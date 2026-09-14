@@ -41,8 +41,19 @@ The data comes from DeepSeek's `GET /user/balance` endpoint using your platform 
 ## Placeholders
 
 The label is plain text by default. You can prepend a Nerd Font glyph in a `<span>` (e.g.
-`<span>\U000f1a10</span> {balance}`), or embed your own image with an `<img>` tag. The
-following placeholders can be used in `label` / `label_alt`:
+`<span>\U000f1a10</span> {balance}`), or embed your own image with an `<img>` tag - useful
+here, since no Nerd Font ships a DeepSeek mark:
+
+```yaml
+    label: "<span><img src='C:/Users/you/.config/yasb/assets/deepseek.png' width='14' height='14'></span> {balance}"
+```
+
+> An `<img>` is a bitmap, so unlike a glyph it does **not** follow the `color` set in CSS.
+> Tint the image itself, and keep a second copy if you want a different colour per theme.
+> Use forward slashes in the path. Note the 8-digit `\U` form for glyph escapes rather than a
+> `\udbXX\udcXX` surrogate pair: YAML leaves lone surrogates as two unrenderable characters.
+
+The following placeholders can be used in `label` / `label_alt`:
 
 - `{balance}` / `{total}` - total available balance, formatted with the currency symbol (`--` when unknown).
 - `{granted}` - the not-yet-expired granted (free) balance.
@@ -259,3 +270,239 @@ failed result would difference a balance against itself.
 .deepseek-usage-menu .section.status .updated {}
 .deepseek-usage-menu .section.status .updated.error {}     /* shown instead when a fetch failed */
 ```
+
+## Example Style
+
+A full style covering every element. Matches the look the other usage widgets use: a dark
+panel (pair with `menu.blur: true`), section titles as small pills, a slim progress track, and
+thin 1px separators between sections rather than boxed cards. Copy/paste and adjust colours
+to taste.
+
+> **Size the progress track with `min-height` and `max-height`, never `height`.** The widget
+> draws the filled portion as a child frame sized to the track, and only the min/max pair
+> constrains it - a bare `height` paints a short background inside a frame the layout has
+> already stretched, leaving the fill standing proud of the bar.
+
+```css
+/* Bar */
+.deepseek-usage {
+    padding: 0 2px;
+}
+.deepseek-usage .widget-container {
+    background-color: #24273a;
+    margin: 2px 0;
+    padding: 2px 8px;
+    border-radius: 8px;
+    min-height: 16px;
+    height: 16px;
+}
+.deepseek-usage .icon {
+    color: #74c7ec;
+    padding-right: 5px;
+}
+.deepseek-usage .label {
+    color: #74c7ec;
+    padding: 2px 0;
+}
+.deepseek-usage .low,
+.deepseek-usage .stale {
+    color: #f9e2af;
+    padding-left: 4px;
+}
+.deepseek-usage .budget.low      { color: #a6e3a1; }
+.deepseek-usage .budget.medium   { color: #f9e2af; }
+.deepseek-usage .budget.high     { color: #fab387; }
+.deepseek-usage .budget.critical { color: #f38ba8; }
+
+/* Popup */
+.deepseek-usage-menu {
+    background-color: #1e1e2e;
+    border: 1px solid #313244;
+    border-radius: 14px;
+    min-width: 320px;
+}
+.deepseek-usage-menu .header {
+    background-color: rgba(17, 17, 27, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 14px 18px 12px 18px;
+}
+.deepseek-usage-menu .header .text {
+    font-family: 'Segoe UI';
+    font-size: 14px;
+    font-weight: 700;
+    color: #cdd6f4;
+}
+.deepseek-usage-menu .header .refresh {
+    font-size: 13px;
+    color: #7f849c;
+    background-color: transparent;
+    border: none;
+    padding: 0 6px;
+}
+.deepseek-usage-menu .header .refresh:hover {
+    color: #89b4fa;
+}
+.deepseek-usage-menu .header .pin-btn {
+    font-family: 'Segoe Fluent Icons';
+    font-size: 12px;
+    color: #7f849c;
+    background-color: transparent;
+    border: none;
+    padding: 0 4px;
+}
+.deepseek-usage-menu .header .pin-btn.pinned {
+    color: #cba6f7;
+}
+.deepseek-usage-menu .section {
+    padding: 18px 18px 16px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+/* Section titles read as small pills. */
+.deepseek-usage-menu .section .title {
+    font-family: 'Segoe UI';
+    font-size: 10px;
+    font-weight: 700;
+    color: #bac2de;
+    background-color: #313244;
+    border-radius: 7px;
+    padding: 3px 9px;
+}
+.deepseek-usage-menu .section .progress {
+    background-color: #313244;
+    border-radius: 3px;
+    min-height: 6px;
+    max-height: 6px;
+    margin: 16px 0 13px 0;
+}
+.deepseek-usage-menu .section .progress .fill {
+    background-color: #74c7ec;
+    border-radius: 3px;
+}
+.deepseek-usage-menu .section .progress.medium .fill   { background-color: #f9e2af; }
+.deepseek-usage-menu .section .progress.high .fill     { background-color: #fab387; }
+.deepseek-usage-menu .section .progress.critical .fill { background-color: #f38ba8; }
+
+/* Balance */
+.deepseek-usage-menu .section.balance .balance-total {
+    font-family: 'Segoe UI';
+    font-size: 24px;
+    font-weight: 700;
+    color: #cdd6f4;
+    padding: 10px 0 8px 0;
+}
+.deepseek-usage-menu .section.balance .balance-total.low {
+    color: #f9e2af;
+}
+.deepseek-usage-menu .section.balance .row {
+    padding: 3px 0;
+}
+.deepseek-usage-menu .section.balance .row .caption {
+    font-family: 'Segoe UI';
+    font-size: 11px;
+    color: #a6adc8;
+}
+.deepseek-usage-menu .section.balance .row .value {
+    font-family: 'Segoe UI';
+    font-size: 11px;
+    font-weight: 600;
+    color: #cdd6f4;
+}
+
+/* Budget */
+.deepseek-usage-menu .section.budget .footer .detail {
+    font-family: 'Segoe UI';
+    font-size: 11px;
+    color: #a6adc8;
+}
+.deepseek-usage-menu .section.budget .footer .percent {
+    font-family: 'Segoe UI';
+    font-size: 13px;
+    font-weight: 700;
+    color: #cdd6f4;
+}
+.deepseek-usage-menu .section.budget .footer .percent.medium   { color: #f9e2af; }
+.deepseek-usage-menu .section.budget .footer .percent.high     { color: #fab387; }
+.deepseek-usage-menu .section.budget .footer .percent.critical { color: #f38ba8; }
+
+/* Spend */
+.deepseek-usage-menu .section.spend .period-toggle {
+    padding: 11px 0 8px 0;
+}
+.deepseek-usage-menu .section.spend .period-btn {
+    font-family: 'Segoe UI';
+    font-size: 11px;
+    font-weight: 600;
+    color: #7f849c;
+    background-color: transparent;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 7px;
+}
+.deepseek-usage-menu .section.spend .period-btn:hover {
+    color: #cdd6f4;
+    background-color: #313244;
+}
+.deepseek-usage-menu .section.spend .period-btn.active {
+    color: #1e1e2e;
+    background-color: #74c7ec;
+}
+.deepseek-usage-menu .section.spend .spend-total {
+    font-family: 'Segoe UI';
+    font-size: 20px;
+    font-weight: 700;
+    color: #cdd6f4;
+    padding: 5px 0 7px 0;
+}
+.deepseek-usage-menu .section.spend .graph-container {
+    padding-top: 6px;
+    padding-bottom: 8px;
+}
+.deepseek-usage-menu .section.spend .spend-graph {
+    min-height: 46px;
+    height: 46px;
+    color: #74c7ec;
+}
+.deepseek-usage-menu .section.spend .spend-graph-grid {
+    color: #313244;
+}
+
+/* Footer */
+.deepseek-usage-menu .section.status .updated {
+    font-family: 'Segoe UI';
+    font-size: 10px;
+    color: #6c7086;
+}
+.deepseek-usage-menu .section.status .updated.error {
+    color: #f9e2af;
+}
+```
+
+## Troubleshooting
+
+**The bar shows `--` and the popup says "No API key".**
+The widget found no key. With the default `api_key: "env"` it reads `YASB_DEEPSEEK_API_KEY`
+and then `DEEPSEEK_API_KEY`. Setting a user environment variable does not affect processes
+that are already running, so restart YASB after setting it:
+
+```powershell
+[Environment]::SetEnvironmentVariable("YASB_DEEPSEEK_API_KEY", "sk-...", "User")
+```
+
+**The popup says "API key rejected".**
+The endpoint returned 401/403. The key is wrong, revoked, or belongs to a different account.
+Check it on [platform.deepseek.com](https://platform.deepseek.com).
+
+**Spend stays at 0 and the graph is flat.**
+Expected until the balance actually moves. Spend is derived by differencing consecutive
+balance readings, so the first reading establishes a baseline and nothing is recorded until a
+later reading comes back lower. A brand-new ledger shows nothing on day one.
+
+**Spend jumped by the size of my free credits.**
+A granted-credit balance expiring looks exactly like spending it, because both are a drop with
+no other signal. Set `spend_history.count_granted_as_spend: false` to count only topped-up
+money, which cannot be affected by expiry.
+
+**The balance is right but spend looks low.**
+A top-up between two polls hides the spend that came before it - the net movement is upward,
+so that interval records nothing. There is no usage endpoint to recover it from. Topping up
+while idle avoids it.
