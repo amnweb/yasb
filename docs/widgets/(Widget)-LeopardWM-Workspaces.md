@@ -141,9 +141,15 @@ border on every button prevents focus changes from changing layout dimensions:
 }
 .leopardwm-workspaces .separator {
     color: #737780;
-    padding: 0 4px;
+    font-family: "Segoe UI";
+    font-size: 16px;
+    padding: 0 4px 6px;
 }
 ```
+
+The separator example centers a 16px Segoe UI pipe on the 16px icon row; the
+bottom padding compensates for the glyph baseline and reserved underline space.
+Adjust the padding when using a different separator font, symbol, or icon size.
 
 Separators are decorative and cannot activate a workspace. They disappear when
 adjacent groups are hidden or state goes offline; no leading/trailing separator
