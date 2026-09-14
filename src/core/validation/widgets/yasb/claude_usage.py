@@ -70,6 +70,9 @@ class ClaudeUsageConfig(CustomBaseModel):
     five_hour_reset_format: Literal["relative", "absolute"] = "relative"
     seven_day_reset_format: Literal["relative", "absolute"] = "absolute"
     reset_show_date: bool = True
+    # Show which account the numbers belong to, under the popup title and in the tooltip.
+    # Worth turning off if you screenshot the bar, since it puts an email on screen.
+    show_account: bool = True
     # Clock style for every time the popup renders. 24h also drops the AM/PM suffix.
     time_format: Literal["12h", "24h"] = "12h"
     # strftime template for the exact reset timestamp under each window. The default keeps
