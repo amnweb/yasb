@@ -15,10 +15,12 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from PyQt6.QtWidgets import QApplication, QFrame, QProgressBar, QVBoxLayout, QWidget  # noqa: E402
+from PyQt6.QtCore import Qt  # noqa: E402
+from PyQt6.QtWidgets import QApplication, QFrame, QLabel, QProgressBar, QVBoxLayout, QWidget  # noqa: E402
 
 APP = QApplication.instance() or QApplication([])
 
+from core.utils.widgets.prayer_times.ribbon import DayRibbon  # noqa: E402
 from core.validation.widgets.yasb.prayer_times import PrayerTimesConfig  # noqa: E402
 from core.widgets.yasb.prayer_times import PrayerTimesWidget  # noqa: E402
 
@@ -239,6 +241,171 @@ class FlashTest(PopupTestCase):
             self.assertEqual(set(alt.property("class").split()), {"label", "alt", "dhuhr", "flash"})
         finally:
             self.widget._stop_flash()
+
+
+class DayRibbonTest(PopupTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.load_today()
+        self.widget._fill_popup(self.layout)
+
+    def test_the_ribbon_sits_between_the_dates_and_the_countdown(self) -> None:
+        sections = [
+            cls
+            for cls in ("header", "day", "hero", "rows-container", "footer")
+            if find_class(self.host, cls) is not None
+        ]
+
+        self.assertEqual(sections, ["header", "day", "hero", "rows-container", "footer"])
+
+    def test_the_band_is_painted_not_composed_of_widgets(self) -> None:
+        self.assertIsInstance(by_class(self.host, "day-ribbon"), DayRibbon)
+
+    def test_captions_name_the_real_sunrise_sunset_and_daylight(self) -> None:
+        day = by_class(self.host, "day")
+
+        self.assertEqual(by_class(day, "day-sunrise").text(), "06:06")
+        self.assertEqual(by_class(day, "day-sunset").text(), "17:54")
+        self.assertEqual(by_class(day, "day-length").text(), "11h 48m of daylight")
+
+    def test_one_tick_per_prayer_on_show(self) -> None:
+        ribbon: DayRibbon = by_class(self.host, "day-ribbon")
+
+        self.assertEqual(len(ribbon._marks), len(self.widget._schedule))
+
+    def test_ticks_carry_which_prayers_the_day_has_gone_past(self) -> None:
+        """At 10:06 Fajr is behind and Dhuhr is still ahead."""
+        ribbon: DayRibbon = by_class(self.host, "day-ribbon")
+        passed = {entry.name: mark.passed for entry, mark in zip(self.widget._schedule, ribbon._marks)}
+
+        self.assertTrue(passed["Fajr"])
+        self.assertFalse(passed["Dhuhr"])
+
+    def test_the_stem_tracks_the_clock(self) -> None:
+        ribbon: DayRibbon = by_class(self.host, "day-ribbon")
+        at_ten = ribbon._now
+
+        self.set_now(datetime(2026, 7, 21, 16, 0, tzinfo=JAKARTA))
+        self.widget._refresh_popup()
+
+        self.assertIsNotNone(at_ten)
+        self.assertGreater(ribbon._now, at_ten)
+
+    def test_the_stem_is_dropped_when_the_band_is_not_the_day_the_clock_is_in(self) -> None:
+        """Late evening the popup has already moved on to tomorrow; today's clock is not on that band."""
+        self.widget._on_data_received(payload("22-07-2026", "7"))
+        self.widget._fill_popup(self.layout)
+
+        self.assertIsNone(by_class(self.host, "day-ribbon")._now)
+
+    def test_no_ribbon_without_the_moments_that_light_it(self) -> None:
+        """A response with no sunrise or sunset would only buy a flat band that says nothing."""
+        stripped = payload("21-07-2026", "6")
+        for name in ("Sunrise", "Sunset", "Maghrib"):
+            stripped["data"]["timings"].pop(name)
+        self.widget._on_data_received(stripped)
+
+        self.widget._fill_popup(self.layout)
+
+        self.assertIsNone(find_class(self.host, "day"))
+        self.assertIsNotNone(find_class(self.host, "hero"))
+
+
+class PassedPrayerTest(PopupTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.load_today()
+        self.widget._fill_popup(self.layout)
+
+    def remaining(self, prayer: str) -> QLabel:
+        return self.widget._popup_row_widgets[prayer]["remaining"]
+
+    def test_a_prayer_the_day_has_gone_past_is_marked_not_labelled(self) -> None:
+        """Four rows all reading the word 'passed' filled the column with what you already knew."""
+        label = self.remaining("Fajr")
+
+        self.assertEqual(label.text(), self.widget.config.icons.done)
+        self.assertIn("done", label.property("class").split())
+
+    def test_upcoming_prayers_keep_their_countdown(self) -> None:
+        label = self.remaining("Asr")
+
+        self.assertEqual(label.text(), "in 5h 16m")
+        self.assertNotIn("done", label.property("class").split())
+
+    def test_the_mark_is_centred_so_the_glyph_cannot_be_sliced(self) -> None:
+        """Right-aligned, Qt lays the glyph out on a fallback advance narrower than the ink it paints."""
+        self.assertEqual(self.remaining("Fajr").alignment(), Qt.AlignmentFlag.AlignCenter)
+
+    def test_a_countdown_becoming_a_mark_takes_the_alignment_with_it(self) -> None:
+        self.set_now(datetime(2026, 7, 21, 16, 0, tzinfo=JAKARTA))
+
+        self.widget._refresh_popup()
+
+        label = self.remaining("Dhuhr")
+        self.assertEqual(label.text(), self.widget.config.icons.done)
+        self.assertEqual(label.alignment(), Qt.AlignmentFlag.AlignCenter)
+
+
+class CalledPrayerTest(PopupTestCase):
+    """The minutes a prayer has just been called and is still inside its grace period."""
+
+    def test_the_hero_and_its_row_both_say_now(self) -> None:
+        self.load_today()
+        self.set_now(datetime(2026, 7, 21, 15, 23, tzinfo=JAKARTA))
+        self.widget._fill_popup(self.layout)
+
+        self.assertIn("now", by_class(self.host, "hero").property("class").split())
+        self.assertIn("now", self.widget._popup_row_widgets["Asr"]["row"].property("class").split())
+
+    def test_the_state_clears_once_the_grace_period_is_over(self) -> None:
+        self.load_today()
+        self.set_now(datetime(2026, 7, 21, 15, 23, tzinfo=JAKARTA))
+        self.widget._fill_popup(self.layout)
+
+        self.set_now(datetime(2026, 7, 21, 15, 40, tzinfo=JAKARTA))
+        self.widget._refresh_popup()
+
+        self.assertNotIn("now", by_class(self.host, "hero").property("class").split())
+
+
+class EveryPrayerPassedTest(PopupTestCase):
+    """Late evening, before tomorrow's schedule has landed."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.load_today()
+        self.set_now(datetime(2026, 7, 21, 22, 30, tzinfo=JAKARTA))
+        self.widget._fill_popup(self.layout)
+
+    def test_counts_down_to_tomorrow_rather_than_back_to_this_morning(self) -> None:
+        """The first prayer was returned unrolled, so the hero announced one 'started 1076m ago'."""
+        self.assertEqual(by_class(self.host, "hero-countdown").text(), "in 6h 14m")
+
+    def test_the_span_runs_from_tonight_s_last_prayer(self) -> None:
+        hero = by_class(self.host, "hero")
+
+        self.assertEqual(by_class(hero, "hero-from").text(), "Isha 19:08")
+        self.assertEqual(by_class(hero, "hero-to").text(), "04:44")
+
+    def test_the_progress_bar_stays_inside_its_range(self) -> None:
+        bar = by_class(self.host, "hero-progress")
+
+        self.assertGreater(bar.value(), 0)
+        self.assertLess(bar.value(), bar.maximum())
+
+    def test_the_next_row_counts_down_instead_of_being_marked_done(self) -> None:
+        """The row was both highlighted as next and marked as gone by, reading its own moment."""
+        remaining = self.widget._popup_row_widgets["Fajr"]["remaining"]
+
+        self.assertEqual(remaining.text(), by_class(self.host, "hero-countdown").text())
+        self.assertNotIn("done", remaining.property("class").split())
+
+    def test_every_other_row_is_still_marked_done(self) -> None:
+        for prayer in ("Dhuhr", "Asr", "Maghrib", "Isha"):
+            with self.subTest(prayer=prayer):
+                label = self.widget._popup_row_widgets[prayer]["remaining"]
+                self.assertIn("done", label.property("class").split())
 
 
 if __name__ == "__main__":

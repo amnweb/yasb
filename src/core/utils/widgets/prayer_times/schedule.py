@@ -35,6 +35,17 @@ _MISSING_TIME = "--:--"
 _HHMM_RE = re.compile(r"^\s*(\d{1,2}):(\d{2})")
 _GREGORIAN_RE = re.compile(r"^(\d{2})-(\d{2})-(\d{4})$")
 
+# The solar moments the day ribbon's light is built from.  Requested separately from
+# the prayers on show, because the day is lit the same whether or not you list Sunrise.
+SOLAR_NAMES: list[str] = ["Fajr", "Sunrise", "Sunset", "Maghrib", "Isha"]
+
+# Roles a ribbon gradient stop can carry.  Declared here, in the Qt-free module, so
+# the painter imports the vocabulary rather than the other way round.
+NIGHT = "night"
+DAWN = "dawn"
+DAY = "day"
+DUSK = "dusk"
+
 
 @dataclass(frozen=True)
 class PrayerTime:
@@ -165,18 +176,33 @@ def format_countdown(entry_at: datetime, now: datetime) -> str:
     return _format_remaining(seconds)
 
 
+def shift_days(entry: PrayerTime, days: int) -> PrayerTime:
+    """Return *entry* moved by whole days, keeping its name and displayed time.
+
+    Prayer times drift by a minute or two between days, which is close enough for a
+    countdown that is about to be replaced by the real schedule for that day.
+    """
+    return replace(entry, at=entry.at + timedelta(days=days))
+
+
 def previous_entry(schedule: list[PrayerTime], current: PrayerTime) -> PrayerTime:
     """Return the prayer before *current* in a chronological schedule.
 
     Before the first prayer the span starts at the previous night's last prayer, which a
-    single day's schedule does not hold, so the last entry is shifted back one day. Prayer
-    times drift by a minute or two between days, which is close enough for a progress bar.
+    single day's schedule does not hold, so the last entry is shifted back one day.
+
+    *current* may be an entry ``shift_days`` has moved off the schedule, which is what the
+    widget hands over once every prayer in the day has passed. It is matched by name and
+    the same shift is carried onto the entry that comes back, so the span stays the real
+    one: last night's Isha through to tomorrow morning's first prayer.
     """
-    index = schedule.index(current)
+    index = next((i for i, entry in enumerate(schedule) if entry.name == current.name), 0)
+    shift = current.at - schedule[index].at
     if index > 0:
-        return schedule[index - 1]
+        previous = schedule[index - 1]
+        return replace(previous, at=previous.at + shift)
     last = schedule[-1]
-    return replace(last, at=last.at - timedelta(days=1))
+    return replace(last, at=last.at + shift - timedelta(days=1))
 
 
 def progress_fraction(start: datetime, end: datetime, now: datetime) -> float:
@@ -185,3 +211,74 @@ def progress_fraction(start: datetime, end: datetime, now: datetime) -> float:
     if span <= 0:
         return 1.0
     return min(max((now - start).total_seconds() / span, 0.0), 1.0)
+
+
+def format_span(start: datetime, end: datetime) -> str:
+    """Format the distance between two moments as '13h 48m', or '' if they are out of order."""
+    minutes = int((end - start).total_seconds() // 60)
+    if minutes <= 0:
+        return ""
+    hours, mins = divmod(minutes, 60)
+    return f"{hours}h {mins:02d}m" if hours else f"{mins}m"
+
+
+def day_window(base_date: date, tz_name: str | None, schedule: list[PrayerTime]) -> tuple[datetime, datetime]:
+    """Return the ribbon's window: *base_date*'s own midnight to midnight, in local time.
+
+    Anchored in the API's timezone rather than the machine's, so a schedule calculated for
+    another city still starts its band at that city's midnight. Entries that roll past the
+    end (``Midnight``, ``Lastthird``) stretch it rather than falling off the edge.
+    """
+    tzinfo = resolve_timezone(tz_name)
+    start = datetime(base_date.year, base_date.month, base_date.day, tzinfo=tzinfo).astimezone()
+    end = start + timedelta(days=1)
+    if schedule:
+        end = max(end, schedule[-1].at)
+    return start, end
+
+
+def light_stops(solar: dict[str, PrayerTime], start: datetime, end: datetime) -> list[tuple[float, str]]:
+    """Return the ribbon's gradient stops as (fraction, role) across the *start*-to-*end* window.
+
+    Night holds until Fajr, warms through dawn to full daylight by sunrise, holds flat all
+    day, warms again at sunset and is back to night by Isha. Every boundary is a moment the
+    API returned, so the band's proportions belong to this location and this date; nothing
+    here is a nominal dawn or a stock golden hour.
+
+    Missing moments only cost their own transition: without Sunrise there is no dawn wash,
+    and with nothing at all the band is flat night rather than an invented day.
+    """
+    span = (end - start).total_seconds()
+    if span <= 0:
+        return []
+
+    def fraction(moment: datetime) -> float:
+        return min(max((moment - start).total_seconds() / span, 0.0), 1.0)
+
+    fajr = solar.get("Fajr")
+    sunrise = solar.get("Sunrise")
+    sunset = solar.get("Sunset") or solar.get("Maghrib")
+    isha = solar.get("Isha")
+
+    stops: list[tuple[float, str]] = [(0.0, NIGHT)]
+    if sunrise is not None:
+        if fajr is not None:
+            # First light at Fajr, peaking midway to sunrise: the wash is as wide as
+            # this latitude's twilight actually is.
+            stops.append((fraction(fajr.at), NIGHT))
+            stops.append(((fraction(fajr.at) + fraction(sunrise.at)) / 2, DAWN))
+        stops.append((fraction(sunrise.at), DAY))
+    if sunset is not None:
+        if sunrise is not None:
+            stops.append((fraction(sunset.at), DAY))
+        if isha is not None and isha.at > sunset.at:
+            stops.append(((fraction(sunset.at) + fraction(isha.at)) / 2, DUSK))
+            stops.append((fraction(isha.at), NIGHT))
+        else:
+            stops.append((fraction(sunset.at), DUSK))
+    stops.append((1.0, NIGHT))
+
+    # Qt reads stops in the order given; a clock that disagrees with the canonical
+    # ordering must not be allowed to fold the gradient back on itself.
+    stops.sort(key=lambda stop: stop[0])
+    return stops

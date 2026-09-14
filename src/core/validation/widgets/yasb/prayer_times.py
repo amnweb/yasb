@@ -53,6 +53,9 @@ class PrayerTimesIconsConfig(CustomBaseModel):
     firstthird: str = "\ue32b"  # weather-night_clear
     midnight: str = "\ue32b"  # weather-night_clear
     lastthird: str = "\ue32b"  # weather-night_clear
+    # oct-dot_fill. A dot, not a check: the widget knows the time has gone by, not that
+    # you prayed it, and the same dot is what a passed prayer becomes on the day ribbon.
+    done: str = "\uf444"
     default: str = "\uf017"  # fa-clock_o
 
 

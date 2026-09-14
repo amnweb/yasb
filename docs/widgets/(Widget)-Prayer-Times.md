@@ -1,6 +1,6 @@
 # Prayer Times Widget
 
-Displays Islamic prayer times fetched from the [Aladhan API](https://aladhan.com/prayer-times-api). Shows the next upcoming (or currently active) prayer by default, with an alt label that lists all daily prayer times. Left-clicking opens a popup card with the Hijri and Gregorian date, a countdown to the next prayer with a progress bar running from the previous one, and every prayer's time.
+Displays Islamic prayer times fetched from the [Aladhan API](https://aladhan.com/prayer-times-api). Shows the next upcoming (or currently active) prayer by default, with an alt label that lists all daily prayer times. Left-clicking opens a popup card with the Hijri and Gregorian date, a day ribbon showing that date's own light with each prayer notched onto it, a countdown to the next prayer with a progress bar running from the previous one, and every prayer's time.
 
 ## Options
 
@@ -82,8 +82,33 @@ icons:
   firstthird: "\ue32b"  # weather-night_clear
   midnight: "\ue32b"    # weather-night_clear
   lastthird: "\ue32b"   # weather-night_clear
+  done: "\uf444"        # oct-dot_fill, marks a prayer the day has gone past
   default: "\uf017"     # Fallback when no matching icon is found
 ```
+
+### Day Ribbon
+
+Between the dates and the countdown the popup paints a band of that date's own light: night until Fajr, warming through dawn to full daylight at sunrise, holding through the day, warming again at sunset and dark by Isha. Every boundary is a moment the API returned, so the band's proportions belong to your coordinates and that date — a narrow dawn wash near the equator, a wide one in a northern summer. Each prayer in `prayers_to_show` is notched underneath it, dimmed once the day has gone past it, and the current moment is pinned through the band.
+
+The band needs sunrise and sunset to mean anything, so a response carrying neither drops the section rather than painting a flat bar. Missing moments otherwise cost only their own transition: without `Sunrise` there is no dawn wash.
+
+Because a Qt stylesheet cannot express a gradient with data-driven stops, the band is painted rather than composed of widgets, and its colours and dimensions arrive as `-qproperty-` values — the same mechanism the adaptive bar uses (see [Styling](Styling)):
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `-qproperty-nightcolor` | color | `#181825` | The band before Fajr and after Isha. |
+| `-qproperty-dawncolor` | color | `#74c7ec` | Peak of the wash between Fajr and sunrise. |
+| `-qproperty-daycolor` | color | `#f9e2af` | Full daylight, sunrise through sunset. |
+| `-qproperty-duskcolor` | color | `#fab387` | Peak of the wash between sunset and Isha. |
+| `-qproperty-tickcolor` | color | `rgba(255,255,255,110)` | Notch for a prayer still ahead. |
+| `-qproperty-passedtickcolor` | color | `rgba(0,0,0,70)` | Notch for a prayer the day has gone past. |
+| `-qproperty-nowcolor` | color | `#cdd6f4` | The stem and cap marking the current moment. |
+| `-qproperty-bandheight` | int | `10` | Height of the light band in pixels. |
+| `-qproperty-tickwidth` | int | `2` | Width of each notch and of the now stem. |
+| `-qproperty-tickheight` | int | `4` | Height of the notch lane below the band. |
+| `-qproperty-nowradius` | int | `3` | Radius of the cap on the now stem. |
+
+Give `.day-ribbon` a `min-height` and `max-height` of the same value, as with any YASB container; `nowradius + bandheight + 3 + tickheight` is the height the ribbon asks for by default.
 
 ### Menu Options
 
@@ -247,7 +272,9 @@ For the full list and custom (`method=99`) options, see the [Aladhan API docs](h
 
 > **Note:** The widget sets no padding, margins or fixed widths in code; every popup dimension comes from CSS. The header, hero, rows container and footer are frames, so `padding`, `border` and `background-color` all apply to them. Column alignment in the prayer rows comes from `min-width` on `.prayer-icon`, `.prayer-name` and `.prayer-time`.
 
-> **Upgrading:** The popup gained a hero block, a second header line and a timezone in the footer. Copy the popup rules from the [example style](#example-style) to pick up the new layout. Rules you already had for `.header`, `.rows-container` and `.footer` now take effect as well (they were silently ignored before), which can change their spacing.
+> **Upgrading:** The popup gained a [day ribbon](#day-ribbon) above the hero, a `now` state on the hero and the active row for the minutes a prayer is actually being called, and a `.prayer-remaining.done` mark in place of the word "passed" on every prayer the day has gone by. Style `.day-ribbon` with `-qproperty-` values, or leave it unstyled and it falls back to its own defaults.
+>
+> **Earlier:** The popup gained a hero block, a second header line and a timezone in the footer. Copy the popup rules from the [example style](#example-style) to pick up the new layout. Rules you already had for `.header`, `.rows-container` and `.footer` now take effect as well (they were silently ignored before), which can change their spacing.
 
 ```css
 /* ── Bar widget ──────────────────────────────────────────────────── */
@@ -286,8 +313,16 @@ For the full list and custom (`method=99`) options, see the [Aladhan API docs](h
 .prayer-times-menu .header .title {}
 .prayer-times-menu .header .hijri-date {}
 .prayer-times-menu .header .gregorian-date {}   /* "Today, Sunday 13 September" */
+.prayer-times-menu .day {}                      /* Day ribbon section */
+.prayer-times-menu .day-ribbon {}               /* The painted band itself, see [Day Ribbon](#day-ribbon) */
+.prayer-times-menu .day-icon.sunrise {}         /* Sunrise glyph under the band's left end */
+.prayer-times-menu .day-icon.sunset {}          /* Sunset glyph under the band's right end */
+.prayer-times-menu .day-sunrise {}              /* Sunrise time, e.g. "06:06" */
+.prayer-times-menu .day-sunset {}               /* Sunset time, e.g. "17:54" */
+.prayer-times-menu .day-length {}               /* "11h 48m of daylight" */
 .prayer-times-menu .hero {}
 .prayer-times-menu .hero.dhuhr {}               /* The hero also carries its prayer name */
+.prayer-times-menu .hero.now {}                 /* This prayer has been called and is still in grace */
 .prayer-times-menu .hero-icon {}
 .prayer-times-menu .hero-name {}
 .prayer-times-menu .hero-countdown {}           /* "in 1h 43m" / "started 5m ago" / "now" */
@@ -299,11 +334,13 @@ For the full list and custom (`method=99`) options, see the [Aladhan API docs](h
 .prayer-times-menu .prayer-row {}
 .prayer-times-menu .prayer-row.fajr {}          /* Row also carries its prayer name */
 .prayer-times-menu .prayer-row.active {}        /* Currently active prayer (within grace period) */
+.prayer-times-menu .prayer-row.active.now {}    /* Same, but only while it is actually being called */
 .prayer-times-menu .prayer-row.passed {}        /* Prayers whose grace period has fully expired */
 .prayer-times-menu .prayer-icon {}
 .prayer-times-menu .prayer-name {}
 .prayer-times-menu .prayer-time {}
-.prayer-times-menu .prayer-remaining {}         /* "in 2h 15m" / "5m ago" (grace window) / "passed" */
+.prayer-times-menu .prayer-remaining {}         /* "in 2h 15m" / "5m ago" (grace window) */
+.prayer-times-menu .prayer-remaining.done {}    /* The `icons.done` mark, once the prayer has gone by */
 .prayer-times-menu .footer {}
 .prayer-times-menu .method-name {}              /* Calculation method name */
 .prayer-times-menu .timezone {}                 /* Timezone the times were calculated for */
@@ -405,6 +442,54 @@ For the full list and custom (`method=99`) options, see the [Aladhan API docs](h
   font-family: 'Segoe UI';
   font-size: 11px;
   color: rgba(235, 238, 245, 0.45);
+}
+
+/* Day ribbon: the band reuses the same hues as the rows below, so it doubles as
+   their legend. The light runs unbroken and the prayers are notched underneath. */
+.prayer-times-menu .day {
+  padding: 14px 18px 11px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.prayer-times-menu .day-ribbon {
+  min-height: 22px;
+  max-height: 22px;
+  -qproperty-nightcolor: #262b3a;
+  -qproperty-dawncolor: #7aa2f7;
+  -qproperty-daycolor: #f2d57e;
+  -qproperty-duskcolor: #e8935f;
+  -qproperty-tickcolor: rgba(235, 238, 245, 0.55);
+  -qproperty-passedtickcolor: rgba(235, 238, 245, 0.18);
+  -qproperty-nowcolor: #ffffff;
+  -qproperty-bandheight: 12;
+  -qproperty-tickwidth: 2;
+  -qproperty-tickheight: 4;
+  -qproperty-nowradius: 3;
+}
+.prayer-times-menu .day-icon {
+  font-family: 'JetBrainsMono NFP';
+  font-size: 12px;
+  padding-top: 6px;
+}
+.prayer-times-menu .day-icon.sunrise {
+  color: #f2d57e;
+  padding-right: 6px;
+}
+.prayer-times-menu .day-icon.sunset {
+  color: #e8935f;
+  padding-left: 6px;
+}
+.prayer-times-menu .day-sunrise,
+.prayer-times-menu .day-sunset {
+  font-family: 'Segoe UI';
+  font-size: 11px;
+  color: rgba(235, 238, 245, 0.55);
+  padding-top: 6px;
+}
+.prayer-times-menu .day-length {
+  font-family: 'Segoe UI';
+  font-size: 11px;
+  color: rgba(235, 238, 245, 0.35);
+  padding-top: 6px;
 }
 
 /* Hero: the one loud thing on the card is how long until the next prayer. */
@@ -591,6 +676,32 @@ For the full list and custom (`method=99`) options, see the [Aladhan API docs](h
 }
 .prayer-times-menu .prayer-row.passed .prayer-remaining {
   color: transparent;
+}
+
+/* Called, and still inside the grace period: the one state the whole widget is for.
+   Matches what the bar pill is doing at the same moment. */
+.prayer-times-menu .hero.now .hero-countdown,
+.prayer-times-menu .hero.now .hero-name {
+  color: #e8935f;
+}
+.prayer-times-menu .prayer-row.active.now {
+  background-color: rgba(232, 147, 95, 0.14);
+  border-left-color: #e8935f;
+}
+.prayer-times-menu .prayer-row.active.now .prayer-icon,
+.prayer-times-menu .prayer-row.active.now .prayer-name,
+.prayer-times-menu .prayer-row.active.now .prayer-time,
+.prayer-times-menu .prayer-row.active.now .prayer-remaining {
+  color: #e8935f;
+}
+
+/* The done mark needs a min-width of its own: Qt sizes a glyph-only label against the
+   family the stylesheet named, which on a machine without it is not the one that paints. */
+.prayer-times-menu .prayer-remaining.done {
+  font-family: 'JetBrainsMono NFP';
+  font-size: 11px;
+  min-width: 14px;
+  color: rgba(235, 238, 245, 0.3);
 }
 
 /* ---- Footer ---- */

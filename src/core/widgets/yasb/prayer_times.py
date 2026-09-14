@@ -11,15 +11,21 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QProgressBar, QVBoxLayo
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.widgets.prayer_times.api import PrayerTimesDataFetcher
+from core.utils.widgets.prayer_times.ribbon import DayRibbon, RibbonMark
 from core.utils.widgets.prayer_times.schedule import (
     ALL_PRAYER_NAMES,
+    SOLAR_NAMES,
     PrayerTime,
     build_schedule,
+    day_window,
     format_countdown,
     format_delta,
+    format_span,
+    light_stops,
     parse_gregorian_date,
     previous_entry,
     progress_fraction,
+    shift_days,
 )
 from core.validation.widgets.yasb.prayer_times import PrayerTimesConfig
 from core.widgets.base import BaseWidget
@@ -58,12 +64,14 @@ class PrayerTimesWidget(BaseWidget):
         self._hijri: dict[str, Any] = {}
         self._meta: dict[str, Any] = {}
         self._schedule: list[PrayerTime] = []
+        self._solar: dict[str, PrayerTime] = {}
         self._base_date = None
         self._tz_name: str | None = None
         self._popup: PopupWidget | None = None
         self._popup_layout: QVBoxLayout | None = None
         self._popup_key: tuple | None = None
         self._popup_hero: dict[str, QWidget] = {}
+        self._popup_ribbon: dict[str, QWidget] = {}
         self._popup_row_widgets: dict[str, dict[str, QWidget]] = {}
         self._loading: bool = True
         self._date_offset: int = 0
@@ -212,8 +220,14 @@ class PrayerTimesWidget(BaseWidget):
         """Resolve the raw API timings into absolute, chronologically sorted local moments."""
         if not self._timings or self._base_date is None:
             self._schedule = []
+            self._solar = {}
             return
         self._schedule = build_schedule(self._timings, self._base_date, self._tz_name, self._prayers)
+        # The day is lit the same whether or not Sunrise is one of the prayers on show,
+        # so the ribbon's light is resolved from the full response, not from _prayers.
+        self._solar = {
+            entry.name: entry for entry in build_schedule(self._timings, self._base_date, self._tz_name, SOLAR_NAMES)
+        }
 
     def _start_minute_timer(self) -> None:
         self._minute_timer.start()
@@ -249,6 +263,12 @@ class PrayerTimesWidget(BaseWidget):
 
         A prayer is considered 'current' for grace_period minutes after its time,
         so the label doesn't immediately jump to the next prayer when the time hits.
+
+        Once the whole day has passed, the first prayer comes back rolled onto tomorrow.
+        Returning it unrolled read as a moment that had already gone by, which is how the
+        popup came to announce a prayer 'started 1076m ago' late in the evening. The widget
+        re-fetches tomorrow's schedule at that point anyway; this is what it shows while
+        that request is in flight, or if it never lands.
         """
         if not self._schedule:
             return None
@@ -257,7 +277,7 @@ class PrayerTimesWidget(BaseWidget):
         for entry in self._schedule:
             if entry.at + grace > now:
                 return entry
-        return self._schedule[0]
+        return shift_days(self._schedule[0], 1)
 
     def _get_next_prayer(self) -> tuple[str, str]:
         """Return (prayer_name, time_str) for the current or next upcoming prayer."""
@@ -269,6 +289,18 @@ class PrayerTimesWidget(BaseWidget):
     def _time_delta_text(self, entry: PrayerTime) -> str:
         """Return human-readable remaining/elapsed label for a prayer moment."""
         return format_delta(entry.at, self._now(), self._grace, _DELTA_PASSED)
+
+    def _row_delta_text(self, entry: PrayerTime, upcoming: PrayerTime | None) -> str:
+        """Return the delta for a row, counting from *upcoming* when this is the row it names.
+
+        Late in the evening every prayer in the day has gone by and the next one is the first
+        prayer again, on tomorrow. The row was reading its own moment, so it came up both
+        highlighted as next and marked as done; now it counts down to the same moment the hero
+        above it does.
+        """
+        if upcoming is not None and entry.name == upcoming.name:
+            return self._time_delta_text(upcoming)
+        return self._time_delta_text(entry)
 
     # ------------------------------------------------------------------
     # Label options dict
@@ -490,6 +522,7 @@ class PrayerTimesWidget(BaseWidget):
         self._popup_layout = layout
         self._popup_key = self._popup_state_key()
         self._popup_hero = {}
+        self._popup_ribbon = {}
         self._popup_row_widgets = {}
 
         layout.addWidget(self._build_popup_header())
@@ -501,6 +534,9 @@ class PrayerTimesWidget(BaseWidget):
             layout.addWidget(placeholder)
             return
 
+        ribbon = self._build_popup_ribbon()
+        if ribbon is not None:
+            layout.addWidget(ribbon)
         layout.addWidget(self._build_popup_hero())
         layout.addWidget(self._build_popup_rows())
         footer = self._build_popup_footer()
@@ -516,6 +552,7 @@ class PrayerTimesWidget(BaseWidget):
             if self._popup is not None:
                 self._popup.adjustSize()
             return
+        self._refresh_popup_ribbon()
         self._refresh_popup_hero()
         self._refresh_popup_rows()
 
@@ -559,6 +596,102 @@ class PrayerTimesWidget(BaseWidget):
         header_layout.addLayout(dates_layout)
 
         return header
+
+    # ------------------------------------------------------------------
+    # Day ribbon
+    # ------------------------------------------------------------------
+
+    def _build_popup_ribbon(self) -> QFrame | None:
+        """Build the day ribbon: this date's own light, ticked with its prayers.
+
+        Returns None when the response carried no sunrise or sunset, since without them
+        there is no daylight to draw and a flat band would say nothing the rows do not.
+        """
+        if self._base_date is None or "Sunrise" not in self._solar:
+            return None
+        if not (set(self._solar) & {"Sunset", "Maghrib"}):
+            return None
+
+        section = QFrame()
+        section.setProperty("class", "day")
+        section_layout = QVBoxLayout(section)
+        section_layout.setContentsMargins(0, 0, 0, 0)
+        section_layout.setSpacing(0)
+
+        ribbon = DayRibbon()
+        ribbon.setProperty("class", "day-ribbon")
+        section_layout.addWidget(ribbon)
+
+        # Glyph and time are separate labels rather than one string: a Nerd Font icon and
+        # a UI-font time need different families and their own gap, which one QLabel cannot
+        # give them.  Same split the bar labels use.
+        captions_layout = QHBoxLayout()
+        captions_layout.setContentsMargins(0, 0, 0, 0)
+        captions_layout.setSpacing(0)
+        sunrise_icon = QLabel(self._icon_map.get("Sunrise", ""))
+        sunrise_icon.setProperty("class", "day-icon sunrise")
+        sunrise_lbl = QLabel()
+        sunrise_lbl.setProperty("class", "day-sunrise")
+        daylight_lbl = QLabel()
+        daylight_lbl.setProperty("class", "day-length")
+        daylight_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sunset_lbl = QLabel()
+        sunset_lbl.setProperty("class", "day-sunset")
+        sunset_lbl.setAlignment(Qt.AlignmentFlag.AlignRight)
+        sunset_icon = QLabel(self._icon_map.get("Sunset", ""))
+        sunset_icon.setProperty("class", "day-icon sunset")
+        captions_layout.addWidget(sunrise_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
+        captions_layout.addWidget(sunrise_lbl, alignment=Qt.AlignmentFlag.AlignVCenter)
+        captions_layout.addStretch()
+        captions_layout.addWidget(daylight_lbl, alignment=Qt.AlignmentFlag.AlignVCenter)
+        captions_layout.addStretch()
+        captions_layout.addWidget(sunset_lbl, alignment=Qt.AlignmentFlag.AlignVCenter)
+        captions_layout.addWidget(sunset_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
+        section_layout.addLayout(captions_layout)
+
+        self._popup_ribbon = {
+            "frame": section,
+            "ribbon": ribbon,
+            "sunrise-icon": sunrise_icon,
+            "sunrise": sunrise_lbl,
+            "daylight": daylight_lbl,
+            "sunset": sunset_lbl,
+            "sunset-icon": sunset_icon,
+        }
+        self._refresh_popup_ribbon()
+        return section
+
+    def _refresh_popup_ribbon(self) -> None:
+        """Move the ribbon's now stem and re-mark the prayers it has gone past."""
+        parts = self._popup_ribbon
+        if not parts or self._base_date is None:
+            return
+        now = self._now()
+        start, end = day_window(self._base_date, self._tz_name, self._schedule)
+        span = (end - start).total_seconds()
+        if span <= 0:
+            return
+
+        def fraction(moment) -> float:
+            return (moment - start).total_seconds() / span
+
+        marks = [RibbonMark(at=fraction(entry.at), passed=entry.at <= now) for entry in self._schedule]
+        # The stem is dropped rather than pinned to an edge once the popup has moved on to
+        # tomorrow's schedule: this band is not the day the clock is in.
+        position = fraction(now)
+        ribbon: DayRibbon = parts["ribbon"]  # type: ignore[assignment]
+        ribbon.set_day(light_stops(self._solar, start, end), marks, position if 0.0 <= position <= 1.0 else None)
+
+        sunrise = self._solar.get("Sunrise")
+        sunset = self._solar.get("Sunset") or self._solar.get("Maghrib")
+        if sunrise is not None:
+            parts["sunrise"].setText(sunrise.time_str)  # type: ignore[attr-defined]
+        if sunset is not None:
+            parts["sunset"].setText(sunset.time_str)  # type: ignore[attr-defined]
+        if sunrise is not None and sunset is not None:
+            length = format_span(sunrise.at, sunset.at)
+            parts["daylight"].setText(f"{length} of daylight" if length else "")  # type: ignore[attr-defined]
+        refresh_widget_style(*parts.values())
 
     def _build_popup_hero(self) -> QFrame:
         """Build the hero block: the current or next prayer, its countdown and progress since the previous one."""
@@ -622,8 +755,11 @@ class PrayerTimesWidget(BaseWidget):
             return
         now = self._now()
         previous = previous_entry(self._schedule, entry)
-        # The frame carries the prayer name so CSS can tint the whole block per time of day.
-        hero["frame"].setProperty("class", f"hero {entry.name.lower()}")
+        # The frame carries the prayer name so CSS can tint the whole block per time of day,
+        # and `now` for the one window the whole widget exists for: the prayer that has just
+        # been called and is still inside its grace period.
+        state = " now" if self._is_live(entry) else ""
+        hero["frame"].setProperty("class", f"hero {entry.name.lower()}{state}")
         hero["icon"].setText(self._icon_map.get(entry.name, self.config.icons.default))
         hero["name"].setText(entry.name)
         hero["countdown"].setText(format_countdown(entry.at, now))
@@ -632,20 +768,43 @@ class PrayerTimesWidget(BaseWidget):
         hero["to"].setText(entry.time_str)
         refresh_widget_style(*hero.values())
 
-    @staticmethod
-    def _row_class(entry: PrayerTime, next_name: str, delta_text: str) -> str:
-        """Return a row's CSS class: its prayer name plus 'active' or 'passed' where that applies."""
+    def _is_live(self, entry: PrayerTime) -> bool:
+        """Return True while *entry* is the prayer that has been called and is still in grace."""
+        now = self._now()
+        return entry.at <= now < entry.at + self._grace
+
+    def _row_class(self, entry: PrayerTime, next_name: str, delta_text: str) -> str:
+        """Return a row's CSS class: its prayer name plus 'active', 'now' or 'passed' where those apply."""
         row_class = f"prayer-row {entry.name.lower()}"
         if entry.name == next_name:
-            return f"{row_class} active"
+            return f"{row_class} active now" if self._is_live(entry) else f"{row_class} active"
         if delta_text == _DELTA_PASSED:
             return f"{row_class} passed"
         return row_class
+
+    def _remaining_slot(self, delta_text: str) -> tuple[str, str, Qt.AlignmentFlag]:
+        """Return the (text, class, alignment) for a row's right-hand slot.
+
+        A prayer that is done is marked once, not labelled: stacking the word 'passed' down
+        four rows turned the column into noise and left no room for the one countdown that
+        is actually live.
+
+        The mark is centred rather than right-aligned, and that is load-bearing. Qt measures
+        a label with the font family the stylesheet asked for; where that name is not the
+        installed one it falls back to a font whose advance for the glyph is narrower than
+        the ink the real font then paints, and a right-aligned glyph gets sliced down the
+        middle. Centring leaves the overhang somewhere to go whatever the machine has
+        installed, which is not something a widget shipped to other people can assume.
+        """
+        if delta_text == _DELTA_PASSED:
+            return self.config.icons.done, "prayer-remaining done", Qt.AlignmentFlag.AlignCenter
+        return delta_text, "prayer-remaining", Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight
 
     def _build_popup_rows(self) -> QFrame:
         """Build the prayer rows container, recording row widgets for later refresh."""
         icon_map = self._icon_map
         ic = self.config.icons
+        upcoming = self._next_entry()
         next_name, _ = self._get_next_prayer()
 
         rows_container = QFrame()
@@ -655,7 +814,7 @@ class PrayerTimesWidget(BaseWidget):
         rows_layout.setSpacing(0)
 
         for entry in self._schedule:
-            delta_text = self._time_delta_text(entry)
+            delta_text = self._row_delta_text(entry, upcoming)
 
             row = QFrame()
             row.setProperty("class", self._row_class(entry, next_name, delta_text))
@@ -676,9 +835,10 @@ class PrayerTimesWidget(BaseWidget):
             time_lbl.setProperty("class", "prayer-time")
             time_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
 
-            remaining_lbl = QLabel(delta_text)
-            remaining_lbl.setProperty("class", "prayer-remaining")
-            remaining_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
+            remaining_text, remaining_class, remaining_align = self._remaining_slot(delta_text)
+            remaining_lbl = QLabel(remaining_text)
+            remaining_lbl.setProperty("class", remaining_class)
+            remaining_lbl.setAlignment(remaining_align)
 
             row_layout.addWidget(icon_lbl)
             row_layout.addWidget(name_lbl)
@@ -723,6 +883,7 @@ class PrayerTimesWidget(BaseWidget):
         """Update remaining-time labels and active/passed CSS classes every minute."""
         if not self._popup_row_widgets:
             return
+        upcoming = self._next_entry()
         next_name, _ = self._get_next_prayer()
         for entry in self._schedule:
             widgets = self._popup_row_widgets.get(entry.name)
@@ -730,8 +891,11 @@ class PrayerTimesWidget(BaseWidget):
                 continue
             row: QFrame = widgets["row"]  # type: ignore[assignment]
             remaining_lbl: QLabel = widgets["remaining"]  # type: ignore[assignment]
-            delta_text = self._time_delta_text(entry)
-            remaining_lbl.setText(delta_text)
+            delta_text = self._row_delta_text(entry, upcoming)
+            remaining_text, remaining_class, remaining_align = self._remaining_slot(delta_text)
+            remaining_lbl.setText(remaining_text)
+            remaining_lbl.setProperty("class", remaining_class)
+            remaining_lbl.setAlignment(remaining_align)
             row.setProperty("class", self._row_class(entry, next_name, delta_text))
             # Descendant rules such as `.prayer-row.active .prayer-name` only re-apply once the
             # children are repolished as well, not just the row whose class changed.
