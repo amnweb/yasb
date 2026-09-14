@@ -198,6 +198,7 @@ class CodexUsageWidget(BaseWidget):
         self._heatmap_next: QPushButton | None = None
         self._heatmap_history_note: QLabel | None = None
         self._model_widgets: list[dict[str, Any]] = []
+        self._plan_label: QLabel | None = None
         self._refresh_button: RefreshButton | None = None
         self._refresh_status: QLabel | None = None
         self._refresh_pending = False
@@ -462,35 +463,55 @@ class CodexUsageWidget(BaseWidget):
         self._menu.show()
         self._service.refresh_now()
 
+    @staticmethod
+    def _window_phrase(minutes: Any) -> str:
+        """A readable name for a rate-limit window, e.g. "1-week", "5-hour".
+
+        The short forms ("1w", "5h") suit the bar label, but the popup caption is a sentence
+        and reads badly with abbreviations in the middle of it.
+        """
+        if not isinstance(minutes, (int, float)) or minutes <= 0:
+            return "current"
+        minutes = int(minutes)
+        if minutes % 10080 == 0:
+            weeks = minutes // 10080
+            return f"{weeks}-week"
+        if minutes % 1440 == 0:
+            return f"{minutes // 1440}-day"
+        if minutes % 60 == 0:
+            return f"{minutes // 60}-hour"
+        return f"{minutes}-minute"
+
     def _build_section(self, name: str, fallback_title: str) -> QFrame:
+        """The primary window leads; a secondary window, when an account has one, trails.
+
+        The reading used to state the same fact twice - "4% used" beside "96% remaining" at
+        equal weight - so neither was the answer. usage_mode now decides which way round the
+        single number reads, and the caption says which, so the second number is redundant.
+        """
+        if name == "primary":
+            return self._build_window_hero(name)
+        return self._build_window_row(name, fallback_title)
+
+    def _build_window_hero(self, name: str) -> QFrame:
         section = QFrame()
-        section.setProperty("class", f"section {name}")
+        section.setProperty("class", f"section {name} hero")
         layout = QVBoxLayout(section)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        title = QLabel(fallback_title)
-        title.setProperty("class", "title")
-        # AlignLeft keeps the label at its own width so a CSS background renders as a pill
-        # hugging the text, matching the Claude popup; a filled QLabel would band the row.
-        layout.addWidget(title, 0, Qt.AlignmentFlag.AlignLeft)
+        value = QLabel("--%")
+        value.setProperty("class", "hero-value unknown")
+        layout.addWidget(value, 0, Qt.AlignmentFlag.AlignLeft)
+
+        # A sentence rather than a chip: it has to carry both which window this is and which
+        # way the number reads, and a chip repeating the window name would say half of that.
+        caption = QLabel("")
+        caption.setProperty("class", "hero-caption")
+        layout.addWidget(caption, 0, Qt.AlignmentFlag.AlignLeft)
 
         progress = UsageBar(0, "unknown")
         layout.addWidget(progress)
-
-        stats = QFrame()
-        stats.setProperty("class", "stats")
-        stats_layout = QHBoxLayout(stats)
-        stats_layout.setContentsMargins(0, 0, 0, 0)
-        stats_layout.setSpacing(0)
-        used = QLabel("--% used")
-        used.setProperty("class", "used")
-        stats_layout.addWidget(used)
-        stats_layout.addStretch()
-        remaining = QLabel("--% remaining")
-        remaining.setProperty("class", "remaining unknown")
-        stats_layout.addWidget(remaining)
-        layout.addWidget(stats)
 
         timing = QFrame()
         timing.setProperty("class", "timing")
@@ -503,16 +524,53 @@ class CodexUsageWidget(BaseWidget):
         timing_layout.addStretch()
         date = QLabel("--")
         date.setProperty("class", "date")
+        date.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         timing_layout.addWidget(date)
         layout.addWidget(timing)
+
         self._section_widgets[name] = {
+            "variant": "hero",
+            "frame": section,
+            "value": value,
+            "caption": caption,
+            "progress": progress,
+            "reset": reset,
+            "date": date,
+        }
+        return section
+
+    def _build_window_row(self, name: str, fallback_title: str) -> QFrame:
+        """Compact single line, matching the Claude popup's secondary windows."""
+        section = QFrame()
+        section.setProperty("class", f"section {name} ledger")
+        layout = QHBoxLayout(section)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        title = QLabel(fallback_title)
+        title.setProperty("class", "name")
+        layout.addWidget(title)
+
+        progress = UsageBar(0, "unknown")
+        layout.addWidget(progress, 1)
+
+        percent = QLabel("--%")
+        percent.setProperty("class", "percent unknown")
+        percent.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(percent)
+
+        countdown = QLabel("--")
+        countdown.setProperty("class", "countdown")
+        countdown.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(countdown)
+
+        self._section_widgets[name] = {
+            "variant": "ledger",
             "frame": section,
             "title": title,
             "progress": progress,
-            "reset": reset,
-            "used": used,
-            "remaining": remaining,
-            "date": date,
+            "percent": percent,
+            "countdown": countdown,
         }
         return section
 
@@ -649,10 +707,6 @@ class CodexUsageWidget(BaseWidget):
             tokens_layout = QVBoxLayout(tokens)
             tokens_layout.setContentsMargins(0, 0, 0, 0)
             tokens_layout.setSpacing(0)
-            title = QLabel("Token totals")
-            title.setProperty("class", "section-title")
-            tokens_layout.addWidget(title)
-
             periods = QFrame()
             periods.setProperty("class", "periods")
             periods_layout = QGridLayout(periods)
@@ -660,7 +714,7 @@ class CodexUsageWidget(BaseWidget):
             periods_layout.setHorizontalSpacing(8)
             periods_layout.setVerticalSpacing(2)
             for column, (label, key) in enumerate(
-                (("TODAY", "today"), ("7 DAYS", "week"), ("30 DAYS", "month"), ("YEAR", "year"))
+                (("Today", "today"), ("7 days", "week"), ("30 days", "month"), ("Year", "year"))
             ):
                 name = QLabel(label)
                 name.setProperty("class", "period-name")
@@ -830,7 +884,6 @@ class CodexUsageWidget(BaseWidget):
         layout.setVerticalSpacing(4)
 
         rows = (
-            ("Plan", "plan"),
             ("Credits", "credits"),
             ("Updated", "updated"),
             ("Status", "status"),
@@ -1007,9 +1060,19 @@ class CodexUsageWidget(BaseWidget):
         header.setProperty("class", "header")
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(0, 0, 0, 0)
+        title_stack = QFrame()
+        title_stack.setProperty("class", "title-stack")
+        title_stack_layout = QVBoxLayout(title_stack)
+        title_stack_layout.setContentsMargins(0, 0, 0, 0)
+        title_stack_layout.setSpacing(0)
         title = QLabel("Codex Usage")
         title.setProperty("class", "text")
-        header_layout.addWidget(title)
+        title_stack_layout.addWidget(title, 0, Qt.AlignmentFlag.AlignLeft)
+        plan_label = QLabel("")
+        plan_label.setProperty("class", "plan-line")
+        title_stack_layout.addWidget(plan_label, 0, Qt.AlignmentFlag.AlignLeft)
+        self._plan_label = plan_label
+        header_layout.addWidget(title_stack)
         header_layout.addStretch()
         refresh_status = QLabel("")
         refresh_status.setProperty("class", "refresh-status")
@@ -1082,15 +1145,30 @@ class CodexUsageWidget(BaseWidget):
                 continue
             remaining = window.get("remaining")
             level = self._level_class(remaining)
-            duration = self._duration_name(window.get("duration_mins"), fallback)
-            widgets["title"].setText(duration)
-            widgets["progress"].set_value(self._percent_value(remaining), level)
-            widgets["used"].setText(f"{self._percent(window.get('used'))}% used")
-            widgets["remaining"].setText(f"{self._percent(remaining)}% remaining")
-            widgets["remaining"].setProperty("class", f"remaining {level}")
+            # The fill follows usage_mode so it can never contradict the number beside it:
+            # showing "4% used" against a nearly-full bar reads as two different facts.
+            # The colour still tracks health (how much is left), not the number's magnitude.
+            filled = window.get("used") if self._usage_mode == "used" else remaining
+            widgets["progress"].set_value(self._percent_value(filled), level)
+
+            if widgets.get("variant") == "ledger":
+                widgets["title"].setText(self._duration_name(window.get("duration_mins"), fallback))
+                widgets["percent"].setText(f"{self._mode_value(window)}%")
+                widgets["percent"].setProperty("class", f"percent {level}")
+                widgets["countdown"].setText(self._fmt_reset(window.get("resets_at")))
+                refresh_widget_style(widgets["percent"])
+                continue
+
+            widgets["value"].setText(f"{self._mode_value(window)}%")
+            widgets["value"].setProperty("class", f"hero-value {level}")
+            phrase = self._window_phrase(window.get("duration_mins"))
+            mode_word = (
+                self.config.mode_label_remaining if self._usage_mode == "remaining" else self.config.mode_label_used
+            )
+            widgets["caption"].setText(f"of your {phrase} window {mode_word}")
             widgets["reset"].setText(f"Resets in {self._fmt_reset(window.get('resets_at'))}")
             widgets["date"].setText(self._fmt_reset_at(window.get("resets_at")))
-            refresh_widget_style(widgets["remaining"])
+            refresh_widget_style(widgets["value"])
 
         tokens = self._data.get("tokens")
         has_tokens = self.config.show_token_usage and isinstance(tokens, dict)
@@ -1116,9 +1194,13 @@ class CodexUsageWidget(BaseWidget):
                 widgets["value"].setText(self._format_tokens(value))
                 widgets["bar"].set_ratio(float(value) / model_maximum if model_maximum else 0)
 
+        if is_valid_qobject(self._plan_label):
+            plan = str(self._data.get("plan") or "").strip()
+            self._plan_label.setText(f"{plan.lower()} plan" if plan else "")
+            self._plan_label.setVisible(bool(plan))
+
         if self._detail_widgets:
             stale = bool(self._data.get("stale"))
-            self._detail_widgets["plan"].setText(str(self._data.get("plan") or "--"))
             credits = self._data.get("credits")
             self._detail_widgets["credits"].setText(str(credits if credits is not None else "--"))
             self._detail_widgets["updated"].setText(self._fmt_updated(self._data.get("fetched_at")))
