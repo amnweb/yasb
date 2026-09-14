@@ -183,6 +183,7 @@ class CodexUsageWidget(BaseWidget):
         self._menu: PopupWidget | None = None
         self._section_widgets: dict[str, dict[str, Any]] = {}
         self._detail_widgets: dict[str, QLabel] = {}
+        self._detail_names: dict[str, QLabel] = {}
         self._pages: dict[str, QFrame] = {}
         self._visible_pages: list[str] = []
         self._current_page = "overview"
@@ -196,6 +197,7 @@ class CodexUsageWidget(BaseWidget):
         self._token_widgets: dict[str, QLabel] = {}
         self._reset_credit_widgets: list[dict[str, Any]] = []
         self._reset_credits_count: QLabel | None = None
+        self._reset_credits_header: QFrame | None = None
         self._reset_credits_empty: QLabel | None = None
         self._heatmap_cells: list[QFrame] = []
         self._heatmap_month = date.today().replace(day=1)
@@ -474,22 +476,24 @@ class CodexUsageWidget(BaseWidget):
         if self.config.tooltip:
             primary = self._window("primary")
             secondary = self._window("secondary")
-            lines = [
-                f"Codex {self._duration_name(primary.get('duration_mins'), 'primary')}: "
-                f"{self._percent(primary.get('remaining'))}% remaining "
-                f"({self._percent(primary.get('used'))}% used)",
-            ]
+            mode_key = "used" if self._usage_mode == "used" else "remaining"
+            mode_word = (
+                self.config.mode_label_used if self._usage_mode == "used" else self.config.mode_label_remaining
+            )
+
+            def window_line(window: dict[str, Any], fallback: str) -> str:
+                name = self._duration_name(window.get("duration_mins"), fallback)
+                return f"Codex {name}: {self._percent(window.get(mode_key))}% {mode_word}"
+
+            lines = [window_line(primary, "primary")]
             if secondary:
-                lines.append(
-                    f"Codex {self._duration_name(secondary.get('duration_mins'), 'secondary')}: "
-                    f"{self._percent(secondary.get('remaining'))}% remaining "
-                    f"({self._percent(secondary.get('used'))}% used)"
-                )
+                lines.append(window_line(secondary, "secondary"))
             account = self._account_line()
             if account:
                 lines.append(account)
             if self._data.get("stale"):
-                lines.append(f"Cached data: {self._data.get('error') or 'refresh pending'}")
+                reason = str(self._data.get("error") or "").strip()
+                lines.append(f"Cached - {reason}" if reason else "Cached")
             set_tooltip(self, "\n".join(lines))
         refresh_widget_style(*active_widgets)
 
@@ -568,7 +572,7 @@ class CodexUsageWidget(BaseWidget):
         timing_layout = QHBoxLayout(timing)
         timing_layout.setContentsMargins(0, 0, 0, 0)
         timing_layout.setSpacing(8)
-        reset = QLabel("Reset unknown")
+        reset = QLabel("Reset time unknown")
         reset.setProperty("class", "reset")
         timing_layout.addWidget(reset)
         timing_layout.addStretch()
@@ -662,17 +666,15 @@ class CodexUsageWidget(BaseWidget):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(8)
-        title = QLabel("Usage limit resets")
-        title.setProperty("class", "section-title")
-        header_layout.addWidget(title)
-        header_layout.addStretch()
         count = QLabel("")
         count.setProperty("class", "reset-credits-count")
         header_layout.addWidget(count)
+        header_layout.addStretch()
         self._reset_credits_count = count
+        self._reset_credits_header = header
         layout.addWidget(header)
 
-        empty = QLabel("No reset credits available")
+        empty = QLabel("No reset credits on this account")
         empty.setProperty("class", "empty-state reset-credits-empty")
         empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         empty.setVisible(False)
@@ -779,7 +781,7 @@ class CodexUsageWidget(BaseWidget):
             self._overview_tokens = tokens
             layout.addWidget(tokens)
 
-            empty = QLabel("Token history is unavailable")
+            empty = QLabel("No Codex sessions found on this machine")
             empty.setProperty("class", "empty-state")
             empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
             empty.setVisible(False)
@@ -946,6 +948,7 @@ class CodexUsageWidget(BaseWidget):
             value.setProperty("class", f"value {key}")
             layout.addWidget(value, row, 1)
             self._detail_widgets[key] = value
+            self._detail_names[key] = name
 
         error = QLabel("")
         error.setProperty("class", "error")
@@ -1161,6 +1164,9 @@ class CodexUsageWidget(BaseWidget):
         available_count = max(0, int(available_count)) if isinstance(available_count, (int, float)) else 0
         suffix = "credit" if available_count == 1 else "credits"
         self._reset_credits_count.setText(f"{available_count} {suffix}")
+        if is_valid_qobject(self._reset_credits_header):
+            # "0 credits" above "No reset credits on this account" states one fact twice.
+            self._reset_credits_header.setVisible(bool(available_count))
 
         credits = summary.get("credits")
         credit_items = [credit for credit in credits if isinstance(credit, dict)] if isinstance(credits, list) else []
@@ -1168,7 +1174,7 @@ class CodexUsageWidget(BaseWidget):
             if credits is None and available_count:
                 message = f"{available_count} reset {suffix} available; details unavailable"
             else:
-                message = "No reset credits available"
+                message = "No reset credits on this account"
             self._reset_credits_empty.setText(message)
             self._reset_credits_empty.setVisible(not credit_items)
 
@@ -1268,7 +1274,11 @@ class CodexUsageWidget(BaseWidget):
         if self._detail_widgets:
             stale = bool(self._data.get("stale"))
             credits = self._data.get("credits")
-            self._detail_widgets["credits"].setText(str(credits if credits is not None else "--"))
+            has_credits = credits is not None
+            self._detail_widgets["credits"].setText(str(credits) if has_credits else "")
+            self._detail_widgets["credits"].setVisible(has_credits)
+            if "credits" in self._detail_names:
+                self._detail_names["credits"].setVisible(has_credits)
             self._detail_widgets["updated"].setText(self._fmt_updated(self._data.get("fetched_at")))
             self._detail_widgets["status"].setText("Cached" if stale else "Live")
             self._detail_widgets["status"].setProperty("class", f"value status {'stale' if stale else 'live'}")

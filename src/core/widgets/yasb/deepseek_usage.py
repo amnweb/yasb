@@ -36,8 +36,8 @@ _CURRENCY_SYMBOLS: dict[str, str] = {"CNY": "¥", "USD": "$"}
 _ERROR_MESSAGES: dict[str, str] = {
     "no_key": "No API key - set YASB_DEEPSEEK_API_KEY",
     "auth": "API key rejected - check it on platform.deepseek.com",
-    "http": "DeepSeek returned an error - showing last known balance",
-    "network": "DeepSeek unreachable - showing last known balance",
+    "http": "DeepSeek is having trouble - showing the last cached balance",
+    "network": "DeepSeek is unreachable - showing the last cached balance",
 }
 _EMPTY_SUMMARY: dict[str, Any] = {"totals": {}, "series_by_period": {}, "currency": ""}
 
