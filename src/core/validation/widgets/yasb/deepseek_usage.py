@@ -63,6 +63,11 @@ class DeepSeekUsageConfig(CustomBaseModel):
     update_interval: int = Field(default=60, ge=30, le=3600)
     cache_ttl: int = Field(default=120, ge=0, le=3600)
     low_balance_threshold: float = Field(default=0.0, ge=0.0)
+    # DeepSeek's API returns no account identity, so unlike the Claude and Codex widgets
+    # there is no e-mail to read. Set account_label to whatever names the account to you;
+    # left blank, the header falls back to a masked fingerprint of the key in use.
+    show_account: bool = True
+    account_label: str = ""
     spend_history: DeepSeekSpendHistoryConfig = DeepSeekSpendHistoryConfig()
     budget: DeepSeekBudgetConfig = DeepSeekBudgetConfig()
     low_icon: str = ""  # nf-fa-warning, shown via {low}
