@@ -19,7 +19,7 @@ from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, build_progress_widget, refresh_widget_style
 from core.validation.widgets.yasb.claude_usage import ClaudeUsageConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.claude_usage.claude_api import ClaudeUsageService
+from core.widgets.services.claude_usage.claude_api import ClaudeUsageService, read_account
 from core.widgets.services.claude_usage.status import STATUS_LEVELS, ClaudeStatusService
 from core.widgets.services.claude_usage.token_history import TokenHistoryService, summarize
 
@@ -109,6 +109,9 @@ class ClaudeUsageWidget(BaseWidget):
 
         self._service = ClaudeUsageService.get_instance(self.config.update_interval, self.config.cache_ttl)
         self._data: dict[str, Any] = self._service.latest()
+        # Static until the user re-logs in, so read once here and again on a manual refresh
+        # rather than re-parsing a ~95 KB json on every poll.
+        self._account: dict[str, str] = read_account() if self.config.show_account else {}
 
         # Local token-history (optional): scans Claude Code's session transcripts off-thread.
         self._token_service: TokenHistoryService | None = None
@@ -185,6 +188,8 @@ class ClaudeUsageWidget(BaseWidget):
         self._sync_usage_sections()
 
     def _refresh(self) -> None:
+        if self.config.show_account:
+            self._account = read_account()
         self._service.refresh_now()
         if self._status_service is not None:
             self._status_service.refresh_now()
@@ -426,6 +431,24 @@ class ClaudeUsageWidget(BaseWidget):
             logger.debug("invalid reset_datetime_format: %r", self.config.reset_datetime_format)
             return f"{local.month}/{local.day}/{local.year}, {self._clock(local)}"
 
+    def _account_line(self) -> str:
+        """Who these numbers belong to: the email, which is the unambiguous identifier.
+
+        Empty when signed out or when show_account is off, so the caller omits the line
+        entirely rather than rendering a placeholder.
+        """
+        if not self.config.show_account:
+            return ""
+        return self._account.get("email") or self._account.get("name") or ""
+
+    def _account_tooltip(self) -> str:
+        """Fuller account detail on hover, where there is room for the name and org."""
+        parts = [p for p in (self._account.get("name"), self._account.get("email")) if p]
+        organization = self._account.get("organization")
+        if organization:
+            parts.append(organization)
+        return "\n".join(parts)
+
     def _apply_date(self, label: QLabel, reset_iso: str | None) -> None:
         """Set the absolute reset timestamp, hiding the line entirely when it is unknown.
 
@@ -489,6 +512,9 @@ class ClaudeUsageWidget(BaseWidget):
                     f"Claude - 5h: {values['five_hour']}% used / {values['five_hour_remaining']}% left"
                     f" · 7d: {values['seven_day']}% used / {values['seven_day_remaining']}% left"
                 )
+                account = self._account_line()
+                if account:
+                    tip += f"\n{account}"
                 if self._data.get("token_expired"):
                     tip += "\nToken expired - run `claude -p` to refresh"
                 set_tooltip(current_widget, tip)
@@ -538,98 +564,6 @@ class ClaudeUsageWidget(BaseWidget):
         self._sync_token_section()
         self._sync_status()
 
-    def _build_section(self, window: str, title: str, reset_format: str) -> QFrame:
-        value = self._data.get(window)
-        raw = self._data.get(f"{window}_raw")
-        reset_iso = self._data.get(f"{window}_reset_iso")
-        return self._build_bar_frame(window, f"{title} Window", value, raw, reset_iso, reset_format)
-
-    def _build_scoped_sections(self) -> list[QFrame]:
-        """One extra bar per per-model weekly cap (e.g. Fable) the API reports in ``limits[]``.
-
-        Which models get their own cap is decided server-side and can change with the account's
-        plan, so unlike five/seven this list isn't tracked across a live refresh; see the
-        ``scoped:`` handling in _sync_usage_sections. The popup is built once and reused (see
-        _show_menu), so a cap added or dropped after that first build only takes effect once the
-        widget itself is recreated (a YASB config reload/restart) - rare enough not to warrant
-        rebuilding the whole popup for it.
-        """
-        return [
-            self._build_bar_frame(
-                f"scoped:{s['name']}",
-                f"{s['name']} Weekly",
-                s["value"],
-                s["raw"],
-                s["reset_iso"],
-                self.config.seven_day_reset_format,
-            )
-            for s in self._data.get("scoped", [])
-        ]
-
-    def _build_bar_frame(
-        self, key: str, title: str, value: Any, raw: Any, reset_iso: str | None, reset_format: str
-    ) -> QFrame:
-        level = self._level_class(value)
-        frame = QFrame()
-        frame.setProperty("class", "section")
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        # Head: the window's name and its number are one fact, so they share a line. Stacked
-        # apart (name on top, number three rows down) you had to read the whole block and
-        # reassemble them; side by side each window is a single horizontal glance.
-        head = QFrame()
-        head.setProperty("class", "section-head")
-        head_layout = QHBoxLayout(head)
-        head_layout.setContentsMargins(0, 0, 0, 0)
-        head_layout.setSpacing(0)
-
-        title_label = QLabel(title)
-        title_label.setProperty("class", "title")
-        # AlignLeft makes the label take only its own width, so a CSS background renders as a
-        # pill hugging the text. Without it a QLabel fills the row and paints a full-width band.
-        head_layout.addWidget(title_label, 0, Qt.AlignmentFlag.AlignLeft)
-        head_layout.addStretch()
-
-        percent_label = QLabel(f"{self._pct_decimal(raw, value)}%")
-        percent_label.setProperty("class", f"percent {level}")
-        head_layout.addWidget(percent_label)
-        layout.addWidget(head)
-
-        progress = UsageBar(int(value) if isinstance(value, (int, float)) else 0, level)
-        layout.addWidget(progress)
-
-        # Footer: both remaining items answer "when", so they share the closing line rather
-        # than occupying one each - how long is left on the left, the exact moment on the right.
-        footer = QFrame()
-        footer.setProperty("class", "footer")
-        footer_layout = QHBoxLayout(footer)
-        footer_layout.setContentsMargins(0, 0, 0, 0)
-        footer_layout.setSpacing(0)
-
-        reset_label = QLabel(self._reset_phrase(reset_iso, reset_format))
-        reset_label.setProperty("class", "reset")
-        footer_layout.addWidget(reset_label)
-        footer_layout.addStretch()
-
-        date_label = QLabel()
-        date_label.setProperty("class", "date")
-        date_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self._apply_date(date_label, reset_iso)
-        footer_layout.addWidget(date_label)
-
-        layout.addWidget(footer)
-
-        self._section_widgets[key] = {
-            "reset_format": reset_format,
-            "bar": progress,
-            "reset": reset_label,
-            "percent": percent_label,
-            "date": date_label,
-        }
-        return frame
-
     def _build_token_section(self) -> QFrame:
         """Tokens section: a Session/Today/Week/Month/Year toggle, the selected total,
         and an optional usage graph for the selected period."""
@@ -639,28 +573,6 @@ class ClaudeUsageWidget(BaseWidget):
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-
-        if th.show_models:
-            self._model_container = QFrame()
-            self._model_container.setProperty("class", "model-usage")
-            container_layout = QVBoxLayout(self._model_container)
-            container_layout.setContentsMargins(0, 0, 0, 0)
-            container_layout.setSpacing(0)
-            model_title = QLabel("Models")
-            model_title.setProperty("class", "title")
-            container_layout.addWidget(model_title, 0, Qt.AlignmentFlag.AlignLeft)
-            rows = QFrame()
-            rows.setProperty("class", "model-rows")
-            self._model_layout = QGridLayout(rows)
-            self._model_layout.setContentsMargins(0, 0, 0, 0)
-            self._model_layout.setHorizontalSpacing(8)
-            self._model_layout.setVerticalSpacing(4)
-            self._model_layout.setColumnStretch(1, 1)
-            container_layout.addWidget(rows)
-            layout.addWidget(self._model_container)
-        else:
-            self._model_container = None
-            self._model_layout = None
 
         title_label = QLabel("Tokens")
         title_label.setProperty("class", "title")
@@ -695,6 +607,28 @@ class ClaudeUsageWidget(BaseWidget):
             layout.addWidget(graph_container)
         else:
             self._token_graph = None
+
+        # Last in the section: these rows break down the total and graph above them, so they
+        # read as a detail of it. Placed before the title they floated above the section's own
+        # label, belonging to nothing.
+        if th.show_models:
+            self._model_container = QFrame()
+            self._model_container.setProperty("class", "model-usage")
+            container_layout = QVBoxLayout(self._model_container)
+            container_layout.setContentsMargins(0, 0, 0, 0)
+            container_layout.setSpacing(0)
+            rows = QFrame()
+            rows.setProperty("class", "model-rows")
+            self._model_layout = QGridLayout(rows)
+            self._model_layout.setContentsMargins(0, 0, 0, 0)
+            self._model_layout.setHorizontalSpacing(8)
+            self._model_layout.setVerticalSpacing(4)
+            self._model_layout.setColumnStretch(1, 1)
+            container_layout.addWidget(rows)
+            layout.addWidget(self._model_container)
+        else:
+            self._model_container = None
+            self._model_layout = None
 
         self._sync_token_section()
         return frame
@@ -770,16 +704,143 @@ class ClaudeUsageWidget(BaseWidget):
             self._model_layout = None
 
     def _add_menu_sections(self, layout: QVBoxLayout) -> None:
+        """Lay the popup out as one hero reading followed by a compact ledger.
+
+        The 5-hour window is the constraint that actually stops you working, so it gets the
+        hero treatment and answers "how close am I?" on its own. The 7-day window and any
+        per-model weekly caps are slower-moving context, so they compress to one line each.
+        Giving all three equal weight - which is what a uniform list did - left the panel with
+        nothing for the eye to land on.
+        """
         self._section_widgets = {}
-        self._usage_frames = [
-            self._build_section("five", "5-Hour", self.config.five_hour_reset_format),
-            self._build_section("seven", "7-Day", self.config.seven_day_reset_format),
-            *self._build_scoped_sections(),
+        self._usage_frames = [self._build_hero_frame("five", self.config.five_hour_reset_format)]
+
+        secondary = [("seven", "7-day", self.config.seven_day_reset_format)]
+        secondary += [
+            (f"scoped:{s['name']}", s["name"], self.config.seven_day_reset_format) for s in self._data.get("scoped", [])
         ]
+        ledger = self._build_ledger_frame(secondary)
+        if ledger is not None:
+            self._usage_frames.append(ledger)
+
         for frame in self._usage_frames:
             layout.addWidget(frame)
         if self.config.token_history.enabled:
             layout.addWidget(self._build_token_section())
+
+    def _build_hero_frame(self, key: str, reset_format: str) -> QFrame:
+        """The one reading the popup exists to deliver: percentage, what it measures, bar, countdown.
+
+        The percentage is named by a sentence rather than a chip - a bare number means nothing,
+        and a chip here would collide with the chips that label actual sections below.
+        """
+        value = self._data.get(key)
+        raw = self._data.get(f"{key}_raw")
+        reset_iso = self._data.get(f"{key}_reset_iso")
+        level = self._level_class(value)
+
+        frame = QFrame()
+        frame.setProperty("class", "section hero")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        value_label = QLabel(f"{self._pct_decimal(raw, value)}%")
+        value_label.setProperty("class", f"hero-value {level}")
+        layout.addWidget(value_label, 0, Qt.AlignmentFlag.AlignLeft)
+
+        caption = QLabel("of your 5-hour window")
+        caption.setProperty("class", "hero-caption")
+        layout.addWidget(caption, 0, Qt.AlignmentFlag.AlignLeft)
+
+        progress = UsageBar(int(value) if isinstance(value, (int, float)) else 0, level)
+        layout.addWidget(progress)
+
+        footer = QFrame()
+        footer.setProperty("class", "footer")
+        footer_layout = QHBoxLayout(footer)
+        footer_layout.setContentsMargins(0, 0, 0, 0)
+        footer_layout.setSpacing(0)
+        reset_label = QLabel(self._reset_phrase(reset_iso, reset_format))
+        reset_label.setProperty("class", "reset")
+        footer_layout.addWidget(reset_label)
+        footer_layout.addStretch()
+        date_label = QLabel()
+        date_label.setProperty("class", "date")
+        date_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self._apply_date(date_label, reset_iso)
+        footer_layout.addWidget(date_label)
+        layout.addWidget(footer)
+
+        self._section_widgets[key] = {
+            "variant": "hero",
+            "reset_format": reset_format,
+            "bar": progress,
+            "reset": reset_label,
+            "percent": value_label,
+            "date": date_label,
+        }
+        return frame
+
+    def _build_ledger_frame(self, entries: list[tuple[str, str, str]]) -> QFrame | None:
+        """The slower windows, one line each: name, bar, percentage, countdown.
+
+        Tight rows against the hero's generous block is what creates the hierarchy; these are
+        context you scan, not the number you came for.
+        """
+        if not entries:
+            return None
+        frame = QFrame()
+        frame.setProperty("class", "section ledger")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        for key, name, reset_format in entries:
+            if key.startswith("scoped:"):
+                scoped = next(
+                    (s for s in self._data.get("scoped", []) if s["name"] == key.removeprefix("scoped:")),
+                    None,
+                )
+                value = scoped["value"] if scoped else None
+                reset_iso = scoped["reset_iso"] if scoped else None
+            else:
+                value = self._data.get(key)
+                reset_iso = self._data.get(f"{key}_reset_iso")
+            level = self._level_class(value)
+
+            row = QFrame()
+            row.setProperty("class", "row")
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.setSpacing(0)
+
+            name_label = QLabel(name)
+            name_label.setProperty("class", "name")
+            row_layout.addWidget(name_label)
+
+            progress = UsageBar(int(value) if isinstance(value, (int, float)) else 0, level)
+            row_layout.addWidget(progress, 1)
+
+            percent_label = QLabel(f"{self._pct(value)}%")
+            percent_label.setProperty("class", f"percent {level}")
+            percent_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            row_layout.addWidget(percent_label)
+
+            countdown = QLabel(self._fmt_duration(reset_iso))
+            countdown.setProperty("class", "countdown")
+            countdown.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            row_layout.addWidget(countdown)
+
+            layout.addWidget(row)
+            self._section_widgets[key] = {
+                "variant": "ledger",
+                "reset_format": reset_format,
+                "bar": progress,
+                "percent": percent_label,
+                "countdown": countdown,
+            }
+        return frame
 
     def _sync_usage_sections(self) -> None:
         """Update the 5h/7d bars, percentages and reset lines in place when fresh data arrives.
@@ -809,9 +870,17 @@ class ClaudeUsageWidget(BaseWidget):
                     reset_iso = self._data.get(f"{key}_reset_iso")
                 level = self._level_class(value)
                 w["bar"].set_value(int(value) if isinstance(value, (int, float)) else 0, level)
+                if w.get("variant") == "ledger":
+                    # One line: whole percent is enough at this size, and the countdown stands
+                    # in for the full reset phrase.
+                    w["percent"].setText(f"{self._pct(value)}%")
+                    w["percent"].setProperty("class", f"percent {level}")
+                    w["countdown"].setText(self._fmt_duration(reset_iso))
+                    refresh_widget_style(w["percent"])
+                    continue
                 w["reset"].setText(self._reset_phrase(reset_iso, w["reset_format"]))
                 w["percent"].setText(f"{self._pct_decimal(raw, value)}%")
-                w["percent"].setProperty("class", f"percent {level}")
+                w["percent"].setProperty("class", f"hero-value {level}")
                 self._apply_date(w["date"], reset_iso)
                 refresh_widget_style(w["percent"])
         except RuntimeError:
@@ -842,9 +911,26 @@ class ClaudeUsageWidget(BaseWidget):
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
 
+        # Title and account stack, so the header answers "usage for whom" as well as "what".
+        # It matters on a machine signed into more than one account.
+        title_stack = QFrame()
+        title_stack.setProperty("class", "title-stack")
+        title_layout = QVBoxLayout(title_stack)
+        title_layout.setContentsMargins(0, 0, 0, 0)
+        title_layout.setSpacing(0)
+
         title_label = QLabel("Claude Usage")
         title_label.setProperty("class", "text")
-        header_layout.addWidget(title_label)
+        title_layout.addWidget(title_label, 0, Qt.AlignmentFlag.AlignLeft)
+
+        account_text = self._account_line()
+        if account_text:
+            account_label = QLabel(account_text)
+            account_label.setProperty("class", "account")
+            set_tooltip(account_label, self._account_tooltip())
+            title_layout.addWidget(account_label, 0, Qt.AlignmentFlag.AlignLeft)
+
+        header_layout.addWidget(title_stack)
         header_layout.addStretch()
 
         refresh_btn = QPushButton("\U000f0450")

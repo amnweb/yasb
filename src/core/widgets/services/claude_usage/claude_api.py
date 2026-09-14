@@ -71,6 +71,35 @@ def _token_expired() -> bool:
         return False
 
 
+def read_account() -> dict[str, str]:
+    """The signed-in Claude account, for showing *which* account the numbers belong to.
+
+    Claude Code records this in ``~/.claude.json`` under ``oauthAccount`` (the credentials
+    store holds only the token). Only the display fields are read - never the token or the
+    account UUIDs - and nothing here is logged or written to the usage cache.
+
+    Returns empty strings when signed out or unreadable, so callers can simply hide the line.
+    """
+    candidates = [
+        os.path.join(os.path.expanduser("~"), ".claude.json"),
+        os.path.join(_claude_config_dir(), ".claude.json"),
+    ]
+    for path in candidates:
+        try:
+            with open(path, encoding="utf-8") as f:
+                account = json.load(f).get("oauthAccount") or {}
+        except Exception:
+            continue
+        if not isinstance(account, dict):
+            continue
+        email = str(account.get("emailAddress") or "").strip()
+        name = str(account.get("displayName") or "").strip()
+        organization = str(account.get("organizationName") or "").strip()
+        if email or name:
+            return {"email": email, "name": name, "organization": organization}
+    return {"email": "", "name": "", "organization": ""}
+
+
 def _cache_path() -> str:
     return str(app_data_path("claude_usage_cache.json"))
 
