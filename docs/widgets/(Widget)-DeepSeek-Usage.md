@@ -391,6 +391,8 @@ to taste.
     max-height: 6px;
     margin: 16px 0 13px 0;
 }
+/* The bar rests in the product's own colour, so the popup and the bar button that opened
+   it read as one thing, then escalates away from it - identity never looks like a warning. */
 .deepseek-usage-menu .section .progress .fill {
     background-color: #74c7ec;
     border-radius: 3px;

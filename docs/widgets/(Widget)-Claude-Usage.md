@@ -390,12 +390,16 @@ colours to taste.
     min-height: 8px;
     max-height: 8px;
 }
+/* The bar rests in the product's own colour, so the popup and the bar button that opened
+   it read as one thing, then escalates away from it - identity never looks like a warning. */
 .claude-usage-menu .progress .fill {
-    background-color: #47AFF5;
+    background-color: #fab387;
     border-radius: 4px;
 }
-.claude-usage-menu .progress.medium .fill { background-color: #ffc83d; }
-.claude-usage-menu .progress.high .fill { background-color: #ff6b6b; }
+/* Maroon rather than amber: amber sits next to Claude's peach, and a warning you cannot
+   tell from the resting colour is not a warning. */
+.claude-usage-menu .progress.medium .fill { background-color: #eba0ac; }
+.claude-usage-menu .progress.high .fill { background-color: #f38ba8; }
 .claude-usage-menu .reset {
     color: rgba(255, 255, 255, 0.6);
     font-size: 12px;

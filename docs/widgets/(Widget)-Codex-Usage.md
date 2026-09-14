@@ -325,12 +325,15 @@ Qt scales these logical pixel sizes with the active Windows display scale. The c
     min-height: 8px;
     max-height: 8px;
 }
+/* The bar rests in the product's own colour, so the popup and the bar button that opened
+   it read as one thing, then escalates away from it - identity never looks like a warning. */
 .codex-usage-menu .section .progress .fill {
-    background-color: #6ccb5f;
+    background-color: #94e2d5;
     border-radius: 4px;
 }
-.codex-usage-menu .section .progress.low .fill { background-color: #ffc83d; }
-.codex-usage-menu .section .progress.critical .fill { background-color: #ff6b6b; }
+.codex-usage-menu .section .progress.good .fill { background-color: #94e2d5; }
+.codex-usage-menu .section .progress.low .fill { background-color: #f9e2af; }
+.codex-usage-menu .section .progress.critical .fill { background-color: #f38ba8; }
 .codex-usage-menu .section .stats { padding-top: 7px; }
 .codex-usage-menu .section .used {
     color: rgba(255, 255, 255, 0.62);
@@ -341,7 +344,7 @@ Qt scales these logical pixel sizes with the active Windows display scale. The c
     font-size: 14px;
     font-weight: 600;
 }
-.codex-usage-menu .section .remaining.good { color: #6ccb5f; }
+.codex-usage-menu .section .remaining.good { color: #94e2d5; }
 .codex-usage-menu .section .remaining.low { color: #ffc83d; }
 .codex-usage-menu .section .remaining.critical { color: #ff6b6b; }
 .codex-usage-menu .section .timing { padding-top: 6px; }
