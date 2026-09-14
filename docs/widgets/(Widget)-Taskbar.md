@@ -15,6 +15,7 @@ Puts your running apps on the status bar, working just like a standard taskbar. 
 | `callbacks`         | dict    | `{'on_left': 'toggle_window', 'on_middle': 'do_nothing', 'on_right': 'context_menu'}` | Callbacks for mouse events on the widget.                                   |
 | `preview`           | dict    | `{'enabled': False, 'width': 240, 'delay': 400, 'padding': 8, 'margin': 8, 'blur': False, 'peek': False}` | Configuration for window preview thumbnails.                                |
 | `grouping`          | dict    | `{'enabled': False, 'show_count': True}` | Combine all windows of the same app into a single button. |
+| `badge`             | dict    | `{'enabled': False, 'type': 'dot', 'position': 'top-right', 'color': '#ff5555', 'border_color': 'transparent', 'border_width': 0, 'size': 8, 'font_size': 7, 'offset_x': 0, 'offset_y': 0}` | Notification badge painted on the app icon. |
 | `animation`         | dict    | `{'enabled': True, 'duration': 200}` | Configuration for animations when switching between applications. |
 
 ## Example Configuration
@@ -42,6 +43,17 @@ taskbar:
     grouping:
       enabled: false
       show_count: true
+    badge:
+      enabled: false
+      type: "dot"
+      position: "top-right"
+      color: "#ff5555"
+      border_color: "transparent"
+      border_width: 0
+      size: 8
+      font_size: 7
+      offset_x: 0
+      offset_y: 0
     title_label:
       enabled: false
       show: "always"
@@ -82,12 +94,26 @@ taskbar:
 - **grouping:** A dictionary specifying how windows of the same application are combined. It includes:
   - enabled: A boolean flag to combine every window of an application into a single taskbar button.
   - show_count: A boolean flag to show the number of windows on a grouped button. The counter is hidden while the button holds only one window.
+- **badge:** A dictionary specifying the notification badge painted on each app icon. It includes:
+  - enabled: A boolean flag to enable or disable the badge.
+  - type: `"dot"` draws a plain dot, `"number"` also writes the count inside it (`9+` above nine).
+  - position: The icon corner the badge sits in: `"top-right"`, `"top-left"`, `"bottom-right"` or `"bottom-left"`.
+  - color: Fill color of the badge, as a hex (`"#ff5555"`) or color name. CSS functions such as `rgba()` are not accepted.
+  - border_color: Color of the ring around the badge, in the same format. `"transparent"` draws no ring.
+  - border_width: Width of the ring in pixels (0 to 10). The ring is only drawn when this is above 0.
+  - size: Diameter of the badge in pixels (4 to 32).
+  - font_size: Pixel size of the count in `"number"` mode (4 to 24). The count is always bold white.
+  - offset_x: Horizontal nudge in pixels (-20 to 20), positive moves right.
+  - offset_y: Vertical nudge in pixels (-20 to 20), positive moves down.
 
 > Note:
 > When **preview** is enabled **tooltip** are automatically disabled to avoid overlap.
 
 > Note:
 > Applications are grouped by the same identity used for pinning, so a grouped button also takes over the slot of its pinned app. File Explorer windows are identified by their folder, which is what lets you pin folders separately, so they group per folder. The folder is read when the window opens, navigating an existing window does not move it to another group.
+
+> Note:
+> The **badge** shows while one of the app's windows is flashing for attention, or while the app has notifications waiting in Windows Notification Center (checked every 2 seconds). In `"number"` mode it shows the notification count, or `1` when a window is only flashing. The count follows Notification Center, so it clears once those notifications leave it (dismissed there, or removed by the app), not when you focus the app. Reading notifications needs **Settings → System → Notifications → Allow apps to access notifications** switched on. Apps are matched by process name (`WhatsApp.exe` → `whatsapp`) against the app name Notification Center shows, so an app whose process and display names differ may only get the flashing badge. A grouped button shows one badge for all of its windows. The badge is painted inside the `icon_size` box of the icon, so an offset that pushes it past the edge clips it.
 
 ## Available CSS Classes
 ```css
@@ -100,7 +126,7 @@ taskbar:
 .taskbar-widget .app-container.running {} /* container for running apps (not focused) */
 .taskbar-widget .app-container.running.minimized {} /* container for apps whose windows are all minimized */
 .taskbar-widget .app-container.grouped {} /* container holding more than one window of the same app */
-.taskbar-widget .app-container .app-icon {} /* Icon inside the container */
+.taskbar-widget .app-container .app-icon {} /* Icon inside the container. The notification badge is painted over it from the badge options; CSS does not style the badge */
 .taskbar-widget .app-container .app-title {} /* Label inside the container */
 .taskbar-widget .app-container .app-count {} /* Window counter, only shown on grouped containers */
 /* Taskbar preview popup is very limited in styling options, do not use margins/paddings here */
