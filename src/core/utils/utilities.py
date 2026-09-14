@@ -17,6 +17,7 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import (
     QFontMetrics,
+    QFontMetricsF,
     QHideEvent,
     QPainter,
     QPaintEvent,
@@ -72,6 +73,55 @@ def refresh_widget_style(*widgets: QWidget) -> None:
             style.polish(widget)
         except Exception:
             pass
+
+
+def align_label_text(root: QWidget) -> None:
+    """Put every QLabel's text back on its box's left edge.
+
+    Qt insets a QLabel's text whenever its style gives the label a frame, and any padding in
+    the stylesheet does exactly that. With the default indent of -1 the inset is half the
+    width of 'x' in that label's own font, so two stacked labels at different font sizes end
+    up on different left edges even though the layout placed their boxes identically - a
+    10px caption under a 14px heading lands about 2px to the right of it.
+
+    Pinning the indent to 0 leaves the text where the layout already agreed it should be, and
+    leaves horizontal padding free to mean what it says.
+    """
+    if root is None or not is_valid_qobject(root):
+        return
+    for label in root.findChildren(QLabel):
+        label.setIndent(0)
+
+
+def align_label_ink(*labels: QLabel) -> None:
+    """Put the first glyph's ink on a common left edge, for labels meant to share one.
+
+    Aligning boxes is not aligning text. Every glyph carries a left side bearing, and it
+    scales with the type: at 34px a '$' sits 2px inside its box where an 'a' at 11px sits
+    within half a pixel of the edge. A caption under a hero number therefore reads as
+    indented even though the layout put both boxes on the same edge.
+
+    Worse, the bearing belongs to the glyph rather than to the label, so a hero whose value
+    changes from '$' to '1' would shift its own left rail as the number changed. Indenting
+    each label by its distance from the widest bearing in the group fixes the rail in place.
+
+    Call it after the text is set; it re-measures whatever the labels currently say.
+    """
+    measured: list[tuple[QLabel, float]] = []
+    for label in labels:
+        if label is None or not is_valid_qobject(label):
+            continue
+        # The font comes from the stylesheet, which is only resolved once the label is
+        # polished - measuring before that would measure the application default.
+        label.ensurePolished()
+        text = label.text().lstrip()
+        if text:
+            measured.append((label, QFontMetricsF(label.font()).leftBearing(text[0])))
+    if not measured:
+        return
+    widest = max(bearing for _, bearing in measured)
+    for label, bearing in measured:
+        label.setIndent(max(0, round(widest - bearing)))
 
 
 def build_progress_widget(self, options: dict[str, Any]) -> None:

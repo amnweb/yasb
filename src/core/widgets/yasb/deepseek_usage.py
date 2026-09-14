@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayou
 from core.utils.qobject import is_valid_qobject
 from core.utils.stat_popup import GraphWidget
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, refresh_widget_style
+from core.utils.utilities import PopupWidget, align_label_ink, align_label_text, refresh_widget_style
 from core.validation.widgets.yasb.deepseek_usage import DeepSeekUsageConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.deepseek_usage.deepseek_api import (
@@ -563,6 +563,9 @@ class DeepSeekUsageWidget(BaseWidget):
                 label = self._balance_labels.get(key)
                 if label is not None:
                     label.setText(self._fmt_money(self._data.get(key)))
+            # Re-measured here, not at build time: the figure's first glyph is what sets the
+            # rail, and it changes with the balance.
+            align_label_ink(total_label, self._balance_labels.get("caption"))
         except RuntimeError:
             # Popup was destroyed; references are stale until it reopens.
             self._balance_labels = {}
@@ -670,6 +673,8 @@ class DeepSeekUsageWidget(BaseWidget):
             account_label.setProperty("class", "account")
             set_tooltip(account_label, self._account_tooltip())
             title_layout.addWidget(account_label, 0, Qt.AlignmentFlag.AlignLeft)
+            # Title and account are fixed for the life of the popup, so one measure is enough.
+            align_label_ink(title_label, account_label)
 
         header_layout.addWidget(title_stack)
         header_layout.addStretch()
@@ -707,6 +712,8 @@ class DeepSeekUsageWidget(BaseWidget):
         # sections, matching the Claude popup.
         layout.addStretch(1)
 
+        # Before the first measure: the indent it removes is part of each label's width.
+        align_label_text(self._menu)
         self._menu.adjustSize()
         # Lock the width after the first layout so switching periods only changes the height,
         # keeping the bars a constant length between periods.
