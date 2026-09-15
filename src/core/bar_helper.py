@@ -1098,8 +1098,8 @@ class AutoWidthManager(QObject):
             screen_geometry.height(),
         )
 
-        self.bar_widget.setGeometry(bar_x, bar_y, new_width, bar_height)
         self.bar_widget._bar_frame.setGeometry(0, 0, new_width, bar_height)
+        self.bar_widget.setGeometry(bar_x, bar_y, new_width, bar_height)
 
     def sync(self) -> None:
         """Ensure auto width matches the layout after a DPI/geometry change."""

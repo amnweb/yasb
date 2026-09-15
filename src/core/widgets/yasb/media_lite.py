@@ -76,6 +76,7 @@ class MediaWidget(BaseWidget):
         self._empty_thumb_cache: dict[tuple[int, float], QPixmap] = {}
         self._source_icon_cache: dict[tuple[str, float], QPixmap] = {}
         self._default_source_icon: dict[float, QPixmap] = {}
+        self._artwork_dpr: float | None = None
         self._app_volume_session = None
         self._app_is_muted = False
 
@@ -463,6 +464,15 @@ class MediaWidget(BaseWidget):
         artist = (session.artist or "").strip()
         self._popup_title_label.setText(title or "Unknown Title")
         self._popup_artist_label.setText(artist or "Unknown Artist")
+
+    def event(self, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.DevicePixelRatioChange:
+            dpr = self.devicePixelRatioF()
+            if dpr != self._artwork_dpr:
+                self._artwork_dpr = dpr
+                if self.current_session is not None:
+                    self._apply_artwork(self.current_session)
+        return super().event(event)
 
     def _apply_artwork(self, session: SessionState) -> None:
         cover = session.thumbnail

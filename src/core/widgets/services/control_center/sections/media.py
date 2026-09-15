@@ -5,7 +5,7 @@ from collections.abc import Callable
 from typing import Any
 
 from PIL import Image
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot
+from PyQt6.QtCore import QEvent, Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import QMouseEvent, QPainter, QPainterPath, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import (
     QFrame,
@@ -59,6 +59,7 @@ class MediaSectionWidget(QFrame):
         self._current_is_playing: bool | None = None
 
         self._cached_thumb: tuple[int, QPixmap] | None = None
+        self._thumb_dpr: float = self.devicePixelRatioF()
         self._empty_thumb: QPixmap | None = self._build_empty_thumbnail()
 
         self._hide_timer = QTimer(self)
@@ -158,6 +159,23 @@ class MediaSectionWidget(QFrame):
     def refresh_state(self) -> None:
         self._sync_ui(force_thumbnail=True)
 
+    def event(self, event: QEvent) -> bool:
+        # Built before the popup has a screen, so the scale is only known once it is shown
+        if event.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
+            self._update_thumbnail_scale()
+        return super().event(event)
+
+    def _update_thumbnail_scale(self) -> None:
+        dpr = self.devicePixelRatioF()
+        if dpr == self._thumb_dpr:
+            return
+        self._thumb_dpr = dpr
+        self._empty_thumb = self._build_empty_thumbnail()
+        self._cached_thumb = None
+        session = self._media.current_session
+        if session is not None:
+            self._apply_thumbnail(session.thumbnail)
+
     def _hide_now(self) -> None:
         if self._media.current_session is not None:
             return
@@ -224,7 +242,8 @@ class MediaSectionWidget(QFrame):
             self._thumbnail_label.clear()
 
     def _render_thumbnail(self, image: Image.Image) -> QPixmap:
-        size = self.config.thumbnail_size
+        dpr = self._thumb_dpr
+        size = max(1, round(self.config.thumbnail_size * dpr))
         radius = self.config.thumbnail_radius
 
         if image.mode != "RGBA":
@@ -246,16 +265,15 @@ class MediaSectionWidget(QFrame):
         if not source.loadFromData(buf.getvalue()):
             return QPixmap(size, size)
 
-        if radius <= 0:
-            return source
-        return self._apply_rounded_corners(source, size, radius)
+        return self._apply_rounded_corners(source, size, radius, dpr)
 
     def _build_empty_thumbnail(self) -> QPixmap | None:
         try:
             icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "media.png")
             if not os.path.exists(icon_path):
                 return None
-            size = self.config.thumbnail_size
+            dpr = self._thumb_dpr
+            size = max(1, round(self.config.thumbnail_size * dpr))
             radius = self.config.thumbnail_radius
 
             with Image.open(icon_path) as image:
@@ -268,23 +286,25 @@ class MediaSectionWidget(QFrame):
                 if not source.loadFromData(buf.getvalue()):
                     return QPixmap(size, size)
 
-            if radius <= 0:
-                return source
-            return self._apply_rounded_corners(source, size, radius)
+            return self._apply_rounded_corners(source, size, radius, dpr)
         except Exception as e:
             logger.error("Error creating default media thumbnail: %s", e)
             return None
 
-    def _apply_rounded_corners(self, source: QPixmap, size: int, radius: int) -> QPixmap:
+    def _apply_rounded_corners(self, source: QPixmap, size: int, radius: int, dpr: float) -> QPixmap:
+        if radius <= 0:
+            source.setDevicePixelRatio(dpr)
+            return source
         pixmap = QPixmap(size, size)
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         path = QPainterPath()
-        path.addRoundedRect(0, 0, size, size, radius, radius)
+        path.addRoundedRect(0, 0, size, size, radius * dpr, radius * dpr)
         painter.setClipPath(path)
         painter.drawPixmap(0, 0, source)
         painter.end()
+        pixmap.setDevicePixelRatio(dpr)
         return pixmap
 
     def _update_controls(self):

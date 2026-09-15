@@ -3,7 +3,7 @@ from collections.abc import Callable
 from typing import Any
 
 from PIL import Image
-from PyQt6.QtCore import QPoint, QSize, Qt
+from PyQt6.QtCore import QEvent, QPoint, QSize, Qt
 from PyQt6.QtGui import QIcon, QPainter, QPainterPath, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPushButton, QWidget
 
@@ -34,6 +34,7 @@ class SystemControlsSectionWidget(QFrame):
         self._power_menu: QMenu | None = None
         self._profile_image_btn: QPushButton | None = None
         self._profile_menu: QMenu | None = None
+        self._profile_dpr: float | None = None
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -59,20 +60,34 @@ class SystemControlsSectionWidget(QFrame):
     def _build_profile_controls(self, layout: QHBoxLayout):
         self._profile_image_btn = QPushButton(self)
         self._profile_image_btn.setProperty("class", "button profile-image")
-        profile_image_size = self.config.profile_image_size
-        icon = self._build_profile_image_icon(profile_image_size)
-        if icon is not None:
-            self._profile_image_btn.setIcon(icon)
-            self._profile_image_btn.setIconSize(QSize(profile_image_size, profile_image_size))
+        self._update_profile_image()
         self._profile_image_btn.clicked.connect(self._show_profile_menu)
         if self._tooltip:
             set_tooltip(self._profile_image_btn, get_windows_username(), position="top")
         layout.addWidget(self._profile_image_btn)
 
-    def _build_profile_image_icon(self, size: int) -> QIcon | None:
+    def event(self, event: QEvent) -> bool:
+        # Built before the popup has a screen, so the scale is only known once it is shown
+        if event.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
+            self._update_profile_image()
+        return super().event(event)
+
+    def _update_profile_image(self) -> None:
+        dpr = self.devicePixelRatioF()
+        if dpr == self._profile_dpr or not is_valid_qobject(self._profile_image_btn):
+            return
+        self._profile_dpr = dpr
+        size = self.config.profile_image_size
+        icon = self._build_profile_image_icon(size, dpr)
+        if icon is not None:
+            self._profile_image_btn.setIcon(icon)
+            self._profile_image_btn.setIconSize(QSize(size, size))
+
+    def _build_profile_image_icon(self, size: int, dpr: float) -> QIcon | None:
         profile_image_path = get_user_avatar_path()
         if not profile_image_path:
             return None
+        phys = max(1, round(size * dpr))
 
         try:
             with Image.open(profile_image_path) as image:
@@ -89,7 +104,7 @@ class SystemControlsSectionWidget(QFrame):
                 else:
                     square = image
 
-                resized = square.resize((size, size), Image.LANCZOS)
+                resized = square.resize((phys, phys), Image.LANCZOS)
                 buffer = io.BytesIO()
                 resized.save(buffer, format="PNG")
                 pixmap = QPixmap()
@@ -98,15 +113,16 @@ class SystemControlsSectionWidget(QFrame):
         except Exception:
             return None
 
-        rounded = QPixmap(size, size)
+        rounded = QPixmap(phys, phys)
         rounded.fill(Qt.GlobalColor.transparent)
         painter = QPainter(rounded)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         path = QPainterPath()
-        path.addEllipse(0, 0, size, size)
+        path.addEllipse(0, 0, phys, phys)
         painter.setClipPath(path)
         painter.drawPixmap(0, 0, pixmap)
         painter.end()
+        rounded.setDevicePixelRatio(dpr)
         return QIcon(rounded)
 
     def _create_context_menu(self) -> QMenu:

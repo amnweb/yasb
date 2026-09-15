@@ -255,8 +255,8 @@ class Bar(QWidget):
         if extra and self._alignment["position"] == "bottom":
             bar_y -= extra
 
-        self.setGeometry(bar_x, bar_y, bar_width, bar_height + extra)
         self._bar_frame.setGeometry(0, 0, bar_width, bar_height + extra)
+        self.setGeometry(bar_x, bar_y, bar_width, bar_height + extra)
 
     def _add_widgets(self, widgets: dict[str, list] = None):
         bar_layout = QGridLayout()
@@ -323,6 +323,12 @@ class Bar(QWidget):
         if self._animation_manager:
             self._animation_manager.cleanup()
         self.try_remove_app_bar()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        # On a DPI change Qt keeps the old native size when the logical size is unchanged
+        if event.size() != self._bar_frame.size():
+            QTimer.singleShot(0, self.position_bar)
 
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.Type.PaletteChange:

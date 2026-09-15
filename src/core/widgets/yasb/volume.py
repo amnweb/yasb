@@ -2,7 +2,7 @@ import logging
 import re
 
 from PIL import Image
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRect, Qt
+from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRect, Qt
 from PyQt6.QtGui import QImage, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
@@ -240,6 +240,11 @@ class VolumeWidget(BaseWidget):
         """Format session label by removing file extensions and truncating if necessary"""
         name = name.removesuffix(".exe").replace(".", " ").title()
         return name if len(name) <= 23 else f"{name[:20]}..."
+
+    def event(self, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.DevicePixelRatioChange:
+            self._dpi = self.devicePixelRatioF()
+        return super().event(event)
 
     def _get_process_icon_pixmap(self, pid: int, icon_size: int = 16, force_grayscale: bool = False) -> QPixmap | None:
         """Get icon for a process and convert to QPixmap with DPI-aware caching"""

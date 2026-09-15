@@ -6,7 +6,7 @@ import struct
 import subprocess
 import threading
 
-from PyQt6.QtCore import QPointF, QRectF, QTimer, pyqtSignal
+from PyQt6.QtCore import QEvent, QPointF, QRectF, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath
 from PyQt6.QtWidgets import QApplication, QFrame, QLabel
 
@@ -37,6 +37,12 @@ class CavaBar(QFrame):
             )
         )
         self.setContentsMargins(0, 0, 0, 0)
+
+    def event(self, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.DevicePixelRatioChange:
+            self._dpr = None
+            self.update()
+        return super().event(event)
 
     def _device_pixel_ratio(self, painter: QPainter) -> float:
         """Return device pixel ratio for the painter's device."""

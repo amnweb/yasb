@@ -4,7 +4,7 @@ import logging
 import win32con
 import win32gui
 from PIL import Image
-from PyQt6.QtCore import QEasingCurve, QMimeData, QPropertyAnimation, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QEasingCurve, QEvent, QMimeData, QPropertyAnimation, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor, QDrag, QImage, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
@@ -982,6 +982,34 @@ class TaskbarWidget(BaseWidget):
                 self._thumbnail_mgr.hide_preview()
         except Exception:
             pass
+
+    def event(self, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.DevicePixelRatioChange:
+            dpr = self.devicePixelRatioF()
+            if dpr != self._dpi:
+                self._dpi = dpr
+                self._reload_icons()
+        return super().event(event)
+
+    def _reload_icons(self) -> None:
+        for hwnd, widget in list(self._hwnd_to_widget.items()):
+            if not is_valid_qobject(widget):
+                continue
+            icon_label = self._get_icon_label(widget)
+            if not icon_label:
+                continue
+            if hwnd < 0:
+                unique_id = widget.property("unique_id")
+                icon = self._load_cached_icon(unique_id) if unique_id else None
+            elif hwnd in self._window_buttons:
+                title, _, _, process = self._window_buttons[hwnd]
+                icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
+                self._window_buttons[hwnd] = (title, icon, hwnd, process)
+            else:
+                continue
+            # A grouped button is shared by its windows, only the representing window's icon is shown
+            if icon is not None and getattr(widget, "_hwnd", hwnd) == hwnd:
+                icon_label.setPixmap(icon)
 
     def showEvent(self, event):
         try:
