@@ -110,16 +110,15 @@ Source is a **16px app icon** (tooltip shows the app name). The volume icon **al
 
 ```css
 .media-lite-widget {}
-.media-lite-widget .widget-container {}
-.media-lite-widget .thumbnail {}
-.media-lite-widget .text {}
-.media-lite-widget .label {}
-.media-lite-widget .title {}
-.media-lite-widget .artist {}
+.media-lite-widget .widget-container {}  /* holds the thumbnail and the text container */
+.media-lite-widget .thumbnail {}         /* album art in the bar (show_thumbnail) */
+.media-lite-widget .text {}              /* text container: holds .label, or .title and .artist */
+.media-lite-widget .label {}             /* one line "title - artist" (scrolling_label: true) */
+.media-lite-widget .title {}             /* track title (scrolling_label: false) */
+.media-lite-widget .artist {}            /* artist below the title (scrolling_label: false) */
 
 .media-lite-menu {}
 .media-lite-menu .header {}
-.media-lite-menu .artwork-background {}
 .media-lite-menu .thumbnail {}
 .media-lite-menu .controls {}
 .media-lite-menu .title {}

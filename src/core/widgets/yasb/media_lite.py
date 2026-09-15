@@ -17,6 +17,8 @@ from PyQt6.QtWidgets import (
     QLabel,
     QSizePolicy,
     QSlider,
+    QStyle,
+    QStyleOption,
     QVBoxLayout,
     QWidget,
 )
@@ -253,7 +255,6 @@ class MediaWidget(BaseWidget):
         outer.setSpacing(0)
 
         self._artwork_bg_label = QLabel(self.dialog)
-        self._artwork_bg_label.setProperty("class", "artwork-background")
         self._artwork_bg_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._artwork_bg_label.setScaledContents(True)
         self._artwork_bg_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
@@ -615,13 +616,39 @@ class MediaWidget(BaseWidget):
                 alpha = cropped.getchannel("A")
                 alpha = alpha.point(lambda a: int(a * opacity))
                 cropped.putalpha(alpha)
-            pix = QPixmap.fromImage(ImageQt(cropped).copy())
-            pix.setDevicePixelRatio(dpr)
-            self._artwork_bg_label.setPixmap(pix)
+            self._artwork_bg_label.setPixmap(self._clip_to_menu(cropped, dpr))
             self._artwork_bg_label.show()
         except Exception as e:
             logger.error("Error updating artwork background: %s", e)
             self._artwork_bg_label.hide()
+
+    def _clip_to_menu(self, image: Image.Image, dpr: float) -> QPixmap:
+        # Qt stylesheets don't clip child widgets, so we cut the artwork to the menu shape ourselves.
+        # A hidden copy of the menu frame paints the shape with solid colors (only alpha matters),
+        # then the artwork is kept inside it and the border is erased.
+        # We don't use render() here, it resizes the popup and triggers ArtworkResizeFilter again.
+        art = ImageQt(image)
+        art.setDevicePixelRatio(dpr)
+        pix = QPixmap(art.size())
+        pix.setDevicePixelRatio(dpr)
+        pix.fill(Qt.GlobalColor.transparent)
+        probe = QFrame(self.dialog)
+        probe.deleteLater()
+        probe.setProperty("class", "media-lite-menu")
+        probe.setStyleSheet("background: #000; border-color: transparent;")
+        probe.ensurePolished()
+        option = QStyleOption()
+        option.initFrom(probe)
+        option.rect = self.dialog.rect()
+        painter = QPainter(pix)
+        probe.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, option, painter, probe)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+        painter.drawImage(0, 0, art)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationOut)
+        probe.setStyleSheet("background: transparent; border-color: #000;")
+        probe.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, option, painter, probe)
+        painter.end()
+        return pix
 
     def _get_source_app_icon(self, aumid: str) -> QPixmap | None:
         if not aumid:
