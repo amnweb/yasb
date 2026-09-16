@@ -1,4 +1,5 @@
 import logging
+import re
 import socket
 import ssl
 import urllib.error
@@ -6,6 +7,7 @@ import urllib.request
 from datetime import datetime
 from urllib.parse import urlparse
 
+from ping3 import ping
 from PyQt6.QtCore import QThread, pyqtSignal
 
 logger = logging.getLogger("server_monitor")
@@ -69,19 +71,61 @@ class ServerCheckWorker(QThread):
             return
 
         server_statuses: list[dict] = []
-
+        octet = r"(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
+        ip_part = rf"{octet}(?:\.{octet}){{3}}"
+        port_part = r"(?:[1-9]\d{0,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])"
+        pattern = rf"\b(?P<ip>{ip_part})(?::(?P<port>{port_part}))?\b"
+        pattern_ip = r"^\d"
         for server in self.servers:
             if not self.running:
                 break
+            match = re.finditer(pattern, server["url"])
+            ip_port = next(match, None)
+            is_ip = re.findall(pattern_ip, server["url"])
+            if is_ip and ip_port:
+                ip, port = ip_port.group("ip"), ip_port.group("port")
+                status = self.ping_ip_port(ip, port, self.timeout)
+            else:
+                status = self.check_single_server(server["url"], server["ssl_port"], server["ssl_check"], self.timeout)
 
-            status = self.check_single_server(server["url"], self.ssl_verify, self.ssl_check, self.timeout)
             status["name"] = server["name"]
             server_statuses.append(status)
 
         self.status_updated.emit(server_statuses)
 
-    def check_single_server(self, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict:
-        ping_result = self.ping_server(server, ssl_verify, ssl_check, timeout)
+    def ping_ip_port(self, host: str, port: int, timeout: int) -> dict:
+        """Check server availability and collect status information."""
+        status = {
+            "url": host + ":" + str(port) if port else host,
+            "ssl": None,
+            "response_time": None,
+            "response_code": 0,
+            "status": "Offline",
+            "no_internet": True,
+        }
+        if port is None:
+            try:
+                # 超时设为2秒，返回毫秒值
+                delay = ping(host, timeout=timeout, unit="ms")
+                if delay is not None:
+                    status["status"] = "Online"
+                    status["response_time"] = f"{delay:.2f} ms"
+            except Exception as e:
+                ex = f"Ping error {e}"
+                logger.warning(ex)
+        else:
+            # Configure SSL context if needed
+            try:
+                with socket.create_connection((host, port), timeout=timeout):
+                    status["status"] = "Online"
+                    status["response_time"] = 0
+            except Exception as e:
+                ex = f"Socket error {e}"
+                logger.warning(ex)
+        return status
+
+    def check_single_server(self, server: str, ssl_port: int, ssl_check: bool, timeout: int) -> dict:
+        ping_result = self.ping_server(server, ssl_port, ssl_check, timeout)
 
         return {
             "url": server,
@@ -92,12 +136,18 @@ class ServerCheckWorker(QThread):
             "no_internet": ping_result.get("no_internet", False),
         }
 
-    def ping_server(self, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict:
+    def ping_server(self, server: str, ssl_port: bool, ssl_check: bool, timeout: int) -> dict:
         """Check server availability and collect status information."""
         http_status = None
         response_time = None
-        final_hostname = server
-        url = f"https://{server}" if ssl_check else f"http://{server}"
+        final_hostname = None
+        ssl_verify = False
+        # http https
+        pattern = r"^https?://"
+        match = re.match(pattern, server)
+        if match:
+            ssl_verify = True
+        url = server
 
         # Configure SSL context if needed
         context = ssl.create_default_context() if not ssl_verify else None
@@ -112,8 +162,8 @@ class ServerCheckWorker(QThread):
             try:
                 with urllib.request.urlopen(request, timeout=timeout, context=context) as response:
                     http_status = response.status
-                    parsed_url = urlparse(response.url)
-                    final_hostname = parsed_url.netloc or server
+                    # parsed_url = urlparse(response.url)
+                    final_hostname = urlparse(url).hostname
             except urllib.error.HTTPError as e:
                 http_status = e.code
 
@@ -139,7 +189,9 @@ class ServerCheckWorker(QThread):
         status = "Online" if http_status is not None and http_status < 500 else "Offline"
 
         # Only attempt SSL expiry checks when online.
-        ssl_days = self.check_ssl_expiry(final_hostname, timeout) if (ssl_check and status == "Online") else None
+        ssl_days = (
+            self.check_ssl_expiry(final_hostname, ssl_port, timeout) if (ssl_check and status == "Online") else None
+        )
 
         return {
             "status": status,
@@ -149,10 +201,10 @@ class ServerCheckWorker(QThread):
             "no_internet": False,
         }
 
-    def check_ssl_expiry(self, hostname: str, timeout: int) -> int | None:
+    def check_ssl_expiry(self, hostname: str, port: int, timeout: int) -> int | None:
         try:
             context = ssl.create_default_context()
-            with socket.create_connection((hostname, 443), timeout=timeout) as sock:
+            with socket.create_connection((hostname, port), timeout=timeout) as sock:
                 with context.wrap_socket(sock, server_hostname=hostname) as ssock:
                     cert = ssock.getpeercert()
                     exp_date = datetime.strptime(cert["notAfter"], "%b %d %H:%M:%S %Y %Z")
