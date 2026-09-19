@@ -1,3 +1,4 @@
+import math
 import threading
 import unittest
 from dataclasses import replace
@@ -491,13 +492,23 @@ class WorkspaceWidgetTests(unittest.TestCase):
         self.app.processEvents()
         button = widget._buttons[DISPLAY1, 0]
         size = button.size()
-        image = button.grab().toImage()
-        self.assertEqual(image.pixelColor(image.width() // 2, image.height() - 1).name(), "#40ff40")
+
+        def underline_band():
+            # grab() renders at the screen's device pixel ratio, so the 2px logical
+            # border spans ceil(2 * ratio) physical rows and the outermost one may be
+            # a partially covered blend rather than the pure border colour. Sample the
+            # whole band so the assertion holds at any display scale.
+            pixmap = button.grab()
+            image = pixmap.toImage()
+            rows = math.ceil(2 * pixmap.devicePixelRatio())
+            x = image.width() // 2
+            return {image.pixelColor(x, image.height() - 1 - row).name() for row in range(rows)}
+
+        self.assertIn("#40ff40", underline_band())
         self.client.publish(replace(self.client.snapshot, focused_monitor_device_name=DISPLAY2, revision=2))
         self.app.processEvents()
         self.assertEqual(button.size(), size)
-        image = button.grab().toImage()
-        self.assertNotEqual(image.pixelColor(image.width() // 2, image.height() - 1).name(), "#40ff40")
+        self.assertNotIn("#40ff40", underline_band())
 
     def test_null_focus_has_no_indicator_and_uses_inactive_icon_treatment(self):
         self.client.snapshot = replace(snapshot((Window(1, False, False),), active=1), focused_monitor_device_name=None)
