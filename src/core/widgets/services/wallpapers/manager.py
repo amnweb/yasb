@@ -99,6 +99,9 @@ class WallpaperManager(QObject):
             logging.error("Failed to set wallpaper: %s", e)
             self._is_running = False
             return
+        # Consumers such as the wallpaper colors service key off this instead
+        # of re-using set_wallpaper_signal, which is wired to change_background.
+        self._event_service.emit_event("wallpaper_changed", os.path.abspath(image_path))
         self._run_after_thread(image_path)
 
     def get_monitor_ids(self) -> list[str]:

@@ -46,9 +46,30 @@ Valid options are:
 | `update_check`      | boolean  | `true`   | Enable automatic update check. This works only if the application is installed. |
 | `show_systray`      | boolean  | `true`   | Show or hide the YASB system tray icon. |
 | `system_colors`     | boolean  | `false`  | Enable automatic generation of CSS variables from Windows theme colors. |
+| `wallpaper_colors`  | object   | [See below](#wallpaper-colors-configuration) | Watch the wallpaper and publish its palette as CSS variables. |
 | `tooltip`           | object   | [See below](#tooltip-configuration) | Global tooltip configuration. |
 | `komorebi`      | object  | [See below](#komorebi-settings-for-tray-menu)   | Komorebi configuration for tray menu. |
 | `glazewm`      | object  | [See below](#glazewm-settings-for-tray-menu)   | Glazewm configuration for tray menu. |
+
+## Wallpaper Colors Configuration
+
+Optional watcher that extracts a color palette from the desktop wallpaper. Whenever the wallpaper changes, YASB saves a palette file and (with `auto_apply`) recolors the bar to match.
+
+| Option       | Type    | Default | Description |
+|--------------|---------|---------|-------------|
+| `enabled`    | boolean | `false` | Master switch for the wallpaper watcher. |
+| `auto_apply` | boolean | `true`  | Recolor the bar background automatically. Set to `false` to only publish the CSS variables for use in your own `styles.css` rules. |
+
+```yaml
+wallpaper_colors:
+  enabled: true
+  auto_apply: true
+```
+
+The palette file is written to `yasb_wallpaper_colors.css` in your config directory and contains `--wallpaper-color-1` (dominant), `--wallpaper-color-2`, `--wallpaper-color-3`, plus derived `--wallpaper-accent` and `--wallpaper-text` variables (each also available as an `-rgb` variant). See [Wallpaper Colors](Styling#wallpaper-colors) in the styling guide. Turning `enabled` off (or stopping YASB) removes the file and reverts the bar.
+
+> **Note:**
+> Changes apply live; no restart needed. The feature watches the wallpaper of the primary monitor.
 
 ## Logging and Debugging
 YASB provides detailed logging to help troubleshoot widget or configuration issues.

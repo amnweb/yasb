@@ -5936,6 +5936,23 @@
       "title": "GithubNotificationsProviderConfig",
       "type": "object"
     },
+    "WallpaperColorsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "auto_apply": {
+          "default": true,
+          "title": "Auto Apply",
+          "type": "boolean"
+        }
+      },
+      "title": "WallpaperColorsConfig",
+      "type": "object"
+    },
     "GlazeWMConfig": {
       "additionalProperties": false,
       "properties": {
@@ -16068,6 +16085,13 @@
       "default": false,
       "title": "System Colors",
       "type": "boolean"
+    },
+    "wallpaper_colors": {
+      "$ref": "#/$defs/WallpaperColorsConfig",
+      "default": {
+        "auto_apply": true,
+        "enabled": false
+      }
     },
     "tooltip": {
       "$ref": "#/$defs/TooltipOptions",

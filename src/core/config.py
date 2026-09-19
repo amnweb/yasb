@@ -13,6 +13,7 @@ from yaml.parser import ParserError
 from core.utils.alert_dialog import raise_info_alert
 from core.utils.css_processor import CSSProcessor
 from core.utils.validation_errors import format_pydantic_errors_to_yaml
+from core.utils.wallpaper_palette import load_generated_css
 from core.validation.config import YasbConfig
 from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME, GITHUB_URL
 
@@ -122,6 +123,10 @@ def get_stylesheet(show_error_dialog: bool = False) -> str | None:
     try:
         css_processor = CSSProcessor(styles_path)
         css_content = css_processor.process()
+        # The wallpaper watcher appends its palette as literal hex, so an enabled
+        # feature applies itself even when the user never edits their styles.css.
+        if generated := load_generated_css():
+            css_content += generated
         return css_content
 
     except SyntaxErr as e:

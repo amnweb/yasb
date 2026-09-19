@@ -20,6 +20,7 @@ from core.ui.views.welcome import run_setup_wizard
 from core.utils.controller import start_cli_server
 from core.utils.system_colors import SystemColorsService
 from core.utils.update_service import get_update_service, start_update_checker
+from core.utils.wallpaper_colors import WallpaperColorsService
 from core.utils.win32.constants import ERROR_ALREADY_EXISTS
 from core.watcher import create_observer
 from env import load_env, set_font_engine
@@ -132,6 +133,14 @@ async def main_async(app: YASBApplication):
         # Initialize system colors service
         if config.system_colors:
             SystemColorsService.start_service()
+
+        # Initialize wallpaper colors (palette watcher) service
+        if config.wallpaper_colors.enabled:
+            service = WallpaperColorsService.start_service(auto_apply=config.wallpaper_colors.auto_apply)
+            service.stylesheet_changed.connect(manager.styles_modified)
+            app.aboutToQuit.connect(WallpaperColorsService.stop_service)
+        else:
+            WallpaperColorsService.remove_stale_files()
 
         # Build system tray icon
         if config.show_systray:

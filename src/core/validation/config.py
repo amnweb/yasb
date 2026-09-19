@@ -29,6 +29,13 @@ class GlazeWMConfig(CustomBaseModel):
     reload_command: str | None = None
 
 
+class WallpaperColorsConfig(CustomBaseModel):
+    """Wallpaper watcher: extract a palette from the desktop wallpaper and apply it to the bar."""
+
+    enabled: bool = False
+    auto_apply: bool = True
+
+
 class YasbConfig(CustomBaseModel):
     watch_config: bool = True
     watch_stylesheet: bool = True
@@ -36,6 +43,7 @@ class YasbConfig(CustomBaseModel):
     update_check: bool = True
     show_systray: bool = True
     system_colors: bool = False
+    wallpaper_colors: WallpaperColorsConfig = WallpaperColorsConfig()
     tooltip: TooltipOptions = TooltipOptions()
     komorebi: KomorebiConfig = KomorebiConfig()
     glazewm: GlazeWMConfig = GlazeWMConfig()

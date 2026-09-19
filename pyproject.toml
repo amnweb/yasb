@@ -67,6 +67,7 @@ dev = [
     "pyqt6-stubs",
     "types-pillow",
     "types-pywin32",
+    "pytest>=8.0",
 ]
 packaging = [
     "cx-freeze==8.6.4"
@@ -80,6 +81,10 @@ pattern = "BUILD_VERSION = \"(?P<version>[^\"]+)\""
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/core"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 120

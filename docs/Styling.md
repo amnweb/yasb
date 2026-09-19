@@ -457,6 +457,33 @@ Available color variables (each provides both a `var(--name)` and a `var(--name-
 - `--yasb-background`
 - `--yasb-foreground`
 
+## Wallpaper Colors
+YASB can extract a color palette from your desktop wallpaper and provide it as CSS variables. Enable it with `wallpaper_colors: { enabled: true }` in your `config.yaml` (see [Wallpaper Colors Configuration](Configuration#wallpaper-colors-configuration)).
+
+Whenever the wallpaper changes, YASB regenerates `yasb_wallpaper_colors.css` in your configuration directory. With the default `auto_apply: true`, the bar's background and text color follow the wallpaper automatically - no CSS editing required. With `auto_apply: false`, the file only provides variables you can use in your own rules:
+
+```css
+.yasb-bar {
+    background-color: var(--wallpaper-color-1);
+    border-bottom: 1px solid var(--wallpaper-accent);
+}
+
+.clock-widget {
+    color: var(--wallpaper-text);
+    border-color: rgba(var(--wallpaper-color-3-rgb), 0.4);
+}
+```
+
+Available variables (each color also has an `-rgb` variant for use in `rgba()`):
+- `--wallpaper-color-1` - dominant wallpaper color
+- `--wallpaper-color-2` - second most common color
+- `--wallpaper-color-3` - third most common color
+- `--wallpaper-accent` - the most vivid of the three, for highlights
+- `--wallpaper-text` - white or near-black, whichever is readable over color-1
+
+> **Note:**
+> The variables hold literal hex values resolved before Qt applies the stylesheet, so they also work in places Qt's own `var()` support does not reach.
+
 ## Icons
 There is a nice app at [Character Map UWP](https://github.com/character-map-uwp/Character-Map-UWP) where you can select a font, click on icons, and copy the UTF-16 value. Alternatively, you can visit the Nerd Fonts site and do the same under the icons section.
 

@@ -23,3 +23,4 @@ DEFAULT_CONFIG_DIRECTORY = os.getenv("YASB_CONFIG_HOME") or os.path.join(os.path
 DEFAULT_STYLES_FILENAME = "styles.css"
 DEFAULT_CONFIG_FILENAME = "config.yaml"
 DEFAULT_LOG_FILENAME = "yasb.log"
+WALLPAPER_COLORS_FILENAME = "yasb_wallpaper_colors.css"
