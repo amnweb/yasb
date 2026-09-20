@@ -32,7 +32,7 @@ from winrt.windows.devices.wifi import WiFiConnectionStatus
 
 from core.ui.components.loader import LoaderLine
 from core.utils.qobject import is_valid_qobject
-from core.utils.utilities import PopupWidget, refresh_widget_style
+from core.utils.utilities import ElidedLabel, PopupWidget, refresh_widget_style
 from core.utils.win32.utils import apply_qmenu_style
 from core.validation.widgets.yasb.wifi import WifiMenuConfig  # type: ignore
 from core.widgets.services.wifi.wifi_managers import (
@@ -109,7 +109,7 @@ class WifiItem(QFrame):
         self.wifi_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.wifi_icon.setContentsMargins(0, 0, 0, 0)
 
-        self.wifi_name = QLabel(self)
+        self.wifi_name = ElidedLabel(parent=self)
         self.wifi_name.setProperty("class", "name")
 
         # Right container
@@ -136,8 +136,7 @@ class WifiItem(QFrame):
         self.right_container_layout.addWidget(self.wifi_strength)
 
         self.wifi_details_container_layout.addWidget(self.wifi_icon)
-        self.wifi_details_container_layout.addWidget(self.wifi_name)
-        self.wifi_details_container_layout.addStretch()
+        self.wifi_details_container_layout.addWidget(self.wifi_name, 1)
         self.wifi_details_container_layout.addWidget(self.right_container)
 
         # Controls container
