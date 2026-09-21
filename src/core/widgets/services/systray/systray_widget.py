@@ -252,6 +252,13 @@ class DropWidget(QFrame):
         self.dragged_button: IconWidget | None = None
         self._hover_btn: IconWidget | None = None
 
+    def update_content_width(self) -> None:
+        """Keep enough horizontal space for every visible tray icon."""
+        visible_icons = [icon for icon in self._get_all_icons() if not icon.isHidden()]
+        width = sum(icon.sizeHint().width() for icon in visible_icons)
+        width += max(0, len(visible_icons) - 1) * self.main_layout.spacing()
+        self.setMinimumWidth(width)
+
     @staticmethod
     def _set_class(widget: QWidget, name: str, add: bool):
         """Add or remove a CSS class and refresh the widget style."""
@@ -335,6 +342,7 @@ class DropWidget(QFrame):
 
         self.main_layout.insertWidget(insert_index, source)
         source.show()
+        self.update_content_width()
         self.dragged_button = None
         a0.acceptProposedAction()
         self.drag_ended.emit()
