@@ -113,6 +113,7 @@ choco install yasb
 | [Media Lite](https://github.com/amnweb/yasb/wiki/(Widget)-Media-Lite) | A vertical and minimal album-style media widget. |
 | [Memory](https://github.com/amnweb/yasb/wiki/(Widget)-Memory) | Shows current memory usage and information. |
 | [Microphone](https://github.com/amnweb/yasb/wiki/(Widget)-Microphone) | Displays the current microphone status. |
+| [Microsoft Teams Status](https://github.com/amnweb/yasb/wiki/(Widget)-MS-Teams-Status) | Shows your Microsoft Teams presence and lets you change it. |
 | [Notifications](https://github.com/amnweb/yasb/wiki/(Widget)-Notifications) | Shows the number of notifications from Windows. |
 | [Notes](https://github.com/amnweb/yasb/wiki/(Widget)-Notes) | A simple notes widget that allows you to add, delete, and view notes. |
 | [OBS](https://github.com/amnweb/yasb/wiki/(Widget)-Obs) | Integrates with OBS Studio to show various streaming information. |
