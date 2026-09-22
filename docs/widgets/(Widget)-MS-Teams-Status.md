@@ -281,4 +281,4 @@ Each status has a key used in `status_colours` and `status_icons`, and a CSS cla
 ```
 
 ## Preview of the Widget
-![Microsoft Teams Status YASB Widget](assets/ms_teams_status_widget.png)
+![Microsoft Teams Status YASB Widget](assets/8af88592-613f-471a-91a8-7812c5a3614d.png)
