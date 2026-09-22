@@ -3,110 +3,9 @@
 import logging
 import re
 
-from pycaw.pycaw import DEVICE_STATE, AudioUtilities, EDataFlow, ERole
-
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_VOLUME, ICON_VOLUME_DOWN, ICON_VOLUME_UP
-
-
-def _get_volume_interface():
-    """Get the default audio output device's volume interface."""
-    try:
-        speakers = AudioUtilities.GetSpeakers()
-        if speakers:
-            return speakers.EndpointVolume
-    except Exception as e:
-        logging.debug("Failed to get audio device: %s", e)
-    return None
-
-
-def _get_volume() -> tuple[int | None, bool]:
-    """Return (volume_percent, is_muted) or (None, False) on failure."""
-    volume = _get_volume_interface()
-    if volume is None:
-        return None, False
-    try:
-        level = volume.GetMasterVolumeLevelScalar()
-        muted = volume.GetMute() != 0
-        return round(level * 100), muted
-    except Exception as e:
-        logging.debug("Failed to read volume: %s", e)
-        return None, False
-
-
-def _set_volume(percent: int) -> bool:
-    """Set volume to percent (0-100). Returns True on success."""
-    volume = _get_volume_interface()
-    if volume is None:
-        return False
-    try:
-        clamped = max(0, min(100, percent))
-        volume.SetMasterVolumeLevelScalar(clamped / 100, None)
-        return True
-    except Exception as e:
-        logging.error("Failed to set volume: %s", e)
-        return False
-
-
-def _toggle_mute() -> bool | None:
-    """Toggle mute. Returns new mute state or None on failure."""
-    volume = _get_volume_interface()
-    if volume is None:
-        return None
-    try:
-        current = volume.GetMute()
-        volume.SetMute(not current, None)
-        return not current
-    except Exception as e:
-        logging.error("Failed to toggle mute: %s", e)
-        return None
-
-
-def _set_mute(muted: bool) -> bool:
-    """Set mute state. Returns True on success."""
-    volume = _get_volume_interface()
-    if volume is None:
-        return False
-    try:
-        volume.SetMute(muted, None)
-        return True
-    except Exception as e:
-        logging.error("Failed to set mute: %s", e)
-        return False
-
-
-def _get_all_devices() -> list[tuple[str, str]]:
-    """List all active audio output devices as (device_id, friendly_name)."""
-    try:
-        devices = AudioUtilities.GetAllDevices(
-            data_flow=EDataFlow.eRender.value,
-            device_state=DEVICE_STATE.ACTIVE.value,
-        )
-        return [(d.id, d.FriendlyName) for d in devices]
-    except Exception as e:
-        logging.debug("Failed to enumerate audio devices: %s", e)
-        return []
-
-
-def _get_default_device_id() -> str | None:
-    """Return the ID of the current default audio output device."""
-    try:
-        enumerator = AudioUtilities.GetDeviceEnumerator()
-        default = enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender.value, ERole.eConsole.value)
-        return default.GetId()
-    except Exception as e:
-        logging.debug("Failed to get default device ID: %s", e)
-        return None
-
-
-def _set_default_device(device_id: str) -> bool:
-    """Switch default audio output device. Returns True on success."""
-    try:
-        AudioUtilities.SetDefaultDevice(device_id, roles=[ERole.eConsole])
-        return True
-    except Exception as e:
-        logging.error("Failed to set default audio device: %s", e)
-        return False
+from core.widgets.services.volume.service import AudioOutputService
 
 
 class VolumeProvider(BaseProvider):
@@ -123,6 +22,65 @@ class VolumeProvider(BaseProvider):
     def __init__(self, config: dict | None = None):
         super().__init__(config)
         self.step: int = self.config.get("step", 5)
+        self._service = AudioOutputService()
+
+    # ── Audio helpers (delegate to AudioOutputService) ─────────────────
+
+    def _get_volume(self) -> tuple[int | None, bool]:
+        """Return (volume_percent, is_muted) or (None, False) on failure."""
+        volume = self._service.get_volume_interface()
+        if volume is None:
+            return None, False
+        try:
+            level = volume.GetMasterVolumeLevelScalar()
+            muted = volume.GetMute() != 0
+            return round(level * 100), muted
+        except Exception as e:
+            logging.debug("Failed to read volume: %s", e)
+            return None, False
+
+    def _set_volume(self, percent: int) -> bool:
+        """Set volume to percent (0-100). Returns True on success."""
+        volume = self._service.get_volume_interface()
+        if volume is None:
+            return False
+        try:
+            current = volume.GetMute()
+            if current:
+                volume.SetMute(not current, None)
+            clamped = max(0, min(100, percent))
+            volume.SetMasterVolumeLevelScalar(clamped / 100, None)
+            return True
+        except Exception as e:
+            logging.error("Failed to set volume: %s", e)
+            return False
+
+    def _toggle_mute(self) -> bool | None:
+        """Toggle mute. Returns new mute state or None on failure."""
+        volume = self._service.get_volume_interface()
+        if volume is None:
+            return None
+        try:
+            current = volume.GetMute()
+            volume.SetMute(not current, None)
+            return not current
+        except Exception as e:
+            logging.error("Failed to toggle mute: %s", e)
+            return None
+
+    def _set_mute(self, muted: bool) -> bool:
+        """Set mute state. Returns True on success."""
+        volume = self._service.get_volume_interface()
+        if volume is None:
+            return False
+        try:
+            volume.SetMute(muted, None)
+            return True
+        except Exception as e:
+            logging.error("Failed to set mute: %s", e)
+            return False
+
+    # ── Provider interface ─────────────────────────────────────────────
 
     def match(self, text: str) -> bool:
         text = text.strip()
@@ -175,33 +133,33 @@ class VolumeProvider(BaseProvider):
         if action == "set":
             # Typed command (vol 50) — close popup after setting
             value = result.action_data.get("value", 0)
-            _set_volume(value)
+            self._set_volume(value)
             return True
         elif action == "up":
             # Menu button — stay open, refresh menu
-            volume, _ = _get_volume()
+            volume, _ = self._get_volume()
             if volume is not None:
-                _set_volume(volume + self.step)
+                self._set_volume(volume + self.step)
             return False
         elif action == "down":
             # Menu button — stay open, refresh menu
-            volume, _ = _get_volume()
+            volume, _ = self._get_volume()
             if volume is not None:
-                _set_volume(volume - self.step)
+                self._set_volume(volume - self.step)
             return False
         elif action == "toggle_mute":
             # Menu button — stay open, refresh menu
-            _toggle_mute()
+            self._toggle_mute()
             return False
         elif action == "unmute":
             # Menu button — stay open, refresh menu
-            _set_mute(False)
+            self._set_mute(False)
             return False
         elif action == "select_device":
             # Menu button — stay open, refresh menu
             device_id = result.action_data.get("device_id")
             if device_id:
-                _set_default_device(device_id)
+                self._service.set_default_device(device_id)
             return False
         elif action == "refresh_menu":
             return False
@@ -212,7 +170,7 @@ class VolumeProvider(BaseProvider):
         results: list[ProviderResult] = []
 
         # Current volume status
-        volume, muted = _get_volume()
+        volume, muted = self._get_volume()
         if volume is None:
             results.append(
                 ProviderResult(
@@ -300,8 +258,8 @@ class VolumeProvider(BaseProvider):
         )
 
         # Device selection
-        devices = _get_all_devices()
-        default_id = _get_default_device_id()
+        devices = self._service.get_all_devices()
+        default_id = self._service.get_default_device_id()
 
         if not devices:
             results.append(
@@ -332,7 +290,7 @@ class VolumeProvider(BaseProvider):
 
     def _preview_change(self, delta: int) -> list[ProviderResult]:
         """Preview volume change without actually changing it."""
-        volume, muted = _get_volume()
+        volume, muted = self._get_volume()
         if volume is None:
             return [
                 ProviderResult(
@@ -361,7 +319,7 @@ class VolumeProvider(BaseProvider):
 
     def _preview_toggle_mute(self) -> list[ProviderResult]:
         """Preview mute toggle without actually toggling."""
-        volume, muted = _get_volume()
+        volume, muted = self._get_volume()
         if volume is None:
             return [
                 ProviderResult(
@@ -391,7 +349,7 @@ class VolumeProvider(BaseProvider):
 
     def _preview_set_mute(self, muted: bool) -> list[ProviderResult]:
         """Preview set mute without actually setting it."""
-        volume, current_mute = _get_volume()
+        volume, current_mute = self._get_volume()
         if volume is None:
             return [
                 ProviderResult(
@@ -421,7 +379,7 @@ class VolumeProvider(BaseProvider):
 
     def _preview_set(self, value: int) -> list[ProviderResult]:
         """Preview set volume without actually setting it."""
-        volume, muted = _get_volume()
+        volume, muted = self._get_volume()
         if volume is None:
             return [
                 ProviderResult(
@@ -463,7 +421,7 @@ class VolumeProvider(BaseProvider):
 
         # Handle relative changes
         if text.startswith("+") or text.startswith("-"):
-            volume, muted = _get_volume()
+            volume, muted = self._get_volume()
             if volume is None:
                 return [
                     ProviderResult(
