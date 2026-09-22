@@ -487,6 +487,7 @@ class SIZE(ct.Structure):
 
 
 class DWM_THUMBNAIL_PROPERTIES(ct.Structure):
+    _pack_ = 1
     _fields_ = [
         ("dwFlags", UINT),
         ("rcDestination", RECT),
