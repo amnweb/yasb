@@ -3,12 +3,12 @@ from datetime import datetime
 
 from PyQt6.QtCore import QEvent, QRect, Qt, QTimer
 from PyQt6.QtGui import QShowEvent, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QStyle, QStyleOptionSlider, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QStyle, QStyleOptionSlider, QVBoxLayout
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, build_progress_widget
-from core.utils.win32.utils import get_monitor_hwnd
+from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.validation.widgets.yasb.brightness import BrightnessConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.brightness.service import BrightnessService
@@ -58,7 +58,7 @@ class BrightnessWidget(BaseWidget):
 
     @property
     def _hmonitor(self) -> int | None:
-        return get_monitor_hwnd(int(QWidget.winId(self)))
+        return get_widget_monitor_hwnd(self)
 
     def showEvent(self, a0: QShowEvent | None):
         """Handle widget show event detect monitor and check support."""

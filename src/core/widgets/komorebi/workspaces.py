@@ -5,13 +5,13 @@ from typing import Literal
 from PIL import Image
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QImage, QMouseEvent, QPixmap
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utils import get_monitor_hwnd, get_process_info
+from core.utils.win32.utils import get_process_info, get_widget_monitor_hwnd
 from core.validation.widgets.komorebi.workspaces import KomorebiWorkspacesConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.komorebi.client import KomorebiClient
@@ -406,7 +406,7 @@ class WorkspaceWidget(BaseWidget):
 
     def _update_komorebi_state(self, komorebi_state: dict) -> bool:
         try:
-            self._screen_hwnd = get_monitor_hwnd(int(QWidget.winId(self)))
+            self._screen_hwnd = get_widget_monitor_hwnd(self)
             if self._screen_hwnd is None:
                 return False
             self._komorebi_state = komorebi_state

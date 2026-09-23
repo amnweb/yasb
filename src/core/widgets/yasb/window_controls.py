@@ -5,11 +5,11 @@ import win32api
 import win32gui
 import win32process
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QPushButton, QWidget
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QPushButton
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
-from core.utils.win32.utils import get_app_name_from_pid, get_monitor_hwnd, is_window_maximized
+from core.utils.win32.utils import get_app_name_from_pid, get_widget_monitor_hwnd, is_window_maximized
 from core.utils.win32.window_actions import (
     close_application,
     maximize_window,
@@ -286,7 +286,7 @@ class WindowControlsWidget(BaseWidget):
         # Per-widget monitor exclusivity check
         if self.config.monitor_exclusive:
             try:
-                widget_monitor = get_monitor_hwnd(int(QWidget.winId(self)))
+                widget_monitor = get_widget_monitor_hwnd(self)
                 if result.fg_monitor_hwnd != widget_monitor:
                     mon_info = win32api.GetMonitorInfo(result.fg_monitor_hwnd)
                     if self.screen().name() != mon_info.get("Device"):

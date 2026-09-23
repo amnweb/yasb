@@ -2,12 +2,12 @@ import logging
 from collections import deque
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
 from core.utils.utilities import PopupWidget
-from core.utils.win32.utils import get_monitor_hwnd
+from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.validation.widgets.komorebi.active_layout import ActiveLayoutConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.komorebi.client import KomorebiClient
@@ -323,7 +323,7 @@ class ActiveLayoutWidget(BaseWidget):
 
     def _update_komorebi_state(self, komorebi_state: dict):
         try:
-            self._screen_hwnd = get_monitor_hwnd(int(QWidget.winId(self)))
+            self._screen_hwnd = get_widget_monitor_hwnd(self)
             self._komorebi_state = komorebi_state
 
             if self._komorebi_state:

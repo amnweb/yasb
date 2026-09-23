@@ -2,10 +2,10 @@ import logging
 from typing import Any
 
 from PyQt6.QtCore import QEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QPushButton, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QPushButton
 
 from core.utils.widget_builder import WidgetBuilder
-from core.utils.win32.utils import get_monitor_hwnd
+from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.validation.widgets.yasb.grouper import GrouperWidgetConfig
 from core.widgets.base import BaseWidget
 
@@ -131,7 +131,7 @@ class GrouperWidget(BaseWidget):
     def _propagate_bar_context(self) -> None:
         """Propagate bar context to existing child widgets."""
         try:
-            monitor_hwnd = get_monitor_hwnd(int(QWidget.winId(self)))
+            monitor_hwnd = get_widget_monitor_hwnd(self)
             if monitor_hwnd is None:
                 return
             for cw in self._child_widgets:

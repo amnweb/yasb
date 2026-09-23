@@ -13,7 +13,7 @@ from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_icons import get_stock_icon, get_window_icon
 from core.utils.win32.constants import KnownCLSID
-from core.utils.win32.utils import get_monitor_hwnd, get_monitor_info
+from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.utils.win32.window_actions import (
     can_minimize,
     close_application,
@@ -469,7 +469,6 @@ class TaskbarWidget(BaseWidget):
         self._show_only_visible = self.config.show_only_visible
         self._ignore_apps = self.config.ignore_apps.model_dump()
 
-        self._widget_monitor_handle = None
         self._context_menu_open = False
 
         self._preview_enabled = self.config.preview.enabled
@@ -1317,16 +1316,10 @@ class TaskbarWidget(BaseWidget):
 
     def _get_widget_monitor_handle(self):
         """Get the monitor handle for this widget using win32 utilities."""
-        if self._widget_monitor_handle is None:
-            try:
-                self._widget_monitor_handle = get_monitor_hwnd(self.winId())
-                try:
-                    self._widget_monitor_info = get_monitor_info(self._widget_monitor_handle)
-                except Exception:
-                    self._widget_monitor_info = None
-            except Exception:
-                self._widget_monitor_handle = None
-        return self._widget_monitor_handle
+        try:
+            return get_widget_monitor_hwnd(self)
+        except Exception:
+            return None
 
     def _should_show_window(self, hwnd, window_data):
         """Determine if a window should be shown based on widget configuration"""

@@ -94,6 +94,12 @@ def get_monitor_hwnd(window_hwnd: int) -> int | None:
     return int(monitor)
 
 
+def get_widget_monitor_hwnd(widget: QWidget) -> int | None:
+    # Don't use widget.winId() here, Qt would turn the widget and all its
+    # siblings into native windows.
+    return get_monitor_hwnd(int(widget.window().winId()))
+
+
 def get_monitor_info(monitor_hwnd: int) -> dict:
     monitor_info = GetMonitorInfo(monitor_hwnd)
     return {

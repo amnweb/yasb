@@ -7,13 +7,13 @@ import win32gui
 from PIL import Image
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QImage, QMouseEvent, QPixmap
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utils import get_monitor_hwnd
+from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.utils.win32.window_actions import close_application
 from core.validation.widgets.komorebi.stack import StackConfig
 from core.widgets.base import BaseWidget
@@ -309,7 +309,7 @@ class StackWidget(BaseWidget):
 
     def _update_komorebi_state(self, komorebi_state: dict) -> bool:
         try:
-            self._screen_hwnd = get_monitor_hwnd(int(QWidget.winId(self)))
+            self._screen_hwnd = get_widget_monitor_hwnd(self)
             self._komorebi_state = komorebi_state
             if self._komorebi_state:
                 self._komorebi_screen = self._komorebic.get_screen_by_hwnd(self._komorebi_state, self._screen_hwnd)

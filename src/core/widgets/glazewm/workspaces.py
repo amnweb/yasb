@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolic
 
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utils import get_monitor_hwnd, get_process_info
+from core.utils.win32.utils import get_process_info, get_widget_monitor_hwnd
 from core.validation.widgets.glazewm.workspaces import GlazewmWorkspacesConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.glazewm.client import GlazewmClient, Monitor, Window, Workspace
@@ -385,7 +385,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
     @override
     def showEvent(self, a0: QShowEvent | None):
         super().showEvent(a0)
-        self.monitor_handle = get_monitor_hwnd(int(QWidget.winId(self)))
+        self.monitor_handle = get_widget_monitor_hwnd(self)
         self.glazewm_client.connect()
 
     @pyqtSlot(bool)
