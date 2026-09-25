@@ -1,6 +1,6 @@
 import math
 
-from PyQt6.QtCore import QEvent, QRect, QRectF, Qt, pyqtProperty
+from PyQt6.QtCore import QEvent, QRect, QRectF, Qt, QTimer, pyqtProperty
 from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPalette, QPen, QTransform
 from PyQt6.QtWidgets import QFrame, QWidget
 
@@ -104,11 +104,21 @@ class AdaptiveBarFrame(BarFrame):
         if value == self._edge_radius:
             return
         self._edge_radius = value
+        # A translucent window shows its old picture at the new spot until it repaints, and during
+        # a stylesheet reload that is only once every widget is restyled, so move it afterwards
+        if self.window().isVisible():
+            QTimer.singleShot(0, self._apply_edge_radius)
+        else:
+            self._apply_edge_radius()
+
+    def _apply_edge_radius(self) -> None:
         self._reserve_edge_space()
         window = self.window()
         if hasattr(window, "position_bar"):
             window.position_bar()
         self._update_shape(force=True)
+        if window.isVisible():
+            window.repaint()
 
     @pyqtProperty(int)
     def borderwidth(self) -> int:
