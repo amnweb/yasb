@@ -112,7 +112,13 @@ class KomorebiEventListener(QThread):
 
     def stop(self):
         self._stop_event.set()
-        self._close_pipe()
+        try:
+            client = win32file.CreateFile(
+                f"\\\\.\\pipe\\{self.pipe_name}", win32file.GENERIC_READ, 0, None, win32file.OPEN_EXISTING, 0, None
+            )
+            win32file.CloseHandle(client)
+        except pywintypes.error:
+            pass
 
     def _emit_event(self, event: dict, state: dict) -> None:
         if isinstance(event, str):
@@ -143,7 +149,14 @@ class KomorebiEventListener(QThread):
         if not self._app_running or self.pipe is None:
             return
 
-        win32pipe.ConnectNamedPipe(self.pipe, None)
+        try:
+            win32pipe.ConnectNamedPipe(self.pipe, None)
+        except pywintypes.error:
+            if self._app_running:
+                raise
+        if not self._app_running:
+            return
+
         logging.info("Komorebi connected to named pipe: %s", self.pipe_name)
         state = self._komorebic.query_state()
 
