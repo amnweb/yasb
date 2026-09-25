@@ -1,10 +1,26 @@
 # Audio Visualizer Widget Configuration
 
-Native audio visualizer for the default output device (WASAPI loopback). No external audio app or process needed.
+Native audio visualizer for an output device (WASAPI loopback). No external audio app or process needed.
 
 ## How it captures audio
 
-Audio comes from a WASAPI loopback capture on whatever Windows currently has set as the default playback device - the same device shown selected in the Windows volume mixer. This is automatic and dynamic: there is no device picker, and switching outputs (plugging in headphones, disabling a device, changing the default in Windows sound settings) is picked up on its own, with capture rebuilding against the new endpoint.
+Audio comes from a WASAPI loopback capture on an output device. With the default `source: "auto"` that is whatever Windows currently has set as the default playback device - the same device shown selected in the Windows volume mixer. This is automatic and dynamic: switching outputs (plugging in headphones, disabling a device, changing the default in Windows sound settings) is picked up on its own, with capture rebuilding against the new endpoint.
+
+### Picking an output device
+
+Set `source` to the full name of an output device to always capture that one instead. This is useful when an audio mixer such as SteelSeries Sonar, VoiceMeeter or VB-Cable plays music on a device that is not the Windows default:
+
+```yaml
+source: "SteelSeries Sonar - Media (SteelSeries Sonar Virtual Audio Device)"
+```
+or
+```yaml
+source: "Speakers (Realtek(R) Audio)"
+```
+
+The name must match exactly, including the part in brackets. The volume widget's menu lists output devices by this same full name.
+
+If no active output device has that name (a typo, or the device is disabled or unplugged), the widget captures the default device instead and logs a warning. When the named device becomes active again, capture switches back to it on its own.
 
 Because of that, only audio going through the normal Windows shared-mixer path is visible. Anything routed through **ASIO**, or another driver model that bypasses the shared mixer for direct hardware access, never reaches this capture, since that audio doesn't pass through the default device's loopback path at all - a limitation of WASAPI loopback itself, not something specific to this widget. If an app is set to output via ASIO, the visualizer will sit silent for that app's audio while continuing to show anything else still playing through the normal output.
 
@@ -13,6 +29,7 @@ Because of that, only audio going through the normal Windows shared-mixer path i
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `class_name` | string | `""` | Additional CSS class names for the widget container |
+| `source` | string | `"auto"` | Output device to capture. `"auto"` follows the Windows default device, anything else is the device's exact full name. See [Picking an output device](#picking-an-output-device) |
 | `style` | string | `"bars"` | Visual style: `"bars"`, `"waves"`, or `"dots"` |
 | `height` | integer | `14` | Paint surface height in pixels |
 | `smoothness` | integer | `55` | Motion smoothing 0–100 (higher = smoother, slower). Expressed in real time, so the motion looks identical at any `framerate` |
@@ -62,6 +79,7 @@ Only the block matching `style` is used; the others are ignored.
   audio_visualizer:
     type: "yasb.audio_visualizer.AudioVisualizerWidget"
     options:
+      source: "auto" # Optional. Only change it if you need a specific output device
       style: bars
       height: 16
       smoothness: 80
