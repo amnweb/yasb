@@ -26,7 +26,7 @@ dependencies = [
     "qasync==0.28.0",
     "comtypes==1.4.16",
     "python-dotenv==1.2.3",
-    "tzdata==2026.3",
+    "tzdata==2026.4",
     "winrt.windows.foundation==3.2.1",
     "winrt.windows.foundation.collections==3.2.1",
     "winrt.windows.data.xml.dom==3.2.1",
