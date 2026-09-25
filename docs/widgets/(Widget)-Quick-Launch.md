@@ -69,6 +69,7 @@ Quick Launch uses a plugin-based provider system. Each provider handles a specif
 - [SSH Connections](#ssh-provider)
 - [System Commands](#system-commands-provider)
 - [Unit Converter](#unit-converter-provider)
+- [Volume](#volume-provider)
 - [VSCode](#vscode-provider)
 - [Web Search](#web-search-provider)
 - [Window Switcher](#window-switcher-provider)
@@ -540,6 +541,44 @@ Search and open recently used projects, folders, and files directly in Visual St
 > [!NOTE]
 > The VSCode provider reads directly from VSCode's internal SQLite state database (`state.vscdb`) in read-only mode to prevent lock issues and does not require VSCode to be running.
 > **state_storage_path** is absolute path to the `state.vscdb` file. For example: `C:\Users\user\.vscode-shared\sharedStorage\state.vscdb` for Visual Studio Code, or `C:\Users\user\AppData\Roaming\Windsurf\User\globalStorage\state.vscdb` for Windsurf. If left empty, the default Visual Studio Code path will be used.
+
+### Volume Provider
+
+Control system audio volume directly from Quick Launch. Type the prefix (default `vol`) to see an interactive menu with volume controls and device selection, or type a command for quick adjustments.
+
+| Option     | Type   | Default | Description                                                                          |
+| ---------- | ------ | ------- | ------------------------------------------------------------------------------------ |
+| `enabled`  | bool   | `false` | Enable/disable the volume provider.                                                  |
+| `prefix`   | string | `"vol"` | Trigger prefix. Use `"*"` to include in default results.                             |
+| `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
+| `step`     | int    | `5`     | Volume change percentage for up/down commands.                                       |
+
+**Available commands:**
+
+| Command      | Description                                       | Example      |
+| ------------ | ------------------------------------------------- | ------------ |
+| `up`         | Increase volume by step amount                    | `vol up`     |
+| `down`       | Decrease volume by step amount                    | `vol down`   |
+| `mute`       | Toggle mute on/off                                | `vol mute`   |
+| `unmute`     | Unmute audio output                               | `vol unmute` |
+| `max`        | Set volume to 100%                                | `vol max`    |
+| `half`       | Set volume to 50%                                 | `vol half`   |
+| `min`        | Set volume to 0%                                  | `vol min`    |
+| `<number>`   | Set volume to specific percentage (0-100)         | `vol 75`     |
+| `+<number>`  | Increase volume by specified amount               | `vol +10`    |
+| `-[number]`  | Decrease volume by specified amount               | `vol -20`    |
+
+**Interactive menu (no query):**
+
+When you type just the prefix with no command, an interactive menu appears with:
+
+- **Current volume status** - shows percentage or muted state
+- **Volume Up / Down buttons** - click to adjust by step amount (menu stays open)
+- **Mute / Unmute button** - click to toggle (menu stays open)
+- **Output device list** - shows all audio devices with current device marked (`●`). Click to switch devices.
+
+> [!NOTE]
+> Typing a command (e.g., `vol 50`) shows a preview and sets the volume when you press Enter. Menu buttons apply changes immediately and refresh the menu without closing the popup.
 
 ### Web Search Provider
 
