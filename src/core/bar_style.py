@@ -54,6 +54,7 @@ class AdaptiveBarFrame(BarFrame):
         self._islands: tuple[tuple[int, int], ...] = ()
         self._shape = QPainterPath()
         self._gaps = QPainterPath()
+        self._border_path = QPainterPath()
 
     @pyqtProperty(int)
     def railheight(self) -> int:
@@ -191,12 +192,11 @@ class AdaptiveBarFrame(BarFrame):
         painter.fillRect(QRectF(0.0, 0.0, float(self.width()), self._frame_bottom()), Qt.GlobalColor.transparent)
 
         if self._border_width > 0 and self._border_color.alpha() > 0:
-            # Stroking the gaps leaves the frame's own edges bare clipped to the shape at
-            # twice the width so only the half inside the bar lands
+            # Clipped to the shape at twice the width so only the half inside the bar lands
             painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
             painter.setClipPath(self._shape)
             painter.setPen(QPen(self._border_color, self._border_width * 2))
-            painter.drawPath(self._gaps)
+            painter.drawPath(self._border_path)
 
     def _frame_bottom(self) -> float:
         """The frame's bottom, out to a whole device pixel. On fractional scaling the last
@@ -213,7 +213,7 @@ class AdaptiveBarFrame(BarFrame):
 
         changed = self.rect() if force else self._changed_area(self._islands, islands)
         self._islands = islands
-        self._shape = self._build_shape(islands)
+        self._shape, self._border_path = self._build_shape(islands)
 
         frame = QPainterPath()
         frame.addRect(QRectF(0.0, 0.0, float(self.width()), self._frame_bottom()))
@@ -302,7 +302,7 @@ class AdaptiveBarFrame(BarFrame):
 
         return tuple((start, end) for start, end in merged)
 
-    def _build_shape(self, islands: tuple[tuple[int, int], ...]) -> QPainterPath:
+    def _build_shape(self, islands: tuple[tuple[int, int], ...]) -> tuple[QPainterPath, QPainterPath]:
         width = float(self.width())
         # The frame is taller than the bar by edgeradius, that strip holds the edge curves
         bottom = self._frame_bottom()
@@ -314,17 +314,20 @@ class AdaptiveBarFrame(BarFrame):
         full_rect.addRect(0.0, 0.0, width, height)
 
         if width <= 0 or height <= rail:
-            return full_rect
+            inner = 0.0 if self._position == "bottom" else height
+            path = QPainterPath()
+            path.moveTo(width, inner)
+            path.lineTo(0.0, inner)
+            return full_rect, path
 
         # Both curves share the island's side, so together they cannot exceed its height
         radius = min(float(self._island_radius), max(0.0, (height - rail) / 2))
 
         path = QPainterPath()
-        path.moveTo(0.0, 0.0)
-        path.lineTo(width, 0.0)
+        reaches_right = bool(islands) and islands[-1][1] >= width
+        path.moveTo(width, height + overhang if reaches_right else rail)
 
         if not islands:
-            path.lineTo(width, rail)
             path.lineTo(0.0, rail)
 
         last = len(islands) - 1
@@ -335,13 +338,8 @@ class AdaptiveBarFrame(BarFrame):
 
             if x1 >= width:
                 if overhang > 0.0:
-                    path.lineTo(width, height + overhang)
                     path.arcTo(QRectF(width - 2 * overhang, height, 2 * overhang, 2 * overhang), 0.0, 90.0)
-                else:
-                    path.lineTo(width, height)
             else:
-                if index == last:
-                    path.lineTo(width, rail)
                 next_start = float(islands[index + 1][0]) if index < last else width
                 fillet = min(radius, (next_start - x1) / 2)
                 path.lineTo(x1 + fillet, rail)
@@ -351,7 +349,7 @@ class AdaptiveBarFrame(BarFrame):
                 if corner > 0.0:
                     path.arcTo(QRectF(x1 - 2 * corner, height - 2 * corner, 2 * corner, 2 * corner), 0.0, -90.0)
 
-            if x0 <= 0.0:  # closeSubpath draws this side
+            if x0 <= 0.0:
                 if overhang > 0.0:
                     path.lineTo(overhang, height)
                     path.arcTo(QRectF(0.0, height, 2 * overhang, 2 * overhang), 90.0, 90.0)
@@ -369,9 +367,13 @@ class AdaptiveBarFrame(BarFrame):
                 if index == 0:
                     path.lineTo(0.0, rail)
 
-        path.closeSubpath()
+        shape = QPainterPath(path)
+        shape.lineTo(0.0, 0.0)
+        shape.lineTo(width, 0.0)
+        shape.closeSubpath()
 
         if self._position == "bottom":
-            path = QTransform().translate(0.0, height + overhang).scale(1.0, -1.0).map(path)
+            flip = QTransform().translate(0.0, height + overhang).scale(1.0, -1.0)
+            return flip.map(shape), flip.map(path)
 
-        return path
+        return shape, path
