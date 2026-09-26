@@ -23,7 +23,6 @@ from core.utils.win32.bindings import (
     OpenProcess,
     QueryFullProcessImageNameW,
     ReleaseDC,
-    SendMessageTimeoutW,
     shell32,
 )
 from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, SHGSI_ICON, SHGSI_LARGEICON
@@ -113,22 +112,14 @@ def get_window_icon(hwnd: int):
             except Exception:
                 return False
 
-        # Ask each icon variant with a bounded wait so unresponsive windows cannot stall callers.
+        # Stop asking an unresponsive window after the first bounded wait.
         for which in (win32con.ICON_BIG, win32con.ICON_SMALL, getattr(win32con, "ICON_SMALL2", 2)):
             try:
-                result = ctypes.c_size_t()  # DWORD_PTR keeps the complete HICON on 64-bit Windows.
-                sent = SendMessageTimeoutW(
-                    hwnd,
-                    win32con.WM_GETICON,
-                    which,
-                    0,
-                    win32con.SMTO_ABORTIFHUNG | win32con.SMTO_BLOCK,
-                    200,
-                    byref(result),
+                _, hicon = win32gui.SendMessageTimeout(
+                    hwnd, win32con.WM_GETICON, which, 0, win32con.SMTO_ABORTIFHUNG | win32con.SMTO_BLOCK, 200
                 )
-                hicon = result.value if sent else 0
             except Exception:
-                hicon = 0
+                break
             if hicon:
                 img = _image_from_hicon(hicon)
                 # WM_GETICON borrows the window owner's icon; reading it does not transfer ownership.
