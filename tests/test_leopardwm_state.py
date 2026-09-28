@@ -36,17 +36,15 @@ class SnapshotTests(unittest.TestCase):
             result = self.assembler.feed(event)
         return result
 
-    def test_only_complete_v3_and_v4_snapshots_are_published(self):
-        for version in (3, 4):
-            self.assembler.reset()
-            begin, chunk, end = frames(version)
-            self.assertIsNone(self.assembler.feed(begin))
-            self.assertIsNone(self.assembler.feed(chunk))
-            snapshot = self.assembler.feed(end)
-            self.assertEqual(len(snapshot.monitors[0].workspaces), 9)
-            self.assertEqual(snapshot.monitors[0].workspaces[2].windows[0].hwnd, 123)
-            with self.assertRaises(FrozenInstanceError):
-                snapshot.revision = 1
+    def test_only_complete_v4_snapshots_are_published(self):
+        begin, chunk, end = frames()
+        self.assertIsNone(self.assembler.feed(begin))
+        self.assertIsNone(self.assembler.feed(chunk))
+        snapshot = self.assembler.feed(end)
+        self.assertEqual(len(snapshot.monitors[0].workspaces), 9)
+        self.assertEqual(snapshot.monitors[0].workspaces[2].windows[0].hwnd, 123)
+        with self.assertRaises(FrozenInstanceError):
+            snapshot.revision = 1
 
     def test_chunk_order_does_not_change_ownership(self):
         events = frames()
@@ -107,6 +105,7 @@ class SnapshotTests(unittest.TestCase):
     def test_protocol_revision_and_required_fields(self):
         for field, value in (
             ("protocol_version", 2),
+            ("protocol_version", 3),
             ("protocol_version", True),
             ("revision", -1),
             ("revision", True),
