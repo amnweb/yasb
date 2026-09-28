@@ -87,7 +87,7 @@ class SnapshotAssembler:
         if kind == "workspace_snapshot_begin":
             if self.in_progress:
                 raise ValueError("Interrupted snapshot")
-            if _integer(event["protocol_version"]) not in (3, 4):
+            if _integer(event["protocol_version"]) != 4:
                 raise ValueError("Unsupported workspace snapshot protocol")
             session = _string(event["session_id"])
             revision = _integer(event["revision"])
