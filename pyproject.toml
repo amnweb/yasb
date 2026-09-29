@@ -21,7 +21,7 @@ dependencies = [
     "pyyaml==6.0.3",
     "holidays==0.105",
     "watchdog==6.0.0",
-    "pycaw==20251023",
+    "pycaw==20260921",
     "pillow==12.3.0",
     "qasync==0.28.0",
     "comtypes==1.4.17",
