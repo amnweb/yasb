@@ -12,7 +12,7 @@ from pycaw.api.mmdeviceapi import PROPERTYKEY
 from pycaw.callbacks import MMNotificationClient
 from pycaw.constants import DEVICE_STATE, STGM
 from pycaw.pycaw import AudioUtilities, EDataFlow, ERole, IAudioClient
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.win32.bindings.ole32 import COINIT_MULTITHREADED, RPC_E_CHANGED_MODE, ole32
@@ -179,7 +179,6 @@ class _WasapiLoopbackClient:
         self.sample_code = "f"
         self.sample_scale = 1.0
         self.stale_timeout_ms = _STALE_TIMEOUT_MIN_MS
-        self.running = False
         self.capture: IAudioCaptureClient | None = None
         self._client: IAudioClient | None = None
         self._open(device, audio_event)
@@ -217,21 +216,6 @@ class _WasapiLoopbackClient:
         client.Start()
         self._client = client
         self.capture = capture
-        self.running = True
-
-    def pause(self) -> None:
-        """Freeze the stream while every visualizer is hidden. The client stays
-        initialised, so :meth:`resume` costs nothing like a fresh open would."""
-        if self._client is None or not self.running:
-            return
-        self._client.Stop()
-        self.running = False
-
-    def resume(self) -> None:
-        if self._client is None or self.running:
-            return
-        self._client.Start()
-        self.running = True
 
     def _read_format(self, wfx) -> None:
         fmt = cast(wfx, POINTER(_WAVEFORMATEX)).contents
@@ -270,7 +254,6 @@ class _WasapiLoopbackClient:
     def close(self) -> None:
         client, self._client = self._client, None
         self.capture = None
-        self.running = False
         if client is None:
             return
         try:
@@ -332,16 +315,21 @@ class AudioVisualizerCaptureService(QObject):
 
     A single WASAPI stream and a single capture thread serve all those widgets,
     on every monitor. The stream is open while at least one widget is attached,
-    frozen while every widget's bar is hidden, and torn down once the last
+    so audio starting and stopping is always reported, spectra are computed
+    only while one of them is on screen, and it is torn down once the last
     widget goes away.
     """
 
     #: A new spectrum has been published. Rate limited to the fastest framerate
     #: among attached widgets.
     frame_ready = pyqtSignal()
+    #: Real audio started flowing, whether or not any widget is on screen.
+    audio_started = pyqtSignal()
     #: The render stream went away. The published spectra have been dropped, so
     #: magnitudes() now returns silence and widgets should fade out.
     audio_stopped = pyqtSignal()
+    #: Audio has been silent for the delay registered under this widget name.
+    idle_timeout = pyqtSignal(str)
     #: The endpoint sample rate changed; analyzers must be rebuilt.
     format_changed = pyqtSignal(int)
 
@@ -360,9 +348,10 @@ class AudioVisualizerCaptureService(QObject):
         self._ring_l: list[float] = []
         self._ring_r: list[float] = []
         # (framerate, wanted-channels) per attached widget, plus a count of the
-        # ones that are currently visible (not paused by a hidden bar).
+        # ones currently on screen, the only ones that need spectra.
         self._readers: list[tuple[int, frozenset[str]]] = []
         self._active_readers = 0
+        self._idle_timers: dict[str, QTimer] = {}
         self._wanted_channels: frozenset[str] = frozenset()
         self._frame_interval_ns = 1_000_000_000 // 60
         self._last_emit_ns = 0
@@ -391,6 +380,8 @@ class AudioVisualizerCaptureService(QObject):
         # Connected first so it runs before the widget slots and re-arms
         # emission as early as possible.
         self.frame_ready.connect(self._on_frame_dispatched)
+        self.audio_started.connect(self._stop_idle_timers)
+        self.audio_stopped.connect(self._start_idle_timers)
         app = QApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self.shutdown)
@@ -425,7 +416,7 @@ class AudioVisualizerCaptureService(QObject):
         """Register a reader wanting ``channels`` at up to ``framerate`` fps.
 
         A reader starts visible; the widget calls :meth:`set_reader_visible`
-        when its bar is hidden or shown.
+        when it is hidden or shown.
         """
         with self._lock:
             self._readers.append((self._clamp_framerate(framerate), channels))
@@ -449,14 +440,34 @@ class AudioVisualizerCaptureService(QObject):
         win32event.SetEvent(self._wake_event)
 
     def set_reader_visible(self, visible: bool) -> None:
-        """A widget's bar became visible (``True``) or hidden (``False``).
+        """A widget came on screen (``True``) or left it (``False``).
 
-        When the last visible reader goes away the capture thread freezes the
-        WASAPI stream without closing it, so a re-show resumes instantly.
+        Spectra are only computed while at least one reader is visible.
+        Capture keeps running either way.
         """
         with self._lock:
             self._active_readers = max(0, self._active_readers + (1 if visible else -1))
-        win32event.SetEvent(self._wake_event)
+
+    def watch_idle(self, widget_name: str, delay_ms: int) -> None:
+        """Emit ``idle_timeout(widget_name)`` whenever audio stays silent for
+        ``delay_ms``. One timer per widget config, shared across screens."""
+        if widget_name in self._idle_timers:
+            return
+        timer = self._idle_timers[widget_name] = QTimer(self)
+        timer.setSingleShot(True)
+        timer.setTimerType(Qt.TimerType.CoarseTimer)
+        timer.setInterval(delay_ms)
+        timer.timeout.connect(lambda: self.idle_timeout.emit(widget_name))
+        if not self._active:
+            timer.start()
+
+    def _start_idle_timers(self) -> None:
+        for timer in self._idle_timers.values():
+            timer.start()
+
+    def _stop_idle_timers(self) -> None:
+        for timer in self._idle_timers.values():
+            timer.stop()
 
     @staticmethod
     def _clamp_framerate(framerate: int) -> int:
@@ -478,10 +489,9 @@ class AudioVisualizerCaptureService(QObject):
             self._wanted_channels = frozenset()
         self._frame_interval_ns = max(1, 1_000_000_000 // fps)
 
-    def _reader_state(self) -> tuple[bool, bool]:
-        """(any readers, any visible readers). Capture thread poll."""
+    def _has_readers(self) -> bool:
         with self._lock:
-            return bool(self._readers), self._active_readers > 0
+            return bool(self._readers)
 
     def _raw_window_locked(self, n: int) -> tuple[list[float], list[float]]:
         """Newest ``n`` samples per channel, zero-padded at the front.
@@ -606,26 +616,9 @@ class AudioVisualizerCaptureService(QObject):
                     client = self._close(client)
                     backoff_ms = _REOPEN_BACKOFF_MIN_MS
 
-                has_readers, has_visible = self._reader_state()
-
                 # No widgets at all: close the stream and park.
-                if not has_readers:
+                if not self._has_readers():
                     client = self._close(client)
-                    self._mark_stopped()
-                    if self._park(idle_handles, win32event.INFINITE):
-                        break
-                    continue
-
-                # Widgets exist but every one is hidden (an auto-hiding bar, a
-                # fullscreen window, a monitor asleep). Freeze the stream but
-                # keep the client, so the next re-show resumes with no reopen.
-                if not has_visible:
-                    if client is not None:
-                        try:
-                            client.pause()
-                        except Exception:
-                            logging.debug("Audio visualizer: pause failed, closing", exc_info=True)
-                            client = self._close(client)
                     self._mark_stopped()
                     if self._park(idle_handles, win32event.INFINITE):
                         break
@@ -648,14 +641,6 @@ class AudioVisualizerCaptureService(QObject):
                     backoff_ms = _REOPEN_BACKOFF_MIN_MS
                     # Give the new stream the full timeout to produce audio, so
                     # swapping devices mid-track does not blip the bars to zero.
-                    self._last_audio_ns = time.monotonic_ns()
-                elif not client.running:
-                    try:
-                        client.resume()
-                    except Exception:
-                        logging.warning("Audio visualizer: resume failed, reopening", exc_info=True)
-                        client = self._close(client)
-                        continue
                     self._last_audio_ns = time.monotonic_ns()
 
                 rc = win32event.WaitForMultipleObjects(handles, False, client.stale_timeout_ms)
@@ -835,8 +820,12 @@ class AudioVisualizerCaptureService(QObject):
     def _publish_frame(self) -> None:
         now = time.monotonic_ns()
         with self._lock:
+            started = not self._active
             self._active = True
-            if self._frame_pending or now - self._last_emit_ns < self._frame_interval_ns:
+        if started:
+            self._safe_emit("audio_started")
+        with self._lock:
+            if not self._active_readers or self._frame_pending or now - self._last_emit_ns < self._frame_interval_ns:
                 return
             wanted = self._wanted_channels
             if not wanted:
@@ -868,7 +857,12 @@ class AudioVisualizerCaptureService(QObject):
         """
         now = time.monotonic_ns()
         with self._lock:
-            if not self._active or self._frame_pending or now - self._last_emit_ns < self._frame_interval_ns:
+            if (
+                not self._active
+                or not self._active_readers
+                or self._frame_pending
+                or now - self._last_emit_ns < self._frame_interval_ns
+            ):
                 return
             wanted = self._wanted_channels
             if not wanted:

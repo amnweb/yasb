@@ -41,8 +41,8 @@ class _ReaderToken:
     Deliberately holds no reference to the widget, so it can be handed to the
     ``destroyed`` signal without keeping the widget alive.
 
-    ``attach`` opens the claim (visible); ``set_visible`` follows the bar as it
-    hides and shows, and only ``detach`` (on widget destruction) drops it.
+    ``attach`` opens the claim (visible); ``set_visible`` follows the widget as
+    it hides and shows, and only ``detach`` (on widget destruction) drops it.
     """
 
     __slots__ = ("_service", "_framerate", "_channels", "_attached", "_visible")
@@ -150,12 +150,6 @@ class AudioVisualizerWidget(BaseWidget):
         self._fade_timer.setInterval(frame_ms)
         self._fade_timer.timeout.connect(self._on_fade_tick)
 
-        self._hide_timer = QTimer(self)
-        self._hide_timer.setSingleShot(True)
-        self._hide_timer.setTimerType(Qt.TimerType.CoarseTimer)
-        self._hide_timer.setInterval(config.hide_idle_after)
-        self._hide_timer.timeout.connect(self._hide_for_idle)
-
         # Tell the shared service which spectra to compute for us: both for
         # stereo, otherwise just the one the mono mix draws from.
         channels = frozenset({"left", "right"}) if self._stereo else frozenset({config.mono_option})
@@ -166,32 +160,31 @@ class AudioVisualizerWidget(BaseWidget):
         self.destroyed.connect(lambda *_: token.detach())
 
         self._service.frame_ready.connect(self._on_frame)
+        self._service.audio_started.connect(self._on_audio_started)
         self._service.audio_stopped.connect(self._on_audio_stopped)
+        self._service.idle_timeout.connect(self._on_idle_timeout)
         self._service.format_changed.connect(self._apply_sample_rate)
         self._apply_sample_rate(self._service.sample_rate)
 
         if config.hide_idle:
-            # Start collapsed so the bar never reserves space for a silent
-            # visualizer, but stay attached so the stream can wake us.
-            self._idle_hidden = True
-            self._apply_collapsed(True, animate=False)
+            # Stay attached so the stream can wake us, and start hidden so the
+            # bar never reserves space for a silent visualizer.
             self._token.attach()
+            self._token.set_visible(False)
+            if not self._service.is_active:
+                self._idle_hidden = True
+                self._apply_collapsed(True, animate=False)
 
     def _apply_collapsed(self, collapsed: bool, *, animate: bool = True) -> None:
-        """Collapse to zero width rather than ``hide()``, eased so the bar
-        reflows smoothly instead of the widget popping in or out.
-
-        A hidden widget stops receiving show/hide events, so it cannot tell
-        when the bar itself is hidden and would keep the capture stream open
-        forever. A zero-width widget stays visually gone but still gets the
-        bar's show/hide events, so ``hideEvent`` can always release the stream.
-        """
         target = 0 if collapsed else self.sizeHint().width()
+        if not collapsed:
+            self.show()
         if not animate:
             self._collapse_animation.stop()
             self.setMinimumWidth(0)
             self.setMaximumWidth(target)
             self.updateGeometry()
+            self._on_collapse_finished()
             return
         current = self.width()
         self._collapse_animation.stop()
@@ -202,6 +195,7 @@ class AudioVisualizerWidget(BaseWidget):
 
     def _on_collapse_finished(self) -> None:
         if self._idle_hidden:
+            self.hide()
             return
         self.setMaximumWidth(QWIDGETSIZE_MAX)
         self.updateGeometry()
@@ -225,26 +219,15 @@ class AudioVisualizerWidget(BaseWidget):
     def showEvent(self, event: QShowEvent) -> None:
         super().showEvent(event)
         self._token.attach()
-        # Resume the shared stream. If the bar just blinked (auto-hide, a
-        # maximised window) it was only frozen, so this costs nothing.
         self._token.set_visible(True)
         if self._idle_hidden:
-            # The bar came back while we were idle-collapsed: stay collapsed
-            # and wait for audio to expand us again.
             return
         if not self._service.is_active:
             self._reset_visual()
-            if self.config.hide_idle:
-                self._hide_timer.start()
 
     def hideEvent(self, event: QHideEvent) -> None:
         super().hideEvent(event)
-        # The idle collapse never calls hide(), so any hide event here means
-        # the bar, a monitor change or a minimise hid us. Freeze the shared
-        # stream (it stays open, so a re-show resumes instantly). _idle_hidden
-        # and the collapsed width are left as they are.
         self._fade_timer.stop()
-        self._hide_timer.stop()
         self._audio_active = False
         self._reset_visual()
         self._token.set_visible(False)
@@ -256,17 +239,20 @@ class AudioVisualizerWidget(BaseWidget):
         self._canvas.reset()
 
     def _on_frame(self) -> None:
+        if not self.isVisible():
+            return
         if self._audio_active:
             if time.monotonic_ns() - self._last_render_ns < self._frame_interval_ns:
                 return
         else:
             self._audio_active = True
             self._fade_timer.stop()
-            self._hide_timer.stop()
-            if self._idle_hidden:
-                self._idle_hidden = False
-                self._apply_collapsed(False)
         self._render()
+
+    def _on_audio_started(self) -> None:
+        if self._idle_hidden:
+            self._idle_hidden = False
+            self._apply_collapsed(False)
 
     def _frame_delta(self) -> float:
         """Seconds since the last frame, so smoothing is framerate-independent."""
@@ -292,8 +278,6 @@ class AudioVisualizerWidget(BaseWidget):
         self._canvas.set_samples(samples)
 
     def _on_audio_stopped(self) -> None:
-        if not self._audio_active:
-            return
         self._audio_active = False
         if self._idle_hidden:
             return
@@ -301,7 +285,7 @@ class AudioVisualizerWidget(BaseWidget):
         # last captured frame. The timer stops itself once they settle.
         self._fade_timer.start()
         if self.config.hide_idle:
-            self._hide_timer.start()
+            self._service.watch_idle(self.widget_name or "", self.config.hide_idle_after)
 
     def _on_fade_tick(self) -> None:
         dt = self._frame_delta()
@@ -316,8 +300,12 @@ class AudioVisualizerWidget(BaseWidget):
         if not moving:
             self._fade_timer.stop()
 
+    def _on_idle_timeout(self, widget_name: str) -> None:
+        if widget_name == (self.widget_name or ""):
+            self._hide_for_idle()
+
     def _hide_for_idle(self) -> None:
-        if self._audio_active or self._idle_hidden:
+        if self._service.is_active or self._idle_hidden:
             return
         self._fade_timer.stop()
         self._reset_visual()
