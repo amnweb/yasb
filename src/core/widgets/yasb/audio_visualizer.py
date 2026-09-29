@@ -160,7 +160,7 @@ class AudioVisualizerWidget(BaseWidget):
         # stereo, otherwise just the one the mono mix draws from.
         channels = frozenset({"left", "right"}) if self._stereo else frozenset({config.mono_option})
 
-        self._service = AudioVisualizerCaptureService.instance()
+        self._service = AudioVisualizerCaptureService.instance(config.source)
         self._token = _ReaderToken(self._service, config.framerate, channels)
         token = self._token
         self.destroyed.connect(lambda *_: token.detach())

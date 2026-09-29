@@ -1,4 +1,4 @@
-"""WASAPI loopback capture of the default render device."""
+"""WASAPI loopback capture of a render device."""
 
 import logging
 import threading
@@ -8,8 +8,9 @@ from ctypes import POINTER, Structure, c_ubyte, c_uint16, c_uint32, c_uint64, c_
 
 import win32event
 from comtypes import CLSCTX_ALL, COMMETHOD, GUID, HRESULT, COMError, IUnknown
+from pycaw.api.mmdeviceapi import PROPERTYKEY
 from pycaw.callbacks import MMNotificationClient
-from pycaw.constants import DEVICE_STATE
+from pycaw.constants import DEVICE_STATE, STGM
 from pycaw.pycaw import AudioUtilities, EDataFlow, ERole, IAudioClient
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication
@@ -19,6 +20,13 @@ from core.widgets.services.audio_visualizer.spectrum import FFT_SIZE, SpectrumSo
 
 # Channel selectors a widget can ask for.
 _CHANNELS = ("left", "right", "average")
+
+_AUTO_SOURCE = "auto"
+
+# PKEY_Device_FriendlyName, the full "Speakers (Realtek(R) Audio)" name.
+_PKEY_DEVICE_FRIENDLY_NAME = PROPERTYKEY()
+_PKEY_DEVICE_FRIENDLY_NAME.fmtid = GUID("{A45C254E-DF1C-4EFD-8020-67D146A850E0}")
+_PKEY_DEVICE_FRIENDLY_NAME.pid = 14
 
 # Returned by magnitudes() before the first frame and while the stream is idle.
 _SILENT_SPECTRUM: list[float] = [0.0] * (FFT_SIZE // 2)
@@ -144,6 +152,17 @@ def _decode_stereo(buf: bytes, channels: int, sample_code: str, scale: float) ->
     return [v * scale for v in left], [v * scale for v in right]
 
 
+def _friendly_name(device) -> str:
+    try:
+        value = device.OpenPropertyStore(STGM.STGM_READ.value).GetValue(_PKEY_DEVICE_FRIENDLY_NAME)
+    except COMError:
+        return ""
+    try:
+        return value.GetValue() or ""
+    finally:
+        value.clear()
+
+
 class _WasapiLoopbackClient:
     """A live event-driven loopback client.
 
@@ -152,7 +171,7 @@ class _WasapiLoopbackClient:
     switch can never leave a stale frame stride behind.
     """
 
-    def __init__(self, audio_event: int) -> None:
+    def __init__(self, device, audio_event: int) -> None:
         self.sample_rate = 48000
         self.channels = 2
         self.frame_bytes = 8
@@ -163,16 +182,14 @@ class _WasapiLoopbackClient:
         self.running = False
         self.capture: IAudioCaptureClient | None = None
         self._client: IAudioClient | None = None
-        self._open(audio_event)
+        self._open(device, audio_event)
 
     @property
     def format_summary(self) -> str:
         kind = {"f": "float", "h": "int16", "i": "int32"}.get(self.sample_code, self.sample_code)
         return f"{self.sample_rate} Hz, {self.channels} ch, {self.bits}-bit {kind}"
 
-    def _open(self, audio_event: int) -> None:
-        enumerator = AudioUtilities.GetDeviceEnumerator()
-        device = enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender.value, ERole.eMultimedia.value)
+    def _open(self, device, audio_event: int) -> None:
         client = device.Activate(IAudioClient._iid_, CLSCTX_ALL, None).QueryInterface(IAudioClient)
 
         wfx = client.GetMixFormat()
@@ -274,63 +291,47 @@ class _RenderDeviceWatcher(MMNotificationClient):
     def __init__(self, service: AudioVisualizerCaptureService) -> None:
         super().__init__()
         self._service = service
-        self._last_device_id = self._current_render_device_id()
         self._last_states: dict[str, int] = {}
 
-    @staticmethod
-    def _current_render_device_id() -> str | None:
-        try:
-            enumerator = AudioUtilities.GetDeviceEnumerator()
-            endpoint = enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender.value, ERole.eMultimedia.value)
-            return endpoint.GetId()
-        except Exception:
-            return None
-
     def on_default_device_changed(self, flow, flow_id, role, role_id, default_device_id) -> None:
-        logging.debug(
-            "Audio visualizer: default device changed flow=%s role=%s device=%s",
-            flow_id,
-            role_id,
-            default_device_id,
-        )
         if flow_id != EDataFlow.eRender.value or role_id != ERole.eMultimedia.value:
             return
-        if default_device_id == self._last_device_id:
+        device_id, follows_default = self._service.endpoint
+        if not follows_default or default_device_id == device_id:
             return
-        self._last_device_id = default_device_id
-        logging.debug("Audio visualizer: default device change accepted, reopening")
+        logging.debug("Audio visualizer: default device changed to %s, reopening", default_device_id)
         self._service.request_reopen()
 
+    def on_device_added(self, added_device_id) -> None:
+        if self._service.waiting_for_source:
+            logging.debug("Audio visualizer: device %s added, reopening", added_device_id)
+            self._service.request_reopen()
+
     def on_device_state_changed(self, device_id, new_state, new_state_id) -> None:
-        logging.debug(
-            "Audio visualizer: device state changed device=%s state=%#x",
-            device_id,
-            new_state_id,
-        )
+        if self._last_states.get(device_id) == new_state_id:
+            return
+        self._last_states[device_id] = new_state_id
         # A device connecting or disconnecting can touch several unrelated
         # endpoints (a headset's own microphone, other devices Windows
         # happens to re-enumerate along the way), only the one we are
         # actually reading from matters to a render-only loopback capture.
-        if device_id != self._last_device_id:
-            return
-        if new_state_id not in (
-            DEVICE_STATE.ACTIVE.value,
-            DEVICE_STATE.DISABLED.value,
-            DEVICE_STATE.UNPLUGGED.value,
+        # While the configured source is missing, any endpoint that comes up
+        # may be it.
+        current_id, _ = self._service.endpoint
+        if device_id != current_id and not (
+            new_state_id == DEVICE_STATE.ACTIVE.value and self._service.waiting_for_source
         ):
             return
-        if self._last_states.get(device_id) == new_state_id:
-            return
-        self._last_states[device_id] = new_state_id
-        logging.debug("Audio visualizer: device state change accepted, reopening")
+        logging.debug("Audio visualizer: device %s state changed to %#x, reopening", device_id, new_state_id)
         self._service.request_reopen()
 
 
 class AudioVisualizerCaptureService(QObject):
-    """Shared, event-driven loopback capture for every visualizer widget.
+    """Shared, event-driven loopback capture for every visualizer widget with
+    the same ``source``.
 
-    A single WASAPI stream and a single capture thread serve all widgets, on
-    every monitor. The stream is open while at least one widget is attached,
+    A single WASAPI stream and a single capture thread serve all those widgets,
+    on every monitor. The stream is open while at least one widget is attached,
     frozen while every widget's bar is hidden, and torn down once the last
     widget goes away.
     """
@@ -344,11 +345,17 @@ class AudioVisualizerCaptureService(QObject):
     #: The endpoint sample rate changed; analyzers must be rebuilt.
     format_changed = pyqtSignal(int)
 
-    _instance: AudioVisualizerCaptureService | None = None
+    _instances: dict[str, AudioVisualizerCaptureService] = {}
     _instance_lock = threading.Lock()
 
-    def __init__(self) -> None:
+    def __init__(self, source: str = _AUTO_SOURCE) -> None:
         super().__init__()
+        self._source = source
+        # Capture thread only.
+        self._source_missing = False
+        # (endpoint id, follows the default device). Rebound in one go by the
+        # capture thread, read by the device watcher.
+        self._endpoint: tuple[str | None, bool] = (None, True)
         self._lock = threading.Lock()
         self._ring_l: list[float] = []
         self._ring_r: list[float] = []
@@ -389,11 +396,21 @@ class AudioVisualizerCaptureService(QObject):
             app.aboutToQuit.connect(self.shutdown)
 
     @classmethod
-    def instance(cls) -> AudioVisualizerCaptureService:
+    def instance(cls, source: str = _AUTO_SOURCE) -> AudioVisualizerCaptureService:
         with cls._instance_lock:
-            if cls._instance is None:
-                cls._instance = cls()
-            return cls._instance
+            service = cls._instances.get(source)
+            if service is None:
+                service = cls._instances[source] = cls(source)
+            return service
+
+    @property
+    def endpoint(self) -> tuple[str | None, bool]:
+        return self._endpoint
+
+    @property
+    def waiting_for_source(self) -> bool:
+        """A device is configured but not active, so the default stands in."""
+        return self._source != _AUTO_SOURCE and self._endpoint[1]
 
     @property
     def sample_rate(self) -> int:
@@ -706,7 +723,8 @@ class AudioVisualizerCaptureService(QObject):
 
     def _open(self) -> _WasapiLoopbackClient | None:
         try:
-            client = _WasapiLoopbackClient(int(self._audio_event))
+            device = self._pick_device(AudioUtilities.GetDeviceEnumerator())
+            client = _WasapiLoopbackClient(device, int(self._audio_event))
         except UnsupportedFormatError as exc:
             logging.error("Audio visualizer: %s", exc)
             with self._lock:
@@ -725,8 +743,34 @@ class AudioVisualizerCaptureService(QObject):
             self._sample_rate = client.sample_rate
         if rate_changed:
             self._safe_emit("format_changed", client.sample_rate)
-        logging.info("Audio visualizer: loopback capture open (%s)", client.format_summary)
+        logging.info(
+            "Audio visualizer: loopback capture open on %r (%s)", _friendly_name(device), client.format_summary
+        )
         return client
+
+    def _pick_device(self, enumerator):
+        """The configured device while it is active, otherwise the default one."""
+        if self._source != _AUTO_SOURCE:
+            device = self._find_source(enumerator)
+            self._source_missing = device is None
+            if device is not None:
+                self._endpoint = (device.GetId(), False)
+                return device
+        device = enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender.value, ERole.eMultimedia.value)
+        self._endpoint = (device.GetId(), True)
+        return device
+
+    def _find_source(self, enumerator):
+        collection = enumerator.EnumAudioEndpoints(EDataFlow.eRender.value, DEVICE_STATE.ACTIVE.value)
+        for i in range(collection.GetCount()):
+            device = collection.Item(i)
+            if _friendly_name(device) == self._source:
+                return device
+        if not self._source_missing:
+            logging.warning(
+                "Audio visualizer: cannot open output device %r, switched to the default device", self._source
+            )
+        return None
 
     @staticmethod
     def _close(client: _WasapiLoopbackClient | None) -> None:

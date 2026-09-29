@@ -23,6 +23,7 @@ class DotsStyleConfig(CustomBaseModel):
 
 class AudioVisualizerConfig(CustomBaseModel):
     class_name: str = ""
+    source: str = "auto"
     style: Literal["bars", "waves", "dots"] = "bars"
     height: int = Field(default=14, ge=4, le=64)
     smoothness: int = Field(default=55, ge=0, le=100)
