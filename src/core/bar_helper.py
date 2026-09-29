@@ -913,16 +913,13 @@ class BarContextMenu:
 
     def _toggle_widget(self, widget, enabled):
         try:
-            # Add a flag to track manual visibility override
-            widget._manual_visibility_override = not enabled
-            widget.setVisible(bool(enabled))
-
             # Store the original show/hide methods if not already stored
             if not hasattr(widget, "_original_show"):
                 widget._original_show = widget.show
                 widget._original_hide = widget.hide
+                widget._original_set_visible = widget.setVisible
 
-            # Override show method to respect manual override
+            # Override show and setVisible to respect manual override
             def controlled_show():
                 if not getattr(widget, "_manual_visibility_override", False):
                     widget._original_show()
@@ -930,8 +927,18 @@ class BarContextMenu:
             def controlled_hide():
                 widget._original_hide()
 
+            def controlled_set_visible(visible):
+                if visible and getattr(widget, "_manual_visibility_override", False):
+                    return
+                widget._original_set_visible(visible)
+
             widget.show = controlled_show
             widget.hide = controlled_hide
+            widget.setVisible = controlled_set_visible
+
+            # Add a flag to track manual visibility override
+            widget._manual_visibility_override = not enabled
+            widget.setVisible(bool(enabled))
 
         except Exception as e:
             logging.error("Failed to toggle widget %s: %s", self._get_widget_display_name(widget), e)
