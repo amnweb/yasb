@@ -262,7 +262,7 @@ class TrafficWidget(BaseWidget):
         self._is_internet_connected = is_connected
 
         if self.config.hide_if_offline:
-            current_visibility = self.isVisible()
+            current_visibility = not self.isHidden()
             if current_visibility == is_connected:
                 return
 

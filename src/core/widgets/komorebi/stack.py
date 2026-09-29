@@ -70,7 +70,7 @@ class WindowButton(QFrame):
             self.close_stack_window()
 
     def update_visible_buttons(self):
-        visible_buttons = [btn for btn in self.parent_widget._window_buttons if btn.isVisible()]
+        visible_buttons = [btn for btn in self.parent_widget._window_buttons if not btn.isHidden()]
         for index, button in enumerate(visible_buttons):
             current_class = button.property("class")
             new_class = " ".join([cls for cls in (current_class or "").split() if not cls.startswith("button-")])

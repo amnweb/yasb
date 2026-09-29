@@ -190,12 +190,12 @@ class MediaSectionWidget(QFrame):
             return
         session = self._media.current_session
         if session is None:
-            if self.isVisible() and not self._hide_timer.isActive():
+            if not self.isHidden() and not self._hide_timer.isActive():
                 self._hide_timer.start()
             return
 
         self._hide_timer.stop()
-        if not self.isVisible():
+        if self.isHidden():
             self.show()
 
         app_id = session.app_id

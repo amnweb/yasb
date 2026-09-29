@@ -176,11 +176,11 @@ class MediaWidget(BaseWidget):
             if self.config.show_title or self.config.show_artist:
                 self._text_col_widget.show()
             return
-        if self.isVisible() and not self._bar_hide_timer.isActive():
+        if not self.isHidden() and not self._bar_hide_timer.isActive():
             self._bar_hide_timer.start()
 
     def _hide_bar_now(self) -> None:
-        if self.current_session is not None or not self.isVisible():
+        if self.current_session is not None or self.isHidden():
             return
         self.hide()
         if self._bar_scroll_label is not None:
