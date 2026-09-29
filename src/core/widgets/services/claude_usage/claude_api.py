@@ -120,15 +120,19 @@ def fetch_usage(cache_path: str, cache_ttl: int) -> dict[str, Any]:
         with urllib.request.urlopen(request, timeout=10) as response:
             payload = json.loads(response.read().decode("utf-8"))
 
-        five_raw = float(payload["five_hour"]["utilization"])
-        seven_raw = float(payload["seven_day"]["utilization"])
+        five = payload.get("five_hour") or {}
+        seven = payload.get("seven_day") or {}
+        five_util = five.get("utilization")
+        seven_util = seven.get("utilization")
+        five_raw = float(five_util) if five_util is not None else None
+        seven_raw = float(seven_util) if seven_util is not None else None
         record = {
-            "five": round(five_raw),
+            "five": round(five_raw) if five_raw is not None else None,
             "five_raw": five_raw,
-            "five_reset_iso": payload["five_hour"].get("resets_at"),
-            "seven": round(seven_raw),
+            "five_reset_iso": five.get("resets_at"),
+            "seven": round(seven_raw) if seven_raw is not None else None,
             "seven_raw": seven_raw,
-            "seven_reset_iso": payload["seven_day"].get("resets_at"),
+            "seven_reset_iso": seven.get("resets_at"),
             "scoped": _parse_scoped_limits(payload),
             "fetched_at": now,
             # A successful fetch proves the token is currently valid.
