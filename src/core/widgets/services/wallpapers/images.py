@@ -2,7 +2,7 @@ import logging
 import os
 
 from PyQt6.QtCore import QObject, QRect, QRunnable, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QImageReader, QPainter, QPixmap
+from PyQt6.QtGui import QImageIOHandler, QImageReader, QPainter, QPixmap
 
 from core.utils.system import get_build_and_ubr
 
@@ -76,11 +76,15 @@ class ImageLoader(QRunnable):
         target_h = int(self.target_height * self.dpr)
 
         reader = QImageReader(self.image_path)
+        reader.setAutoTransform(True)
+        # size() and setScaledSize() are in the stored orientation, before the EXIF rotation.
+        sideways = bool(reader.transformation() & QImageIOHandler.Transformation.TransformationRotate90)
         original_size = reader.size()
+        if sideways:
+            original_size.transpose()
 
         if not original_size.isValid():
-            reader.setScaledSize(QSize(target_w, target_h))
-            image = reader.read()
+            scaled_size = QSize(target_w, target_h)
         else:
             orig_aspect = original_size.width() / original_size.height()
             target_aspect = target_w / target_h if target_h != 0 else 1.0
@@ -92,8 +96,10 @@ class ImageLoader(QRunnable):
                 scaled_width = target_w
                 scaled_height = int(scaled_width / orig_aspect) if orig_aspect != 0 else target_h
 
-            reader.setScaledSize(QSize(scaled_width, scaled_height))
-            image = reader.read()
+            scaled_size = QSize(scaled_width, scaled_height)
+
+        reader.setScaledSize(scaled_size.transposed() if sideways else scaled_size)
+        image = reader.read()
 
         pixmap = QPixmap(target_w, target_h)
         pixmap.fill(Qt.GlobalColor.transparent)

@@ -28,7 +28,7 @@ import winreg
 from ctypes import wintypes
 
 from PyQt6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QImage, QPainter, QPainterPath, QPixmap, QPolygonF
+from PyQt6.QtGui import QColor, QImage, QImageReader, QPainter, QPainterPath, QPixmap, QPolygonF
 from PyQt6.QtWidgets import QApplication, QWidget
 from win32con import (
     GWL_EXSTYLE,
@@ -414,7 +414,9 @@ class _ImageLoader(QThread):
         self.old_path = old_path
 
     def run(self):
-        new_img = QImage(self.new_path)
+        reader = QImageReader(self.new_path)
+        reader.setAutoTransform(True)
+        new_img = reader.read()
         old_img = QImage(self.old_path)
         self.loaded.emit(new_img, old_img)
 
