@@ -1,7 +1,6 @@
 import ctypes
 import logging
 import os
-import subprocess
 import winreg
 from datetime import datetime
 from functools import partial
@@ -34,6 +33,7 @@ from PyQt6.QtWidgets import (
 from win32con import HWND_BOTTOM, HWND_NOTOPMOST, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE
 
 from core.utils.controller import exit_application, reload_application
+from core.utils.shell_utils import shell_open
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
 from core.utils.win32.bindings import SetWindowPos
@@ -959,7 +959,7 @@ class BarContextMenu:
 
     def _open_task_manager(self):
         try:
-            subprocess.Popen("taskmgr", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            shell_open("taskmgr")
         except Exception as e:
             logging.error("Failed to open Task Manager: %s", e)
 

@@ -5,6 +5,7 @@ import subprocess
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+from core.utils.shell_utils import shell_open
 from core.utils.utilities import PopupWidget
 from core.validation.widgets.yasb.home import HomeConfig, MenuItemConfig
 from core.widgets.base import BaseWidget
@@ -90,7 +91,7 @@ class HomeWidget(BaseWidget):
             self._add_menu_item(
                 main_layout,
                 self.config.menu_labels.about,
-                lambda: subprocess.Popen("winver", shell=True, creationflags=subprocess.CREATE_NO_WINDOW),
+                lambda: shell_open("winver"),
             )
 
             self._menu._add_separator(main_layout)
@@ -100,7 +101,7 @@ class HomeWidget(BaseWidget):
             self._add_menu_item(
                 main_layout,
                 self.config.menu_labels.task_manager,
-                lambda: subprocess.Popen("taskmgr", shell=True, creationflags=subprocess.CREATE_NO_WINDOW),
+                lambda: shell_open("taskmgr"),
             )
 
             self._menu._add_separator(main_layout)

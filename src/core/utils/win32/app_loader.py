@@ -2,7 +2,6 @@ import ctypes
 import glob
 import os
 import re
-import subprocess
 import winreg
 
 from PyQt6.QtCore import (
@@ -13,6 +12,7 @@ from PyQt6.QtCore import (
 _APPS_CACHE = None
 
 _CPL_NS_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel\NameSpace"
+_APPS_FOLDER = "shell:::{4234d49b-0245-4df3-b780-3893943456e1}"
 
 
 def _load_indirect_string(resource: str) -> str | None:
@@ -63,6 +63,21 @@ def _enumerate_control_panel_items():
                     yield name, clsid, canonical, desc
             except OSError:
                 continue
+
+
+def _get_start_apps() -> list[tuple[str, str]]:
+    import pythoncom
+    import win32com.client
+
+    pythoncom.CoInitialize()
+    try:
+        apps = [
+            (item.Name, item.Path)
+            for item in win32com.client.Dispatch("Shell.Application").NameSpace(_APPS_FOLDER).Items()
+        ]
+    finally:
+        pythoncom.CoUninitialize()
+    return sorted(apps, key=lambda app: app[0].casefold())
 
 
 class AppListLoader(QThread):
@@ -157,37 +172,10 @@ class AppListLoader(QThread):
                     mark_seen(name)
 
         try:
-            ps_script = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-StartApps | ForEach-Object { [PSCustomObject]@{Name=$_.Name;AppID=$_.AppID} } | ConvertTo-Json -Compress"
-            result = subprocess.run(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-NoLogo",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-Command",
-                    ps_script,
-                ],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=10,
-                creationflags=subprocess.CREATE_NO_WINDOW,
-            )
-            if result.returncode == 0:
-                import json as _json
-
-                uwp_list = _json.loads(result.stdout)
-                if isinstance(uwp_list, dict):
-                    uwp_list = [uwp_list]
-                for entry in uwp_list:
-                    name = entry.get("Name")
-                    appid = entry.get("AppID")
-                    if name and appid and not is_duplicate(name) and not should_filter_app(name):
-                        apps.append((name, f"UWP::{appid}", None))
-                        mark_seen(name)
+            for name, appid in _get_start_apps():
+                if name and appid and not is_duplicate(name) and not should_filter_app(name):
+                    apps.append((name, f"UWP::{appid}", None))
+                    mark_seen(name)
         except Exception:
             pass
 

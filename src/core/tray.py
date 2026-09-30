@@ -209,7 +209,7 @@ class SystemTrayManager(QSystemTrayIcon):
 
     def _open_config(self):
         try:
-            subprocess.run(["explorer", DEFAULT_CONFIG_DIRECTORY])
+            shell_open(DEFAULT_CONFIG_DIRECTORY)
         except Exception as e:
             logging.error("Failed to open config directory: %s", e)
 
