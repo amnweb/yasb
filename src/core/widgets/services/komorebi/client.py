@@ -34,7 +34,7 @@ class KomorebiClient:
                 [self._komorebic_path, "state"],
                 timeout=self._timeout_secs,
                 stderr=subprocess.PIPE,
-                shell=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
             return json.loads(output)
         except subprocess.TimeoutExpired:
@@ -108,12 +108,19 @@ class KomorebiClient:
         args = [self._komorebic_path, "focus-monitor-workspace", str(m_idx), str(ws_idx)]
         if wait:
             try:
-                subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, shell=True)
+                subprocess.run(
+                    args, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW
+                )
             except subprocess.SubprocessError, FileNotFoundError:
                 logging.exception("Failed to activate komorebi workspace")
         else:
             try:
-                subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
+                subprocess.Popen(
+                    args,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
             except subprocess.SubprocessError, FileNotFoundError:
                 logging.exception("Failed to activate komorebi workspace (spawn)")
 
@@ -123,7 +130,7 @@ class KomorebiClient:
                 [self._komorebic_path, "cycle-workspace", "next"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                shell=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
         except subprocess.SubprocessError, FileNotFoundError:
             logging.exception("Failed to cycle komorebi workspace")
@@ -131,10 +138,10 @@ class KomorebiClient:
     def prev_workspace(self) -> None:
         try:
             subprocess.Popen(
-                [self._komorebic_path, "cycle-workspace", "prev"],
+                [self._komorebic_path, "cycle-workspace", "previous"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                shell=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
         except subprocess.SubprocessError, FileNotFoundError:
             logging.exception("Failed to cycle komorebi workspace")
@@ -142,10 +149,10 @@ class KomorebiClient:
     def toggle_focus_mouse(self) -> None:
         try:
             subprocess.Popen(
-                [self._komorebic_path, "toggle-focus-follows-mouse"],
+                [self._komorebic_path, "toggle-focus-follows-mouse", "--implementation", "windows"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                shell=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
         except subprocess.SubprocessError, FileNotFoundError:
             logging.exception("Failed to toggle focus-follows-mouse")
@@ -156,7 +163,7 @@ class KomorebiClient:
                 [self._komorebic_path, "workspace-layout", str(m_idx), str(ws_idx), layout],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                shell=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
         except subprocess.SubprocessError, FileNotFoundError:
             logging.exception("Failed to change layout of currently active workspace to %s", layout)
@@ -167,7 +174,7 @@ class KomorebiClient:
                 [self._komorebic_path, "flip-layout", direction],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                shell=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
         except subprocess.SubprocessError, FileNotFoundError:
             pass
@@ -194,12 +201,12 @@ class KomorebiClient:
             logging.exception("Failed to toggle %s for currently active workspace", toggle_type)
 
     def wait_until_subscribed_to_pipe(self, pipe_name: str):
-        proc = subprocess.Popen(
-            [self._komorebic_path, "subscribe", pipe_name], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        _stdout, stderr = proc.communicate()
-
-        return stderr, proc
+        args = [self._komorebic_path, "subscribe", pipe_name]
+        try:
+            proc = subprocess.run(args, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+        except FileNotFoundError as e:
+            proc = subprocess.CompletedProcess(args, 1, b"", f"{self._komorebic_path}: {e.strerror}".encode())
+        return proc.stderr, proc
 
     def get_containers(self, workspace: dict, get_monocle: bool = True) -> list:
         containers = [add_index(container, i) for i, container in enumerate(workspace["containers"]["elements"])]
@@ -282,7 +289,7 @@ class KomorebiClient:
                 [self._komorebic_path, "focus-stack-window", str(w_idx)],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                shell=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
         except subprocess.SubprocessError, FileNotFoundError:
             logging.exception("Failed to focus stack window")
@@ -293,7 +300,7 @@ class KomorebiClient:
                 [self._komorebic_path, "cycle-stack", "next"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                shell=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
         except subprocess.SubprocessError, FileNotFoundError:
             logging.exception("Failed to cycle komorebi stack")
@@ -301,10 +308,10 @@ class KomorebiClient:
     def prev_stack_window(self) -> None:
         try:
             subprocess.Popen(
-                [self._komorebic_path, "cycle-stack", "prev"],
+                [self._komorebic_path, "cycle-stack", "previous"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                shell=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
         except subprocess.SubprocessError, FileNotFoundError:
             logging.exception("Failed to cycle komorebi stack")
