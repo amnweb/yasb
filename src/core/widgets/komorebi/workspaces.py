@@ -170,7 +170,8 @@ class WorkspaceButtonWithIcons(QFrame):
         # Remove extra QLabel widgets if there are more than needed
         for extra_label in self.icon_labels[len(icons_list) :]:
             self.button_layout.removeWidget(extra_label)
-            extra_label.setParent(None)
+            extra_label.hide()
+            extra_label.deleteLater()
         self.icon_labels = self.icon_labels[: len(icons_list)]
 
         # Add or update icons
@@ -402,7 +403,8 @@ class WorkspaceWidget(BaseWidget):
         for i in reversed(range(self._workspace_container_layout.count())):
             old_workspace_widget = self._workspace_container_layout.itemAt(i).widget()
             self._workspace_container_layout.removeWidget(old_workspace_widget)
-            old_workspace_widget.setParent(None)
+            old_workspace_widget.hide()
+            old_workspace_widget.deleteLater()
 
     def _update_komorebi_state(self, komorebi_state: dict) -> bool:
         try:
