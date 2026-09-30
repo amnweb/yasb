@@ -6,11 +6,10 @@ import threading
 
 import comtypes.client
 import pythoncom
-from comtypes import GUID
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from core.events.service import EventService
-from core.utils.win32.bindings.shell32 import IDesktopWallpaper
+from core.utils.win32.bindings.shell32 import CLSID_DesktopWallpaper, IDesktopWallpaper
 from core.widgets.services.wallpapers.engine import WallpaperEngine
 from core.widgets.services.wallpapers.images import collect_image_files
 
@@ -92,8 +91,7 @@ class WallpaperManager(QObject):
 
         pythoncom.CoInitialize()
         try:
-            clsid = GUID("{C2CF3110-460E-4fc1-B9D0-8A1C0C9CC4BD}")
-            dwp = comtypes.client.CreateObject(clsid, interface=IDesktopWallpaper)
+            dwp = comtypes.client.CreateObject(CLSID_DesktopWallpaper, interface=IDesktopWallpaper)
             dwp.SetWallpaper(monitor_id, os.path.abspath(image_path))
         except Exception as e:
             logging.error("Failed to set wallpaper: %s", e)
@@ -105,8 +103,7 @@ class WallpaperManager(QObject):
         """Return COM monitor device paths for all connected monitors."""
         pythoncom.CoInitialize()
         try:
-            clsid = GUID("{C2CF3110-460E-4fc1-B9D0-8A1C0C9CC4BD}")
-            dwp = comtypes.client.CreateObject(clsid, interface=IDesktopWallpaper)
+            dwp = comtypes.client.CreateObject(CLSID_DesktopWallpaper, interface=IDesktopWallpaper)
             count = dwp.GetMonitorDevicePathCount()
             return [dwp.GetMonitorDevicePathAt(i) for i in range(count)]
         except Exception as e:

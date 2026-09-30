@@ -261,8 +261,15 @@ class CardsView(QWidget):
         """Fill *rect* with *pixmap*, cropping rather than stretching it."""
         size = pixmap.deviceIndependentSize()
         scale = max(rect.width() / size.width(), rect.height() / size.height())
-        width, height = size.width() * scale, size.height() * scale
         centre = rect.center()
+        if abs(scale - 1.0) < 0.01:
+            # Unscaled and on whole device pixels, QPainter copies the pixmap instead of resampling it.
+            dpr = painter.device().devicePixelRatio()
+            x = round((centre.x() - size.width() / 2.0) * dpr) / dpr
+            y = round((centre.y() - size.height() / 2.0) * dpr) / dpr
+            painter.drawPixmap(QPointF(x, y), pixmap)
+            return
+        width, height = size.width() * scale, size.height() * scale
         target = QRectF(centre.x() - width / 2.0, centre.y() - height / 2.0, width, height)
         painter.drawPixmap(target, pixmap, QRectF(0, 0, pixmap.width(), pixmap.height()))
 
@@ -397,14 +404,15 @@ class CardsView(QWidget):
 
         self.index = index % count
         target = self.gallery.offset_for(self.index)
-        self.gallery.on_focus_changed(self.index)
-
         self.animation.stop()
+
         if not animate:
             self.offset = target
+            self.gallery.on_focus_changed(self.index)
             self.update()
             return
 
+        self.gallery.on_focus_changed(self.index)
         self.animation.setStartValue(self.offset)
         self.animation.setEndValue(target)
         self.animation.start()
@@ -474,6 +482,15 @@ class Cards(GalleryWindow):
             cards.append((index, spot._replace(focus=max(0.0, 1.0 - abs(distance)))))
         return cards
 
+    def selected_spot(self) -> Placement:
+        """Where the selected card sits, the largest a card is ever drawn."""
+        return self.place(0.0)
+
+    def thumbnail_size(self) -> tuple[float, float]:
+        """The size the selected card's picture is drawn at."""
+        area = self.view.project(self.selected_spot(), self.border).boundingRect()
+        return area.width(), area.height()
+
     def decode_order(self, index: int) -> float:
         return abs(self.view.relative_distance(index))
 
@@ -499,6 +516,7 @@ class Cards(GalleryWindow):
         self.neighbours = 1
         self.wraps = False
         self.dpr = 1.0
+        self.screen_name: str | None = None
         self.is_closing = False
         self._cache: OrderedDict[int, QPixmap] = OrderedDict()
         self._pending: set[int] = set()
@@ -510,22 +528,24 @@ class Cards(GalleryWindow):
 
         # Started here rather than on show, so the walk has a head start on the
         # window being built and the fade-in running.
-        scanner = FolderScanner(self.image_paths)
+        screens = {screen.name(): screen.geometry().getCoords() for screen in QApplication.screens()}
+        scanner = FolderScanner(self.image_paths, screens)
         scanner.signals.finished.connect(self._on_scan_finished)
         self.threadpool.start(scanner)
 
-    def _on_scan_finished(self, files: list[str]):
+    def _on_scan_finished(self, files: list[str], current: dict[str, int]):
         self.scanning = False
         if self.is_closing:
             return
         self.image_files = files
         self.fit_to_view(self.view.width(), self.view.height())
-        self.view.go_to(0, animate=False)
+        self.view.go_to(current.get(self.screen_name, 0), animate=False)
 
     def build_frame(self):
         self.setCentralWidget(self.view)
 
     def build_content(self, screen):
+        self.screen_name = screen.name()
         area = screen.geometry()
         _, card_h = self.card_size
         height = min(area.height(), int(card_h * self.max_scale))
@@ -563,7 +583,7 @@ class Cards(GalleryWindow):
 
         radius = self.neighbours + 3
         wanted = {(index + offset) % count for offset in range(-radius, radius + 1)}
-        card_w, card_h = self.card_size
+        thumb_w, thumb_h = self.thumbnail_size()
 
         self._requeue(wanted)
 
@@ -571,7 +591,7 @@ class Cards(GalleryWindow):
             if target in self._cache or target in self._pending:
                 continue
             self._pending.add(target)
-            loader = ImageLoader(self.image_files[target], card_w, card_h, target, dpr=self.dpr)
+            loader = ImageLoader(self.image_files[target], thumb_w, thumb_h, target, dpr=self.dpr)
             loader.signals.loaded.connect(self._on_image_loaded)
             loader.setAutoDelete(False)
             self._queued[target] = loader
@@ -677,6 +697,9 @@ class Magnified(Cards):
     @property
     def max_scale(self) -> float:
         return 1.0 + self.grow
+
+    def selected_spot(self) -> Placement:
+        return Placement(x=0.0, scale=self.max_scale)
 
     def scale_at(self, distance: float) -> float:
         return 1.0 + self.grow * max(0.0, 1.0 - abs(distance) / self.reach)

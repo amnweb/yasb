@@ -65,3 +65,6 @@ class IDesktopWallpaper(comtypes.IUnknown):
         ),
         COMMETHOD([], HRESULT, "GetMonitorDevicePathCount", (["out"], POINTER(c_uint), "count")),
     ]
+
+
+CLSID_DesktopWallpaper = GUID("{C2CF3110-460E-4fc1-B9D0-8A1C0C9CC4BD}")
