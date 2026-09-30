@@ -378,9 +378,7 @@ class ServerMonitor(BaseWidget):
                     self._animations.append(animation)  # Store animation reference
 
                 row_widget.setProperty("class", f"row {class_name}")
-                _server_url = (
-                    f"https://{server_data['url']}" if self.config.ssl_check else f"http://{server_data['url']}"
-                )
+                _server_url = server_data["url"]
                 row_widget.mousePressEvent = lambda _, url=_server_url: (QDesktopServices.openUrl(QUrl(url)), None)[1]
                 row_widget_layout = QVBoxLayout(row_widget)
                 row_widget_layout.setContentsMargins(0, 0, 0, 0)
@@ -400,7 +398,7 @@ class ServerMonitor(BaseWidget):
                 h_layout.addWidget(server_status)
 
                 ssl_status = ""
-                if self.config.ssl_check and isinstance(server_data.get("ssl"), int):
+                if self.config.ssl_verify and isinstance(server_data.get("ssl"), int):
                     ssl_status = f", SSL expires in {server_data['ssl']} days"
                 if server_data["status"] == "Online":
                     details_text = (
