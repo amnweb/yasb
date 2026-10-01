@@ -8,10 +8,11 @@ threads (QThread workers).
 """
 
 import logging
-import subprocess
 
 import pywintypes
 import win32com.client
+
+from core.utils.shell_utils import shell_open
 
 
 def check_updates() -> list[dict[str, str]]:
@@ -64,4 +65,4 @@ def check_updates() -> list[dict[str, str]]:
 
 def upgrade_packages(package_ids: list[str] | None = None) -> None:
     """Open the Windows Update settings page to install updates."""
-    subprocess.Popen("start ms-settings:windowsupdate", shell=True)
+    shell_open("ms-settings:windowsupdate")

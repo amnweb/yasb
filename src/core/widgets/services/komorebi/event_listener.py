@@ -10,6 +10,7 @@ from PyQt6.QtCore import QThread
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
+from core.utils.process import is_process_running
 from core.widgets.services.komorebi.client import KomorebiClient
 
 KOMOREBI_PIPE_BUFF_SIZE = 64 * 1024 * 8
@@ -130,21 +131,21 @@ class KomorebiEventListener(QThread):
 
     def _wait_until_komorebi_online(self):
         logging.debug("Waiting for Komorebi to subscribe to named pipe %s", self.pipe_name)
-        stderr, proc = self._komorebic.wait_until_subscribed_to_pipe(self.pipe_name)
-
-        if stderr:
-            stderr_str = " ".join(stderr.decode("utf-8").replace("\n", " ").replace("\r", " ").split())
-
-            if "(os error 10061)" in stderr_str:
-                error_message = "Komorebi is not running, please start Komorebi."
+        warned = False
+        while self._app_running:
+            error_message = "Komorebi is not running, please start Komorebi."
+            if is_process_running("komorebi.exe"):
+                stderr, proc = self._komorebic.wait_until_subscribed_to_pipe(self.pipe_name)
+                if proc.returncode == 0:
+                    break
+                stderr_str = " ".join(stderr.decode("utf-8").replace("\n", " ").replace("\r", " ").split())
+                if "(os error 10061)" not in stderr_str:
+                    error_message = stderr_str
+            if not warned:
                 logging.warning("Komorebi failed to subscribe named pipe. %s", error_message)
-            else:
-                logging.warning("Komorebi failed to subscribe named pipe. %s", stderr_str)
-
-        while self._app_running and proc.returncode != 0:
+                warned = True
             if self._stop_event.wait(5):
                 return
-            stderr, proc = self._komorebic.wait_until_subscribed_to_pipe(self.pipe_name)
 
         if not self._app_running or self.pipe is None:
             return

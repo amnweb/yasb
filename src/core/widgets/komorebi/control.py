@@ -328,8 +328,8 @@ class VersionCheckThread(QThread):
                 [self._komorebic._komorebic_path, "--version"],
                 timeout=self._komorebic._timeout_secs,
                 stderr=subprocess.STDOUT,
-                shell=True,
                 text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
             match = re.search(r"komorebic\s+(\d+\.\d+\.\d+)", output.strip().split("\n")[0])
             return match.group(1) if match else None
