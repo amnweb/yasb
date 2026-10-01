@@ -90,6 +90,10 @@ class Bar(QWidget):
             self._bar_frame = BarFrame(self)
             self._bar_frame.setProperty("class", f"bar {self.config.class_name}")
 
+        # Force-disable CSS box/text-shadow for the bar and bar frame
+        self.setProperty("cssEngineDisableShadow", True)
+        self._bar_frame.setProperty("cssEngineDisableShadow", True)
+
         # Set cursor for the bar frame, so that it doesn't inherit from the parent widget.
         self._bar_frame.setCursor(Qt.CursorShape.ArrowCursor)
 
