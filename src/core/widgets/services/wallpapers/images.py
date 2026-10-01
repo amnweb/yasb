@@ -1,13 +1,22 @@
+import ctypes
 import logging
+import math
 import os
+from functools import cmp_to_key, partial
 
-from PyQt6.QtCore import QObject, QRect, QRunnable, QSize, Qt, pyqtSignal
+import comtypes.client
+import pythoncom
+import win32api
+from PyQt6.QtCore import QObject, QRect, QRunnable, QSize, Qt, QThreadPool, pyqtSignal
 from PyQt6.QtGui import QImageIOHandler, QImageReader, QPainter, QPixmap
 
 from core.utils.system import get_build_and_ubr
+from core.utils.win32.bindings.shell32 import CLSID_DesktopWallpaper, IDesktopWallpaper
+from core.widgets.services.wallpapers import thumbnails
 
 FILE_TYPES = ("png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff")
 WEBP_BUILDS = ((26220, 7653), (26100, 8037))
+EDD_GET_DEVICE_INTERFACE_NAME = 1
 
 
 def supported_types() -> tuple[str, ...]:
@@ -19,7 +28,7 @@ def supported_types() -> tuple[str, ...]:
 
 
 def collect_image_files(image_paths: str | list[str]) -> list[str]:
-    """Every usable wallpaper under *image_paths*, sorted by path."""
+    """Every usable wallpaper under *image_paths*, in name order."""
     if isinstance(image_paths, str):
         image_paths = [image_paths]
 
@@ -33,19 +42,52 @@ def collect_image_files(image_paths: str | list[str]) -> list[str]:
                 if name.lower().endswith(file_types):
                     files.append(os.path.join(root, name))
 
-    return sorted(files)
+    return sorted(files, key=cmp_to_key(ctypes.windll.shlwapi.StrCmpLogicalW))
+
+
+def current_wallpapers(screens: dict[str, tuple[int, int, int, int]]) -> dict[str, str]:
+    """The wallpaper Windows shows on each of *screens*, by screen name."""
+    pythoncom.CoInitialize()
+    desktop = comtypes.client.CreateObject(CLSID_DesktopWallpaper, interface=IDesktopWallpaper)
+    wallpapers: dict[str, str] = {}
+    for name, rect in screens.items():
+        try:
+            device = win32api.GetMonitorInfo(win32api.MonitorFromRect(rect))["Device"]
+            # The monitor's device interface path is the monitor ID IDesktopWallpaper takes.
+            monitor = win32api.EnumDisplayDevices(device, 0, EDD_GET_DEVICE_INTERFACE_NAME).DeviceID
+            wallpapers[name] = desktop.GetWallpaper(monitor)
+        except Exception:
+            logging.debug("Could not read the wallpaper on %s", name, exc_info=True)
+    return wallpapers
+
+
+def find_wallpapers(files: list[str], wallpapers: dict[str, str]) -> dict[str, int]:
+    """Where each screen's wallpaper sits in *files*, by screen name."""
+    wanted: dict[str, list[str]] = {}
+    for name, path in wallpapers.items():
+        if path:
+            wanted.setdefault(os.path.normcase(os.path.normpath(path)), []).append(name)
+
+    found: dict[str, int] = {}
+    for index, file in enumerate(files):
+        if not wanted:
+            break
+        for name in wanted.pop(os.path.normcase(os.path.normpath(file)), ()):
+            found[name] = index
+    return found
 
 
 class ScanSignals(QObject):
-    finished = pyqtSignal(list)
+    finished = pyqtSignal(list, dict)
 
 
 class FolderScanner(QRunnable):
-    """Walks the wallpaper folders off the GUI thread."""
+    """Walks the wallpaper folders off the GUI thread and finds each screen's wallpaper in them."""
 
-    def __init__(self, image_paths: str | list[str]):
+    def __init__(self, image_paths: str | list[str], screens: dict[str, tuple[int, int, int, int]]):
         super().__init__()
         self.image_paths = image_paths
+        self.screens = screens
         self.signals = ScanSignals()
 
     def run(self):
@@ -54,7 +96,15 @@ class FolderScanner(QRunnable):
         except Exception:
             logging.exception("Failed to scan wallpaper folders")
             files = []
-        self.signals.finished.emit(files)
+
+        current: dict[str, int] = {}
+        if files:
+            try:
+                current = find_wallpapers(files, current_wallpapers(self.screens))
+            except Exception:
+                logging.debug("Could not read the current wallpapers", exc_info=True)
+        self.signals.finished.emit(files, current)
+        thumbnails.prune()
 
 
 class ImageSignals(QObject):
@@ -72,8 +122,16 @@ class ImageLoader(QRunnable):
         self.signals = ImageSignals()
 
     def run(self):
-        target_w = int(self.target_width * self.dpr)
-        target_h = int(self.target_height * self.dpr)
+        target_w = math.ceil(self.target_width * self.dpr)
+        target_h = math.ceil(self.target_height * self.dpr)
+
+        cache_key = thumbnails.key(self.image_path, target_w, target_h)
+        cached = thumbnails.load(cache_key) if cache_key else None
+        if cached is not None:
+            pixmap = QPixmap.fromImage(cached)
+            pixmap.setDevicePixelRatio(self.dpr)
+            self.signals.loaded.emit(self.image_path, pixmap, self.index)
+            return
 
         reader = QImageReader(self.image_path)
         reader.setAutoTransform(True)
@@ -124,5 +182,8 @@ class ImageLoader(QRunnable):
         painter.end()
 
         pixmap.setDevicePixelRatio(self.dpr)
+        thumbnail = pixmap.toImage()
 
         self.signals.loaded.emit(self.image_path, pixmap, self.index)
+        if cache_key and not image.isNull():
+            QThreadPool.globalInstance().start(partial(thumbnails.save, cache_key, thumbnail))

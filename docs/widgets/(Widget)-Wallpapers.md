@@ -141,6 +141,10 @@ The row slides rather than paging, so Page Up and Page Down do not replace every
 
 Clicking outside the gallery closes it.
 
+The gallery opens on the wallpaper currently set on the screen it opens on, so with a different wallpaper per screen, each screen starts on its own. Wallpapers are listed by name, in the same order as File Explorer.
+
+Thumbnails are cached in `%LOCALAPPDATA%\YASB\wallpaper_thumbnails`, so reopening the gallery does not decode every image again. The cache is kept under 100 MB, and thumbnails older than 30 days are removed. It is safe to delete the folder at any time.
+
 
 ## Example Style
 ```css
