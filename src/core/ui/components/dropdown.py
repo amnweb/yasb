@@ -209,9 +209,12 @@ class _DropDownPopup(QWidget):
 class DropDown(QPushButton):
     currentChanged = pyqtSignal(str)
 
-    def __init__(self, items: list[tuple[str, str]] | None = None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, items: list[tuple[str, str]] | None = None, parent: QWidget | None = None, *, align_selected: bool = True
+    ) -> None:
         super().__init__(parent)
         self._items = items or []
+        self._align_selected = align_selected
         self._current = self._items[0][0] if self._items else ""
         self._popup: _DropDownPopup | None = None
 
@@ -325,7 +328,7 @@ class DropDown(QPushButton):
         self._popup.itemSelected.connect(self._on_popup_selected)
         self._popup.destroyed.connect(self._on_popup_destroyed)
         current_index = next((i for i, (k, _) in enumerate(self._items) if k == self._current), 0)
-        self._popup.show_at(self, current_index)
+        self._popup.show_at(self, current_index if self._align_selected else 0)
 
     def _on_popup_selected(self, key: str) -> None:
         self.set_current(key)
