@@ -1,6 +1,5 @@
 import ctypes
 import logging
-import os
 import re
 import winreg
 
@@ -9,6 +8,7 @@ from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
 from win32con import WM_INPUTLANGCHANGEREQUEST
 
+from core.utils.shell_utils import shell_open
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.win32.bindings import (
     kernel32,
@@ -114,12 +114,7 @@ class LanguageWidget(BaseWidget):
             self._menu.hide()
 
     def _open_language_settings(self):
-        """Open Windows language settings"""
-        try:
-            os.startfile("ms-settings:regionlanguage")
-        except Exception:
-            # Fallback to the old Control Panel if Settings app fails
-            os.startfile(os.path.join(os.environ["SystemRoot"], "System32", "control.exe"), "intl.cpl")
+        shell_open("ms-settings:regionlanguage")
 
     def _show_language_menu(self):
         """Show popup menu with available languages"""
