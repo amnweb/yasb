@@ -121,6 +121,14 @@ def _md_table(lines: list[str]) -> str:
     return html + "</table>"
 
 
+def _starts_block(lines: list[str], i: int) -> bool:
+    line = lines[i].strip()
+    if "|" in line and i + 1 < len(lines) and _TABLE_SEP.match(lines[i + 1].strip()):
+        return True
+    blocks = (_HEADING_FENCE, _HR, _UL_ITEM, _OL_ITEM, _HTML_BLOCK_OPEN)
+    return line.startswith(_CODE_BLOCK_PREFIX) or any(block.match(line) for block in blocks)
+
+
 # Public API
 def preprocess_readme(text: str) -> str:
     """Strip block-level HTML wrappers and rewrite GitHub blob URLs to raw URLs."""
@@ -247,8 +255,14 @@ def md_to_html(src: str, *, alert_styles: dict[str, tuple[str, str]] | None = No
         # Blockquote
         if _BQ_START.match(stripped):
             bq: list[str] = []
-            while i < n and _BQ_START.match(lines[i].strip()):
-                bq.append(_BQ_PREFIX.sub("", lines[i], count=1))
+            while i < n:
+                cur = lines[i].strip()
+                if _BQ_START.match(cur):
+                    bq.append(_BQ_PREFIX.sub("", lines[i], count=1))
+                elif cur and bq[-1].strip() and not _starts_block(lines, i):
+                    bq.append(cur)
+                else:
+                    break
                 i += 1
             # GFM alert blocks [!NOTE], [!TIP], [!IMPORTANT], [!WARNING], [!CAUTION]
             if bq:
