@@ -117,9 +117,9 @@ class SystemTrayManager(QSystemTrayIcon):
 
             add_item(hmenu, "Open Config", self._open_config)
             if os.path.exists(CLOUD_EXE_PATH):
-                add_item(hmenu, "YASB Cloud", lambda: os.startfile(CLOUD_EXE_PATH))
+                add_item(hmenu, "YASB Cloud", lambda: shell_open(CLOUD_EXE_PATH))
             if os.path.exists(THEME_EXE_PATH):
-                add_item(hmenu, "Get Themes", lambda: os.startfile(THEME_EXE_PATH))
+                add_item(hmenu, "Get Themes", lambda: shell_open(THEME_EXE_PATH))
             add_item(hmenu, "Reload YASB", self._reload_application)
             add_sep(hmenu)
 
