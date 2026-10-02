@@ -141,6 +141,7 @@ choco install yasb
 | [Komorebi Layout](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Layout) | Shows the current layout of Komorebi. |
 | [Komorebi Stack](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Stack) | Shows windows in the current Komorebi stack. |
 | [Komorebi Workspaces](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Workspaces) | Komorebi workspaces widget. |
+| [LeopardWM Workspaces](https://github.com/amnweb/yasb/wiki/(Widget)-LeopardWM-Workspaces) | Monitor-aware workspace strip with application icons and live IPC updates. |
 
 
 ## 🤝 Contributors
