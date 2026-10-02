@@ -1287,6 +1287,10 @@ class QuickLaunchWidget(BaseWidget):
         if should_close is True:
             QTimer.singleShot(0, self._hide_popup)
         elif should_close is False and self._popup:
+            # Preserve scroll position so selection stays near the clicked item
+            sb = self._popup.results_view.verticalScrollBar()
+            if sb:
+                self._pending_scroll_value = sb.value()
             text = self._popup.search_input.text()
             self._update_results(text)
         elif should_close is None:
