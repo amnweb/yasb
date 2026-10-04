@@ -5,6 +5,8 @@ from ctypes import POINTER, Structure, c_ulong, sizeof, windll, wintypes
 import win32con
 from PyQt6.QtGui import QScreen
 
+from core.utils.win32.bindings.user32 import GetWindowLongPtr, SetWindowLongPtr
+
 shell32 = windll.shell32
 user32 = windll.user32
 
@@ -106,11 +108,11 @@ class Win32AppBar:
         self.app_bar_data.hWnd = hwnd
         self.register_new()
 
-        current_ex_style = windll.user32.GetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE)
+        current_ex_style = GetWindowLongPtr(hwnd, win32con.GWL_EXSTYLE)
         updated_ex_style = current_ex_style | win32con.WS_EX_NOACTIVATE
         if always_on_top:
             updated_ex_style |= win32con.WS_EX_TOPMOST
-        windll.user32.SetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE, updated_ex_style)
+        SetWindowLongPtr(hwnd, win32con.GWL_EXSTYLE, updated_ex_style)
 
         self.position_bar(app_bar_height, screen, scale_screen, bar_name)
         # Only reserve screen space if requested windows_app_bar: true

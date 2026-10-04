@@ -98,8 +98,6 @@ class PowerPlanService:
     def _watch_loop(cls) -> None:
         """Block on RegNotifyChangeKeyValue emit event on every scheme change."""
         kernel32 = windll.kernel32
-        kernel32.CreateEventW.restype = c_void_p
-        kernel32.WaitForMultipleObjects.restype = wintypes.DWORD
 
         try:
             key = winreg.OpenKey(
@@ -145,7 +143,6 @@ class PowerPlanService:
             return
 
         kernel32 = windll.kernel32
-        kernel32.CreateEventW.restype = c_void_p
         cls._reg_stop_handle = kernel32.CreateEventW(None, True, False, None)
         if not cls._reg_stop_handle:
             logger.warning("PowerPlanService could not create stop event.")

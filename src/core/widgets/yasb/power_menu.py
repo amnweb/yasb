@@ -1,4 +1,3 @@
-import ctypes
 import datetime
 import os
 
@@ -19,6 +18,7 @@ from PyQt6.QtWidgets import (
 from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.win32.backdrop import enable_blur
+from core.utils.win32.bindings.kernel32 import GetTickCount64
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.power_menu import PowerMenuConfig
 from core.widgets.base import BaseWidget
@@ -93,7 +93,7 @@ class OverlayWidget(AnimatedWidget):
             )
 
     def boot_time(self):
-        uptime_seconds = int(ctypes.windll.kernel32.GetTickCount64() / 1000)
+        uptime_seconds = int(GetTickCount64() / 1000)
         delta = datetime.timedelta(seconds=uptime_seconds)
         days, hours = delta.days, delta.seconds // 3600
         minutes = (delta.seconds % 3600) // 60

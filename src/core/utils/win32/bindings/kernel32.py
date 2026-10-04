@@ -6,6 +6,7 @@ from ctypes import (
     byref,
     c_char,
     c_size_t,
+    c_ulonglong,
     c_wchar,
     create_string_buffer,
     windll,
@@ -87,6 +88,9 @@ kernel32.OpenEventW.restype = HANDLE
 kernel32.WaitForSingleObject.argtypes = [HANDLE, DWORD]
 kernel32.WaitForSingleObject.restype = DWORD
 
+kernel32.WaitForMultipleObjects.argtypes = [DWORD, POINTER(HANDLE), BOOL, DWORD]
+kernel32.WaitForMultipleObjects.restype = DWORD
+
 kernel32.ReadFile.argtypes = [
     HANDLE,
     LPVOID,
@@ -115,6 +119,15 @@ kernel32.CreateFileW.argtypes = [
     HANDLE,
 ]
 kernel32.CreateFileW.restype = HANDLE
+
+kernel32.FindFirstChangeNotificationW.argtypes = [LPCWSTR, BOOL, DWORD]
+kernel32.FindFirstChangeNotificationW.restype = HANDLE
+
+kernel32.FindNextChangeNotification.argtypes = [HANDLE]
+kernel32.FindNextChangeNotification.restype = BOOL
+
+kernel32.FindCloseChangeNotification.argtypes = [HANDLE]
+kernel32.FindCloseChangeNotification.restype = BOOL
 
 kernel32.DeviceIoControl.argtypes = [
     HANDLE,
@@ -171,13 +184,16 @@ kernel32.FormatMessageW.argtypes = [
     DWORD,
     LPWSTR,
     DWORD,
-    POINTER(DWORD),
+    LPVOID,  # va_list*, or a DWORD_PTR array with FORMAT_MESSAGE_ARGUMENT_ARRAY
 ]
 kernel32.FormatMessageW.restype = DWORD
 
 # Additional kernel32 APIs
 kernel32.GetCurrentThreadId.argtypes = []
 kernel32.GetCurrentThreadId.restype = DWORD
+
+kernel32.GetTickCount64.argtypes = []
+kernel32.GetTickCount64.restype = c_ulonglong
 
 kernel32.GetModuleHandleW.argtypes = [LPCWSTR]
 kernel32.GetModuleHandleW.restype = HANDLE
@@ -454,6 +470,10 @@ def FormatMessage(
 
 def GetCurrentThreadId() -> int:
     return int(kernel32.GetCurrentThreadId())
+
+
+def GetTickCount64() -> int:
+    return kernel32.GetTickCount64()
 
 
 def GetModuleHandle(lpModuleName: str | None) -> int:

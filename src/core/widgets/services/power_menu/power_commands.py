@@ -1,4 +1,3 @@
-import ctypes
 import logging
 import subprocess
 
@@ -7,6 +6,7 @@ import win32security
 from PyQt6.QtCore import QCoreApplication
 
 from core.utils.controller import exit_application
+from core.utils.win32.bindings.powrprof import SetSuspendState
 
 
 class PowerOperations:
@@ -68,7 +68,7 @@ class PowerOperations:
                 try:
                     priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_SHUTDOWN_NAME)
                     win32security.AdjustTokenPrivileges(htoken, 0, [(priv_id, win32security.SE_PRIVILEGE_ENABLED)])
-                    success = ctypes.windll.powrprof.SetSuspendState(False, True, False)
+                    success = SetSuspendState(False, True, False)
                     if not success:
                         logging.error("Sleep operation failed")
                 finally:

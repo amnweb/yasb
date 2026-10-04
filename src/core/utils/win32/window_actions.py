@@ -44,12 +44,9 @@ def is_owner_root_active(base: int) -> bool:
     return int(fg_top) == int(base)
 
 
-def can_minimize(base: int) -> bool:
-    try:
-        style = u32.GetWindowLong(base, win32con.GWL_STYLE)
-        return bool(style & win32con.WS_MINIMIZEBOX) and bool(u32.IsWindowEnabled(base))
-    except Exception:
-        return True
+def can_minimize(hwnd: int) -> bool:
+    style = u32.GetWindowLongW(int(hwnd), win32con.GWL_STYLE)
+    return bool(style & win32con.WS_MINIMIZEBOX) and bool(u32.IsWindowEnabled(int(hwnd)))
 
 
 # --- Window commands ---
@@ -59,7 +56,7 @@ def send_sys_command(hwnd: int, cmd: int) -> bool:
     """Send WM_SYSCOMMAND to a window with a short timeout. Returns True on success."""
     try:
         SMTO_ABORTIFHUNG = 0x0002
-        result = ctypes.c_ulong()
+        result = ctypes.c_size_t()
         ret = u32.SendMessageTimeoutW(
             int(hwnd),
             int(win32con.WM_SYSCOMMAND),
@@ -186,7 +183,7 @@ def close_application(hwnd: int, force: bool = False):
 
     Graceful close (force=False):
     - SendMessageTimeout(WM_SYSCOMMAND, SC_CLOSE) to the root owner window
-    - Fallback to PostMessage(WM_CLOSE)
+    - If the window is hung, fall back to PostMessage(WM_CLOSE)
     - As a last resort, call EndTask (graceful attempt)
 
     Forced termination (force=True):
@@ -264,7 +261,7 @@ def close_application(hwnd: int, force: bool = False):
             SC_CLOSE = 0xF060
             SMTO_ABORTIFHUNG = 0x0002
 
-            lpdw_result = ctypes.c_ulong()
+            lpdw_result = ctypes.c_size_t()
             sent = u32.SendMessageTimeoutW(
                 int(target_hwnd),
                 int(WM_SYSCOMMAND),
@@ -278,9 +275,15 @@ def close_application(hwnd: int, force: bool = False):
             if sent:
                 return
 
+            # SendMessageTimeout also gives up while the app shows a modal prompt for SC_CLOSE
+            # ("Save changes?"). Only a hung window needs the fallback; a responsive one would
+            # get a second close request on top of the open prompt.
+            if not u32.IsHungAppWindow(int(target_hwnd)):
+                return
+
             # Fallback: WM_CLOSE via PostMessage
             WM_CLOSE = 0x0010
-            posted = u32.PostMessage(int(target_hwnd), int(WM_CLOSE), 0, 0)
+            posted = u32.PostMessageW(int(target_hwnd), int(WM_CLOSE), 0, 0)
             if posted:
                 return
 
