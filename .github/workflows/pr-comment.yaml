@@ -24,10 +24,13 @@ jobs:
           sparse-checkout: .github/scripts
           persist-credentials: false
 
+      # The pull request's own run wrote these artifacts. Extracted outside the workspace, they
+      # cannot replace the script the next step runs.
       - name: Download PR Metadata
         uses: actions/download-artifact@v8
         with:
           name: pr-metadata
+          path: ${{ runner.temp }}/pr-metadata
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
         continue-on-error: true
@@ -37,13 +40,17 @@ jobs:
         with:
           pattern: test-report-*
           merge-multiple: true
-          path: test-reports
+          path: ${{ runner.temp }}/test-reports
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
         continue-on-error: true
 
       - name: Build Test Comment
-        run: python3 .github/scripts/test_report.py comment --reports test-reports --out tests_comment.md --status tests_status.txt
+        run: >-
+          python3 .github/scripts/test_report.py comment
+          --reports "$RUNNER_TEMP/test-reports"
+          --out "$RUNNER_TEMP/tests_comment.md"
+          --status "$RUNNER_TEMP/tests_status.txt"
 
       - name: Manage PR Comments
         uses: actions/github-script@v9
@@ -51,11 +58,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
+            const path = require('path');
+            const temp = process.env.RUNNER_TEMP;
             const read = (file) => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim() : null);
+            const metadata = (name) => read(path.join(temp, 'pr-metadata', name));
             const { owner, repo } = context.repo;
             const run = context.payload.workflow_run;
 
-            const prNumber = parseInt(read('pr_number.txt') ?? '', 10);
+            const rawNumber = metadata('pr_number.txt') ?? '';
+            const prNumber = /^[0-9]+$/.test(rawNumber) ? Number(rawNumber) : 0;
             if (!prNumber) {
               console.log('No PR number artifact found. Skipping.');
               return;
@@ -76,20 +87,20 @@ jobs:
               per_page: 100,
             });
 
-            const ruffStatus = read('ruff_status.txt')
-              ?? (run.conclusion === 'success' ? 'success' : read('comment.txt') ? 'failure' : null);
+            const ruffStatus = metadata('ruff_status.txt')
+              ?? (run.conclusion === 'success' ? 'success' : metadata('comment.txt') ? 'failure' : null);
             const checks = [
               {
                 name: 'Ruff',
                 matches: (body) => body.includes('<!-- yasb-bot:ruff -->') || body.includes('Ruff Lint Check Failed'),
                 status: ruffStatus,
-                body: read('comment.txt'),
+                body: metadata('comment.txt'),
               },
               {
                 name: 'Tests',
                 matches: (body) => body.includes('<!-- yasb-bot:tests -->'),
-                status: read('tests_status.txt'),
-                body: read('tests_comment.md'),
+                status: read(path.join(temp, 'tests_status.txt')),
+                body: read(path.join(temp, 'tests_comment.md')),
               },
             ];
 
