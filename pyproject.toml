@@ -62,11 +62,15 @@ Changelog = "https://github.com/amnweb/yasb/releases/latest"
 
 [project.optional-dependencies]
 dev = [
+    "YASB[test]",
     "pre-commit",
     "ruff>=0.15.0",
     "pyqt6-stubs",
     "types-pillow",
     "types-pywin32",
+]
+test = [
+    "pytest>=9.1",
 ]
 packaging = [
     "cx-freeze==8.6.4"
@@ -80,6 +84,17 @@ pattern = "BUILD_VERSION = \"(?P<version>[^\"]+)\""
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/core"]
+
+[tool.pytest]
+minversion = "9.1"
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+addopts = ["-ra"]
+strict = true
+faulthandler_timeout = "300"
+markers = [
+    "sdk: compares ctypes code with the Windows SDK; needs MSVC, skipped without it unless YASB_REQUIRE_SDK=1",
+]
 
 [tool.ruff]
 line-length = 120

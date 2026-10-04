@@ -18,6 +18,8 @@ dist/
 build/
 build_arm64/
 build_x64/
+# Test caches
+.pytest_cache/
 # Temporary files
 *.tmp
 *.temp
