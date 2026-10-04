@@ -6,6 +6,7 @@ import win32process
 
 from core.utils.win32.bindings import kernel32 as k32
 from core.utils.win32.bindings import user32 as u32
+from core.utils.win32.bindings.user32 import GetWindowLong, IsHungAppWindow, IsWindowEnabled, PostMessage
 
 # --- Resolution helpers ---
 
@@ -45,8 +46,8 @@ def is_owner_root_active(base: int) -> bool:
 
 
 def can_minimize(hwnd: int) -> bool:
-    style = u32.GetWindowLongW(int(hwnd), win32con.GWL_STYLE)
-    return bool(style & win32con.WS_MINIMIZEBOX) and bool(u32.IsWindowEnabled(int(hwnd)))
+    style = GetWindowLong(int(hwnd), win32con.GWL_STYLE)
+    return bool(style & win32con.WS_MINIMIZEBOX) and bool(IsWindowEnabled(int(hwnd)))
 
 
 # --- Window commands ---
@@ -278,12 +279,12 @@ def close_application(hwnd: int, force: bool = False):
             # SendMessageTimeout also gives up while the app shows a modal prompt for SC_CLOSE
             # ("Save changes?"). Only a hung window needs the fallback; a responsive one would
             # get a second close request on top of the open prompt.
-            if not u32.IsHungAppWindow(int(target_hwnd)):
+            if not IsHungAppWindow(int(target_hwnd)):
                 return
 
             # Fallback: WM_CLOSE via PostMessage
             WM_CLOSE = 0x0010
-            posted = u32.PostMessageW(int(target_hwnd), int(WM_CLOSE), 0, 0)
+            posted = PostMessage(int(target_hwnd), int(WM_CLOSE), 0, 0)
             if posted:
                 return
 

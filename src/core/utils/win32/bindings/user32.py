@@ -415,6 +415,10 @@ def IsWindowEnabled(hwnd: int) -> bool:
     return user32.IsWindowEnabled(hwnd)
 
 
+def IsHungAppWindow(hwnd: int) -> bool:
+    return bool(user32.IsHungAppWindow(hwnd))
+
+
 def GetWindowThreadProcessId(hwnd: int, lpdwProcessId: CArgObject | None) -> int:
     return user32.GetWindowThreadProcessId(hwnd, lpdwProcessId)
 
