@@ -11,14 +11,14 @@ _dwmapi = windll.dwmapi
 
 # DwmExtendFrameIntoClientArea
 _dwmapi.DwmExtendFrameIntoClientArea.argtypes = [HWND, POINTER(MARGINS)]
-_dwmapi.DwmExtendFrameIntoClientArea.restype = DWORD
+_dwmapi.DwmExtendFrameIntoClientArea.restype = ctypes.c_long
 
 # Window attribute signatures
 _dwmapi.DwmGetWindowAttribute.argtypes = [HWND, DWORD, LPVOID, DWORD]
-_dwmapi.DwmGetWindowAttribute.restype = DWORD  # HRESULT
+_dwmapi.DwmGetWindowAttribute.restype = ctypes.c_long
 
 _dwmapi.DwmSetWindowAttribute.argtypes = [HWND, DWORD, LPVOID, DWORD]
-_dwmapi.DwmSetWindowAttribute.restype = DWORD  # HRESULT
+_dwmapi.DwmSetWindowAttribute.restype = ctypes.c_long
 
 # Thumbnail signatures
 _dwmapi.DwmRegisterThumbnail.argtypes = [HWND, HWND, POINTER(HANDLE)]

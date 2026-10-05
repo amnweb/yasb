@@ -2135,8 +2135,9 @@ class TaskbarWidget(BaseWidget):
                     pass
                 return
 
-            if is_active and can_minimize(base):
-                minimize_window(base)
+            if is_active:
+                if can_minimize(hwnd):
+                    minimize_window(base)
                 return
 
             show_window(base)

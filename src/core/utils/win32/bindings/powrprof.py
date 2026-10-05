@@ -22,7 +22,7 @@ powrprof.PowerReadFriendlyName.argtypes = [
     wintypes.HANDLE,
     POINTER(GUID),
     POINTER(GUID),
-    POINTER(wintypes.DWORD),
+    POINTER(GUID),
     wintypes.LPBYTE,
     POINTER(wintypes.DWORD),
 ]
@@ -69,6 +69,9 @@ powrprof.PowerWriteDCValueIndex.argtypes = [
     wintypes.DWORD,
 ]
 powrprof.PowerWriteDCValueIndex.restype = wintypes.DWORD
+
+powrprof.SetSuspendState.argtypes = [wintypes.BOOLEAN, wintypes.BOOLEAN, wintypes.BOOLEAN]
+powrprof.SetSuspendState.restype = wintypes.BOOLEAN
 
 
 # -- Power management function wrappers -- #
@@ -138,3 +141,7 @@ def PowerWriteACValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingG
 
 def PowerWriteDCValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex):
     return powrprof.PowerWriteDCValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex)
+
+
+def SetSuspendState(bHibernate, bForce, bWakeupEventsDisabled):
+    return powrprof.SetSuspendState(bHibernate, bForce, bWakeupEventsDisabled)
