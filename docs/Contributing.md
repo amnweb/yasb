@@ -74,6 +74,14 @@ ruff check .
 ruff check --fix .
 ```
 
+### Running Tests
+
+```bash
+python -m pytest
+```
+
+The tests also run on every pull request, and the bot comments with any failures. The checks that compare ctypes code with the Windows SDK need Visual Studio or the Build Tools with the **Desktop development with C++** workload; without it they are skipped locally and still run in CI. See [tests/README.md](https://github.com/amnweb/yasb/blob/main/tests/README.md) for what each test guards against and what to do when one fails.
+
 ## Contributing Guidelines
 
 ### Do Not Modify `schema.json`

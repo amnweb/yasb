@@ -17,13 +17,40 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure'
     steps:
-      - name: Download Artifacts
+      # The default branch, not the pull request: everything below runs with a write token.
+      - name: Checkout Scripts
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      # The pull request's own run wrote these artifacts. Extracted outside the workspace, they
+      # cannot replace the script the next step runs.
+      - name: Download PR Metadata
         uses: actions/download-artifact@v8
         with:
           name: pr-metadata
+          path: ${{ runner.temp }}/pr-metadata
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
         continue-on-error: true
+
+      - name: Download Test Reports
+        uses: actions/download-artifact@v8
+        with:
+          pattern: test-report-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/test-reports
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
+
+      - name: Build Test Comment
+        run: >-
+          python3 .github/scripts/test_report.py comment
+          --reports "$RUNNER_TEMP/test-reports"
+          --out "$RUNNER_TEMP/tests_comment.md"
+          --status "$RUNNER_TEMP/tests_status.txt"
 
       - name: Manage PR Comments
         uses: actions/github-script@v9
@@ -31,93 +58,90 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            
-            // 1. Check for PR Number
-            if (!fs.existsSync('pr_number.txt')) {
+            const path = require('path');
+            const temp = process.env.RUNNER_TEMP;
+            const read = (file) => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim() : null);
+            const metadata = (name) => read(path.join(temp, 'pr-metadata', name));
+            const { owner, repo } = context.repo;
+            const run = context.payload.workflow_run;
+
+            const rawNumber = metadata('pr_number.txt') ?? '';
+            const prNumber = /^[0-9]+$/.test(rawNumber) ? Number(rawNumber) : 0;
+            if (!prNumber) {
               console.log('No PR number artifact found. Skipping.');
               return;
             }
-            const issueNumber = parseInt(fs.readFileSync('pr_number.txt', 'utf8').trim());
-            console.log('Found PR Number:', issueNumber);
 
-            // 2. Get existing bot comments
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-            });
-            
-            const botComments = comments.filter(comment => 
-              comment.user.type === 'Bot' && 
-              comment.body.includes('Ruff Lint Check Failed')
-            );
-
-            const conclusion = context.payload.workflow_run.conclusion;
-            console.log('Workflow conclusion:', conclusion);
-
-            // 3. Handle Success (Delete comments)
-            if (conclusion === 'success') {
-               if (botComments.length > 0) {
-                 console.log('Check passed. Deleting old failure comments.');
-                 for (const comment of botComments) {
-                   await github.rest.issues.deleteComment({
-                     owner: context.repo.owner,
-                     repo: context.repo.repo,
-                     comment_id: comment.id,
-                   });
-                 }
-               } else {
-                 console.log('Check passed and no comments to delete.');
-               }
-            } 
-            // 4. Handle Failure (Post/Update comment)
-            else if (conclusion === 'failure') {
-               if (!fs.existsSync('comment.txt')) {
-                  console.log('No comment.txt found. Skipping comment (likely not a lint failure).');
-                  return;
-               }
-               const commentBody = fs.readFileSync('comment.txt', 'utf8');
-               
-               // We only want one comment. Update if exists, create if not.
-               const existingComment = botComments[0];
-
-               if (existingComment) {
-                 console.log('Updating existing comment');
-                 await github.rest.issues.updateComment({
-                   owner: context.repo.owner,
-                   repo: context.repo.repo,
-                   comment_id: existingComment.id,
-                   body: commentBody
-                 });
-               } else {
-                 console.log('Creating new comment');
-                 await github.rest.issues.createComment({
-                   owner: context.repo.owner,
-                   repo: context.repo.repo,
-                   issue_number: issueNumber,
-                   body: commentBody
-                 });
-               }
+            // The artifact was written by the pull request's own run, so only act on the number
+            // when that pull request really is at the commit this run checked.
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+            if (pr.head.sha !== run.head_sha) {
+              console.log(`PR #${prNumber} is at ${pr.head.sha}, this run checked ${run.head_sha}. Skipping.`);
+              return;
             }
 
-      - name: Delete Artifact
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+
+            const ruffStatus = metadata('ruff_status.txt')
+              ?? (run.conclusion === 'success' ? 'success' : metadata('comment.txt') ? 'failure' : null);
+            const checks = [
+              {
+                name: 'Ruff',
+                matches: (body) => body.includes('<!-- yasb-bot:ruff -->') || body.includes('Ruff Lint Check Failed'),
+                status: ruffStatus,
+                body: metadata('comment.txt'),
+              },
+              {
+                name: 'Tests',
+                matches: (body) => body.includes('<!-- yasb-bot:tests -->'),
+                status: read(path.join(temp, 'tests_status.txt')),
+                body: read(path.join(temp, 'tests_comment.md')),
+              },
+            ];
+
+            for (const check of checks) {
+              const existing = comments.filter((c) => c.user.type === 'Bot' && check.matches(c.body ?? ''));
+              if (check.status === 'success') {
+                for (const comment of existing) {
+                  await github.rest.issues.deleteComment({ owner, repo, comment_id: comment.id });
+                }
+                console.log(`${check.name}: passed, deleted ${existing.length} old comment(s).`);
+              } else if (check.status === 'failure' && check.body) {
+                if (existing.length > 0) {
+                  await github.rest.issues.updateComment({ owner, repo, comment_id: existing[0].id, body: check.body });
+                  console.log(`${check.name}: failed, updated the existing comment.`);
+                } else {
+                  await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: check.body });
+                  console.log(`${check.name}: failed, created a comment.`);
+                }
+              } else {
+                console.log(`${check.name}: no result in this run, comments left as they are.`);
+              }
+            }
+
+      - name: Delete Artifacts
+        if: always()
         uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
                owner: context.repo.owner,
                repo: context.repo.repo,
                run_id: context.payload.workflow_run.id,
             });
-            const matchArtifact = artifacts.data.artifacts.find((artifact) => {
-               return artifact.name == "pr-metadata"
-            });
-            if (matchArtifact) {
-               console.log("Deleting artifact " + matchArtifact.id);
-               await github.rest.actions.deleteArtifact({
+            for (const artifact of artifacts) {
+              if (artifact.name === 'pr-metadata' || artifact.name.startsWith('test-report-')) {
+                console.log("Deleting artifact " + artifact.name);
+                await github.rest.actions.deleteArtifact({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  artifact_id: matchArtifact.id,
-               });
+                  artifact_id: artifact.id,
+                });
+              }
             }

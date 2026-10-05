@@ -64,8 +64,11 @@ jobs:
           $prNumber = "${{ github.event.pull_request.number }}"
           $prNumber | Out-File "pr_number.txt" -Encoding utf8
 
-          if ($env:Step_Ruff_Format_Outcome -eq 'failure' -or $env:Step_Ruff_Lint_Outcome -eq 'failure') {
-              $comment = "## ❌ Ruff Lint Check Failed`n`n"
+          $ruffFailed = $env:Step_Ruff_Format_Outcome -eq 'failure' -or $env:Step_Ruff_Lint_Outcome -eq 'failure'
+          ($ruffFailed ? 'failure' : 'success') | Out-File "ruff_status.txt" -Encoding utf8
+
+          if ($ruffFailed) {
+              $comment = "<!-- yasb-bot:ruff -->`n## ❌ Ruff Lint Check Failed`n`n"
               $comment += "The code quality checks did not pass. Please review and fix the issues below:`n`n"
               
               if ($env:Step_Ruff_Format_Outcome -eq 'failure' -and (Test-Path "format_output.txt")) {
@@ -110,6 +113,7 @@ jobs:
           name: pr-metadata
           path: |
             pr_number.txt
+            ruff_status.txt
             comment.txt
           retention-days: 1
 
@@ -120,8 +124,12 @@ jobs:
           exit 1
         shell: pwsh
 
+  tests:
+    name: Tests
+    uses: ./.github/workflows/tests.yaml
+
   build-x64:
-    needs: ruff-lint
+    needs: [ruff-lint, tests]
     if: success() && github.event.pull_request.draft == false
     runs-on: windows-latest
     name: Build (x64)
@@ -190,7 +198,7 @@ jobs:
           retention-days: 7
 
   build-arm64:
-    needs: ruff-lint
+    needs: [ruff-lint, tests]
     if: success() && github.event.pull_request.draft == false
     runs-on: windows-11-arm
     name: Build (arm64)

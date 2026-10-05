@@ -1,0 +1,81 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.14'
+
+jobs:
+  pytest:
+    name: Pytest (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: ${{ matrix.arch }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+        shell: pwsh
+
+      - name: Run tests
+        env:
+          PYTHONUTF8: '1'
+          YASB_REQUIRE_SDK: '1'
+        run: |
+          New-Item -ItemType Directory -Force reports | Out-Null
+          python -m pytest --junitxml=reports/junit.xml 2>&1 | Tee-Object -FilePath reports/pytest.log
+          $code = $LASTEXITCODE
+          Set-Content -Path reports/exit_code.txt -Value $code
+          exit $code
+        shell: pwsh
+
+      - name: Summarize results
+        if: always()
+        env:
+          PYTHONUTF8: '1'
+        run: |
+          python .github/scripts/test_report.py summarize `
+            --junit reports/junit.xml `
+            --log reports/pytest.log `
+            --exit-code reports/exit_code.txt `
+            --label ${{ matrix.arch }} `
+            --out reports/report-${{ matrix.arch }}.json `
+            --summary $env:GITHUB_STEP_SUMMARY
+        shell: pwsh
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-report-${{ matrix.arch }}
+          path: reports/report-${{ matrix.arch }}.json
+          retention-days: 1
