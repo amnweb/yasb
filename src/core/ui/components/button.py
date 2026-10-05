@@ -294,7 +294,7 @@ class Button(QPushButton):
         if not is_valid_qobject(self):
             return
         if self.isEnabled():
-            hovering = self.rect().contains(event.position().toPoint())
+            hovering = self.isVisible() and self.rect().contains(event.position().toPoint())
             self._animate_to(self._interaction_state(hovering))
 
     def changeEvent(self, event) -> None:
