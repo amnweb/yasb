@@ -56,6 +56,11 @@ HEADERS = (
     "winver.h",
 )
 
+MISSING_HEADER_HINT = (
+    "If the name is right and the SDK declares it, add the header Microsoft Learn names under "
+    "Requirements to HEADERS in tests/win32/probe.py."
+)
+
 _PRELUDE = r"""
 namespace yasb_probe {
 template <class T, class = void> struct is_complete : std::false_type {};

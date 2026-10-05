@@ -5,7 +5,7 @@ from functools import cache
 import pytest
 
 from tests.win32 import abi, foreign, known_issues, specs
-from tests.win32.probe import ProbeResult, function_key
+from tests.win32.probe import MISSING_HEADER_HINT, ProbeResult, function_key
 
 _C_INT_SIZE = ctypes.sizeof(ctypes.c_int)
 _HINT = (
@@ -39,7 +39,8 @@ def test_results_without_restype_fit_a_c_int(module: str, sdk: ProbeResult):
         if key in sdk.errors:
             pytest.fail(
                 f"{function.name} (line {call.site.line}) is not declared by the SDK headers: {sdk.errors[key]}\n"
-                "Check the spelling, or list it in tests/win32/specs.py:NOT_IN_SDK if it is undocumented.",
+                f"Check the spelling. {MISSING_HEADER_HINT} "
+                "Only an undocumented function goes in tests/win32/specs.py:NOT_IN_SDK.",
                 pytrace=False,
             )
         native = abi.Abi.from_json(sdk.functions[function.name]["ret"])

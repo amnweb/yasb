@@ -11,6 +11,7 @@ from tests.win32.probe import ProbeResult, run_probe
 
 _CACHE_KEY = "yasb/win32-sdk-probe"
 _PROBE_SOURCES = ("probe.py", "msvc.py", "specs.py")
+_TOOLCHAIN = pytest.StashKey[str]()
 
 
 def _sdk_required() -> bool:
@@ -34,6 +35,7 @@ def sdk(request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
             pytest.fail(f"YASB_REQUIRE_SDK is set but the Windows SDK toolchain is unavailable: {exc}")
         pytest.skip(f"MSVC with the Windows SDK is not installed ({exc}); CI runs these checks")
 
+    request.config.stash[_TOOLCHAIN] = toolchain.description
     requests = discovery.probe_requests()
     fingerprint = _fingerprint(toolchain.description, requests)
     cache = getattr(request.config, "cache", None)
@@ -45,3 +47,9 @@ def sdk(request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
     if cache:
         cache.set(_CACHE_KEY, {"fingerprint": fingerprint, "result": result.to_json()})
     return result
+
+
+def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter, config: pytest.Config) -> None:
+    toolchain = config.stash.get(_TOOLCHAIN, None)
+    if toolchain:
+        terminalreporter.write_line(f"Windows SDK checks: {toolchain}")

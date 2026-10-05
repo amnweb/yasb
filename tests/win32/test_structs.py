@@ -4,7 +4,7 @@ import pytest
 
 from tests.win32 import abi, discovery, known_issues, specs
 from tests.win32.known_issues import xfail_if_known
-from tests.win32.probe import ProbeResult, field_key, struct_key
+from tests.win32.probe import MISSING_HEADER_HINT, ProbeResult, field_key, struct_key
 
 pytestmark = pytest.mark.sdk
 
@@ -20,10 +20,12 @@ def test_layout_matches_sdk(cls: type, sdk: ProbeResult):
     key = discovery.type_id(cls)
     spec = specs.struct_spec(key, cls.__name__)
     if struct_key(key) in sdk.errors:
-        where = "specs.VENDORED_DECLARATIONS" if isinstance(spec, specs.Vendored) else "the SDK headers"
+        vendored = isinstance(spec, specs.Vendored)
+        where = "specs.VENDORED_DECLARATIONS" if vendored else "the SDK headers"
+        hint = "" if vendored else f" {MISSING_HEADER_HINT}"
         pytest.fail(
             f"{spec.c_type} is not declared by {where}: {sdk.errors[struct_key(key)]}\n"
-            "Name the class after its SDK type, or map it in tests/win32/specs.py:STRUCTS.",
+            f"Name the class after its SDK type, or map it in tests/win32/specs.py:STRUCTS.{hint}",
             pytrace=False,
         )
 

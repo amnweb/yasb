@@ -3,7 +3,7 @@ import pytest
 from tests.win32 import abi, discovery, known_issues, specs
 from tests.win32.discovery import Binding
 from tests.win32.known_issues import xfail_if_known
-from tests.win32.probe import ProbeResult, function_key
+from tests.win32.probe import MISSING_HEADER_HINT, ProbeResult, function_key
 
 pytestmark = pytest.mark.sdk
 
@@ -30,7 +30,8 @@ def test_signature_matches_sdk(binding: Binding, sdk: ProbeResult):
     if key in sdk.errors:
         pytest.fail(
             f"{name} is not declared by the SDK headers: {sdk.errors[key]}\n"
-            "Check the spelling, or list it in tests/win32/specs.py:NOT_IN_SDK if it is undocumented.",
+            f"Check the spelling. {MISSING_HEADER_HINT} "
+            "Only an undocumented function goes in tests/win32/specs.py:NOT_IN_SDK.",
             pytrace=False,
         )
 

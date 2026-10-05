@@ -1,96 +1,118 @@
-# YASB tests
+# Tests
+
+## Running them
 
 ```bash
-pip install -e .[test]       # or .[dev], which includes it
-python -m pytest             # everything, about 10 seconds
-python -m pytest tests/win32 # one area
-python -m pytest "tests/win32/test_structs.py::test_layout_matches_sdk[core.utils.win32.structs.MIB_IF_ROW2]"
+pip install -e .[test]
+python -m pytest
 ```
 
-The same suite runs in CI on every push to `main` and on every pull request, for x64 and arm64. On a
-pull request the bot posts the failures as a comment, and the installers are not built until the
-tests pass.
+You can also run one folder or one file:
 
-## Layout
+```bash
+python -m pytest tests/cloud
+python -m pytest tests/win32/test_structs.py
+```
 
-| Folder | What it guards against |
+The tests never touch your real YASB setup. `tests/conftest.py` points `YASB_CONFIG_HOME` and
+`LOCALAPPDATA` at a temporary folder, and Qt runs offscreen, so no windows pop up.
+
+## What's in here
+
+| Folder | What it checks |
 |---|---|
-| `tests/win32/` | ctypes code that disagrees with Windows: wrong struct layouts, `argtypes`/`restype`, COM vtables and constants, checked against the real Windows SDK headers. Also results ctypes would read with the wrong size, names a DLL does not export, and window helpers run against real windows (`test_window_actions.py`). |
-| `tests/widgets/` | Qt rules for bar widgets, such as never calling `winId()` on a widget inside the bar. |
-| `tests/smoke/` | Every module in `src/core` imports, and every widget's config schema builds. |
-| `tests/cloud/` | YASB Cloud: API errors, encryption, snapshots, restore, settings. `tests/cloud/conftest.py` points the client at a closed local port, so no test reaches the live server. |
-| `tests/support/` | Helpers shared by the tests, not tests themselves. |
+| `smoke/` | Every module imports, and every widget's config schema builds. |
+| `widgets/` | Rules for bar widgets, for example that a widget never calls `winId()` on itself. |
+| `win32/` | Our ctypes code against the real Windows SDK, plus window helpers tested on real windows. |
+| `cloud/` | YASB Cloud: API errors, encryption, backups, restores, settings. None of them contact the real server. |
+| `support/` | Helpers the tests share. |
 
-`tests/conftest.py` points `YASB_CONFIG_HOME` and `LOCALAPPDATA` at a temporary folder for the whole
-run, so no test reads or writes your real configuration, and runs Qt with the offscreen platform.
+## Writing a test
 
-## The Windows SDK checks
+Add a file named `test_<something>.py` to the folder that fits. Each test is a function whose name
+starts with `test_` and checks things with `assert`. This one is from `cloud/test_footer_reason.py`:
 
-A ctypes mistake does not raise an exception. A struct that is 8 bytes too short (`MIB_IF_ROW2`
-without `OutQLen`), a `restype` that is a string pointer instead of a `DWORD`
-(`WlanReasonCodeToString`), or a `c_int` where Windows returns a 64-bit `LRESULT` corrupts memory or
-crashes the process with no Python traceback.
+```python
+from core.cloud.models import Access
+from core.cloud.ui.window import _reason
 
-`tests/win32` finds every ctypes `Structure`/`Union`, every `argtypes`/`restype` declaration, every
-comtypes interface and every constant in `core.utils.win32`. It writes one C++ file that includes
-the Windows SDK headers, compiles it with MSVC, and compares:
 
-- `sizeof` and `offsetof` of every field with the ctypes layout
-- each function's return and parameter types (size, signedness, pointer or integer) with `argtypes`/`restype`
-- the result of every call made without `restype`, which ctypes reads as a 4-byte C `int`. That is only
-  right when the function returns a 4-byte integer or nothing, or when the code ignores the result, so
-  `user32.MessageBeep(0)` needs no declaration but `hwnd = user32.GetForegroundWindow()` does: an `HWND`
-  is 8 bytes.
-- each COM method's vtable slot and parameters with the comtypes `_methods_`
-- each constant's value
+def test_never_having_subscribed_is_not_an_expiry():
+    assert _reason(Access(reason="no_subscription")) == "No active subscription"
+```
 
-This needs Visual Studio or the Build Tools with the **Desktop development with C++** workload (which
-installs the Windows SDK). Without it, those tests are skipped locally. CI sets `YASB_REQUIRE_SDK=1`,
-which turns a missing compiler into an error. The compiled results are cached in `.pytest_cache`
-until the code or the SDK changes.
+A few things that help:
 
-Two checks in `tests/win32` need no compiler and always run:
+- `src` is on the import path, so import YASB code as `core.something`.
+- Ask for the `qapp` fixture if your test creates Qt widgets.
+- Use pytest's `tmp_path` for files and `monkeypatch` to swap a function or an environment variable
+  for one test.
+- Don't call real servers or depend on hardware. CI runs on GitHub's Windows machines (x64 and ARM64),
+  which have no GPU, Bluetooth or Wi-Fi.
+- When you fix a bug, the best test is one that fails before your fix and passes after it.
 
-- `test_referenced_functions_are_exported`: a name the DLL does not export, like `user32.GetWindowLong`
-  (only `GetWindowLongW` exists; `GetWindowLong` is a macro in the headers).
-- `test_window_actions.py`: window helpers such as `can_minimize`, run against real windows with and
-  without a minimize box.
+## The Windows checks
+
+A mistake in ctypes code doesn't raise a Python error. If a struct is missing a field, or a function
+is declared to return 4 bytes when Windows returns 8, YASB reads garbage or crashes without a
+traceback. The tests in `win32/` catch that before it ships.
+
+They collect every ctypes struct, function declaration and constant in `src/core`, then ask the
+Windows SDK about each one: its size, its field offsets, its return and argument types, its value.
+To get those answers they write a small C++ program, compile it with Visual Studio's compiler and run
+it. Then they compare the answers with our Python code. If `MIB_IF_ROW2` were missing its last field,
+you'd see:
+
+```text
+sizeof is 1344, the SDK's MIB_IF_ROW2 is 1352
+```
+
+For this you need Visual Studio or the Build Tools with the "Desktop development with C++" workload.
+Without it these checks are skipped on your PC; set `YASB_REQUIRE_SDK=1` to make them fail instead,
+which is what CI does. The answers are cached in `.pytest_cache`, and the last lines of the output say
+which compiler and SDK were used.
+
+Two checks in `win32/` don't need the compiler. Every function we use must exist in its DLL
+(`user32.dll` has `GetWindowLongW` but no `GetWindowLong`), and `test_window_actions.py` tries the
+window helpers on real windows.
+
+### The files
+
+| File | What it does | Do you edit it? |
+|---|---|---|
+| `test_*.py` | The checks themselves | Only to add a new kind of check |
+| `specs.py` | Python names that differ from the SDK (`WNDCLASS` for `WNDCLASSW`), and things that aren't in the SDK at all (undocumented functions, AMD, NVIDIA) | Yes, when a check asks for it |
+| `known_issues.py` | Problems we know about but haven't fixed yet | Only to delete entries |
+| `probe.py` | Writes, compiles and runs the C++ program | Only its `HEADERS` list, when a check asks for it |
+| `msvc.py` | Finds Visual Studio's compiler | No |
+| `foreign.py`, `discovery.py` | Find the ctypes code in `src/core` | No |
+| `abi.py` | Compares Python types with C types | No |
+| `conftest.py` | Runs the C++ program once and caches its answers | No |
 
 ### When a check fails
 
 | Message | What to do |
 |---|---|
-| `sizeof is 1344, the SDK's MIB_IF_ROW2 is 1352` | The ctypes struct is wrong. Fix its fields. |
-| `X is not declared by the SDK headers` | Name the class or function after its SDK name. If it really is not in the SDK, see `specs.py` below. |
-| `restype c_int is signed int(4), the SDK returns signed int(8)` | Fix the declaration in `src`. |
-| `X returns pointer(8) but has no restype` | Declare `restype` and `argtypes`, like the modules in `src/core/utils/win32/bindings` do. |
-| `user32.dll does not export GetWindowLong` | Call the exported name (`GetWindowLongW`). |
+| `sizeof is 1344, the SDK's MIB_IF_ROW2 is 1352` | The struct doesn't match Windows. Fix its fields. |
+| `argtypes has 4 entries, the SDK takes 5 parameters` | Fix the function's `argtypes`. |
+| `restype c_int is signed int(4), the SDK returns signed int(8)` | Fix the function's `restype`. |
+| `X returns pointer(8) but has no restype` | Declare `restype` and `argtypes`, like the files in `src/core/utils/win32/bindings` do. |
+| `user32.dll does not export GetWindowLong` | Call the name the DLL really has, here `GetWindowLongW`. |
+| `X is not declared by the SDK headers` | Check the spelling. If it's right, add its header to `HEADERS` in `win32/probe.py` (Microsoft Learn lists the header under Requirements). Only undocumented names belong in `NOT_IN_SDK` in `specs.py`. |
 
-[`win32/specs.py`](win32/specs.py) is the only place to describe how Python names map onto the SDK.
-A struct, function or interface named exactly like its SDK counterpart needs no entry. Otherwise:
+### Known issues
 
-- `STRUCTS`: a different C name (`WNDCLASS` is `WNDCLASSW`), renamed fields, padding fields, or a
-  struct that only declares the first members (`prefix=True`).
-- `VENDORED_DECLARATIONS`: the C declaration of a type no SDK header has (undocumented or third party,
-  such as AMD ADL or NVML), copied from the header that defines it.
-- `NOT_IN_SDK`, `UNDOCUMENTED_INTERFACES`: undocumented exports and interfaces, with a reason.
-- `CONSTANT_ALIASES`: a constant the code names differently from the headers.
-
-## Known issues
-
-[`win32/known_issues.py`](win32/known_issues.py) lists problems the tests found in the existing code
-that are not fixed yet, so CI can be green while they stay on record. Do not add to it to make a new
-failure go away: fix the code. When you fix one of the listed problems its test starts failing with
-"fixed now, delete ..." or `XPASS(strict)`. Delete the entry and the run is green again.
+`win32/known_issues.py` lists problems we know about but haven't fixed yet, so CI can stay green
+in the meantime. Don't add to it to get rid of a new failure; fix the code instead. When you fix a
+listed problem, its test tells you to delete the entry.
 
 ## CI
 
-- [`.github/workflows/tests.yaml`](../.github/workflows/tests.yaml) runs pytest on `windows-latest` and
-  `windows-11-arm`. It is triggered on pushes to `main`, by hand, and from PR Check.
-- [`.github/workflows/pr-check.yaml`](../.github/workflows/pr-check.yaml) runs it next to Ruff; the
-  builds wait for both.
-- [`.github/workflows/pr-comment.yaml`](../.github/workflows/pr-comment.yaml) posts, updates or deletes
-  the bot's test comment, using [`.github/scripts/test_report.py`](../.github/scripts/test_report.py).
-  If pytest dies without a report, which is what an access violation in native code looks like, the
-  comment says so and shows the end of the log. GitHub runs this workflow from the copy on `main`, so
-  a change to it only takes effect once it is merged.
+Every pull request and every push to `main` runs the tests on Windows x64 and Windows ARM64. When
+something fails on a pull request, the bot comments with the failures, and the installers aren't
+built until the tests pass. If pytest crashes outright, which is what a bad ctypes call usually
+looks like, the comment says so and shows the end of the log.
+
+The workflows are `.github/workflows/tests.yaml` (runs the tests), `pr-check.yaml` (Ruff, tests and
+builds) and `pr-comment.yaml` (the bot's comment). GitHub always runs `pr-comment.yaml` from `main`,
+so a change to it only takes effect after it's merged.

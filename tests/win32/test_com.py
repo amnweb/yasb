@@ -2,7 +2,7 @@ import pytest
 
 from tests.win32 import abi, discovery, known_issues, specs
 from tests.win32.known_issues import xfail_if_known
-from tests.win32.probe import ProbeResult, method_key, vtable_key
+from tests.win32.probe import MISSING_HEADER_HINT, ProbeResult, method_key, vtable_key
 
 pytestmark = pytest.mark.sdk
 
@@ -21,7 +21,8 @@ def test_vtable_matches_sdk(cls: type, sdk: ProbeResult):
     if vtable_key(key) in sdk.errors:
         pytest.fail(
             f"{c_interface} is not declared by the SDK headers: {sdk.errors[vtable_key(key)]}\n"
-            "Map it in tests/win32/specs.py:COM_INTERFACES, or list it in UNDOCUMENTED_INTERFACES.",
+            f"Map it in tests/win32/specs.py:COM_INTERFACES. {MISSING_HEADER_HINT} "
+            "Only an undocumented interface goes in UNDOCUMENTED_INTERFACES.",
             pytrace=False,
         )
 
