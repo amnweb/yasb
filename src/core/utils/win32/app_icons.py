@@ -112,19 +112,17 @@ def get_window_icon(hwnd: int):
             except Exception:
                 return False
 
-        # Ask the window for its icons
+        # Stop asking an unresponsive window after the first bounded wait.
         for which in (win32con.ICON_BIG, win32con.ICON_SMALL, getattr(win32con, "ICON_SMALL2", 2)):
             try:
-                hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, which, 0)
+                _, hicon = win32gui.SendMessageTimeout(
+                    hwnd, win32con.WM_GETICON, which, 0, win32con.SMTO_ABORTIFHUNG | win32con.SMTO_BLOCK, 200
+                )
             except Exception:
-                hicon = 0
+                break
             if hicon:
                 img = _image_from_hicon(hicon)
-                # WM_GETICON returns an icon handle we should destroy
-                try:
-                    win32gui.DestroyIcon(hicon)
-                except Exception:
-                    pass
+                # WM_GETICON borrows the window owner's icon; reading it does not transfer ownership.
                 if img is not None and not _is_fully_transparent(img):
                     return img
 

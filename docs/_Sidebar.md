@@ -40,6 +40,7 @@
     - [Komorebi Workspaces](./(Widget)-Komorebi-Workspaces)
     - [Language](./(Widget)-Language)
     - [Launchpad](./(Widget)-Launchpad)
+    - [LeopardWM Workspaces](./(Widget)-LeopardWM-Workspaces)
     - [Libre Hardware Monitor](./(Widget)-Libre-HW-Monitor)
     - [Media](./(Widget)-Media)
     - [Media Lite](./(Widget)-Media-Lite)
