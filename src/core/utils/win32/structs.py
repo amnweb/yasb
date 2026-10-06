@@ -41,6 +41,18 @@ WNDPROC = WINFUNCTYPE(LPARAM, HWND, UINT, WPARAM, LPARAM)
 WINEVENTPROC = WINFUNCTYPE(None, HANDLE, DWORD, HWND, LONG, LONG, DWORD, DWORD)
 
 
+class OVERLAPPED(ct.Structure):
+    """Asynchronous I/O state, using the offset members of the anonymous union."""
+
+    _fields_ = [
+        ("Internal", c_size_t),
+        ("InternalHigh", c_size_t),
+        ("Offset", DWORD),
+        ("OffsetHigh", DWORD),
+        ("hEvent", HANDLE),
+    ]
+
+
 class ACCENTPOLICY(ct.Structure):
     _fields_ = [
         ("AccentState", ct.c_uint),

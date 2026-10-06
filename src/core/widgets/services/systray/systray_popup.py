@@ -1,11 +1,13 @@
 import ctypes
+from typing import override
 
 from PyQt6.QtCore import QEvent, QPoint, QPropertyAnimation, QRect, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QApplication, QFrame, QVBoxLayout, QWidget
+from PyQt6.QtGui import QCloseEvent, QCursor, QHideEvent, QResizeEvent, QShowEvent
+from PyQt6.QtWidgets import QApplication, QFrame, QPushButton, QVBoxLayout, QWidget
 
-from core.utils.win32.backdrop import enable_blur
+from core.utils.win32.backdrop import enable_blur  # pyright: ignore[reportUnknownVariableType]
 from core.utils.win32.bindings import user32
+from core.validation.widgets.yasb.systray import SystrayPopupConfig
 from core.widgets.services.systray.systray_widget import DropWidget, IconWidget
 
 # Win32 detect physical mouse button state
@@ -27,7 +29,14 @@ class SystrayPopup(QWidget):
 
     closed = pyqtSignal()
 
-    def __init__(self, parent, toggle_btn, popup_config, icons_per_row: int, label_collapsed: str = ""):
+    def __init__(
+        self,
+        parent: QWidget | None,
+        toggle_btn: QPushButton,
+        popup_config: SystrayPopupConfig,
+        icons_per_row: int,
+        label_collapsed: str = "",
+    ) -> None:
         super().__init__(parent)
         self.setWindowFlags(
             Qt.WindowType.Tool
@@ -40,11 +49,12 @@ class SystrayPopup(QWidget):
         self._toggle_btn = toggle_btn
         self._popup_config = popup_config
         self._label_collapsed = label_collapsed
-        self._blur = getattr(popup_config, "blur", True)
+        self._blur = popup_config.blur
         self._round_corners = popup_config.round_corners
         self._round_corners_type = popup_config.round_corners_type
         self._border_color = popup_config.border_color
         self._is_closing = False
+        self._pos_args: tuple[str, str, int, int] | None = None
 
         # Inner frame for styling
         self._popup_content = QFrame(self)
@@ -80,15 +90,15 @@ class SystrayPopup(QWidget):
     def is_visible(self) -> bool:
         return self.isVisible() and not self._is_closing
 
-    def add_icon(self, icon: IconWidget):
+    def add_icon(self, icon: IconWidget) -> None:
         self._grid_widget.add_icon_to_grid(icon)
 
-    def toggle(self, label_expanded: str):
+    def toggle(self, label_expanded: str) -> None:
         if self._is_closing:
             return
         self.hide_animated() if self.is_visible else self.open(label_expanded)
 
-    def open(self, label_expanded: str):
+    def open(self, label_expanded: str) -> None:
         self._grid_widget.relayout_grid()
         self.show()
         self._grid_widget.updateGeometry()
@@ -102,24 +112,26 @@ class SystrayPopup(QWidget):
         self._toggle_btn.setChecked(True)
         self._toggle_btn.setText(label_expanded)
 
-    def relayout_grid(self):
+    def relayout_grid(self) -> None:
         self._grid_widget.relayout_grid()
         if self.isVisible():
             self._grid_widget.updateGeometry()
             self.adjustSize()
 
-    def sort_unpinned(self, sorted_icons: list[IconWidget]):
+    def sort_unpinned(self, sorted_icons: list[IconWidget]) -> None:
         self._grid_widget.relayout_grid(sorted_icons)
         if self.isVisible():
             self._grid_widget.updateGeometry()
             self.adjustSize()
 
-    def _set_position(self, alignment="left", direction="down", offset_left=0, offset_top=0):
+    def _set_position(
+        self, alignment: str = "left", direction: str = "down", offset_left: int = 0, offset_top: int = 0
+    ) -> None:
         self._pos_args = (alignment, direction, offset_left, offset_top)
 
         btn = self._toggle_btn
-        parent = self.parent()
-        if not btn or not parent:
+        parent = self.parentWidget()
+        if parent is None:
             return
 
         # Vertical offset from bar (parent), same as other popup widgets
@@ -148,15 +160,19 @@ class SystrayPopup(QWidget):
 
         self.move(QPoint(x, y))
 
-    def setProperty(self, name, value):
-        super().setProperty(name, value)
+    @override
+    def setProperty(self, name: str | None, value: object) -> bool:
+        result = super().setProperty(name, value)
         if name == "class":
             self._popup_content.setProperty(name, value)
+        return result
 
     def _popup_rect(self) -> QRect:
         return QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
 
-    def showEvent(self, event):
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
+        event = a0
         if self._blur:
             enable_blur(
                 self.winId(),
@@ -180,7 +196,7 @@ class SystrayPopup(QWidget):
         self._fade_animation.setEndValue(1.0)
         self._fade_animation.start()
 
-    def hide_animated(self):
+    def hide_animated(self) -> None:
         """Hide with a fade-out animation."""
         if self._is_closing:
             return
@@ -204,38 +220,48 @@ class SystrayPopup(QWidget):
         self._fade_animation.setEndValue(0.0)
         self._fade_animation.start()
 
-    def _on_animation_finished(self):
+    def _on_animation_finished(self) -> None:
         if self._is_closing:
             QWidget.hide(self)
             self._is_closing = False
 
-    def hideEvent(self, event):
+    @override
+    def hideEvent(self, a0: QHideEvent | None) -> None:
+        event = a0
         self._watch_timer.stop()
         super().hideEvent(event)
         self.closed.emit()
 
-    def closeEvent(self, event):
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
+        event = a0
+        if event is None:
+            return
         event.ignore()
         self.hide_animated()
 
-    def _on_popup_closed(self):
+    def _on_popup_closed(self) -> None:
         self._toggle_btn.setChecked(False)
         if self._label_collapsed:
             self._toggle_btn.setText(self._label_collapsed)
 
-    def resizeEvent(self, event):
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        event = a0
         self._popup_content.setGeometry(0, 0, self.width(), self.height())
-        if hasattr(self, "_pos_args"):
+        if self._pos_args is not None:
             self._set_position(*self._pos_args)
         super().resizeEvent(event)
 
-    def changeEvent(self, event):
+    @override
+    def changeEvent(self, a0: QEvent | None) -> None:
+        event = a0
         super().changeEvent(event)
-        if event.type() != QEvent.Type.ActivationChange or self._is_closing:
+        if event is None or event.type() != QEvent.Type.ActivationChange or self._is_closing:
             return
         if self.isActiveWindow():
             self._watch_timer.stop()
-        elif IconWidget._drag_in_progress:
+        elif IconWidget.drag_in_progress:
             pass  # Suppress close during drag-and-drop
         elif self._toggle_btn and self._toggle_btn.rect().contains(self._toggle_btn.mapFromGlobal(QCursor.pos())):
             # User clicked the toggle button let the button's clicked handler decide
@@ -246,9 +272,9 @@ class SystrayPopup(QWidget):
         else:
             self.hide_animated()
 
-    def _on_watch_tick(self):
+    def _on_watch_tick(self) -> None:
         self._watch_ticks += 1
-        if self._is_closing or self.isActiveWindow() or IconWidget._drag_in_progress:
+        if self._is_closing or self.isActiveWindow() or IconWidget.drag_in_progress:
             self._watch_timer.stop()
             return
         if self._watch_ticks >= 3 and _is_mouse_pressed():

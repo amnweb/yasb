@@ -3,23 +3,28 @@ import logging
 import os
 import struct
 import time
+from ctypes.wintypes import BOOL, DWORD, HWND, LPARAM
+from threading import Event, Lock
 
-import pywintypes
-import win32api
-import win32event
-import win32file
-import win32pipe
-import winerror
 from PIL import Image
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.utils.win32.bindings.kernel32 import (
+    CancelIoEx,
     CloseHandle,
+    ConnectNamedPipe,
+    CreateEvent,
     CreateMutex,
+    CreateNamedPipe,
+    DisconnectNamedPipe,
     FreeLibrary,
     GetLastError,
+    GetOverlappedResult,
     GetProcAddress,
     LoadLibraryW,
+    ReadFileOverlapped,
+    ResetEvent,
+    WaitForSingleObject,
 )
 from core.utils.win32.bindings.user32 import (
     EnumWindows,
@@ -30,14 +35,28 @@ from core.utils.win32.bindings.user32 import (
     UnhookWindowsHookEx,
 )
 from core.utils.win32.constants import (
+    ERROR_BROKEN_PIPE,
+    ERROR_IO_PENDING,
+    ERROR_MORE_DATA,
+    ERROR_OPERATION_ABORTED,
+    ERROR_PIPE_CONNECTED,
+    ERROR_SUCCESS,
+    FILE_FLAG_OVERLAPPED,
+    INVALID_HANDLE_VALUE,
     NIF_GUID,
     NIM_ADD,
     NIM_DELETE,
     NIM_MODIFY,
     NIM_SETVERSION,
+    PIPE_ACCESS_INBOUND,
+    PIPE_READMODE_MESSAGE,
+    PIPE_TYPE_MESSAGE,
+    PIPE_WAIT,
+    WAIT_FAILED,
+    WAIT_OBJECT_0,
     WH_GETMESSAGE,
 )
-from core.utils.win32.structs import NOTIFYICONDATA, SHELLTRAYDATA
+from core.utils.win32.structs import NOTIFYICONDATA, OVERLAPPED, SHELLTRAYDATA
 from core.widgets.services.systray.utils import (
     IconData,
     get_dll_path,
@@ -51,22 +70,22 @@ logger = logging.getLogger("systray_hook")
 
 def _find_shell_tray_hwnd(explorer_pid: int) -> int:
     """Find the Shell_TrayWnd belonging to a specific Explorer PID. Returns 0 if not found."""
-    _WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_size_t, ctypes.c_size_t)
+    _WNDENUMPROC = ctypes.WINFUNCTYPE(BOOL, HWND, LPARAM)
     result = 0
 
     @_WNDENUMPROC
-    def _cb(hwnd, _):
+    def _cb(hwnd: int, _: int) -> bool:
         nonlocal result
         if GetClassName(hwnd) != "Shell_TrayWnd":
             return True
-        pid = ctypes.c_ulong(0)
+        pid = DWORD()
         GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
         if pid.value == explorer_pid:
             result = hwnd
             return False  # stop enumeration
         return True
 
-    EnumWindows(_cb, 0)
+    EnumWindows(ctypes.cast(_cb, ctypes.c_void_p), 0)
     return result
 
 
@@ -121,167 +140,212 @@ class SystrayHook(QObject):
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
         self._running = False
-        self._h_mutex = None
-        self._message_pipe = None
+        self._worker_active = False
+        self._state_lock = Lock()
+        self._stop_event = Event()
+        self._h_mutex: int | None = None
+        self._message_pipe: int | None = None
         self._h_hook: int = 0
 
         # Create the watchdog mutex - held for entire lifetime.
-        try:
-            self._h_mutex = CreateMutex(None, True, WATCHDOG_MUTEX_NAME)
-        except pywintypes.error as e:
-            logger.error("Failed to create watchdog mutex: %s", e)
+        self._h_mutex = CreateMutex(None, True, WATCHDOG_MUTEX_NAME)
+        if not self._h_mutex:
+            logger.error("Failed to create watchdog mutex (err=%d)", GetLastError())
+            self._h_mutex = None
             return
 
         # A message pipe that the DLL will connect to.
         # Using FILE_FLAG_OVERLAPPED for efficient waiting in a separate thread
         logger.debug("Creating pipe %s...", MESSAGE_PIPE_NAME)
-        try:
-            self._message_pipe = win32pipe.CreateNamedPipe(
-                MESSAGE_PIPE_NAME,
-                win32pipe.PIPE_ACCESS_INBOUND | win32file.FILE_FLAG_OVERLAPPED,
-                win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_READMODE_MESSAGE | win32pipe.PIPE_WAIT,
-                1,
-                PIPE_BUFFER_SIZE,
-                PIPE_BUFFER_SIZE,
-                0,
-                None,
-            )
-        except pywintypes.error as e:
-            logger.error("Failed to create pipe: %s", e)
-            if self._h_mutex:
-                CloseHandle(self._h_mutex)
-                self._h_mutex = None
-            return
-
-    def destroy(self):
-        """Clean up the hook"""
-        self._running = False
-        if self._h_hook:
-            UnhookWindowsHookEx(self._h_hook)
-            self._h_hook = 0
-        if self._message_pipe is not None:
-            # Closing the handle will also cancel any pending overlapped I/O in the worker thread
-            win32api.CloseHandle(self._message_pipe)
+        self._message_pipe = CreateNamedPipe(
+            MESSAGE_PIPE_NAME,
+            PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+            1,
+            PIPE_BUFFER_SIZE,
+            PIPE_BUFFER_SIZE,
+            0,
+            None,
+        )
+        if not self._message_pipe or self._message_pipe == INVALID_HANDLE_VALUE:
+            logger.error("Failed to create pipe (err=%d)", GetLastError())
             self._message_pipe = None
-        if self._h_mutex is not None:
             CloseHandle(self._h_mutex)
             self._h_mutex = None
 
     def run(self) -> None:
-        """Worker thread loop to handle pipe I/O"""
-        if self._running:
-            return
+        """Own the worker's I/O resources and retry sessions until shutdown."""
+        with self._state_lock:
+            if self._worker_active:
+                return
+            if self._message_pipe is None:
+                logger.error("Pipe not initialized")
+                return
+            pipe = self._message_pipe
+            self._stop_event.clear()
+            self._running = True
+            self._worker_active = True
 
-        if self._message_pipe is None:
-            logger.error("Pipe not initialized")
-            return
+        h_event = 0
+        try:
+            h_event = CreateEvent(None, True, False, None)
+            if not h_event:
+                logger.error("Failed to create pipe event (err=%d)", GetLastError())
+                return
+            buffer = ctypes.create_string_buffer(PIPE_BUFFER_SIZE)
 
-        self._running = True
-        h_event = win32event.CreateEvent(None, True, False, None)
-        overlapped = win32file.OVERLAPPED()
-        overlapped.hEvent = h_event
-
-        # Retry loop: retries in case or explorer restart or injection failure
-        while self._running:
-            pid = get_explorer_pid()
-            if not pid:
-                time.sleep(1)
-                continue
-            dll_path = get_dll_path()  # will hard crash if unsupported architecture
-            dll_name = os.path.basename(dll_path)
-            if not is_dll_loaded(pid, dll_name):
-                logger.info("Injecting into Explorer (PID: %s)", pid)
-                self._h_hook = _inject_via_hook(dll_path, pid)
-                if not self._h_hook:
-                    logger.error("Injection failed, retrying in 5s")
-                    time.sleep(5)
+            # Retry after Explorer restarts or injection fails.
+            while self._running:
+                if not self._ensure_injected():
                     continue
-            try:
-                logger.debug("Waiting for DLL to connect")
-                win32event.ResetEvent(h_event)
-                res = win32pipe.ConnectNamedPipe(self._message_pipe, overlapped)
-                if res == winerror.ERROR_PIPE_CONNECTED:
-                    pass
-                elif res == winerror.ERROR_IO_PENDING:
-                    while self._running:
-                        # Non-blocking check for event signal
-                        wait_res = win32event.WaitForSingleObject(h_event, 500)
-                        if wait_res == win32event.WAIT_OBJECT_0:
-                            break
-                elif res == 0:
-                    pass
+                self._run_pipe_session(pipe, h_event, buffer)
+                self._stop_event.wait(3)
+        finally:
+            with self._state_lock:
+                self._running = False
+                self._unhook()
+                CloseHandle(pipe)
+                self._message_pipe = None
+                self._worker_active = False
+            if h_event:
+                CloseHandle(h_event)
+
+    def destroy(self):
+        """Clean up the hook"""
+        with self._state_lock:
+            self._running = False
+            self._stop_event.set()
+            self._unhook()
+            if self._message_pipe is not None:
+                if self._worker_active:
+                    # The worker drains cancellation before releasing its OVERLAPPED and buffer.
+                    CancelIoEx(self._message_pipe)
                 else:
-                    raise pywintypes.error(res, "ConnectNamedPipe", "Unexpected error")
+                    CloseHandle(self._message_pipe)
+                    self._message_pipe = None
+            if self._h_mutex is not None:
+                CloseHandle(self._h_mutex)
+                self._h_mutex = None
 
-                if not self._running:
+    def _ensure_injected(self) -> bool:
+        """Find Explorer and inject the DLL if needed, backing off on failure."""
+        pid = get_explorer_pid()
+        if not pid:
+            self._stop_event.wait(1)
+            return False
+        if not self._running:
+            return False
+
+        dll_path = get_dll_path()  # Raises if the architecture is unsupported.
+        if is_dll_loaded(pid, os.path.basename(dll_path)):
+            return self._running
+
+        logger.info("Injecting into Explorer (PID: %s)", pid)
+        h_hook = _inject_via_hook(dll_path, pid)
+        if not h_hook:
+            logger.error("Injection failed, retrying in 5s")
+            self._stop_event.wait(5)
+            return False
+
+        with self._state_lock:
+            # Injection can finish after destroy() has already run.
+            if not self._running:
+                UnhookWindowsHookEx(h_hook)
+                return False
+            self._h_hook = h_hook
+        return True
+
+    def _run_pipe_session(self, pipe: int, h_event: int, buffer: ctypes.Array[ctypes.c_char]) -> None:
+        """Connect and process messages until the DLL disconnects or shutdown begins."""
+        try:
+            logger.debug("Waiting for DLL to connect")
+            if not self._running or not self._connect_pipe(pipe, h_event) or not self._running:
+                return
+
+            logger.debug("DLL Connected")
+            with self._state_lock:
+                self._unhook()
+            self.update_icons.emit()
+
+            while self._running:
+                message = self._read_message(pipe, h_event, buffer)
+                if message is None or not self._running:
                     break
-
-                logger.debug("DLL Connected")
-                if self._h_hook:
-                    UnhookWindowsHookEx(self._h_hook)
-                    self._h_hook = 0
-                self.update_icons.emit()
-
-                buffer = win32file.AllocateReadBuffer(PIPE_BUFFER_SIZE)
-                # Read loop: reads a single message from the explorer hook
-                while self._running:
-                    chunks: list[bytes] = []
-                    read_error = False
-                    # Chunks loop: collects chunks until the full message is received
-                    while True:
-                        win32event.ResetEvent(h_event)
-                        try:
-                            hr, _data = win32file.ReadFile(self._message_pipe, buffer, overlapped)
-                        except pywintypes.error as e:
-                            if e.winerror == winerror.ERROR_BROKEN_PIPE:
-                                logger.debug("DLL Disconnected")
-                            elif e.winerror == winerror.ERROR_OPERATION_ABORTED:
-                                logger.debug("Pipe operation aborted (closing)")
-                            else:
-                                logger.error("ReadFile failed immediately: %s", e)
-                            read_error = True
-                            break
-
-                        if hr == winerror.ERROR_IO_PENDING:
-                            while self._running:
-                                wait_res = win32event.WaitForSingleObject(h_event, 500)
-                                if wait_res == win32event.WAIT_OBJECT_0:
-                                    break
-                            if not self._running:
-                                break
-                        # Retrieve completed result
-                        try:
-                            n_read = win32file.GetOverlappedResult(self._message_pipe, overlapped, True)
-                            chunks.append(bytes(buffer[:n_read]))
-                            break  # Full message received
-                        except pywintypes.error as e:
-                            if e.winerror == winerror.ERROR_MORE_DATA:
-                                chunks.append(bytes(buffer[:PIPE_BUFFER_SIZE]))
-                                continue  # More data remaining for this message
-                            elif e.winerror == winerror.ERROR_BROKEN_PIPE:
-                                logger.debug("DLL Disconnected")
-                            else:
-                                logger.error("GetOverlappedResult failed: %s", e)
-                            read_error = True
-                            break
-                    if read_error or not self._running:
-                        break
-                    if chunks:
-                        self.process_message(b"".join(chunks))
-            except Exception as e:
-                # Avoid logging error if shutting down
-                if self._running:
-                    logger.error("Worker error: %s", e)
-            finally:
-                try:
-                    win32pipe.DisconnectNamedPipe(self._message_pipe)
-                except pywintypes.error:
-                    pass
+                self._process_message(message)
+        except OSError as e:
             if self._running:
-                time.sleep(3)
-        win32api.CloseHandle(h_event)
+                if e.winerror == ERROR_BROKEN_PIPE:
+                    logger.debug("DLL Disconnected")
+                elif e.winerror == ERROR_OPERATION_ABORTED:
+                    logger.debug("Pipe operation aborted (closing)")
+                else:
+                    logger.error("Worker error: %s", e)
+        except Exception as e:
+            if self._running:
+                logger.error("Worker error: %s", e)
+        finally:
+            # A failed connection must release its hook before another injection attempt.
+            with self._state_lock:
+                self._unhook()
+            DisconnectNamedPipe(pipe)
 
-    def process_message(self, data_bytes: bytes) -> None:
+    def _connect_pipe(self, pipe: int, h_event: int) -> bool:
+        overlapped = OVERLAPPED(hEvent=h_event)
+        ResetEvent(h_event)
+        if ConnectNamedPipe(pipe, ctypes.byref(overlapped)):
+            return True
+        error = GetLastError()
+        if error == ERROR_PIPE_CONNECTED:
+            return True
+        if error != ERROR_IO_PENDING:
+            raise ctypes.WinError(error)
+        if not self._wait_for_io(pipe, overlapped):
+            return False
+        success, _ = GetOverlappedResult(pipe, ctypes.byref(overlapped), False)
+        if not success:
+            raise ctypes.WinError(GetLastError())
+        return True
+
+    def _read_message(self, pipe: int, h_event: int, buffer: ctypes.Array[ctypes.c_char]) -> bytes | None:
+        chunks: list[bytes] = []
+        while self._running:
+            overlapped = OVERLAPPED(hEvent=h_event)
+            ResetEvent(h_event)
+            success = ReadFileOverlapped(pipe, buffer, ctypes.byref(overlapped))
+            error = ERROR_SUCCESS if success else GetLastError()
+            if error == ERROR_IO_PENDING:
+                if not self._wait_for_io(pipe, overlapped):
+                    return None
+            elif error not in (ERROR_SUCCESS, ERROR_MORE_DATA):
+                raise ctypes.WinError(error)
+
+            success, n_read = GetOverlappedResult(pipe, ctypes.byref(overlapped), False)
+            error = ERROR_SUCCESS if success else GetLastError()
+            if error not in (ERROR_SUCCESS, ERROR_MORE_DATA):
+                raise ctypes.WinError(error)
+            chunks.append(buffer.raw[:n_read])
+            if error == ERROR_SUCCESS:
+                return b"".join(chunks)
+        return None
+
+    def _wait_for_io(self, pipe: int, overlapped: OVERLAPPED) -> bool:
+        """Wait for completion, or cancel and drain the operation before returning."""
+        completed = False
+        try:
+            while self._running:
+                wait_result = WaitForSingleObject(overlapped.hEvent, 500)
+                if wait_result == WAIT_OBJECT_0:
+                    completed = True
+                    return True
+                if wait_result == WAIT_FAILED:
+                    raise ctypes.WinError(GetLastError())
+            return False
+        finally:
+            if not completed:
+                CancelIoEx(pipe, ctypes.byref(overlapped))
+                GetOverlappedResult(pipe, ctypes.byref(overlapped), True)
+
+    def _process_message(self, data_bytes: bytes) -> None:
         """Processes a message from the explorer hook"""
         if len(data_bytes) < 4:
             return
@@ -327,3 +391,9 @@ class SystrayHook(QObject):
                         guid=icon_data.guidItem.to_uuid() if icon_data.uFlags & NIF_GUID else None,
                     )
                 )
+
+    def _unhook(self) -> None:
+        """Release the injection hook. The caller must hold _state_lock."""
+        if self._h_hook:
+            UnhookWindowsHookEx(self._h_hook)
+            self._h_hook = 0
