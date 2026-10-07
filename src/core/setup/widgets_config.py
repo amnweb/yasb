@@ -2,11 +2,19 @@
 Widgets configuration for the YASB setup wizard.
 """
 
+from typing import Any, TypedDict
+
 from core.utils.system import is_windows_10
+
+
+class WidgetPreset(TypedDict):
+    placement: dict[str, tuple[str, int]]
+    config: dict[str, dict[str, Any]]
+
 
 CPU_ICON = "\ue950" if is_windows_10() else "\ueea1"
 
-BASE_WIDGET: dict = {
+BASE_WIDGET: dict[str, WidgetPreset] = {
     "base": {
         "placement": {
             "home": ("left", 0),
@@ -133,7 +141,7 @@ BASE_WIDGET: dict = {
     },
 }
 
-KOMOREBI_WIDGET: dict = {
+KOMOREBI_WIDGET: dict[str, WidgetPreset] = {
     "komorebi": {
         "placement": {
             "komorebi_workspaces": ("left", 20),
@@ -155,7 +163,7 @@ KOMOREBI_WIDGET: dict = {
     },
 }
 
-GLAZEWM_WIDGET: dict = {
+GLAZEWM_WIDGET: dict[str, WidgetPreset] = {
     "glazewm": {
         "placement": {
             "glazewm_workspaces": ("left", 30),
@@ -172,7 +180,7 @@ GLAZEWM_WIDGET: dict = {
     },
 }
 
-WINDOWS_DESKTOPS_WIDGET: dict = {
+WINDOWS_DESKTOPS_WIDGET: dict[str, WidgetPreset] = {
     "windows_desktops": {
         "placement": {
             "windows_desktops": ("left", 10),
@@ -194,7 +202,7 @@ WINDOWS_DESKTOPS_WIDGET: dict = {
     },
 }
 
-CPU_WIDGET: dict = {
+CPU_WIDGET: dict[str, WidgetPreset] = {
     "cpu": {
         "placement": {
             "cpu": ("right", 30),
@@ -225,7 +233,7 @@ CPU_WIDGET: dict = {
     },
 }
 
-MEMORY_WIDGET: dict = {
+MEMORY_WIDGET: dict[str, WidgetPreset] = {
     "memory": {
         "placement": {
             "memory": ("right", 40),
@@ -256,7 +264,7 @@ MEMORY_WIDGET: dict = {
     },
 }
 
-QUICK_LAUNCH_WIDGET: dict = {
+QUICK_LAUNCH_WIDGET: dict[str, WidgetPreset] = {
     "quick_launch": {
         "placement": {
             "quick_launch": ("left", 5),
@@ -306,7 +314,7 @@ QUICK_LAUNCH_WIDGET: dict = {
     },
 }
 
-ACTIVE_WINDOW_WIDGET: dict = {
+ACTIVE_WINDOW_WIDGET: dict[str, WidgetPreset] = {
     "active_window": {
         "placement": {
             "active_window": ("left", 40),
@@ -329,7 +337,7 @@ ACTIVE_WINDOW_WIDGET: dict = {
     },
 }
 
-SYSTRAY_WIDGET: dict = {
+SYSTRAY_WIDGET: dict[str, WidgetPreset] = {
     "systray": {
         "placement": {
             "systray": ("right", 20),
@@ -366,7 +374,7 @@ SYSTRAY_WIDGET: dict = {
     },
 }
 
-WEATHER_WIDGET: dict = {
+WEATHER_WIDGET: dict[str, WidgetPreset] = {
     "weather": {
         "placement": {
             "open_meteo": ("right", 60),
@@ -422,7 +430,7 @@ WEATHER_WIDGET: dict = {
     },
 }
 
-GITHUB_WIDGET: dict = {
+GITHUB_WIDGET: dict[str, WidgetPreset] = {
     "github": {
         "placement": {
             "github": ("right", 50),
@@ -469,7 +477,7 @@ GITHUB_WIDGET: dict = {
     },
 }
 
-MICROPHONE_WIDGET: dict = {
+MICROPHONE_WIDGET: dict[str, WidgetPreset] = {
     "microphone": {
         "placement": {
             "microphone": ("right", 70),
@@ -504,7 +512,7 @@ MICROPHONE_WIDGET: dict = {
     },
 }
 
-MEDIA_WIDGET: dict = {
+MEDIA_WIDGET: dict[str, WidgetPreset] = {
     "media": {
         "placement": {
             "media": ("right", 10),
@@ -564,7 +572,7 @@ MEDIA_WIDGET: dict = {
 }
 
 
-WIDGETS_CONFIG: dict[str, dict] = {
+WIDGETS_CONFIG: dict[str, WidgetPreset] = {
     **BASE_WIDGET,
     **KOMOREBI_WIDGET,
     **GLAZEWM_WIDGET,

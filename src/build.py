@@ -1,7 +1,7 @@
 import datetime
 import os
 
-from cx_Freeze import Executable, setup
+from cx_Freeze import Executable, setup  # pyright: ignore[reportUnknownVariableType, reportMissingTypeStubs]
 
 from core.utils.system import detect_architecture
 from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL

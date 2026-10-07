@@ -9,7 +9,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 
@@ -37,6 +37,14 @@ _TOKEN_FILE_CACHE: dict[str, tuple[int, int, dict[str, Any]]] = {}
 _TOKEN_CACHE_LOCK = threading.Lock()
 
 
+def as_dict(value: object) -> dict[str, Any] | None:
+    return cast(dict[str, Any], value) if isinstance(value, dict) else None
+
+
+def as_list(value: object) -> list[Any] | None:
+    return cast(list[Any], value) if isinstance(value, list) else None
+
+
 def _cache_path() -> str:
     return str(app_data_path("codex_usage_widget_cache.json"))
 
@@ -45,7 +53,7 @@ def _read_cache(path: str) -> dict[str, Any] | None:
     try:
         with open(path, encoding="utf-8") as cache_file:
             value = json.load(cache_file)
-        return value if isinstance(value, dict) else None
+        return as_dict(value)
     except OSError, ValueError, TypeError:
         return None
 
@@ -94,8 +102,8 @@ def _parse_token_file(path: Path) -> dict[str, Any]:
                     event = json.loads(line)
                 except ValueError, TypeError:
                     continue
-                payload = event.get("payload")
-                if not isinstance(payload, dict):
+                payload = as_dict(event.get("payload"))
+                if payload is None:
                     continue
                 if event.get("type") in {"session_meta", "turn_context"}:
                     model = payload.get("model")
@@ -104,9 +112,9 @@ def _parse_token_file(path: Path) -> dict[str, Any]:
                     continue
                 if payload.get("type") != "token_count":
                     continue
-                info = payload.get("info")
-                total_usage = info.get("total_token_usage") if isinstance(info, dict) else None
-                if not isinstance(total_usage, dict):
+                info = as_dict(payload.get("info"))
+                total_usage = as_dict(info.get("total_token_usage")) if info is not None else None
+                if total_usage is None:
                     continue
                 event_day = _event_date(event.get("timestamp"))
                 if event_day is None:
@@ -230,8 +238,9 @@ def _response_reader(process: subprocess.Popen[str], messages: queue.Queue[dict[
             message = json.loads(line)
         except ValueError:
             continue
-        if isinstance(message, dict):
-            messages.put(message)
+        parsed = as_dict(message)
+        if parsed is not None:
+            messages.put(parsed)
     messages.put(None)
 
 
@@ -254,11 +263,12 @@ def _receive_response(messages: queue.Queue[dict[str, Any] | None], response_id:
 def _response_result(message: dict[str, Any], operation: str) -> dict[str, Any]:
     if "error" in message:
         error: Any = message["error"]
-        if isinstance(error, dict):
-            error = error.get("message") or error.get("code")
+        error_info = as_dict(error)
+        if error_info is not None:
+            error = error_info.get("message") or error_info.get("code")
         raise RuntimeError(f"Codex {operation} failed: {error}")
-    result = message.get("result")
-    if not isinstance(result, dict):
+    result = as_dict(message.get("result"))
+    if result is None:
         raise RuntimeError(f"Codex returned an invalid {operation} response")
     return result
 
@@ -320,34 +330,37 @@ def read_rate_limits(codex_path: str, timeout: float) -> dict[str, Any]:
 
 
 def _normalize_window(value: Any) -> dict[str, Any] | None:
-    if not isinstance(value, dict):
+    window = as_dict(value)
+    if window is None:
         return None
-    used = value.get("usedPercent")
+    used = window.get("usedPercent")
     if not isinstance(used, (int, float)):
         return None
     used = max(0.0, min(100.0, float(used)))
     return {
         "used": used,
         "remaining": 100.0 - used,
-        "duration_mins": value.get("windowDurationMins"),
-        "resets_at": value.get("resetsAt"),
+        "duration_mins": window.get("windowDurationMins"),
+        "resets_at": window.get("resetsAt"),
     }
 
 
 def _normalize_reset_credits(value: Any) -> dict[str, Any] | None:
     """Keep display metadata for reset credits while discarding redeemable identifiers."""
-    if not isinstance(value, dict):
+    summary = as_dict(value)
+    if summary is None:
         return None
-    available_count = value.get("availableCount")
+    available_count = summary.get("availableCount")
     if not isinstance(available_count, (int, float)):
         return None
 
     normalized_credits: list[dict[str, Any]] | None = None
-    credits = value.get("credits")
-    if isinstance(credits, list):
+    credits = as_list(summary.get("credits"))
+    if credits is not None:
         normalized_credits = []
-        for credit in credits:
-            if not isinstance(credit, dict):
+        for raw_credit in credits:
+            credit = as_dict(raw_credit)
+            if credit is None:
                 continue
             normalized_credits.append(
                 {
@@ -364,22 +377,22 @@ def _normalize_reset_credits(value: Any) -> dict[str, Any] | None:
 
 def normalize_rate_limits(payload: dict[str, Any]) -> dict[str, Any]:
     """Convert the app-server response into a stable, cache-safe widget record."""
-    limits_by_id = payload.get("rateLimitsByLimitId")
+    limits_by_id = as_dict(payload.get("rateLimitsByLimitId"))
     limits: dict[str, Any] | None = None
-    if isinstance(limits_by_id, dict):
-        preferred = limits_by_id.get("codex")
-        if isinstance(preferred, dict):
+    if limits_by_id is not None:
+        preferred = as_dict(limits_by_id.get("codex"))
+        if preferred is not None:
             limits = preferred
         else:
-            limits = next((item for item in limits_by_id.values() if isinstance(item, dict)), None)
-    if limits is None and isinstance(payload.get("rateLimits"), dict):
-        limits = payload["rateLimits"]
+            limits = next((item for raw in limits_by_id.values() if (item := as_dict(raw)) is not None), None)
+    if limits is None:
+        limits = as_dict(payload.get("rateLimits"))
     if limits is None:
         raise RuntimeError("Codex returned no account rate limits; sign in with ChatGPT")
 
-    credits = limits.get("credits")
+    credits = as_dict(limits.get("credits"))
     credit_value: str | float | int | None = None
-    if isinstance(credits, dict):
+    if credits is not None:
         if credits.get("unlimited"):
             credit_value = "Unlimited"
         elif isinstance(credits.get("balance"), (int, float)):
@@ -462,7 +475,7 @@ class CodexUsageService(QObject):
 
     data_ready = pyqtSignal(dict)
 
-    _instances: ClassVar[dict[tuple, CodexUsageService]] = {}
+    _instances: ClassVar[dict[tuple[str, int, int, float, bool], CodexUsageService]] = {}
 
     @classmethod
     def get_instance(
@@ -488,7 +501,7 @@ class CodexUsageService(QObject):
         cache_ttl: int,
         timeout: float,
         show_token_usage: bool,
-        key: tuple,
+        key: tuple[str, int, int, float, bool],
     ):
         super().__init__()
         self._key = key

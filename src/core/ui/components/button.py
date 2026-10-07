@@ -1,15 +1,35 @@
-from PyQt6 import sip
-from PyQt6.QtCore import QEasingCurve, QParallelAnimationGroup, QPropertyAnimation, QRect, QSize, Qt, pyqtProperty
-from PyQt6.QtGui import QBrush, QColor, QFont, QFontMetrics, QIcon, QLinearGradient, QPainter, QPen, QPixmap
+from collections.abc import Callable
+from typing import Any, override
+
+import PyQt6.QtCore as QtCore
+import PyQt6.sip as sip
+from PyQt6.QtCore import QEasingCurve, QEvent, QParallelAnimationGroup, QPropertyAnimation, QRect, QSize, Qt
+from PyQt6.QtGui import (
+    QBrush,
+    QColor,
+    QEnterEvent,
+    QFont,
+    QFontMetrics,
+    QIcon,
+    QLinearGradient,
+    QMouseEvent,
+    QPainter,
+    QPaintEvent,
+    QPen,
+    QPixmap,
+)
 from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
 
 from core.ui.theme import FONT_FAMILIES, FONT_WEIGHTS, get_tokens, theme_key
 from core.utils.qobject import is_valid_qobject
 
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
+
 _DURATION = 83
 _RADIUS = 4.0
 _TRANSPARENT = QColor(0, 0, 0, 0)
-_DEFAULT_PADDING = (11, 5, 11, 6)
+DEFAULT_PADDING = (11, 5, 11, 6)
 _ICON_TEXT_GAP = 6
 _PROPS = ("bg", "fg", "border", "border_top")
 
@@ -106,7 +126,7 @@ class Button(QPushButton):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(text, parent)
-        self._padding = _parse_padding(padding, _DEFAULT_PADDING)
+        self._padding = _parse_padding(padding, DEFAULT_PADDING)
 
         font = QFont()
         if font_family is not None:
@@ -131,7 +151,9 @@ class Button(QPushButton):
             self._anim_group.addAnimation(anim)
 
         self.toggled.connect(self._on_toggled)
-        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     def _build_states(self, variant: str, t: dict[str, str]) -> None:
         raw = _VARIANTS.get(variant, _VARIANTS["default"])
@@ -222,45 +244,45 @@ class Button(QPushButton):
 
     # Animated properties
 
-    @pyqtProperty(QColor)
-    def bg(self) -> QColor:
+    def _get_bg(self) -> QColor:
         return self._bg
 
-    @bg.setter
-    def bg(self, c: QColor) -> None:
+    def _set_bg(self, c: QColor) -> None:
         self._bg = c
         if not sip.isdeleted(self):
             self.update()
 
-    @pyqtProperty(QColor)
-    def fg(self) -> QColor:
+    bg: QColor = pyqtProperty(QColor, _get_bg, _set_bg)
+
+    def _get_fg(self) -> QColor:
         return self._fg
 
-    @fg.setter
-    def fg(self, c: QColor) -> None:
+    def _set_fg(self, c: QColor) -> None:
         self._fg = c
         if not sip.isdeleted(self):
             self.update()
 
-    @pyqtProperty(QColor)
-    def border(self) -> QColor:
+    fg: QColor = pyqtProperty(QColor, _get_fg, _set_fg)
+
+    def _get_border(self) -> QColor:
         return self._border
 
-    @border.setter
-    def border(self, c: QColor) -> None:
+    def _set_border(self, c: QColor) -> None:
         self._border = c
         if not sip.isdeleted(self):
             self.update()
 
-    @pyqtProperty(QColor)
-    def border_top(self) -> QColor:
+    border: QColor = pyqtProperty(QColor, _get_border, _set_border)
+
+    def _get_border_top(self) -> QColor:
         return self._border_top
 
-    @border_top.setter
-    def border_top(self, c: QColor) -> None:
+    def _set_border_top(self, c: QColor) -> None:
         self._border_top = c
         if not sip.isdeleted(self):
             self.update()
+
+    border_top: QColor = pyqtProperty(QColor, _get_border_top, _set_border_top)
 
     def _animate_to(self, state: str) -> None:
         if not is_valid_qobject(self):
@@ -273,41 +295,47 @@ class Button(QPushButton):
             anim.setEndValue(target[name])
         self._anim_group.start()
 
-    def enterEvent(self, event) -> None:
+    @override
+    def enterEvent(self, event: QEnterEvent | None) -> None:
         if is_valid_qobject(self) and self.isEnabled():
             self._animate_to(self._interaction_state(True))
         super().enterEvent(event)
 
-    def leaveEvent(self, event) -> None:
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         if is_valid_qobject(self) and self.isEnabled():
             self._animate_to(self._interaction_state(False))
-        super().leaveEvent(event)
+        super().leaveEvent(a0)
 
-    def mousePressEvent(self, event) -> None:
+    @override
+    def mousePressEvent(self, e: QMouseEvent | None) -> None:
         if self.isEnabled():
             self._animate_to(self._press_state())
-        super().mousePressEvent(event)
+        super().mousePressEvent(e)
 
-    def mouseReleaseEvent(self, event) -> None:
+    @override
+    def mouseReleaseEvent(self, e: QMouseEvent | None) -> None:
         # clicked may destroy this widget (e.g. Cancel closes the host overlay).
-        super().mouseReleaseEvent(event)
+        super().mouseReleaseEvent(e)
         if not is_valid_qobject(self):
             return
         if self.isEnabled():
-            hovering = self.isVisible() and self.rect().contains(event.position().toPoint())
+            hovering = self.isVisible() and e is not None and self.rect().contains(e.position().toPoint())
             self._animate_to(self._interaction_state(hovering))
 
-    def changeEvent(self, event) -> None:
-        super().changeEvent(event)
+    @override
+    def changeEvent(self, e: QEvent | None) -> None:
+        super().changeEvent(e)
         if not is_valid_qobject(self):
             return
-        if event.type() == event.Type.EnabledChange:
+        if e is not None and e.type() == e.Type.EnabledChange:
             if self.isEnabled():
                 self._animate_to(self._interaction_state(self.underMouse()))
             else:
                 self._animate_to("disabled")
 
-    def paintEvent(self, _event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         if sip.isdeleted(self):
             return
         p = QPainter(self)

@@ -4,6 +4,7 @@ import logging
 from ctypes import byref
 from ctypes.wintypes import MSG
 from dataclasses import dataclass
+from typing import Any
 
 from PyQt6.QtCore import Q_ARG, QMetaObject, QObject, Qt, QThread, pyqtSlot
 
@@ -100,7 +101,7 @@ class HotkeyBinding:
     screen: str = "active"
 
 
-def parse_hotkey(hotkey: str) -> tuple[int, int] | None:
+def parse_hotkey(hotkey: object) -> tuple[int, int] | None:
     """Parse a hotkey string into (modifiers, vk) for RegisterHotKey.
 
     Args:
@@ -273,9 +274,9 @@ class HotkeyListener(QThread):
             user32.PostThreadMessageW(self._thread_id, WM_QUIT, 0, 0)
 
 
-def collect_widget_keybindings(widget_name: str, keybindings: list[dict]) -> list[HotkeyBinding]:
+def collect_widget_keybindings(widget_name: str, keybindings: list[dict[str, Any]]) -> list[HotkeyBinding]:
     """Parse keybinding configs for a widget into HotkeyBinding objects."""
-    bindings = []
+    bindings: list[HotkeyBinding] = []
 
     for kb in keybindings:
         keys = kb.get("keys", "")

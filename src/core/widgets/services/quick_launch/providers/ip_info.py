@@ -5,6 +5,7 @@ import socket
 import subprocess
 import urllib.error
 import urllib.request
+from typing import Any
 
 from PyQt6.QtWidgets import QApplication
 
@@ -109,7 +110,7 @@ class IpInfoProvider(BaseProvider):
     icon = ICON_IP_INFO
     input_placeholder = "Pick a tool or type a command..."
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
 
     def match(self, text: str) -> bool:
@@ -118,7 +119,7 @@ class IpInfoProvider(BaseProvider):
             return stripped == self.prefix or stripped.startswith(self.prefix + " ")
         return True
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).strip()
         parts = query.split(None, 1)
 
@@ -155,14 +156,14 @@ class IpInfoProvider(BaseProvider):
             return True
         return None
 
-    def get_context_menu_actions(self, result):
+    def get_context_menu_actions(self, result: ProviderResult) -> list[ProviderMenuAction]:
         actions: list[ProviderMenuAction] = []
         data = result.action_data
         if data.get("copy") is not None:
             actions.append(ProviderMenuAction(id="copy", label="Copy to clipboard"))
         return actions
 
-    def execute_context_menu_action(self, action_id, result):
+    def execute_context_menu_action(self, action_id: str, result: ProviderResult) -> ProviderMenuActionResult:
         data = result.action_data
         if action_id == "copy":
             copy_text = data.get("copy", "")
@@ -457,7 +458,7 @@ class IpInfoProvider(BaseProvider):
             ipv6_addrs: list[str] = []
 
             for family, _, _, _, sockaddr in addr_infos:
-                ip = sockaddr[0]
+                ip = str(sockaddr[0])
                 if ip in seen:
                     continue
                 seen.add(ip)

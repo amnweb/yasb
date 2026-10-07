@@ -151,6 +151,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self.status = WorkspaceStatus.EMPTY
         self.workspace_window_count = 0
         self.windows = windows
+        self._unique_pids: set[int] = set()
 
         self.setSizePolicy(QSizePolicy.Policy.Fixed, self.sizePolicy().verticalPolicy())
 
@@ -163,8 +164,8 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self.text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.button_layout.addWidget(self.text_label)
 
-        self.icons = {}
-        self.icon_labels = []
+        self.icons: dict[int, QPixmap | None] = {}
+        self.icon_labels: list[QLabel] = []
         self.update_button()
 
     def update_button(self):
@@ -228,8 +229,9 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         else:
             logger.warning("Unknown workspace status: %s", self.status)
 
-    def mousePressEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.LeftButton:
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
             self._activate_workspace()
 
     def _activate_workspace(self):
@@ -257,8 +259,8 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         return {window.handle: self._get_app_icon(window) for window in windows}
 
     def _get_app_icon(self, window: Window, ignore_cache: bool = False) -> QPixmap | None:
+        hwnd = window.handle
         try:
-            hwnd = window.handle
             process = get_process_info(hwnd)
             pid = process["pid"]
 
@@ -268,7 +270,10 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
                 else:
                     return None
 
-            self.dpi = self.screen().devicePixelRatio()
+            screen = self.screen()
+            if screen is None:
+                return None
+            self.dpi = screen.devicePixelRatio()
             cache_key = (hwnd, pid, self.dpi)
 
             if cache_key in self.parent_widget.icon_cache and not ignore_cache:
@@ -284,14 +289,13 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
                         Image.LANCZOS,
                     ).convert("RGBA")
                     qimage = QImage(
-                        icon_img.tobytes(),
+                        icon_img.tobytes(),  # pyright: ignore[reportUnknownMemberType]
                         icon_img.width,
                         icon_img.height,
                         QImage.Format.Format_RGBA8888,
                     )
                     pixmap = QPixmap.fromImage(qimage)
                     pixmap.setDevicePixelRatio(self.dpi)
-                    pixmap.glazewm_id = window.id
                     self.parent_widget.icon_cache[cache_key] = pixmap
                     return pixmap
                 else:
@@ -375,7 +379,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
         )
         self.glazewm_client.glazewm_connection_status.connect(self._update_connection_status)  # type: ignore
         self.glazewm_client.workspaces_data_processed.connect(self._update_workspaces)  # type: ignore
-        self.icon_cache = dict()
+        self.icon_cache: dict[tuple[int, int, float], QPixmap] = {}
         self.workspace_app_icons_enabled = (
             self.config.app_icons.enabled_populated
             or self.config.app_icons.enabled_active
@@ -439,7 +443,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
             btn.workspace_window_count = workspace.num_windows
             btn.is_displayed = workspace.is_displayed
             btn.is_focused = btn.workspace_name == global_focused_ws if global_focused_ws else workspace.focus
-            if self.workspace_app_icons_enabled:
+            if isinstance(btn, GlazewmWorkspaceButtonWithIcons):
                 btn.windows = workspace.windows
 
         for i, ws_name in enumerate(sorted(self.workspaces.keys(), key=natural_sort_key)):
@@ -458,14 +462,14 @@ class GlazewmWorkspacesWidget(BaseWidget):
                 btn.workspace_window_count = workspace.num_windows
                 btn.is_displayed = workspace.is_displayed
                 btn.is_focused = btn.workspace_name == global_focused_ws if global_focused_ws else workspace.focus
-                if self.workspace_app_icons_enabled:
+                if isinstance(btn, GlazewmWorkspaceButtonWithIcons):
                     btn.windows = workspace.windows
             else:
                 workspace = all_workspaces.get(btn.workspace_name)
                 btn.is_displayed = False
                 btn.workspace_window_count = 0
                 btn.is_focused = False
-                if self.workspace_app_icons_enabled:
+                if isinstance(btn, GlazewmWorkspaceButtonWithIcons):
                     btn.windows = []
 
             is_focused = btn.is_focused
@@ -494,10 +498,11 @@ class GlazewmWorkspacesWidget(BaseWidget):
                 return btn
         return None
 
-    def wheelEvent(self, event: QWheelEvent):
-        if not self.config.enable_scroll_switching:
+    @override
+    def wheelEvent(self, a0: QWheelEvent | None) -> None:
+        if a0 is None or not self.config.enable_scroll_switching:
             return
-        direction = event.angleDelta().y()
+        direction = a0.angleDelta().y()
         if self.config.reverse_scroll_direction:
             direction = -direction
         if direction < 0:

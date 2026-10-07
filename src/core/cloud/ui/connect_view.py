@@ -27,7 +27,7 @@ class ConnectView(QWidget):
     cancel_requested = pyqtSignal()
     reopen_requested = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self._init_ui()
 

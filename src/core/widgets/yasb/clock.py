@@ -4,12 +4,16 @@ import logging
 import os
 import re
 import winsound
+from collections.abc import Iterator, Mapping
 from datetime import date, datetime, timedelta
+from functools import partial
 from itertools import cycle
+from types import ModuleType
+from typing import NotRequired, TypedDict, cast, override
 from zoneinfo import ZoneInfo, available_timezones
 
-from PyQt6.QtCore import QDate, QLocale, QPoint, Qt, QTimer
-from PyQt6.QtGui import QColor, QPalette
+from PyQt6.QtCore import QDate, QLocale, QPoint, QRect, Qt, QTimer
+from PyQt6.QtGui import QAction, QColor, QPainter, QPalette, QShowEvent
 from PyQt6.QtWidgets import (
     QAbstractSpinBox,
     QApplication,
@@ -26,10 +30,11 @@ from PyQt6.QtWidgets import (
     QSpinBox,
     QTableView,
     QVBoxLayout,
+    QWidget,
 )
 
 from core.config import HOME_CONFIGURATION_DIR
-from core.utils.tooltip import set_tooltip
+from core.utils.tooltip import set_tooltip, show_tooltip_now
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.utils import apply_qmenu_style
@@ -37,19 +42,42 @@ from core.validation.widgets.yasb.clock import ClockConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
 
-_holidays_cache = {"module": None, "supported_countries": None, "country_holidays": {}}
+
+class _HolidaysCache(TypedDict):
+    module: ModuleType | None
+    supported_countries: set[str] | None
+    country_holidays: dict[str, Mapping[date, str]]
+
+
+class Alarm(TypedDict):
+    time: str
+    days: NotRequired[list[int]]
+    enabled: NotRequired[bool]
+    title: NotRequired[str]
+
+
+class SnoozedAlarm(TypedDict):
+    alarm: Alarm
+    snooze_until: datetime
+
+
+type LocaleSetting = tuple[str | None, str | None]
+
+_holidays_cache: _HolidaysCache = {"module": None, "supported_countries": None, "country_holidays": {}}
 NOTIFICATION_SOUND = os.path.join(SCRIPT_PATH, "assets", "sound", "notification02.wav")
 
 
 class ClockWidgetSharedState:
     """Shared state shared between all clock widget instances."""
 
-    _instance = None
+    _instance: ClockWidgetSharedState | None = None
+    _initialized: bool
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+            instance = super().__new__(cls)
+            instance._initialized = False
+            cls._instance = instance
         return cls._instance
 
     def __init__(self):
@@ -58,18 +86,18 @@ class ClockWidgetSharedState:
             return
 
         self._initialized = True
-        self._widget_instances = []
-        self._alarms = []
-        self._snoozed_alarms = []
-        self._triggered_alarms = set()
-        self._last_check_minute = None
+        self._widget_instances: list[ClockWidget] = []
+        self.alarms: list[Alarm] = []
+        self.snoozed_alarms: list[SnoozedAlarm] = []
+        self._triggered_alarms: set[int] = set()
+        self._last_check_minute: str | None = None
         self._startup_minute = datetime.now().strftime("%H:%M")
-        self._timer_seconds_remaining = 0
-        self._timer_active = False
+        self.timer_seconds_remaining = 0
+        self.timer_active = False
         self._alarms_file = os.path.join(HOME_CONFIGURATION_DIR, "alarms.json")
         self._load_alarms()
 
-    def register_widget(self, widget):
+    def register_widget(self, widget: ClockWidget) -> None:
         """Register a widget instance and start timer if this is first."""
         if widget not in self._widget_instances:
             self._widget_instances.append(widget)
@@ -79,31 +107,31 @@ class ClockWidgetSharedState:
 
             def update_widget():
                 try:
-                    widget._update_label()
-                    widget._update_tooltip()
+                    widget.update_label()
+                    widget.update_tooltip()
                 except Exception:
                     pass
 
             QTimer.singleShot(0, update_widget)
 
-    def unregister_widget(self, widget):
+    def unregister_widget(self, widget: ClockWidget) -> None:
         """Remove a widget instance from the shared list."""
         if widget in self._widget_instances:
             self._widget_instances.remove(widget)
 
     def on_timer_tick(self):
         """Called on each timer tick: update timer, handle snoozes and alarms."""
-        if self._timer_active:
-            if self._timer_seconds_remaining == 0:
+        if self.timer_active:
+            if self.timer_seconds_remaining == 0:
                 self._timer_finished()
-            elif self._timer_seconds_remaining > 0:
-                self._timer_seconds_remaining -= 1
+            elif self.timer_seconds_remaining > 0:
+                self.timer_seconds_remaining -= 1
 
-        for snoozed in self._snoozed_alarms[:]:
-            snooze_until = snoozed.get("snooze_until")
-            if snooze_until and datetime.now() >= snooze_until:
+        for snoozed in self.snoozed_alarms[:]:
+            snooze_until = snoozed["snooze_until"]
+            if datetime.now() >= snooze_until:
                 alarm = snoozed["alarm"]
-                self._snoozed_alarms.remove(snoozed)
+                self.snoozed_alarms.remove(snoozed)
                 self._trigger_alarm(alarm)
 
         now = datetime.now()
@@ -123,7 +151,7 @@ class ClockWidgetSharedState:
         current_time = now.strftime("%H:%M")
         current_day = now.weekday()
 
-        for idx, alarm in enumerate(self._alarms):
+        for idx, alarm in enumerate(self.alarms):
             if not alarm.get("enabled", True):
                 continue
 
@@ -139,31 +167,31 @@ class ClockWidgetSharedState:
                     self._triggered_alarms.add(idx)
                     self._trigger_alarm(alarm)
 
-    def _trigger_alarm(self, alarm):
+    def _trigger_alarm(self, alarm: Alarm) -> None:
         """Trigger an alarm on the first registered widget (UI action)."""
         if self._widget_instances:
             try:
-                self._widget_instances[0]._trigger_alarm(alarm)
+                self._widget_instances[0].trigger_alarm(alarm)
             except Exception:
                 pass
 
     def _timer_finished(self):
         """Handle the shared timer finishing: stop active timer and play sound."""
-        self._timer_active = False
-        self._timer_seconds_remaining = 0
+        self.timer_active = False
+        self.timer_seconds_remaining = 0
         if self._widget_instances:
             try:
-                self._widget_instances[0]._play_sound()
+                self._widget_instances[0].play_sound()
             except Exception:
                 pass
 
-    def notify_all_widgets(self, update_tooltip=False):
+    def notify_all_widgets(self, update_tooltip: bool = False) -> None:
         """Notify all registered widgets to refresh label and optional tooltip."""
         for widget in self._widget_instances[:]:
             try:
-                widget._update_label()
+                widget.update_label()
                 if update_tooltip:
-                    widget._update_tooltip()
+                    widget.update_tooltip()
             except Exception:
                 pass
 
@@ -172,15 +200,15 @@ class ClockWidgetSharedState:
         try:
             if os.path.exists(self._alarms_file):
                 with open(self._alarms_file, encoding="utf-8") as f:
-                    self._alarms = json.load(f)
+                    self.alarms = json.load(f)
         except Exception as e:
             logging.error("Error loading alarms: %s", e)
-            self._alarms = []
+            self.alarms = []
 
     def save_alarms(self):
         """Persist alarms to disk in a tidy JSON format."""
         try:
-            json_str = json.dumps(self._alarms, indent=2, ensure_ascii=False)
+            json_str = json.dumps(self.alarms, indent=2, ensure_ascii=False)
             json_str = re.sub(
                 r"\[\s*(\d+(?:\s*,\s*\d+)*)\s*\]",
                 lambda m: "[" + m.group(1).replace("\n", "").replace(" ", "") + "]",
@@ -193,20 +221,27 @@ class ClockWidgetSharedState:
 
 
 class FormattedSpinBox(QSpinBox):
-    def textFromValue(self, value):
+    @override
+    def textFromValue(self, v: int) -> str:
         """Format numeric value with two digits (e.g. 3 -> '03')."""
-        return f"{value:02d}"
+        return f"{v:02d}"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, parent: QWidget | None = None):
         """Create the formatted spin box and make the line edit read-only."""
-        super().__init__(*args, **kwargs)
-        self.lineEdit().setReadOnly(True)
+        super().__init__(parent)
+        line_edit = self.lineEdit()
+        if line_edit is not None:
+            line_edit.setReadOnly(True)
 
-    def showEvent(self, event):
+    @override
+    def showEvent(self, e: QShowEvent | None) -> None:
         """Adjust selection colors after the widget is shown so colors match."""
-        super().showEvent(event)
+        super().showEvent(e)
+        line_edit = self.lineEdit()
+        if line_edit is None:
+            return
         current_color = self.palette().color(self.foregroundRole())
-        self.lineEdit().setStyleSheet(f"""
+        line_edit.setStyleSheet(f"""
             QLineEdit {{
                 selection-background-color: transparent;
                 selection-color: {current_color.name()};
@@ -214,17 +249,29 @@ class FormattedSpinBox(QSpinBox):
         """)
 
 
-def _get_holidays_module():
+def _get_holidays_module() -> ModuleType:
     """Lazily import the `holidays` module and cache supported countries."""
     import importlib
 
-    if _holidays_cache["module"] is None:
-        _holidays_cache["module"] = importlib.import_module("holidays")
-        _holidays_cache["supported_countries"] = set(_holidays_cache["module"].list_supported_countries())
-    return _holidays_cache["module"]
+    module = _holidays_cache["module"]
+    if module is None:
+        module = importlib.import_module("holidays")
+        _holidays_cache["module"] = module
+        _holidays_cache["supported_countries"] = set(module.list_supported_countries())
+    return module
 
 
-def _get_cached_country_holidays(country, year, subdivision=None):
+def _supported_country(country_code: str | None) -> str | None:
+    supported = _holidays_cache["supported_countries"]
+    if supported is None or not country_code:
+        return None
+    country = country_code.upper()
+    if re.fullmatch(r"[A-Z]{2}", country) and country in supported:
+        return country
+    return None
+
+
+def _get_cached_country_holidays(country: str, year: int, subdivision: str | None = None) -> Mapping[date, str]:
     """Return cached holidays for a country/year, loading if needed."""
     cache_key = f"{country}_{year}_{subdivision}"
     if cache_key not in _holidays_cache["country_holidays"]:
@@ -241,12 +288,13 @@ def _get_cached_country_holidays(country, year, subdivision=None):
 class CustomCalendar(QCalendarWidget):
     def __init__(
         self,
-        parent=None,
-        timezone=None,
-        country_code=None,
-        subdivision=None,
-        show_holidays=True,
-        holiday_color=None,
+        parent: QWidget | None = None,
+        timezone: str | None = None,
+        country_code: str | None = None,
+        subdivision: str | None = None,
+        show_holidays: bool = True,
+        holiday_color: str | None = None,
+        locale_name: str = "",
     ):
         """Calendar widget with optional holiday highlighting by country."""
         super().__init__(parent)
@@ -259,8 +307,8 @@ class CustomCalendar(QCalendarWidget):
         self.setVerticalHeaderFormat(QCalendarWidget.VerticalHeaderFormat.NoVerticalHeader)
         self.setNavigationBarVisible(False)
         self.setAutoFillBackground(False)
-        self._holidays = set()
-        self._current_year = None
+        self._holidays: set[date] = set()
+        self._current_year: int | None = None
         format = self.weekdayTextFormat(Qt.DayOfWeek.Monday)
         for day in range(Qt.DayOfWeek.Monday.value, Qt.DayOfWeek.Sunday.value + 1):
             self.setWeekdayTextFormat(Qt.DayOfWeek(day), format)
@@ -273,45 +321,38 @@ class CustomCalendar(QCalendarWidget):
             palette.setColor(QPalette.ColorRole.HighlightedText, palette.color(QPalette.ColorRole.Text))
             table_view.setPalette(palette)
 
-        if parent and parent._locale:
-            qt_locale = QLocale(parent._locale)
-            self.setLocale(qt_locale)
+        if locale_name:
+            self.setLocale(QLocale(locale_name))
 
         self.update_calendar_display()
         self._update_holidays_for_year(self.selectedDate().year())
         self.currentPageChanged.connect(self._on_page_changed)
 
-    def _update_holidays_for_year(self, year):
+    def _update_holidays_for_year(self, year: int) -> None:
         """Update the holiday cache for the given year (if supported)."""
         self._holidays = set()
         self._current_year = year
-        if _holidays_cache["supported_countries"] is None:
-            return
-        country = None
-        if (
-            self.country_code
-            and re.fullmatch(r"[A-Z]{2}", self.country_code.upper())
-            and self.country_code.upper() in _holidays_cache["supported_countries"]
-        ):
-            country = self.country_code.upper()
+        country = _supported_country(self.country_code)
         if not country:
             return
         h = _get_cached_country_holidays(country, year, self.subdivision)
         self._holidays = set(h.keys())
 
-    def _on_page_changed(self, year, month):
+    def _on_page_changed(self, year: int, month: int) -> None:
         """When calendar page changes, refresh holidays if year changed."""
         if year != self._current_year:
             self._update_holidays_for_year(year)
 
-    def paintCell(self, painter, rect, date):
+    @override
+    def paintCell(self, painter: QPainter | None, rect: QRect, date: QDate | date) -> None:
         """Custom paint for cells; draw holiday dates in holiday_color."""
-        if date < self.minimumDate() or date > self.maximumDate():
+        qdate = date if isinstance(date, QDate) else QDate(date.year, date.month, date.day)
+        if qdate < self.minimumDate() or qdate > self.maximumDate():
             return
-        pydate = date.toPyDate()
+        pydate = qdate.toPyDate()
         is_holiday = self.show_holidays and pydate in self._holidays
-        if is_holiday:
-            is_selected = date == self.selectedDate()
+        if is_holiday and painter is not None:
+            is_selected = qdate == self.selectedDate()
             if is_selected:
                 painter.save()
                 super().paintCell(painter, rect, date)
@@ -319,7 +360,7 @@ class CustomCalendar(QCalendarWidget):
             else:
                 painter.save()
                 painter.setPen(QColor(self.holiday_color))
-                painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, str(date.day()))
+                painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, str(qdate.day()))
                 painter.restore()
         else:
             super().paintCell(painter, rect, date)
@@ -341,18 +382,18 @@ class ClockWidget(BaseWidget):
         self.config = config
         self._locale = self.config.locale
         self._tooltip = self.config.tooltip
-        self._active_tz = None
+        self._active_tz: str | None = None
         self._timezones_list = self._validate_timezones(self.config.timezones if self.config.timezones else [None])
-        self._timezones = cycle(self._timezones_list)
+        self._timezones: Iterator[str | None] = cycle(self._timezones_list)
         self._active_datetime_format_str = ""
-        self._active_datetime_format = None
+        self._active_datetime_format: str | None = None
         self._label_content = self.config.label
         self._calendar = self.config.calendar
         self._label_alt_content = self.config.label_alt
         self._icons = self.config.icons or {}
         self._alarm_icons = self.config.alarm_icons
-        self._current_hour = None
-        self._current_minute = None
+        self._current_hour: str | None = None
+        self._current_minute: str | None = None
         self._previous_alarm_state = False
         self._timer_visible = False
         self._country_code = self.config.calendar.country_code or self.get_country_code()
@@ -367,7 +408,7 @@ class ClockWidget(BaseWidget):
         self._widget_container_layout.addWidget(self._timer_label)
 
         self.register_callback("toggle_label", self._toggle_label)
-        self.register_callback("update_label", self._update_label)
+        self.register_callback("update_label", self.update_label)
         self.register_callback("next_timezone", self._next_timezone)
         self.register_callback("toggle_calendar", self._toggle_calendar)
         self.register_callback("context_menu", self._show_context_menu)
@@ -386,7 +427,7 @@ class ClockWidget(BaseWidget):
         self._shared_state.register_widget(self)
 
         self._next_timezone()
-        self._update_label()
+        self.update_label()
 
         if self.config.calendar.show_holidays:
             QTimer.singleShot(0, _get_holidays_module)
@@ -395,9 +436,9 @@ class ClockWidget(BaseWidget):
         """Forward a timer tick event into the shared state handler."""
         self._shared_state.on_timer_tick()
 
-    def _validate_timezones(self, timezones):
+    def _validate_timezones(self, timezones: list[str] | list[None]) -> list[str | None]:
         """Validate provided timezone strings and return the valid ones."""
-        valid_timezones = []
+        valid_timezones: list[str | None] = []
         available = available_timezones()
         for tz in timezones:
             if tz is None:
@@ -427,7 +468,7 @@ class ClockWidget(BaseWidget):
             widget.setVisible(not self._show_alt_label)
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
-        self._update_label()
+        self.update_label()
 
     def _get_icon_for_hour(self, hour: int) -> str:
         """Return the icon string for a given hour (with fallback for PM)."""
@@ -438,7 +479,7 @@ class ClockWidget(BaseWidget):
             icon = self._icons.get(fallback_key, "")
         return icon or ""
 
-    def _set_locale_context(self):
+    def _set_locale_context(self) -> tuple[LocaleSetting | None, LocaleSetting | None]:
         """Temporarily set LC_TIME (and LC_CTYPE when possible) to the widget's
         configured locale and return the previous settings so they can be
         restored later. Returns (org_locale_time, org_locale_ctype).
@@ -447,6 +488,7 @@ class ClockWidget(BaseWidget):
             return None, None
 
         org_locale_time = locale.getlocale(locale.LC_TIME)
+        org_locale_ctype: LocaleSetting | None
         try:
             org_locale_ctype = locale.getlocale(locale.LC_CTYPE)
         except locale.Error:
@@ -463,7 +505,9 @@ class ClockWidget(BaseWidget):
 
         return org_locale_time, org_locale_ctype
 
-    def _restore_locale_context(self, org_locale_time, org_locale_ctype):
+    def _restore_locale_context(
+        self, org_locale_time: LocaleSetting | None, org_locale_ctype: LocaleSetting | None
+    ) -> None:
         """Restore previously saved locale values if they exist."""
         if org_locale_time is None:
             return
@@ -475,7 +519,7 @@ class ClockWidget(BaseWidget):
             except locale.Error:
                 pass
 
-    def _update_label(self):
+    def update_label(self):
         # Choose which label set to update (primary or alternate)
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
@@ -495,7 +539,7 @@ class ClockWidget(BaseWidget):
         # Temporarily switch locale so strftime outputs are localized
         org_locale_time, org_locale_ctype = self._set_locale_context()
 
-        timer_active = self._shared_state._timer_active and self._shared_state._timer_seconds_remaining >= 0
+        timer_active = self._shared_state.timer_active and self._shared_state.timer_seconds_remaining >= 0
         if timer_active:
             self._timer_label.setText(self._format_timer_display())
 
@@ -516,7 +560,7 @@ class ClockWidget(BaseWidget):
 
         for part in label_parts:
             part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 alt_class = " alt" if self._show_alt_label else ""
                 current_class = active_widgets[widget_index].property("class")
                 if "<span" in part and "</span>" in part:
@@ -531,7 +575,7 @@ class ClockWidget(BaseWidget):
                             active_widgets[widget_index].setProperty("class", new_class)
                             refresh_widget_style(active_widgets[widget_index])
                     elif icon_placeholder == "{alarm}":
-                        if self._shared_state._snoozed_alarms:
+                        if self._shared_state.snoozed_alarms:
                             active_widgets[widget_index].setText(self.config.alarm_icons.snooze)
                             new_class = f"icon{alt_class} alarm snooze"
                             if current_class != new_class:
@@ -552,31 +596,33 @@ class ClockWidget(BaseWidget):
                     else:
                         active_widgets[widget_index].setText(icon_placeholder)
                 else:
-                    has_alarm = "{alarm}" in part and (self._shared_state._snoozed_alarms or self._has_enabled_alarms())
+                    has_alarm = "{alarm}" in part and (self._shared_state.snoozed_alarms or self._has_enabled_alarms())
 
                     if "{icon}" in part:
                         icon = self._get_icon_for_hour(now.hour)
                         part = part.replace("{icon}", icon)
 
                     if "{alarm}" in part:
-                        if self._shared_state._snoozed_alarms:
+                        if self._shared_state.snoozed_alarms:
                             part = part.replace("{alarm}", self.config.alarm_icons.snooze)
                         elif self._has_enabled_alarms():
                             part = part.replace("{alarm}", self.config.alarm_icons.enabled)
                         else:
                             part = part.replace("{alarm}", "")
-                    try:
-                        datetime_format_search = re.search(r"\{(.*)}", part)
-                        datetime_format_str = datetime_format_search.group()
-                        datetime_format = datetime_format_search.group(1)
-                        format_label_content = part.replace(datetime_format_str, now.strftime(datetime_format))
-                    except Exception:
-                        format_label_content = part
+                    format_label_content = part
+                    datetime_format_search = re.search(r"\{(.*)}", part)
+                    if datetime_format_search:
+                        try:
+                            format_label_content = part.replace(
+                                datetime_format_search.group(), now.strftime(datetime_format_search.group(1))
+                            )
+                        except Exception:
+                            format_label_content = part
 
                     active_widgets[widget_index].setText(format_label_content)
 
                     if has_alarm:
-                        if self._shared_state._snoozed_alarms:
+                        if self._shared_state.snoozed_alarms:
                             new_class = f"label{alt_class} alarm snooze"
                         else:
                             new_class = f"label{alt_class} alarm"
@@ -592,7 +638,7 @@ class ClockWidget(BaseWidget):
 
         self._restore_locale_context(org_locale_time, org_locale_ctype)
 
-    def _update_tooltip(self):
+    def update_tooltip(self):
         if self._tooltip:
             try:
                 now = datetime.now(ZoneInfo(self._active_tz)) if self._active_tz else datetime.now().astimezone()
@@ -618,17 +664,17 @@ class ClockWidget(BaseWidget):
             self._active_tz = next(self._timezones)
             if self._active_tz:
                 ZoneInfo(self._active_tz)  # Validate timezone
-            self._update_tooltip()
-            self._update_label()
-            if self._tooltip and hasattr(self, "_tooltip_filter"):
-                self._tooltip_filter.show_tooltip()
+            self.update_tooltip()
+            self.update_label()
+            if self._tooltip:
+                show_tooltip_now(self)
         except Exception as e:
             logging.error("Error switching to timezone '%s': %s", self._active_tz, e)
             self._active_tz = None
-            self._update_tooltip()
-            self._update_label()
+            self.update_tooltip()
+            self.update_label()
 
-    def update_month_label(self, year, month):
+    def update_month_label(self, year: int, month: int) -> None:
         """Update the month label shown on the calendar popup."""
         qlocale = QLocale(self._locale) if self._locale else QLocale.system()
         new_month = qlocale.monthName(month)
@@ -665,16 +711,7 @@ class ClockWidget(BaseWidget):
 
     def update_holiday_label(self, qdate: QDate):
         """Show holiday name for the selected date, if available for country."""
-        if _holidays_cache["supported_countries"] is None:
-            self.holiday_label.setText("")
-            return
-        country = None
-        if (
-            self._country_code
-            and re.fullmatch(r"[A-Z]{2}", self._country_code.upper())
-            and self._country_code.upper() in _holidays_cache["supported_countries"]
-        ):
-            country = self._country_code.upper()
+        country = _supported_country(self._country_code)
         if not country:
             self.holiday_label.setText("")
             return
@@ -686,7 +723,7 @@ class ClockWidget(BaseWidget):
         else:
             self.holiday_label.setText("")
 
-    def get_country_code(self):
+    def get_country_code(self) -> str | None:
         """Try to detect the user's country code from Windows geo APIs."""
         if not self.config.calendar.show_holidays:
             return None
@@ -698,7 +735,7 @@ class ClockWidget(BaseWidget):
             buf = ctypes.create_unicode_buffer(3)
             GetGeoInfoW = ctypes.windll.kernel32.GetGeoInfoW
             result = GetGeoInfoW(geo_id, 4, buf, len(buf), 0)
-            country_code = buf.value if result else ""
+            country_code: str = buf.value if result else ""
             if country_code:
                 return country_code
         except Exception:
@@ -779,6 +816,7 @@ class ClockWidget(BaseWidget):
             subdivision=self._subdivision,
             show_holidays=self.config.calendar.show_holidays,
             holiday_color=self.config.calendar.holiday_color,
+            locale_name=self._locale,
         )
         self.calendar.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.calendar.currentPageChanged.connect(self.update_month_label)
@@ -827,8 +865,8 @@ class ClockWidget(BaseWidget):
             holidays_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
             actions_layout.addWidget(holidays_label)
 
-            upcoming_widgets = []
-            for i in range(4):
+            upcoming_widgets: list[QLabel] = []
+            for _ in range(4):
                 lbl = QLabel("")
                 lbl.setProperty("class", "upcoming-events-item")
                 lbl.setWordWrap(False)
@@ -837,20 +875,14 @@ class ClockWidget(BaseWidget):
                 upcoming_widgets.append(lbl)
 
             try:
-                if self.config.calendar.show_holidays and _holidays_cache["supported_countries"] is not None:
-                    country = None
-                    if (
-                        self._country_code
-                        and re.fullmatch(r"[A-Z]{2}", self._country_code.upper())
-                        and self._country_code.upper() in _holidays_cache["supported_countries"]
-                    ):
-                        country = self._country_code.upper()
+                if self.config.calendar.show_holidays:
+                    country = _supported_country(self._country_code)
 
                     if country:
                         today_dt = (
                             datetime.now(ZoneInfo(self._active_tz)) if self._active_tz else datetime.now().astimezone()
                         ).date()
-                        holidays = {}
+                        holidays: dict[date, str] = {}
                         for y in (today_dt.year, today_dt.year + 1):
                             holidays.update(_get_cached_country_holidays(country, y, self._subdivision))
 
@@ -891,34 +923,40 @@ class ClockWidget(BaseWidget):
             tz_menu.setProperty("class", "context-menu submenu")
 
             for tz in self._timezones_list:
-                tz_display = tz.replace("_", " ")
-                tz_action = tz_menu.addAction(tz_display)
-                tz_action.triggered.connect(lambda checked=False, timezone=tz: self._set_timezone(timezone))
+                tz_display = tz.replace("_", " ") if tz else "Local time"
+                tz_action = QAction(tz_display, tz_menu)
+                tz_menu.addAction(tz_action)
+                tz_action.triggered.connect(partial(self._set_timezone, tz))
 
             menu.addMenu(tz_menu)
             menu.addSeparator()
 
-        if self._shared_state._timer_active:
-            cancel_timer_action = menu.addAction("Cancel Timer")
+        if self._shared_state.timer_active:
+            cancel_timer_action = QAction("Cancel Timer", menu)
+            menu.addAction(cancel_timer_action)
             cancel_timer_action.triggered.connect(lambda: self._cancel_timer())
         else:
-            set_timer_action = menu.addAction("Set Timer")
+            set_timer_action = QAction("Set Timer", menu)
+            menu.addAction(set_timer_action)
             set_timer_action.triggered.connect(lambda: self._show_timer_dialog())
 
         menu.addSeparator()
 
-        set_alarm_action = menu.addAction("Set Alarm")
+        set_alarm_action = QAction("Set Alarm", menu)
+        menu.addAction(set_alarm_action)
         set_alarm_action.triggered.connect(lambda: self._show_alarm_dialog())
 
-        if self._shared_state._alarms:
+        if self._shared_state.alarms:
             menu.addSeparator()
-            alarms_label = menu.addAction("Alarms")
+            alarms_label = QAction("Alarms", menu)
+            menu.addAction(alarms_label)
             alarms_label.setEnabled(False)
 
-            for alarm in self._shared_state._alarms:
+            for alarm in self._shared_state.alarms:
                 alarm_text = self._format_alarm_text(alarm)
-                alarm_action = menu.addAction(alarm_text)
-                alarm_action.triggered.connect(lambda checked=False, a=alarm: self._show_alarm_dialog(a))
+                alarm_action = QAction(alarm_text, menu)
+                menu.addAction(alarm_action)
+                alarm_action.triggered.connect(partial(self._show_alarm_dialog, alarm))
 
         margin = 6
         menu_size = menu.sizeHint()
@@ -930,8 +968,10 @@ class ClockWidget(BaseWidget):
         button_center = self.mapToGlobal(self.rect().center())
         new_x = button_center.x() - menu_size.width() / 2
 
-        bar_alignment = getattr(bar_widget, "_alignment", {}) if bar_widget else {}
-        bar_position = bar_alignment.get("position") if isinstance(bar_alignment, dict) else None
+        bar_alignment: object = getattr(bar_widget, "alignment", None) if bar_widget else None
+        bar_position = (
+            cast(dict[str, object], bar_alignment).get("position") if isinstance(bar_alignment, dict) else None
+        )
         if bar_position == "top":
             new_y = bar_top_left.y() + bar_height + margin
         else:
@@ -941,12 +981,12 @@ class ClockWidget(BaseWidget):
         menu.popup(pos)
         menu.activateWindow()
 
-    def _set_timezone(self, timezone):
+    def _set_timezone(self, timezone: str | None, checked: bool = False) -> None:
         """Make the supplied timezone the active one (and rotate the list)."""
         self._timezones = cycle([timezone] + [tz for tz in self._timezones_list if tz != timezone])
         self._next_timezone()
 
-    def _format_alarm_text(self, alarm):
+    def _format_alarm_text(self, alarm: Alarm) -> str:
         """Return a short textual representation of an alarm for menus."""
         time_str = alarm["time"]
         days = alarm.get("days", [])
@@ -967,23 +1007,23 @@ class ClockWidget(BaseWidget):
         )
         return f"{enabled_str} {time_str} ({days_str})"
 
-    def _has_enabled_alarms(self):
+    def _has_enabled_alarms(self) -> bool:
         """Return True if there are any enabled or snoozed alarms."""
         return (
-            any(alarm.get("enabled", True) for alarm in self._shared_state._alarms)
-            or len(self._shared_state._snoozed_alarms) > 0
+            any(alarm.get("enabled", True) for alarm in self._shared_state.alarms)
+            or len(self._shared_state.snoozed_alarms) > 0
         )
 
-    def _get_alarms_tooltip(self):
+    def _get_alarms_tooltip(self) -> str:
         """Build the multi-line tooltip text describing active and snoozed alarms."""
-        enabled_alarms = [alarm for alarm in self._shared_state._alarms if alarm.get("enabled", True)]
+        enabled_alarms = [alarm for alarm in self._shared_state.alarms if alarm.get("enabled", True)]
 
-        if self._shared_state._snoozed_alarms and not enabled_alarms:
-            if len(self._shared_state._snoozed_alarms) == 1:
-                snooze_time = self._shared_state._snoozed_alarms[0]["snooze_until"].strftime("%H:%M:%S")
+        if self._shared_state.snoozed_alarms and not enabled_alarms:
+            if len(self._shared_state.snoozed_alarms) == 1:
+                snooze_time = self._shared_state.snoozed_alarms[0]["snooze_until"].strftime("%H:%M:%S")
                 return f"Snoozed alarm returns at {snooze_time}"
             else:
-                return f"{len(self._shared_state._snoozed_alarms)} snoozed alarms"
+                return f"{len(self._shared_state.snoozed_alarms)} snoozed alarms"
 
         if not enabled_alarms:
             return "No active alarms"
@@ -1004,14 +1044,14 @@ class ClockWidget(BaseWidget):
 
             tooltip_lines.append(f"{time_str} - {days_str}")
 
-        if self._shared_state._snoozed_alarms:
-            for snoozed in self._shared_state._snoozed_alarms:
+        if self._shared_state.snoozed_alarms:
+            for snoozed in self._shared_state.snoozed_alarms:
                 snooze_time = snoozed["snooze_until"].strftime("%H:%M:%S")
                 tooltip_lines.append(f"Snoozed alarm returns at {snooze_time}")
 
         return "\n".join(tooltip_lines)
 
-    def _create_dialog_popup(self, class_name):
+    def _create_dialog_popup(self, class_name: str) -> PopupWidget:
         """Create a configured PopupWidget used for dialogs (timer/alarm)."""
         popup = PopupWidget(
             self,
@@ -1023,7 +1063,15 @@ class ClockWidget(BaseWidget):
         popup.setProperty("class", f"clock-popup {class_name}")
         return popup
 
-    def _create_time_grid(self, label1_text, label2_text, spin1_range, spin2_range, spin1_value=None, spin2_value=None):
+    def _create_time_grid(
+        self,
+        label1_text: str,
+        label2_text: str,
+        spin1_range: tuple[int, int],
+        spin2_range: tuple[int, int],
+        spin1_value: int | None = None,
+        spin2_value: int | None = None,
+    ) -> tuple[QHBoxLayout, FormattedSpinBox, FormattedSpinBox]:
         """Create a small hour/minute (or minute/second) grid and return spins."""
         time_grid = QGridLayout()
         time_grid.setContentsMargins(0, 0, 0, 0)
@@ -1072,7 +1120,7 @@ class ClockWidget(BaseWidget):
 
         return grid_wrapper, spin1, spin2
 
-    def _create_footer_container(self, buttons):
+    def _create_footer_container(self, buttons: list[QPushButton]) -> QFrame:
         """Create a footer container for dialog buttons (Save/Cancel/Delete)."""
         footer_frame = QFrame()
         footer_frame.setProperty("class", "clock-popup-footer")
@@ -1087,7 +1135,7 @@ class ClockWidget(BaseWidget):
 
         return footer_frame
 
-    def _show_alarm_dialog(self, alarm=None):
+    def _show_alarm_dialog(self, alarm: Alarm | None = None, checked: bool = False) -> None:
         """Show the alarm editor dialog; if alarm is given, edit it."""
         is_edit_mode = alarm is not None
 
@@ -1102,7 +1150,7 @@ class ClockWidget(BaseWidget):
         container_layout = QVBoxLayout(container_frame)
         container_layout.setContentsMargins(0, 0, 0, 0)
 
-        if is_edit_mode:
+        if alarm is not None:
             hour, minute = map(int, alarm["time"].split(":"))
         else:
             now = datetime.now()
@@ -1112,13 +1160,13 @@ class ClockWidget(BaseWidget):
         container_layout.addLayout(grid_wrapper)
 
         days_layout = QHBoxLayout()
-        day_buttons = []
+        day_buttons: list[QPushButton] = []
         day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         for i, day in enumerate(day_names):
             btn = QPushButton(day)
             btn.setCheckable(True)
             btn.setProperty("class", "button day")
-            if is_edit_mode:
+            if alarm is not None:
                 btn.setChecked(i in alarm.get("days", []))
             day_buttons.append(btn)
             days_layout.addWidget(btn)
@@ -1139,7 +1187,7 @@ class ClockWidget(BaseWidget):
             ("Weekdays", "weekdays"),
         ]
 
-        def apply_quick(option_key: str):
+        def apply_quick(option_key: str, checked: bool = False) -> None:
             for btn in day_buttons:
                 btn.blockSignals(True)
             try:
@@ -1158,8 +1206,8 @@ class ClockWidget(BaseWidget):
                     btn.blockSignals(False)
                 update_save_enabled()
 
-        enabled_button = None
-        if is_edit_mode:
+        enabled_button: QPushButton | None = None
+        if alarm is not None:
             enabled_button = QPushButton()
             enabled_button.setCheckable(True)
             is_enabled = alarm.get("enabled", True)
@@ -1167,10 +1215,10 @@ class ClockWidget(BaseWidget):
             enabled_button.setText("Enabled" if is_enabled else "Disabled")
             enabled_button.setProperty("class", f"button {'is-alarm-enabled' if is_enabled else 'is-alarm-disabled'}")
 
-            def on_enabled_toggled(checked):
-                enabled_button.setText("Enabled" if checked else "Disabled")
-                enabled_button.setProperty("class", f"button {'is-alarm-enabled' if checked else 'is-alarm-disabled'}")
-                refresh_widget_style(enabled_button)
+            def on_enabled_toggled(checked: bool, button: QPushButton = enabled_button) -> None:
+                button.setText("Enabled" if checked else "Disabled")
+                button.setProperty("class", f"button {'is-alarm-enabled' if checked else 'is-alarm-disabled'}")
+                refresh_widget_style(button)
 
             enabled_button.toggled.connect(on_enabled_toggled)
             quick_layout.addWidget(enabled_button)
@@ -1183,13 +1231,14 @@ class ClockWidget(BaseWidget):
             btn.setCheckable(True)
             btn.setProperty("class", "button quick-option")
             quick_group.addButton(btn)
-            btn.clicked.connect(lambda checked, k=key: apply_quick(k))
+            btn.clicked.connect(partial(apply_quick, key))
             quick_layout.addWidget(btn)
 
-        popup._alarm_quick_group = quick_group
+        def clear_quick_days(checked: bool = False) -> None:
+            self._clear_quick_group(quick_group)
 
         for btn in day_buttons:
-            btn.clicked.connect(lambda _checked, q=quick_group: self._clear_quick_group(q))
+            btn.clicked.connect(clear_quick_days)
 
         container_layout.addLayout(quick_layout)
 
@@ -1199,24 +1248,24 @@ class ClockWidget(BaseWidget):
         title_edit.setProperty("class", "alarm-input-title")
         title_edit.setPlaceholderText("Alarm title")
         title_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
-        if is_edit_mode:
+        if alarm is not None:
             title_edit.setText(alarm.get("title", ""))
         title_edit.setFocus()
 
         title_layout.addWidget(title_edit)
         container_layout.addLayout(title_layout)
 
-        buttons = []
+        buttons: list[QPushButton] = []
 
-        if is_edit_mode:
+        if alarm is not None:
             delete_btn = QPushButton("Delete")
             delete_btn.setProperty("class", "button delete")
 
-            def delete_alarm():
-                if alarm in self._shared_state._alarms:
-                    self._shared_state._alarms.remove(alarm)
-                    self._shared_state._snoozed_alarms = [
-                        s for s in self._shared_state._snoozed_alarms if s["alarm"] != alarm
+            def delete_alarm(checked: bool = False, alarm: Alarm = alarm) -> None:
+                if alarm in self._shared_state.alarms:
+                    self._shared_state.alarms.remove(alarm)
+                    self._shared_state.snoozed_alarms = [
+                        s for s in self._shared_state.snoozed_alarms if s["alarm"] != alarm
                     ]
                     self._save_alarms()
                     self._refresh_alarm_ui()
@@ -1238,21 +1287,21 @@ class ClockWidget(BaseWidget):
                 selected_days = [datetime.now().weekday()]
             time_value = f"{hour_spin.value():02d}:{minute_spin.value():02d}"
 
-            new_alarm_data = {
+            new_alarm_data: Alarm = {
                 "time": time_value,
                 "days": selected_days,
-                "enabled": enabled_button.isChecked() if is_edit_mode else True,
+                "enabled": enabled_button.isChecked() if enabled_button is not None else True,
                 "title": title_edit.text().strip(),
             }
 
-            if is_edit_mode:
-                if not new_alarm_data["enabled"]:
-                    self._shared_state._snoozed_alarms = [
-                        s for s in self._shared_state._snoozed_alarms if s["alarm"] != alarm
+            if alarm is not None:
+                if not new_alarm_data.get("enabled", True):
+                    self._shared_state.snoozed_alarms = [
+                        s for s in self._shared_state.snoozed_alarms if s["alarm"] != alarm
                     ]
                 alarm.update(new_alarm_data)
             else:
-                self._shared_state._alarms.append(new_alarm_data)
+                self._shared_state.alarms.append(new_alarm_data)
 
             self._save_alarms()
             self._refresh_alarm_ui()
@@ -1267,9 +1316,15 @@ class ClockWidget(BaseWidget):
 
         update_save_enabled()
 
-        title_edit.textChanged.connect(lambda _text: update_save_enabled())
+        def on_title_changed(text: str) -> None:
+            update_save_enabled()
+
+        def on_day_clicked(checked: bool = False) -> None:
+            update_save_enabled()
+
+        title_edit.textChanged.connect(on_title_changed)
         for btn in day_buttons:
-            btn.clicked.connect(lambda _checked, u=update_save_enabled: u())
+            btn.clicked.connect(on_day_clicked)
         save_btn.clicked.connect(save_alarm_func)
         cancel_btn.clicked.connect(lambda: popup.close())
 
@@ -1293,16 +1348,16 @@ class ClockWidget(BaseWidget):
         self._shared_state.save_alarms()
         self._shared_state.notify_all_widgets(update_tooltip=True)
 
-    def _trigger_alarm(self, alarm):
+    def trigger_alarm(self, alarm: Alarm) -> None:
         """Start alarm behavior (play sound and show active alarm popup)."""
-        self._play_sound(loop_duration_ms=16000)
+        self.play_sound(loop_duration_ms=16000)
 
         try:
             self._show_active_alarm_popup(alarm)
         except Exception:
             logging.exception("Failed to show active alarm popup")
 
-    def _play_sound(self, loop_duration_ms=0):
+    def play_sound(self, loop_duration_ms: int = 0) -> None:
         """Play the configured notification sound; loop if loop_duration_ms>0."""
         if not os.path.exists(NOTIFICATION_SOUND):
             logging.warning("Notification sound file not found: %s", NOTIFICATION_SOUND)
@@ -1328,7 +1383,7 @@ class ClockWidget(BaseWidget):
         """Request all widgets to refresh alarm-related UI and tooltip."""
         self._shared_state.notify_all_widgets(update_tooltip=True)
 
-    def _show_active_alarm_popup(self, alarm):
+    def _show_active_alarm_popup(self, alarm: Alarm) -> None:
         """Display a centered popup for an active alarm with controls."""
         win = QFrame(self)
         win.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
@@ -1378,7 +1433,7 @@ class ClockWidget(BaseWidget):
             ("Snooze 5 min", 5),
         ]
 
-        alarm_buttons = []
+        alarm_buttons: list[tuple[QPushButton, int | None]] = []
         for label, snooze_minutes in buttons_config:
             btn = QPushButton(label)
             btn.setProperty("class", "button")
@@ -1389,16 +1444,16 @@ class ClockWidget(BaseWidget):
 
         def _stop_action():
             self._stop_alarm_sound()
-            self._shared_state._snoozed_alarms = [s for s in self._shared_state._snoozed_alarms if s["alarm"] != alarm]
+            self._shared_state.snoozed_alarms = [s for s in self._shared_state.snoozed_alarms if s["alarm"] != alarm]
             self._refresh_alarm_ui()
             win.close()
             win.deleteLater()
 
-        def _snooze_action(minutes: int):
+        def _snooze_action(minutes: int, checked: bool = False) -> None:
             self._stop_alarm_sound()
 
             snooze_until = datetime.now() + timedelta(minutes=minutes)
-            self._shared_state._snoozed_alarms.append({"alarm": alarm, "snooze_until": snooze_until})
+            self._shared_state.snoozed_alarms.append({"alarm": alarm, "snooze_until": snooze_until})
 
             self._shared_state.notify_all_widgets(update_tooltip=True)
             win.close()
@@ -1408,10 +1463,13 @@ class ClockWidget(BaseWidget):
             if snooze_minutes is None:
                 btn.clicked.connect(_stop_action)
             else:
-                btn.clicked.connect(lambda checked=False, mins=snooze_minutes: _snooze_action(mins))
+                btn.clicked.connect(partial(_snooze_action, snooze_minutes))
         win.adjustSize()
 
         screen = QApplication.screenAt(self.mapToGlobal(self.rect().center())) or QApplication.primaryScreen()
+        if screen is None:
+            win.show()
+            return
         geom = screen.availableGeometry()
 
         x = geom.x() + (geom.width() - win.width()) // 2
@@ -1440,7 +1498,7 @@ class ClockWidget(BaseWidget):
         quick_layout = QHBoxLayout()
         quick_options = [("1 min", 1), ("5 min", 5), ("10 min", 10), ("30 min", 30), ("60 min", 60)]
 
-        def set_quick(minutes_total: int):
+        def set_quick(minutes_total: int, checked: bool = False) -> None:
             minutes_spin.blockSignals(True)
             seconds_spin.blockSignals(True)
             try:
@@ -1458,13 +1516,14 @@ class ClockWidget(BaseWidget):
             btn.setCheckable(True)
             btn.setProperty("class", "button quick-option")
             quick_group.addButton(btn)
-            btn.clicked.connect(lambda checked, mins=mins: set_quick(mins))
+            btn.clicked.connect(partial(set_quick, mins))
             quick_layout.addWidget(btn)
 
-        popup._timer_quick_group = quick_group
+        def clear_quick_minutes(value: int) -> None:
+            self._clear_quick_group(quick_group)
 
-        minutes_spin.valueChanged.connect(lambda _v, q=quick_group: self._clear_quick_group(q))
-        seconds_spin.valueChanged.connect(lambda _v, q=quick_group: self._clear_quick_group(q))
+        minutes_spin.valueChanged.connect(clear_quick_minutes)
+        seconds_spin.valueChanged.connect(clear_quick_minutes)
 
         container_layout.addLayout(quick_layout)
 
@@ -1477,8 +1536,8 @@ class ClockWidget(BaseWidget):
         def start_timer():
             total_seconds = minutes_spin.value() * 60 + seconds_spin.value()
             if total_seconds > 0:
-                self._shared_state._timer_seconds_remaining = total_seconds
-                self._shared_state._timer_active = True
+                self._shared_state.timer_seconds_remaining = total_seconds
+                self._shared_state.timer_active = True
                 self._shared_state.notify_all_widgets()
                 popup.close()
 
@@ -1503,9 +1562,9 @@ class ClockWidget(BaseWidget):
 
     def _format_timer_display(self):
         """Format the shared timer remaining seconds into a display string."""
-        hours = self._shared_state._timer_seconds_remaining // 3600
-        minutes = (self._shared_state._timer_seconds_remaining % 3600) // 60
-        seconds = self._shared_state._timer_seconds_remaining % 60
+        hours = self._shared_state.timer_seconds_remaining // 3600
+        minutes = (self._shared_state.timer_seconds_remaining % 3600) // 60
+        seconds = self._shared_state.timer_seconds_remaining % 60
 
         if hours > 0:
             return f"[{hours:02d}:{minutes:02d}:{seconds:02d}]"
@@ -1514,16 +1573,16 @@ class ClockWidget(BaseWidget):
 
     def _cancel_timer(self):
         """Cancel the shared timer and notify widgets to update display."""
-        self._shared_state._timer_active = False
-        self._shared_state._timer_seconds_remaining = 0
+        self._shared_state.timer_active = False
+        self._shared_state.timer_seconds_remaining = 0
         self._shared_state.notify_all_widgets()
 
     def _timer_finished(self):
         """Handle shared timer finishing: stop and play a notification."""
-        self._shared_state._timer_active = False
-        self._shared_state._timer_seconds_remaining = 0
+        self._shared_state.timer_active = False
+        self._shared_state.timer_seconds_remaining = 0
         self._shared_state.notify_all_widgets()
-        self._play_sound()
+        self.play_sound()
 
     def _clear_quick_group(self, qgroup: QButtonGroup | None) -> None:
         """Clear (uncheck) all buttons in a quick-selection QButtonGroup."""

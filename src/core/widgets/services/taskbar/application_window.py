@@ -5,30 +5,11 @@ import win32api
 import win32con
 import win32gui
 
-from core.utils.win32.bindings import DwmGetWindowAttribute, IsWindowEnabled
+from core.utils.win32.bindings import CoCreateInstance, DwmGetWindowAttribute, IsWindowEnabled
+from core.utils.win32.bindings.user32 import GetProp, GetWindowLong
+from core.utils.win32.structs import GUID
+from core.utils.win32.typecheck import CFunctionType
 from core.utils.win32.utils import get_process_info
-
-
-class GUID(ctypes.Structure):
-    _fields_ = [
-        ("Data1", ctypes.c_ulong),
-        ("Data2", ctypes.c_ushort),
-        ("Data3", ctypes.c_ushort),
-        ("Data4", ctypes.c_ubyte * 8),
-    ]
-
-
-ole32 = ctypes.windll.ole32
-
-ole32.CoCreateInstance.argtypes = [
-    ctypes.POINTER(GUID),
-    ctypes.c_void_p,
-    ctypes.c_ulong,
-    ctypes.POINTER(GUID),
-    ctypes.POINTER(ctypes.c_void_p),
-]
-ole32.CoCreateInstance.restype = ctypes.c_long
-
 
 # CLSID_VirtualDesktopManager = {aa509086-5ca9-4c25-8f95-589d3c07b48a}
 CLSID_VirtualDesktopManager = GUID(
@@ -49,8 +30,8 @@ class ApplicationWindow:
     Holds identity (hwnd) and metadata used for filtering and UI state.
     """
 
-    _vdm_ptr = None
-    _vdm_get_id_func = None
+    _vdm_ptr: ctypes.c_void_p | None = None
+    _vdm_get_id_func: CFunctionType | None = None
 
     DEFAULT_IGNORED_PROCESSES = {"SearchHost.exe"}
 
@@ -78,9 +59,9 @@ class ApplicationWindow:
         "SHELLDLL_DefView",
     }
 
-    def __init__(self, hwnd):
+    def __init__(self, hwnd: int):
         self.hwnd = hwnd
-        self.title = self._get_title()
+        self.title = self.get_title()
         self.class_name = self._get_class_name()
         self.is_active = False
         self.is_flashing = False
@@ -96,7 +77,7 @@ class ApplicationWindow:
         monitor_handle = None
         try:
             mh = win32api.MonitorFromWindow(self.hwnd, 0)
-            monitor_handle = int(mh) if mh is not None else None
+            monitor_handle = int(mh) if mh is not None else None  # pyright: ignore[reportUnnecessaryComparison]
         except Exception:
             pass
 
@@ -108,7 +89,7 @@ class ApplicationWindow:
             "class_name": self.class_name,
             "is_active": self.is_active,
             "is_flashing": self.is_flashing,
-            "is_cloaked": self._is_cloaked(),
+            "is_cloaked": self.is_cloaked(),
             "monitor_handle": monitor_handle,
             "process_name": self.process_name,
             "process_pid": self.process_pid,
@@ -132,7 +113,7 @@ class ApplicationWindow:
             self.process_pid = 0
             self.process_path = None
 
-    def _get_title(self):
+    def get_title(self):
         try:
             return win32gui.GetWindowText(self.hwnd)
         except Exception:
@@ -144,7 +125,7 @@ class ApplicationWindow:
         except Exception:
             return ""
 
-    def _is_cloaked(self) -> bool:
+    def is_cloaked(self) -> bool:
         """Return True if the window is cloaked (hidden by the system, e.g., UWP)."""
         try:
             DWMWA_CLOAKED = 14
@@ -162,7 +143,7 @@ class ApplicationWindow:
             cls = self.class_name
             if not cls:
                 return False
-            ex_style = win32gui.GetWindowLong(self.hwnd, win32con.GWL_EXSTYLE)
+            ex_style = GetWindowLong(self.hwnd, win32con.GWL_EXSTYLE)
 
             if cls in (
                 "ApplicationFrameWindow",
@@ -192,7 +173,7 @@ class ApplicationWindow:
     def can_add_to_taskbar(self) -> bool:
         """Policy for showing the window on the taskbar (top-level, visible, app window, minimizable)."""
         try:
-            extended = win32gui.GetWindowLong(self.hwnd, win32con.GWL_EXSTYLE)
+            extended = GetWindowLong(self.hwnd, win32con.GWL_EXSTYLE)
             is_window = bool(win32gui.IsWindow(self.hwnd))
             is_visible = bool(win32gui.IsWindowVisible(self.hwnd))
             is_toolwindow = bool(extended & win32con.WS_EX_TOOLWINDOW)
@@ -202,7 +183,7 @@ class ApplicationWindow:
             # ITaskList_Deleted property
             is_deleted = False
             try:
-                is_deleted = bool(win32gui.GetProp(self.hwnd, "ITaskList_Deleted"))
+                is_deleted = bool(GetProp(self.hwnd, "ITaskList_Deleted"))
             except Exception:
                 is_deleted = False
 
@@ -228,14 +209,14 @@ class ApplicationWindow:
         if self.process_name != "ApplicationFrameHost.exe":
             return False
 
-        if not self._is_cloaked():
+        if not self.is_cloaked():
             return False
 
         try:
             # Initialize the COM object globally on the first call
             if ApplicationWindow._vdm_ptr is None:
                 ptr = ctypes.c_void_p()
-                hr = ole32.CoCreateInstance(
+                hr = CoCreateInstance(
                     ctypes.byref(CLSID_VirtualDesktopManager),
                     None,
                     1,
@@ -250,10 +231,12 @@ class ApplicationWindow:
                 ApplicationWindow._vdm_get_id_func = GetWindowDesktopId_Proto(get_id_addr)
                 ApplicationWindow._vdm_ptr = ptr
 
+            get_desktop_id = ApplicationWindow._vdm_get_id_func
+            if get_desktop_id is None:
+                return True
+
             desktop_id = GUID()
-            hr = ApplicationWindow._vdm_get_id_func(
-                ApplicationWindow._vdm_ptr, int(self.hwnd), ctypes.byref(desktop_id)
-            )
+            hr = get_desktop_id(ApplicationWindow._vdm_ptr, int(self.hwnd), ctypes.byref(desktop_id))
 
             # Binary check for empty GUID (Null Desktop ID)
             if hr != 0 or bytes(desktop_id) == b"\x00" * 16:
@@ -267,7 +250,7 @@ class ApplicationWindow:
     def can_minimize(self) -> bool:
         """Return True if the window has a minimize box and is enabled."""
         try:
-            styles = win32gui.GetWindowLong(self.hwnd, win32con.GWL_STYLE)
+            styles = GetWindowLong(self.hwnd, win32con.GWL_STYLE)
             has_minimize_box = bool(styles & win32con.WS_MINIMIZEBOX)
             try:
                 is_enabled = bool(win32gui.IsWindowEnabled(self.hwnd))
@@ -314,13 +297,13 @@ class ApplicationWindow:
         old_title = self.title
         old_class_name = self.class_name
 
-        self.title = self._get_title()
+        self.title = self.get_title()
         self.class_name = self._get_class_name()
         # is_active is managed by the window manager
 
         return old_title != self.title or old_class_name != self.class_name
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """Two ApplicationWindow objects are equal if they wrap the same hwnd."""
         if isinstance(other, ApplicationWindow):
             return self.hwnd == other.hwnd

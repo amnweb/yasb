@@ -41,7 +41,7 @@ def parse(path: Path) -> ast.Module:
 
 @cache
 def import_core_modules() -> dict[str, str]:
-    failures = {}
+    failures: dict[str, str] = {}
     for module in core_modules():
         try:
             importlib.import_module(module.name)
@@ -50,8 +50,8 @@ def import_core_modules() -> dict[str, str]:
     return failures
 
 
-def all_subclasses(cls: type) -> list[type]:
-    seen: dict[type, None] = {}
+def all_subclasses[T](cls: type[T]) -> list[type[T]]:
+    seen: dict[type[T], None] = {}
     stack = [cls]
     while stack:
         for sub in stack.pop().__subclasses__():

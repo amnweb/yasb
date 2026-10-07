@@ -1,5 +1,8 @@
 import logging
+from collections.abc import Callable
+from functools import partial
 
+from pycaw.api.endpointvolume import IAudioEndpointVolume
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
@@ -7,11 +10,13 @@ from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayou
 from core.utils.shell_utils import shell_open
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import ElidedLabel
-from core.validation.widgets.yasb.control_center import ControlCenterActionConfig
+from core.validation.widgets.yasb.control_center import ControlCenterActionConfig, QuickActionsSectionConfig
 from core.widgets.services.control_center.api.keyboard import TouchKeyboardService
 from core.widgets.services.control_center.api.screenshot.service import ScreenshotService
 from core.widgets.services.control_center.api.theme import ThemeService
 from core.widgets.services.dnd.dnd_api import DndService
+from core.widgets.services.microphone.service import AudioInputService
+from core.widgets.services.volume.service import AudioOutputService
 
 
 class ActionButton(QFrame):
@@ -42,15 +47,17 @@ class QuickActionsSectionWidget(QFrame):
     def __init__(
         self,
         parent: QWidget,
-        config: object,
-        refresh_popup: object,
-        audio_services: dict[str, object],
+        config: QuickActionsSectionConfig,
+        refresh_popup: Callable[[], None],
+        output_service: AudioOutputService | None,
+        input_service: AudioInputService | None,
         tooltip: bool = False,
     ):
         super().__init__(parent)
         self.config = config
         self.refresh_popup = refresh_popup
-        self._audio_services = audio_services
+        self._output_service = output_service
+        self._input_service = input_service
         self._tooltip = tooltip
         self.setProperty("class", "section quick-actions")
 
@@ -85,7 +92,7 @@ class QuickActionsSectionWidget(QFrame):
     def _create_action_button(self, action: ControlCenterActionConfig) -> ActionButton:
         button = ActionButton(self)
         button.setProperty("class", f"button {action.id}")
-        button.clicked.connect(lambda a=action: self._run_action(a))
+        button.clicked.connect(partial(self._run_action, action))
 
         inline = self.config.label_position == "inline"
         align = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter if inline else Qt.AlignmentFlag.AlignCenter
@@ -133,10 +140,10 @@ class QuickActionsSectionWidget(QFrame):
             DndService.set_status(new_status)
             self._current_dnd = new_status
         elif action_id == "screenshot":
-            active = CustomToolTip._active_tooltip
-            if active is not None:
-                active.hide()
-            self.parentWidget().hide()
+            CustomToolTip.hide_active()
+            popup = self.parentWidget()
+            if popup is not None:
+                popup.hide()
             ScreenshotService.start()
             return
         elif action_id == "touch_keyboard":
@@ -159,13 +166,11 @@ class QuickActionsSectionWidget(QFrame):
         DndService.set_status(new_status)
         self._current_dnd = new_status
 
-    def _get_volume_interface(self):
-        service = self._audio_services.get("output")
-        return service.get_volume_interface() if service else None
+    def _get_volume_interface(self) -> IAudioEndpointVolume | None:
+        return self._output_service.get_volume_interface() if self._output_service else None
 
-    def _get_microphone_interface(self):
-        service = self._audio_services.get("input")
-        return service.get_microphone_interface() if service else None
+    def _get_microphone_interface(self) -> IAudioEndpointVolume | None:
+        return self._input_service.get_microphone_interface() if self._input_service else None
 
     def refresh_state(self) -> None:
         if self._current_theme is not None:

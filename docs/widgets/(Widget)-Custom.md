@@ -55,7 +55,7 @@ nvidia_temp:
 ## Example Configuration to weather data
 
 ```yaml
-nvidia_temp:
+weather:
   type: "yasb.custom.CustomWidget"
   options:
     label: "London {data[current][temperature_2m]}{data[current_units][temperature_2m]}"
@@ -78,7 +78,7 @@ nvidia_temp:
 - **tooltip_label**: Custom format string for the tooltip. Use `{data}` to reference the command output data. If not specified, shows the raw data representation (JSON for dict, string for other types).
 - **class_name**: The CSS class name for the widget.
 - **exec_options**: A dictionary specifying the execution options. The keys are:
-  - **run_cmd**: The command or executable path to run. Default is `None`.
+  - **run_cmd**: The command or executable path to run. Put double quotes around a path or argument that contains spaces, for example `run_cmd: '"C:\Program Files\Tool\tool.exe" --json'`. Default is `None`.
   - **run_once**: (boolean) If set to `true`, the command runs only once on startup and the repeat interval timer is disabled. Default is `false`.
   - **run_interval**: The repeat execution interval in milliseconds. Default is `120000` (2 minutes).
   - **return_format**: The format expected from the command output, either `"json"` or `"string"`. Default is `"json"`.

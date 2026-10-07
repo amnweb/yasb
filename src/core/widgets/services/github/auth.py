@@ -5,6 +5,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable
+from typing import Any
 
 from core.utils.system import app_data_path
 
@@ -39,7 +40,7 @@ def save_token(token: str, name: str = "notifications") -> None:
         logging.error("GitHubAuth failed to save token: %s", e)
 
 
-def request_device_code(name: str = "notifications") -> dict:
+def request_device_code(name: str = "notifications") -> dict[str, Any]:
     """
     Request a device code from GitHub OAuth Device Flow.
     Returns dict with: device_code, user_code, verification_uri, expires_in, interval.

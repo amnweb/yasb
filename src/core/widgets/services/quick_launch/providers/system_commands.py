@@ -1,4 +1,5 @@
 import logging
+from typing import Any, TypedDict
 
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import (
@@ -11,7 +12,16 @@ from core.widgets.services.quick_launch.providers.resources.icons import (
     ICON_SYSTEM,
 )
 
-_SYSTEM_COMMANDS = [
+
+class _SystemCommand(TypedDict):
+    keywords: list[str]
+    title: str
+    description: str
+    icon: str
+    action: str
+
+
+_SYSTEM_COMMANDS: list[_SystemCommand] = [
     {
         "keywords": ["shutdown", "shut down", "power off", "turn off"],
         "title": "Shutdown",
@@ -79,7 +89,7 @@ class SystemCommandsProvider(BaseProvider):
     input_placeholder = "Search system commands..."
     icon = ICON_SYSTEM
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self._power_ops = None
 
@@ -104,7 +114,7 @@ class SystemCommandsProvider(BaseProvider):
                         return True
         return False
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = (
             self.get_query_text(text).lower() if self.prefix and text.startswith(self.prefix) else text.strip().lower()
         )
@@ -121,7 +131,7 @@ class SystemCommandsProvider(BaseProvider):
                 for cmd in _SYSTEM_COMMANDS
             ]
 
-        results = []
+        results: list[tuple[int, ProviderResult]] = []
         for cmd in _SYSTEM_COMMANDS:
             match_score = 0
             for kw in cmd["keywords"]:

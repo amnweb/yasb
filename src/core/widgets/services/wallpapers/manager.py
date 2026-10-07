@@ -4,25 +4,28 @@ import random
 import subprocess
 import threading
 
-import comtypes.client
+import comtypes.client  # pyright: ignore[reportMissingTypeStubs]
 import pythoncom
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from core.events.service import EventService
 from core.utils.win32.bindings.shell32 import CLSID_DesktopWallpaper, IDesktopWallpaper
+from core.validation.widgets.yasb.wallpapers import EngineConfig
 from core.widgets.services.wallpapers.engine import WallpaperEngine
 from core.widgets.services.wallpapers.images import collect_image_files
 
 
 class WallpaperManager(QObject):
-    _instance = None
+    _instance: WallpaperManager | None = None
+    _initialized: bool
     toggle_gallery_signal = pyqtSignal(str)
     _set_wallpaper_signal = pyqtSignal(str)
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+            instance = super().__new__(cls)
+            instance._initialized = False
+            cls._instance = instance
         return cls._instance
 
     def __init__(self):
@@ -31,15 +34,15 @@ class WallpaperManager(QObject):
         super().__init__()
         self._initialized = True
 
-        self._image_path = None
-        self._run_after = None
+        self._image_paths: list[str] = []
+        self._run_after: list[str] | None = None
         self._timer = QTimer()
         self._timer.timeout.connect(self._timer_callback)
         self._is_running = False
-        self._last_image = None
+        self._last_image: str | None = None
         self._timer_running = False
-        self._engine_config = None
-        self._engine = None
+        self._engine_config: EngineConfig | None = None
+        self._engine: WallpaperEngine | None = None
 
         self._event_service = EventService()
 
@@ -53,7 +56,7 @@ class WallpaperManager(QObject):
         update_interval: int,
         change_automatically: bool,
         run_after: list[str],
-        engine=None,
+        engine: EngineConfig | None = None,
     ):
         """
         Configure the manager.
@@ -82,9 +85,10 @@ class WallpaperManager(QObject):
         eng = self._engine_config
         if animate and monitor_id is None and eng and eng.enabled:
             try:
-                self._engine = WallpaperEngine(image_path, eng.animation)
-                self._engine.finished.connect(lambda: self.set_wallpaper(image_path, animate=False))
-                self._engine.start()
+                engine = WallpaperEngine(image_path, eng.animation)
+                engine.finished.connect(lambda: self.set_wallpaper(image_path, animate=False))
+                self._engine = engine
+                engine.start()
                 return
             except Exception as e:
                 logging.error("Wallpaper engine failed, falling back: %s", e)
@@ -110,7 +114,7 @@ class WallpaperManager(QObject):
             logging.error("Failed to enumerate monitors: %s", e)
             return []
 
-    def change_background(self, image_path: str = None):
+    def change_background(self, image_path: str | None = None):
         """Change the desktop wallpaper to a new image."""
         if self._is_running:
             return
@@ -155,7 +159,7 @@ class WallpaperManager(QObject):
         else:
             self._is_running = False
 
-    def _run_after_command(self, new_wallpaper):
+    def _run_after_command(self, new_wallpaper: str):
         """Run post-change commands after setting the wallpaper."""
         if self._run_after:
             for command in self._run_after:

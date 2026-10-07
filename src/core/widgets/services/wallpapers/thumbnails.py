@@ -46,7 +46,7 @@ def save(name: str, image: QImage) -> None:
 
 def prune() -> None:
     """Deletes thumbnails older than MAX_AGE_SECONDS, then the oldest ones until the rest fit in MAX_BYTES."""
-    entries = []
+    entries: list[tuple[float, int, str]] = []
     try:
         with os.scandir(FOLDER) as scan:
             for entry in scan:

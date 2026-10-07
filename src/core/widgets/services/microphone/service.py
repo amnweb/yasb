@@ -1,23 +1,34 @@
 import logging
 import threading
+from typing import Any, Protocol
 
+from pycaw.api.endpointvolume import IAudioEndpointVolume
+from pycaw.api.mmdeviceapi import IMMDeviceEnumerator
 from pycaw.callbacks import AudioEndpointVolumeCallback, MMNotificationClient
 from pycaw.constants import DEVICE_STATE
 from pycaw.pycaw import AudioUtilities, EDataFlow, ERole
+from pycaw.utils import AudioDevice
 from PyQt6.QtCore import QObject, pyqtSignal
+
+
+class AudioInputListener(Protocol):
+    def on_input_volume_changed(self) -> None: ...
+    def on_input_device_changed(self) -> None: ...
 
 
 class AudioInputService(QObject):
     """Singleton service that manages shared pycaw instances for all microphone widgets."""
 
-    _instance = None
+    _instance: AudioInputService | None = None
+    _initialized: bool
     device_change_requested = pyqtSignal()
     volume_change_requested = pyqtSignal()
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+            instance = super().__new__(cls)
+            instance._initialized = False
+            cls._instance = instance
         return cls._instance
 
     def __init__(self):
@@ -27,14 +38,14 @@ class AudioInputService(QObject):
         self._initialized = True
         super().__init__()
 
-        self._widgets = []
-        self._microphone_interface = None
-        self._enumerator = None
-        self._device_callback = None
-        self._volume_callback = None
+        self._widgets: list[AudioInputListener] = []
+        self._microphone_interface: IAudioEndpointVolume | None = None
+        self._enumerator: IMMDeviceEnumerator | None = None
+        self._device_callback: _SharedDeviceCallback | None = None
+        self._volume_callback: _SharedVolumeCallback | None = None
 
-        self._cached_microphone = None
-        self._cached_devices = None
+        self._cached_microphone: AudioDevice | None = None
+        self._cached_devices: list[tuple[str, str | None]] | None = None
         self._cache_lock = threading.Lock()
         self._microphone_checked = False
 
@@ -70,7 +81,7 @@ class AudioInputService(QObject):
 
         threading.Thread(target=fetch, daemon=True).start()
 
-    def _get_microphone_device(self):
+    def _get_microphone_device(self) -> AudioDevice | None:
         """Get default microphone as AudioDevice. Returns None if no mic available."""
         try:
             mic_pointer = AudioUtilities.GetMicrophone()
@@ -87,7 +98,7 @@ class AudioInputService(QObject):
             self._cached_devices = None
             self._microphone_checked = False
 
-    def register_widget(self, widget):
+    def register_widget(self, widget: AudioInputListener) -> None:
         """Add widget to the service."""
         if widget not in self._widgets:
             self._widgets.append(widget)
@@ -96,7 +107,7 @@ class AudioInputService(QObject):
             self._initialize_audio()
             self._register_callbacks()
 
-    def unregister_widget(self, widget):
+    def unregister_widget(self, widget: AudioInputListener) -> None:
         """Remove widget from service."""
         if widget in self._widgets:
             self._widgets.remove(widget)
@@ -134,9 +145,7 @@ class AudioInputService(QObject):
         """Push volume updates to all widgets."""
         for widget in self._widgets[:]:
             try:
-                widget._update_label()
-                if hasattr(widget, "dialog") and widget.dialog and widget.dialog.isVisible():
-                    widget._update_slider_value()
+                widget.on_input_volume_changed()
             except:
                 pass
 
@@ -175,11 +184,11 @@ class AudioInputService(QObject):
         # Notify all widgets
         for widget in self._widgets[:]:
             try:
-                widget._reinitialize_microphone()
+                widget.on_input_device_changed()
             except:
                 pass
 
-    def get_microphone_interface(self):
+    def get_microphone_interface(self) -> IAudioEndpointVolume | None:
         """Get volume control interface for microphone."""
         if self._microphone_interface is None:
             mic = self.get_microphone()
@@ -190,7 +199,7 @@ class AudioInputService(QObject):
                     pass
         return self._microphone_interface
 
-    def get_microphone(self):
+    def get_microphone(self) -> AudioDevice | None:
         """Get default microphone device. Returns None if no mic available."""
         with self._cache_lock:
             if self._cached_microphone is not None:
@@ -205,7 +214,7 @@ class AudioInputService(QObject):
                 self._cached_microphone = mic
         return mic
 
-    def get_all_devices(self):
+    def get_all_devices(self) -> list[tuple[str, str | None]]:
         """List all active microphone devices."""
         with self._cache_lock:
             if self._cached_devices is not None:
@@ -233,7 +242,7 @@ class AudioInputService(QObject):
             pass
         return None
 
-    def set_default_device(self, device_id):
+    def set_default_device(self, device_id: str) -> bool:
         """Switch default microphone."""
         try:
             AudioUtilities.SetDefaultDevice(device_id, roles=[ERole.eConsole])
@@ -246,23 +255,27 @@ class AudioInputService(QObject):
 class _SharedVolumeCallback(AudioEndpointVolumeCallback):
     """Forwards volume changes to the service."""
 
-    def __init__(self, service):
+    def __init__(self, service: AudioInputService):
         super().__init__()
         self.service = service
 
-    def on_notify(self, new_volume, new_mute, event_context, channels, channel_volumes):
+    def on_notify(
+        self, new_volume: float, new_mute: int, event_context: Any, channels: int, channel_volumes: list[float]
+    ) -> None:
         self.service.volume_change_requested.emit()
 
 
 class _SharedDeviceCallback(MMNotificationClient):
     """Forwards device changes to the service."""
 
-    def __init__(self, service):
+    def __init__(self, service: AudioInputService):
         super().__init__()
         self.service = service
-        self._last_device_id = None
+        self._last_device_id: str | None = None
 
-    def on_default_device_changed(self, flow, flow_id, role, role_id, default_device_id):
+    def on_default_device_changed(
+        self, flow: str, flow_id: int, role: str, role_id: int, default_device_id: str | None
+    ) -> None:
         """Handle default microphone device changes."""
         # Only care about capture (input) devices with console role
         if flow_id != EDataFlow.eCapture.value or role_id != ERole.eConsole.value:
@@ -273,7 +286,7 @@ class _SharedDeviceCallback(MMNotificationClient):
         self._last_device_id = default_device_id
         self.service.device_change_requested.emit()
 
-    def on_device_state_changed(self, device_id, new_state, new_state_id):
+    def on_device_state_changed(self, device_id: str, new_state: str, new_state_id: int) -> None:
         """Handle device state changes (connected/disconnected)."""
         # React to Active, Disabled, and Unplugged states
         if new_state_id not in (DEVICE_STATE.ACTIVE.value, DEVICE_STATE.DISABLED.value, DEVICE_STATE.UNPLUGGED.value):

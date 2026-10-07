@@ -100,8 +100,11 @@ def compile_cpp(toolchain: Toolchain, source: str, workdir: Path, name: str = "p
     exe = workdir / f"{name}.exe"
     cpp.write_text(source, encoding="utf-8")
     env = dict(toolchain.env)
+    compiler = _compiler(env)
+    if compiler is None:
+        raise ToolchainMissing(f"cl.exe is no longer on the PATH of {toolchain.description}")
     result = subprocess.run(
-        [_compiler(env), "/nologo", "/std:c++17", "/EHsc", "/W0", "/utf-8", cpp.name, f"/Fe:{exe.name}"],
+        [compiler, "/nologo", "/std:c++17", "/EHsc", "/W0", "/utf-8", cpp.name, f"/Fe:{exe.name}"],
         cwd=workdir,
         env=env,
         capture_output=True,

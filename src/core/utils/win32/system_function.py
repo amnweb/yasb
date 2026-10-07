@@ -15,7 +15,6 @@ VK_SPACE = 0x20
 
 VK_VOLUME_UP = 0xAF
 VK_VOLUME_DOWN = 0xAE
-KEYEVENTF_KEYUP = 0x0002
 
 
 def ensure_non_elevated_foreground():

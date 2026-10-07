@@ -1,8 +1,21 @@
 import math
-from typing import Literal
+from typing import Literal, override
 
-from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
+from PyQt6.QtCore import QEvent, QPointF, QRectF, Qt
+from PyQt6.QtGui import (
+    QBrush,
+    QColor,
+    QEnterEvent,
+    QFocusEvent,
+    QFont,
+    QLinearGradient,
+    QPainter,
+    QPainterPath,
+    QPaintEvent,
+    QPen,
+    QPixmap,
+    QResizeEvent,
+)
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import QAbstractButton, QApplication, QLineEdit, QWidget
 
@@ -30,7 +43,8 @@ class _ClearButton(QAbstractButton):
         self.setCursor(Qt.CursorShape.ArrowCursor)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
 
-    def paintEvent(self, _event) -> None:
+    @override
+    def paintEvent(self, e: QPaintEvent | None) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         inner = QRectF(self.rect()).adjusted(0, _BUTTON_MARGIN, -_BUTTON_MARGIN, -_BUTTON_MARGIN)
@@ -81,7 +95,9 @@ class TextBox(QLineEdit):
         self._apply_theme()
         self._update_clear_button()
         self.textChanged.connect(self._update_clear_button)
-        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     def _apply_theme(self) -> None:
         t = get_tokens()
@@ -121,14 +137,14 @@ class TextBox(QLineEdit):
         reserved = self.width() - right + (_BUTTON_WIDTH if visible else 0) + _PAD_RIGHT
         self.setTextMargins(left - _QT_TEXT_INSET, 0, reserved - _QT_TEXT_INSET, 0)
 
-    def _icon(self, dpr: float) -> QPixmap:
+    def _icon(self, svg: str, dpr: float) -> QPixmap:
         color = QColor(self._tokens["text_disabled" if not self.isEnabled() else "text_secondary"])
         key = (dpr, color.rgba())
         if self._icon_pixmap is None or self._icon_key != key:
             size = round(_ICON_SIZE * dpr)
             pixmap = QPixmap(size, size)
             pixmap.fill(Qt.GlobalColor.transparent)
-            renderer = QSvgRenderer(self._icon_svg.encode("utf-8"))
+            renderer = QSvgRenderer(svg.encode("utf-8"))
             renderer.setAspectRatioMode(Qt.AspectRatioMode.KeepAspectRatio)
             painter = QPainter(pixmap)
             renderer.render(painter, QRectF(0, 0, size, size))
@@ -139,32 +155,39 @@ class TextBox(QLineEdit):
             self._icon_pixmap, self._icon_key = pixmap, key
         return self._icon_pixmap
 
-    def focusInEvent(self, event) -> None:
-        super().focusInEvent(event)
+    @override
+    def focusInEvent(self, a0: QFocusEvent | None) -> None:
+        super().focusInEvent(a0)
         self._update_clear_button()
 
-    def focusOutEvent(self, event) -> None:
-        super().focusOutEvent(event)
+    @override
+    def focusOutEvent(self, a0: QFocusEvent | None) -> None:
+        super().focusOutEvent(a0)
         self._update_clear_button()
 
-    def enterEvent(self, event) -> None:
+    @override
+    def enterEvent(self, event: QEnterEvent | None) -> None:
         super().enterEvent(event)
         self.update()
 
-    def leaveEvent(self, event) -> None:
-        super().leaveEvent(event)
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
+        super().leaveEvent(a0)
         self.update()
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         self._update_clear_button()
 
-    def changeEvent(self, event) -> None:
-        super().changeEvent(event)
-        if event.type() == event.Type.EnabledChange:
+    @override
+    def changeEvent(self, a0: QEvent | None) -> None:
+        super().changeEvent(a0)
+        if a0 is not None and a0.type() == a0.Type.EnabledChange:
             self._update_clear_button()
 
-    def paintEvent(self, event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         t = self._tokens
         enabled, focused = self.isEnabled(), self.hasFocus()
         if not enabled:
@@ -197,6 +220,6 @@ class TextBox(QLineEdit):
         if self._icon_svg:
             x = self.width() - _PAD_LEFT - _ICON_SIZE if self._icon_right else _PAD_LEFT
             y = (self.height() - _ICON_SIZE) / 2
-            p.drawPixmap(QPointF(x, y), self._icon(self.devicePixelRatioF()))
+            p.drawPixmap(QPointF(x, y), self._icon(self._icon_svg, self.devicePixelRatioF()))
         p.end()
-        super().paintEvent(event)
+        super().paintEvent(a0)

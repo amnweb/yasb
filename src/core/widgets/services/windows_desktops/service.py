@@ -3,9 +3,9 @@ import logging
 import os
 from ctypes import wintypes
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from comtypes import COMError
+from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from core.utils.win32.bindings.user32 import GetClassName, GetForegroundWindow, GetWindowThreadProcessId
@@ -17,6 +17,9 @@ from core.widgets.services.windows_desktops.com import (
 )
 from core.widgets.services.windows_desktops.interfaces import VirtualDesktopUnsupportedError
 from core.widgets.services.windows_desktops.notification import DesktopEvent, DesktopNotificationListener
+
+if TYPE_CHECKING:
+    from core.widgets.yasb.windows_desktops import WorkspaceWidget
 
 logger = logging.getLogger("windows_desktop_service")
 
@@ -106,7 +109,7 @@ class WindowsDesktopService(QObject):
         WindowsDesktopService._init_done = True
 
         self._api = get_api()
-        self._widgets: list = []
+        self._widgets: list[WorkspaceWidget] = []
         self._timer: QTimer | None = None
         self._listener: DesktopNotificationListener | None = None
 
@@ -228,7 +231,7 @@ class WindowsDesktopService(QObject):
             self._last_number = number
             self.desktops_updated.emit({"index": number}, {"update_buttons": update_buttons})
 
-    def register_widget(self, widget):
+    def register_widget(self, widget: WorkspaceWidget) -> None:
         """Track a widget, starting notifications on the first one."""
         if widget not in self._widgets:
             self._widgets.append(widget)
@@ -244,7 +247,7 @@ class WindowsDesktopService(QObject):
             self._timer.timeout.connect(self._poll)
             self._timer.start()
 
-    def unregister_widget(self, widget):
+    def unregister_widget(self, widget: WorkspaceWidget) -> None:
         """Stop tracking a widget, releasing the shell once the last one goes."""
         try:
             self._widgets.remove(widget)

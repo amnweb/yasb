@@ -17,7 +17,7 @@ _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 _CREATE_NO_WINDOW = 0x08000000
 
 
-def _run_scoop(args: list[str], timeout: int = 120) -> subprocess.CompletedProcess:
+def _run_scoop(args: list[str], timeout: int = 120) -> subprocess.CompletedProcess[str]:
     """Execute a scoop command and return the result.
 
     Uses UTF-8 encoding and hides the console window.

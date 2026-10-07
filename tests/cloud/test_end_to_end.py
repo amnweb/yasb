@@ -170,7 +170,6 @@ def test_symlinks_in_the_config_directory_are_not_followed():
 
         archive = base / "snap.zip"
         create_archive(config, archive)
-        import zipfile
 
         with zipfile.ZipFile(archive) as zf:
             assert b"should never be backed up" not in b"".join(zf.read(n) for n in zf.namelist())

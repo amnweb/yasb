@@ -2,7 +2,7 @@ import io
 import logging
 import os
 from collections.abc import Callable
-from typing import Any
+from typing import Any, override
 
 from PIL import Image
 from PyQt6.QtCore import QEvent, Qt, QTimer, pyqtSlot
@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import ElidedLabel, refresh_widget_style
+from core.validation.widgets.yasb.control_center import MediaSectionConfig
 from core.widgets.services.media.media import SessionState, WindowsMedia
 from settings import SCRIPT_PATH
 
@@ -30,8 +31,9 @@ class _MediaButton(QLabel):
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.data: Callable[[], Any] | None = None
 
-    def mouseReleaseEvent(self, ev: QMouseEvent):
-        if ev.button() == Qt.MouseButton.LeftButton and self.data is not None:
+    @override
+    def mouseReleaseEvent(self, ev: QMouseEvent | None) -> None:
+        if ev is not None and ev.button() == Qt.MouseButton.LeftButton and self.data is not None:
             try:
                 self.data()
             except Exception as e:
@@ -44,7 +46,7 @@ class _MediaButton(QLabel):
 class MediaSectionWidget(QFrame):
     """Section containing media playback controls and track information."""
 
-    def __init__(self, parent: QWidget, config: object):
+    def __init__(self, parent: QWidget, config: MediaSectionConfig):
         super().__init__(parent)
         self.config = config
         self.setProperty("class", "section media")
@@ -159,11 +161,12 @@ class MediaSectionWidget(QFrame):
     def refresh_state(self) -> None:
         self._sync_ui(force_thumbnail=True)
 
-    def event(self, event: QEvent) -> bool:
+    @override
+    def event(self, e: QEvent | None) -> bool:
         # Built before the popup has a screen, so the scale is only known once it is shown
-        if event.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
+        if e is not None and e.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
             self._update_thumbnail_scale()
-        return super().event(event)
+        return super().event(e)
 
     def _update_thumbnail_scale(self) -> None:
         dpr = self.devicePixelRatioF()
@@ -340,11 +343,12 @@ class MediaSectionWidget(QFrame):
                 btn.setProperty("class", new_class)
                 refresh_widget_style(btn)
 
-    def wheelEvent(self, event: QWheelEvent | None):
-        if event is None:
+    @override
+    def wheelEvent(self, a0: QWheelEvent | None) -> None:
+        if a0 is None:
             return
-        delta = event.angleDelta().y()
+        delta = a0.angleDelta().y()
         if delta == 0:
             return
         self._media.switch_current_session(1 if delta > 0 else -1)
-        event.accept()
+        a0.accept()

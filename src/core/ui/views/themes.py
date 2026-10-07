@@ -22,7 +22,7 @@ from datetime import datetime
 from html import escape as html_escape
 from importlib import import_module
 from textwrap import indent
-from typing import cast
+from typing import Any, cast, overload, override
 from urllib.parse import urlencode
 
 import certifi
@@ -40,6 +40,7 @@ from PyQt6.QtCore import (
     QRect,
     QRectF,
     QSize,
+    QSizeF,
     QStandardPaths,
     Qt,
     QThread,
@@ -50,16 +51,24 @@ from PyQt6.QtCore import (
     pyqtSignal,
 )
 from PyQt6.QtGui import (
+    QCloseEvent,
     QColor,
+    QEnterEvent,
     QFont,
     QFontMetrics,
+    QHideEvent,
     QIcon,
     QImage,
+    QKeyEvent,
     QLinearGradient,
+    QMouseEvent,
     QPainter,
     QPainterPath,
+    QPaintEvent,
     QPen,
     QPixmap,
+    QResizeEvent,
+    QShowEvent,
     QWheelEvent,
 )
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkProxyFactory, QNetworkReply, QNetworkRequest
@@ -81,6 +90,7 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QStackedWidget,
     QStyledItemDelegate,
+    QStyleOptionViewItem,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -318,18 +328,25 @@ def _card_section(title: str, name: str) -> tuple[QFrame, QVBoxLayout, QLabel]:
     return card, layout, title_label
 
 
-class _LruCache(OrderedDict):
+class _LruCache[K, V](OrderedDict[K, V]):
     def __init__(self, limit: int):
         super().__init__()
         self._limit = limit
 
-    def get(self, key, default=None):
+    @overload
+    def get(self, key: K, default: None = None, /) -> V | None: ...
+    @overload
+    def get(self, key: K, default: V, /) -> V: ...
+    @overload
+    def get[T](self, key: K, default: T, /) -> V | T: ...
+    @override
+    def get(self, key: K, default: object = None, /) -> object:
         if key in self:
             self.move_to_end(key)
             return self[key]
         return default
 
-    def put(self, key, value) -> None:
+    def put(self, key: K, value: V) -> None:
         self[key] = value
         self.move_to_end(key)
         while len(self) > self._limit:
@@ -368,7 +385,11 @@ def _scroll_area(
     bar = area.verticalScrollBar()
     assert bar is not None
     bar.setEnabled(bar.maximum() > 0)
-    bar.rangeChanged.connect(lambda _minimum, maximum: bar.setEnabled(maximum > 0))
+
+    def on_range_changed(_minimum: int, maximum: int) -> None:
+        bar.setEnabled(maximum > 0)
+
+    bar.rangeChanged.connect(on_range_changed)
     smooth = SmoothScrollFilter(bar, owner)
     for widget in (area.viewport(), content, *extra):
         if widget is not None:
@@ -384,10 +405,16 @@ def _tint_image(image: QImage) -> QImage | None:
     if bits is None:
         return None
     pixels = bits.asstring(image.sizeInBytes())
-    source = Image.frombuffer("RGBA", (image.width(), image.height()), pixels, "raw", "RGBA", image.bytesPerLine(), 1)
+    source = Image.frombuffer("RGBA", (image.width(), image.height()), pixels, "raw", "RGBA", image.bytesPerLine(), 1)  # pyright: ignore[reportUnknownMemberType]
     small = source.resize((24, 6), Image.Resampling.BOX).convert("RGB")
     field = small.resize((120, 72), Image.Resampling.BICUBIC).filter(ImageFilter.GaussianBlur(24))
-    return QImage(field.tobytes(), field.width, field.height, field.width * 3, QImage.Format.Format_RGB888).copy()
+    return QImage(
+        field.tobytes(),  # pyright: ignore[reportUnknownMemberType]
+        field.width,
+        field.height,
+        field.width * 3,
+        QImage.Format.Format_RGB888,
+    ).copy()
 
 
 def _faded_pixmap(tint: QImage, size: QSize, dpr: float, stops: tuple[tuple[float, int], ...]) -> QPixmap:
@@ -493,7 +520,9 @@ def _rounded_top(rect: QRectF, radius: float) -> QPainterPath:
 def _with_bullets(html: str, color: str, indent: int) -> str:
     bullet = f'<span style="color: {color};">&#8226;</span>&nbsp;&nbsp;'
     hanging = f' style="text-indent: -{indent}px;"'
-    parts, lists, last = [], [], 0
+    parts: list[str] = []
+    lists: list[str] = []
+    last = 0
     for match in _LIST_TAG.finditer(html):
         parts.append(html[last : match.start()])
         last = match.end()
@@ -516,7 +545,7 @@ def _with_bullets(html: str, color: str, indent: int) -> str:
 
 
 def _screenshots(text: str, base_url: str) -> list[str]:
-    urls = []
+    urls: list[str] = []
     for tag in _IMG_TAG.findall(md_to_html(preprocess_readme(text))):
         src = {key.lower(): value for key, value in _TAG_ATTR.findall(tag)}.get("src", "")
         if src:
@@ -539,19 +568,19 @@ def _split_screenshots(text: str, base_url: str) -> tuple[list[str], str]:
     return urls, text[: heading.start()] + text[end:]
 
 
-def _widget_index(catalog: list[dict]) -> tuple[dict[str, frozenset[str]], dict[str, float]]:
+def _widget_index(catalog: list[dict[str, Any]]) -> tuple[dict[str, frozenset[str]], dict[str, float]]:
     sets = {item["id"]: frozenset(item.get("widgets") or []) for item in catalog}
     counts = Counter(name for widgets in sets.values() for name in widgets)
     return sets, {name: math.log(len(catalog) / count) for name, count in counts.items()}
 
 
 def _related_themes(
-    theme: dict,
-    catalog: list[dict],
+    theme: dict[str, Any],
+    catalog: list[dict[str, Any]],
     sets: dict[str, frozenset[str]],
     weights: dict[str, float],
     limit: int = 8,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     widgets = sets.get(theme["id"]) or frozenset(theme.get("widgets") or [])
     if not widgets:
         return []
@@ -559,7 +588,7 @@ def _related_themes(
     def weight(names: frozenset[str]) -> float:
         return sum(weights.get(name, 0.0) for name in names)
 
-    scored = []
+    scored: list[tuple[float, dict[str, Any]]] = []
     for other in catalog:
         other_widgets = sets.get(other["id"]) or frozenset(other.get("widgets") or [])
         if other["id"] == theme["id"] or not widgets & other_widgets:
@@ -631,7 +660,7 @@ def _apply_config(files: dict[str, bytes]) -> None:
 
 def _restore_backup() -> None:
     cfg, sty, bcfg, bsty = _config_paths()
-    files = {}
+    files: dict[str, bytes] = {}
     for target, backup in ((cfg, bcfg), (sty, bsty)):
         with open(backup, "rb") as f:
             files[os.path.basename(target)] = f.read()
@@ -663,7 +692,7 @@ def _download_theme(theme_id: str) -> dict[str, bytes]:
     for url in DEFAULT_THEME_INSTALL_URLS:
         base = url.format(theme_id=theme_id)
         try:
-            files = {}
+            files: dict[str, bytes] = {}
             for fname in ("styles.css", "config.yaml"):
                 request = urllib.request.Request(f"{base}/{fname}", headers={"User-Agent": USER_AGENT})
                 with urllib.request.urlopen(request, context=ctx, timeout=15) as r:
@@ -694,14 +723,14 @@ def _theme_config_errors(raw: bytes) -> str:
     except (UnicodeDecodeError, YAMLError) as e:
         return str(e)
 
-    errors = []
+    errors: list[str] = []
     pending = [
         name
         for bar in config.bars.values()
         if bar.enabled
         for name in bar.widgets.left + bar.widgets.center + bar.widgets.right
     ]
-    checked = set()
+    checked: set[str] = set()
     while pending:
         name = pending.pop(0)
         if name in checked:
@@ -770,7 +799,7 @@ class TaskWorker(QThread):
 class SmoothScrollFilter(QObject):
     def __init__(
         self,
-        scroll_bar,
+        scroll_bar: QScrollBar,
         parent: QObject | None = None,
         *,
         step: int = SMOOTH_SCROLL_STEP,
@@ -875,24 +904,26 @@ class FlowLayout(QLayout):
 class PreviewImage(QLabel):
     clicked = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-        self._original_pixmap = None
+        self._original_pixmap: QPixmap | None = None
         self._placeholder: QSize | None = None
         sp = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         sp.setHeightForWidth(True)
         self.setSizePolicy(sp)
 
-    def hasHeightForWidth(self):
+    @override
+    def hasHeightForWidth(self) -> bool:
         return self._source_size() is not None
 
-    def heightForWidth(self, a0):
+    @override
+    def heightForWidth(self, a0: int) -> int:
         size = self._source_size()
         if size is not None and size.width() > 0:
             return int(min(a0, size.width()) * size.height() / size.width())
         return 0
 
-    def set_pixmap(self, pixmap):
+    def set_pixmap(self, pixmap: QPixmap | None) -> None:
         self._original_pixmap = pixmap
         if not pixmap or pixmap.isNull():
             self._original_pixmap = None
@@ -924,7 +955,8 @@ class PreviewImage(QLabel):
         x = (self.width() - w) // 2
         return x, 0, w, h
 
-    def paintEvent(self, a0):
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         x, y, w, h = self._draw_rect()
         if w <= 0 or h <= 0:
             return
@@ -939,7 +971,8 @@ class PreviewImage(QLabel):
             painter.drawPixmap(x, y, w, h, self._original_pixmap)
         painter.end()
 
-    def mouseReleaseEvent(self, ev):
+    @override
+    def mouseReleaseEvent(self, ev: QMouseEvent | None) -> None:
         if ev is not None and ev.button() == Qt.MouseButton.LeftButton and self._original_pixmap is not None:
             if QRect(*self._draw_rect()).contains(ev.position().toPoint()):
                 self.clicked.emit()
@@ -1006,7 +1039,8 @@ class ImageViewer(QWidget):
             self.setGeometry(self._host.rect())
         return super().eventFilter(a0, a1)
 
-    def paintEvent(self, a0) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
         painter.setOpacity(self._opacity)
         painter.fillRect(self.rect(), QColor(0, 0, 0, 190))
@@ -1032,7 +1066,8 @@ class ImageViewer(QWidget):
             painter.setPen(QColor(255, 255, 255, 230))
             painter.drawText(counter, Qt.AlignmentFlag.AlignCenter, text)
 
-    def wheelEvent(self, a0) -> None:
+    @override
+    def wheelEvent(self, a0: QWheelEvent | None) -> None:
         if a0 is None:
             return
         self._wheel += a0.angleDelta().y()
@@ -1042,10 +1077,12 @@ class ImageViewer(QWidget):
             self._wheel += 120 * offset
         a0.accept()
 
-    def mousePressEvent(self, a0) -> None:
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
         self.dismiss()
 
-    def keyPressEvent(self, a0) -> None:
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
         key = a0.key() if a0 is not None else None
         if key == Qt.Key.Key_Escape:
             self.dismiss()
@@ -1072,7 +1109,7 @@ class ImageFetcher(QObject):
         generation = self._generation
         reply = _get(self, url, referer="https://github.com")
         self._replies[url] = reply
-        reply.finished.connect(lambda u=url, r=reply, g=generation: self._on_finished(u, r, g))
+        reply.finished.connect(functools.partial(self._on_finished, url, reply, generation))
 
     def cancel(self) -> None:
         self._generation += 1
@@ -1107,7 +1144,11 @@ class ImageFetcher(QObject):
                     Image.Resampling.LANCZOS,
                 )
             image = QImage(
-                picture.tobytes(), picture.width, picture.height, picture.width * 4, QImage.Format.Format_RGBA8888
+                picture.tobytes(),  # pyright: ignore[reportUnknownMemberType]
+                picture.width,
+                picture.height,
+                picture.width * 4,
+                QImage.Format.Format_RGBA8888,
             ).copy()
         except Exception:
             image = QImage.fromData(data)
@@ -1133,7 +1174,7 @@ class ThemeCard(QWidget):
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-        self.theme: dict | None = None
+        self.theme: dict[str, Any] | None = None
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self._name_font = _ui_font(16, QFont.Weight.DemiBold)
@@ -1153,7 +1194,7 @@ class ThemeCard(QWidget):
         self.theme = None
         self.update()
 
-    def set_theme(self, theme: dict) -> None:
+    def set_theme(self, theme: dict[str, Any]) -> None:
         self.theme = theme
         self._pixmap, self._start, self._tint, self._media = None, 0, None, None
         self._fade.stop()
@@ -1199,7 +1240,8 @@ class ThemeCard(QWidget):
         painter.end()
         return self._media
 
-    def paintEvent(self, a0) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         t = _theme_tokens()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -1229,7 +1271,8 @@ class ThemeCard(QWidget):
         painter.setFont(self._author_font)
         painter.drawText(chip, Qt.AlignmentFlag.AlignCenter, author)
 
-    def mouseReleaseEvent(self, a0) -> None:
+    @override
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
         if (
             a0 is not None
             and a0.button() == Qt.MouseButton.LeftButton
@@ -1248,7 +1291,7 @@ class ThemeGrid(QWidget):
         super().__init__(parent)
         self.preview_for: Callable[[str], tuple[QPixmap, int] | None] = lambda theme_id: None
         self.tint_for: Callable[[str], QImage | None] = lambda theme_id: None
-        self._themes: list[dict] = []
+        self._themes: list[dict[str, Any]] = []
         self._loading = 0
         self._columns = 2
         self._top = 0
@@ -1256,7 +1299,7 @@ class ThemeGrid(QWidget):
         self._cards: list[ThemeCard] = []
         self._bound: dict[str, ThemeCard] = {}
 
-    def set_themes(self, themes: list[dict]) -> None:
+    def set_themes(self, themes: list[dict[str, Any]]) -> None:
         self._themes = themes
         self._loading = 0
         self._relayout()
@@ -1338,7 +1381,8 @@ class ThemeGrid(QWidget):
         self._cards.append(card)
         return card
 
-    def resizeEvent(self, a0) -> None:
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
         super().resizeEvent(a0)
         self._place()
 
@@ -1353,7 +1397,7 @@ class FeaturedBanner(QWidget):
         self.tint_for: Callable[[str], QImage | None] = lambda _theme_id: None
         self._fetcher = ImageFetcher(self)
         self._fetcher.ready.connect(self._on_image)
-        self._theme: dict | None = None
+        self._theme: dict[str, Any] | None = None
         self._tint: QImage | None = None
         self._tint_scaled: QPixmap | None = None
         self._canvas: QPixmap | None = None
@@ -1396,7 +1440,7 @@ class FeaturedBanner(QWidget):
         layout.addWidget(self._text)
         self._text.hide()
 
-    def theme(self) -> dict | None:
+    def theme(self) -> dict[str, Any] | None:
         return self._theme
 
     def reset(self) -> None:
@@ -1413,7 +1457,7 @@ class FeaturedBanner(QWidget):
         self._text.hide()
         self.update()
 
-    def set_theme(self, theme: dict) -> None:
+    def set_theme(self, theme: dict[str, Any]) -> None:
         self.reset()
         self._theme = theme
         self._title.setText(theme.get("name", ""))
@@ -1433,7 +1477,7 @@ class FeaturedBanner(QWidget):
             self._tint_scaled = None
             self.update()
 
-    def _on_readme(self, theme: dict, reply: QNetworkReply) -> None:
+    def _on_readme(self, theme: dict[str, Any], reply: QNetworkReply) -> None:
         ok = reply.error() == QNetworkReply.NetworkError.NoError
         text = reply.readAll().data().decode("utf-8", "replace") if ok else ""
         reply.deleteLater()
@@ -1513,25 +1557,30 @@ class FeaturedBanner(QWidget):
         if self._theme is not None:
             self.opened.emit(self._theme)
 
-    def enterEvent(self, event) -> None:
+    @override
+    def enterEvent(self, event: QEnterEvent | None) -> None:
         self._timer.stop()
         super().enterEvent(event)
 
-    def leaveEvent(self, a0) -> None:
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         if len(self._images) > 1:
             self._timer.start()
         super().leaveEvent(a0)
 
-    def showEvent(self, a0) -> None:
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
         super().showEvent(a0)
         if len(self._images) > 1 and not self.underMouse():
             self._timer.start()
 
-    def hideEvent(self, a0) -> None:
+    @override
+    def hideEvent(self, a0: QHideEvent | None) -> None:
         self._timer.stop()
         super().hideEvent(a0)
 
-    def mouseReleaseEvent(self, a0) -> None:
+    @override
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
         if (
             a0 is not None
             and a0.button() == Qt.MouseButton.LeftButton
@@ -1547,7 +1596,8 @@ class FeaturedBanner(QWidget):
                 self._show_image(dot)
         super().mouseReleaseEvent(a0)
 
-    def paintEvent(self, a0) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         if self._theme is None:
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -1595,8 +1645,11 @@ class FeaturedBanner(QWidget):
         painter.drawPixmap(0, 0, self._canvas)
 
 
-def _promo_card(card: object) -> dict | None:
-    if not isinstance(card, dict) or not isinstance(card.get("title"), str):
+def _promo_card(card: object) -> dict[str, Any] | None:
+    if not isinstance(card, dict):
+        return None
+    card = cast(dict[str, Any], card)
+    if not isinstance(card.get("title"), str):
         return None
     theme = card.get("theme") if isinstance(card.get("theme"), str) else ""
     url = card.get("url") if isinstance(card.get("url"), str) else ""
@@ -1619,7 +1672,7 @@ def _promo_card(card: object) -> dict | None:
 class PromoCard(QWidget):
     clicked = pyqtSignal(dict)
 
-    def __init__(self, card: dict, parent: QWidget | None = None):
+    def __init__(self, card: dict[str, Any], parent: QWidget | None = None):
         super().__init__(parent)
         self.card = card
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1680,7 +1733,8 @@ class PromoCard(QWidget):
             self._scaled.setDevicePixelRatio(dpr)
         return self._scaled
 
-    def resizeEvent(self, a0) -> None:
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
         super().resizeEvent(a0)
         width = self.width() - 40
         title_metrics = QFontMetrics(self._title.font())
@@ -1691,7 +1745,8 @@ class PromoCard(QWidget):
             text_metrics = QFontMetrics(self._text.font())
             self._text.setText(text_metrics.elidedText(self.card["text"], Qt.TextElideMode.ElideRight, width))
 
-    def mouseReleaseEvent(self, a0) -> None:
+    @override
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
         if (
             a0 is not None
             and a0.button() == Qt.MouseButton.LeftButton
@@ -1700,7 +1755,8 @@ class PromoCard(QWidget):
             self.clicked.emit(self.card)
         super().mouseReleaseEvent(a0)
 
-    def paintEvent(self, a0) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         clip = QPainterPath()
@@ -1729,16 +1785,16 @@ class BrowsePage(QWidget):
         super().__init__(parent)
         self._replies: dict[str, QNetworkReply] = {}
         self._pinned: set[str] = set()
-        self._themes: dict[str, dict] = {}
+        self._themes: dict[str, dict[str, Any]] = {}
         self._featured_id: str | None = None
         self._featured_status = "pending"
         self._promo_cards: list[PromoCard] = []
-        self._matches: list[dict] = []
+        self._matches: list[dict[str, Any]] = []
         self._query = ""
         self._sort = SORT_OPTIONS[0][0]
         self._columns = 2
-        self._images = _LruCache(IMAGE_CACHE_LIMIT)
-        self._tints = _LruCache(TINT_CACHE_LIMIT)
+        self._images: _LruCache[str, tuple[QPixmap, int]] = _LruCache(IMAGE_CACHE_LIMIT)
+        self._tints: _LruCache[str, QImage | None] = _LruCache(TINT_CACHE_LIMIT)
         self.sizes: dict[str, QSize] = {}
         t = _theme_tokens()
 
@@ -1802,17 +1858,21 @@ class BrowsePage(QWidget):
         column.addWidget(self._grid)
         column.addStretch(1)
         self._scroll, self._scroll_bar = _scroll_area(content, self)
-        self._scroll_bar.valueChanged.connect(lambda _value: self._update_visible())
+        self._scroll_bar.valueChanged.connect(self._on_scroll_value)
         root.addWidget(self._scroll, stretch=1)
         self.show_loading()
 
-    def resizeEvent(self, a0) -> None:
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
         super().resizeEvent(a0)
         columns = max(1, min(MAX_COLUMNS, (min(self.width(), PAGE_MAX_WIDTH) - 60) // CARD_MIN_WIDTH))
         if columns != self._columns:
             self._columns = columns
             self._grid.set_columns(columns)
             self._place_featured()
+        self._update_visible()
+
+    def _on_scroll_value(self, _value: int) -> None:
         self._update_visible()
 
     def _place_featured(self) -> None:
@@ -1870,7 +1930,7 @@ class BrowsePage(QWidget):
         self._message_label.setText(f"Couldn't load themes.\n{message}")
         self._message.show()
 
-    def set_themes(self, themes: list[dict]) -> None:
+    def set_themes(self, themes: list[dict[str, Any]]) -> None:
         self._clear()
         self._themes = {theme["id"]: theme for theme in themes}
         self._show_featured()
@@ -1878,13 +1938,14 @@ class BrowsePage(QWidget):
         self._header.show()
         self._apply_filters()
 
-    def set_featured(self, data: dict | None) -> None:
+    def set_featured(self, data: dict[str, Any] | None) -> None:
         self._featured_status = "failed" if data is None else "loaded"
         data = data or {}
         featured = data.get("featured")
         self._featured_id = featured if isinstance(featured, str) else None
         cards = data.get("cards")
-        promos = [card for card in map(_promo_card, cards if isinstance(cards, list) else []) if card]
+        card_list = cast(list[object], cards) if isinstance(cards, list) else []
+        promos = [card for card in map(_promo_card, card_list) if card]
         self._promo_cards = [PromoCard(card) for card in promos[:PROMO_MAX_CARDS]]
         for widget in self._promo_cards:
             widget.clicked.connect(self._open_promo)
@@ -1912,7 +1973,7 @@ class BrowsePage(QWidget):
             not self._query and self._featured_status != "failed" and self._message.isHidden()
         )
 
-    def _open_promo(self, card: dict) -> None:
+    def _open_promo(self, card: dict[str, Any]) -> None:
         theme = self._themes.get(card["theme"])
         if theme is not None:
             self.theme_opened.emit(theme)
@@ -1928,8 +1989,8 @@ class BrowsePage(QWidget):
         if theme is None or not theme.get("image") or theme_id in self._images or theme_id in self._replies:
             return
         reply = _get(self, theme["image"])
-        reply.readyRead.connect(lambda r=reply: self._on_preview_header(theme_id, r))
-        reply.finished.connect(lambda r=reply: self._on_preview(theme_id, r))
+        reply.readyRead.connect(functools.partial(self._on_preview_header, theme_id, reply))
+        reply.finished.connect(functools.partial(self._on_preview, theme_id, reply))
         self._replies[theme_id] = reply
 
     def _on_preview_header(self, theme_id: str, reply: QNetworkReply) -> None:
@@ -1982,7 +2043,7 @@ class BrowsePage(QWidget):
             if not self._query
             or self._query in theme.get("name", "").lower()
             or self._query in theme.get("author", "").lower()
-            or any(self._query in widget.lower() for widget in theme.get("widgets") or [])
+            or any(self._query in widget.lower() for widget in cast(list[str], theme.get("widgets") or []))
         ]
         if self._sort in ("newest", "oldest"):
             self._matches.sort(key=lambda theme: theme.get("publish_date", ""), reverse=self._sort == "newest")
@@ -2016,7 +2077,8 @@ class Swatch(QWidget):
         self._tint = tint
         self.update()
 
-    def paintEvent(self, a0) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
@@ -2030,7 +2092,7 @@ class Swatch(QWidget):
 class RelatedItem(QFrame):
     clicked = pyqtSignal(dict)
 
-    def __init__(self, theme: dict, tint: QImage | None, parent: QWidget | None = None):
+    def __init__(self, theme: dict[str, Any], tint: QImage | None, parent: QWidget | None = None):
         super().__init__(parent)
         self.theme = theme
         self.setObjectName("relatedItem")
@@ -2060,7 +2122,8 @@ class RelatedItem(QFrame):
         texts.addStretch()
         layout.addLayout(texts, stretch=1)
 
-    def mouseReleaseEvent(self, a0) -> None:
+    @override
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
         if (
             a0 is not None
             and a0.button() == Qt.MouseButton.LeftButton
@@ -2085,8 +2148,12 @@ class ReadmeBrowser(QTextBrowser):
         assert layout is not None
         document.setDocumentMargin(20)
         document.setIndentWidth(16)
+
         # Long documents are laid out in chunks and report partial sizes; size() finishes the layout first.
-        layout.documentSizeChanged.connect(lambda _size: self.setFixedHeight(int(document.size().height()) + 1))
+        def on_document_size(_size: QSizeF) -> None:
+            self.setFixedHeight(int(document.size().height()) + 1)
+
+        layout.documentSizeChanged.connect(on_document_size)
         widget_style, document_style = _readme_browser_styles(_theme_tokens())
         self.setStyleSheet(widget_style)
         document.setDefaultStyleSheet(document_style)
@@ -2169,7 +2236,8 @@ class ScreenshotStrip(QWidget):
             self._thumbnails[url] = pixmap
         return pixmap
 
-    def paintEvent(self, a0) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
@@ -2198,7 +2266,8 @@ class ScreenshotStrip(QWidget):
                 return index
         return -1
 
-    def mouseMoveEvent(self, a0) -> None:
+    @override
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
         if a0 is None:
             return
         index = self._index_at(a0.position())
@@ -2210,13 +2279,15 @@ class ScreenshotStrip(QWidget):
                 self.unsetCursor()
             self.update()
 
-    def leaveEvent(self, a0) -> None:
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         super().leaveEvent(a0)
         if self._hover >= 0:
             self._hover = -1
             self.update()
 
-    def mouseReleaseEvent(self, a0) -> None:
+    @override
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
         if (
             a0 is not None
             and a0.button() == Qt.MouseButton.LeftButton
@@ -2237,8 +2308,8 @@ class DetailsPage(QWidget):
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-        self.theme_data: dict | None = None
-        self.catalog: list[dict] = []
+        self.theme_data: dict[str, Any] | None = None
+        self.catalog: list[dict[str, Any]] = []
         self._widget_sets: dict[str, frozenset[str]] = {}
         self._widget_weights: dict[str, float] = {}
         self.image_for: Callable[[str], QPixmap | None] = lambda theme_id: None
@@ -2346,7 +2417,11 @@ class DetailsPage(QWidget):
         assert strip_bar is not None
         self._strip_bar = strip_bar
         strip_bar.setEnabled(False)
-        strip_bar.rangeChanged.connect(lambda _minimum, maximum: strip_bar.setEnabled(maximum > 0))
+
+        def on_strip_range_changed(_minimum: int, maximum: int) -> None:
+            strip_bar.setEnabled(maximum > 0)
+
+        strip_bar.rangeChanged.connect(on_strip_range_changed)
         strip_smooth = SmoothScrollFilter(strip_bar, self)
         for widget in (self._screenshots_area.viewport(), self.screenshots):
             if widget is not None:
@@ -2380,15 +2455,15 @@ class DetailsPage(QWidget):
         self._scroll_bar.valueChanged.connect(self.scrolled.emit)
         root.addWidget(self._scroll)
 
-    def set_catalog(self, catalog: list[dict]) -> None:
+    def set_catalog(self, catalog: list[dict[str, Any]]) -> None:
         self.catalog = catalog
         self._widget_sets, self._widget_weights = _widget_index(catalog)
 
-    def open_theme(self, theme: dict) -> None:
+    def open_theme(self, theme: dict[str, Any]) -> None:
         self._cancel_requests()
         self.theme_data = theme
         self.load_image(theme["id"])
-        widgets = theme.get("widgets") or []
+        widgets: list[str] = theme.get("widgets") or []
         self.name_label.setText(theme.get("name", ""))
         self.author_link.setText(f"by {html_escape(theme.get('author', ''))}")
         self.desc_label.setText(theme.get("description", ""))
@@ -2406,10 +2481,10 @@ class DetailsPage(QWidget):
         self._about_section.setVisible(bool(theme.get("readme")))
         if theme.get("readme"):
             self._readme_reply = _get(self, theme["readme"])
-            self._readme_reply.finished.connect(lambda r=self._readme_reply: self._on_readme(r))
+            self._readme_reply.finished.connect(functools.partial(self._on_readme, self._readme_reply))
         _settle_layout()
 
-    def _set_related(self, theme: dict) -> None:
+    def _set_related(self, theme: dict[str, Any]) -> None:
         while (item := self._related.takeAt(0)) is not None:
             if (widget := item.widget()) is not None:
                 widget.hide()
@@ -2436,7 +2511,8 @@ class DetailsPage(QWidget):
     def _update_sidebar(self) -> None:
         self._sidebar.setVisible(self._has_related and self.width() >= SIDEBAR_MIN_PAGE_WIDTH)
 
-    def resizeEvent(self, a0) -> None:
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
         super().resizeEvent(a0)
         self._update_sidebar()
 
@@ -2474,11 +2550,14 @@ class DetailsPage(QWidget):
                 widget.deleteLater()
         for name in widgets:
             tag = _small_tag(name)
-            tag.clicked.connect(lambda _checked=False, widget=name: self.widget_tag_clicked.emit(widget))
+            tag.clicked.connect(functools.partial(self._emit_widget_tag, name))
             self._tags_layout.addWidget(tag)
             tag.show()
         self._widgets_title.setText(f"Widgets ({len(widgets)})")
         self._widgets_section.setVisible(bool(widgets))
+
+    def _emit_widget_tag(self, widget: str, checked: bool = False) -> None:
+        self.widget_tag_clicked.emit(widget)
 
     def _on_readme(self, reply: QNetworkReply) -> None:
         reply.deleteLater()
@@ -2629,7 +2708,8 @@ class HeroBackground(QWidget):
             self._offset = offset
             self.update(0, 0, self.width(), HERO_HEIGHT)
 
-    def paintEvent(self, a0) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         if self._tint is None or self._offset >= HERO_HEIGHT:
             return
         dpr = self.devicePixelRatioF()
@@ -2642,7 +2722,7 @@ class HeroBackground(QWidget):
 
 
 class SuggestionModel(QAbstractListModel):
-    def __init__(self, rows: list[tuple[str, str, dict | None]], parent: QObject | None = None):
+    def __init__(self, rows: list[tuple[str, str, dict[str, Any] | None]], parent: QObject | None = None):
         super().__init__(parent)
         self._rows = rows
 
@@ -2668,7 +2748,8 @@ class SuggestionDelegate(QStyledItemDelegate):
         self._font = _ui_font(12)
         self._color = QColor(_theme_tokens()["text_tertiary"])
 
-    def paint(self, painter: QPainter | None, option, index) -> None:
+    @override
+    def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
         super().paint(painter, option, index)
         if painter is None:
             return
@@ -2773,10 +2854,13 @@ class ThemeGallery(ViewBase, QMainWindow):
         self.details.theme_requested.connect(self.open_theme)
         self.details.images_clicked.connect(self.viewer.show_images)
         self.browse.preview_changed.connect(self.details.on_preview_changed)
-        self.browse.preview_changed.connect(lambda _theme_id: self._update_hero())
+        self.browse.preview_changed.connect(self._on_preview_changed)
         self.details.scrolled.connect(self._hero.set_offset)
         self._load_index()
         self._load_featured()
+
+    def _on_preview_changed(self, _theme_id: str) -> None:
+        self._update_hero()
 
     def _retry(self) -> None:
         if self.browse.featured_failed():
@@ -2789,12 +2873,12 @@ class ThemeGallery(ViewBase, QMainWindow):
         if index >= len(DEFAULT_THEME_INDEX_URLS):
             return
         reply = _get(self, DEFAULT_THEME_INDEX_URLS[index])
-        reply.finished.connect(lambda i=index, r=reply: self._on_index(i, r))
+        reply.finished.connect(functools.partial(self._on_index, index, reply))
         self._theme_reply = reply
 
     def _load_featured(self, index: int = 0) -> None:
         reply = _get(self, DEFAULT_FEATURED_URLS[index])
-        reply.finished.connect(lambda i=index, r=reply: self._on_featured(i, r))
+        reply.finished.connect(functools.partial(self._on_featured, index, reply))
         self._featured_reply = reply
 
     def _on_featured(self, index: int, reply: QNetworkReply) -> None:
@@ -2808,7 +2892,7 @@ class ThemeGallery(ViewBase, QMainWindow):
                 pass
         reply.deleteLater()
         if isinstance(data, dict):
-            self.browse.set_featured(data)
+            self.browse.set_featured(cast(dict[str, Any], data))
         elif index + 1 < len(DEFAULT_FEATURED_URLS):
             self._load_featured(index + 1)
         else:
@@ -2833,11 +2917,12 @@ class ThemeGallery(ViewBase, QMainWindow):
             else:
                 self.browse.show_error(error)
             return
-        items = [
-            {**theme, "id": theme_id}
-            for theme_id, theme in themes.items()
-            if isinstance(theme, dict) and not theme.get("disabled")
-        ]
+        items: list[dict[str, Any]] = []
+        for theme_id, theme in cast(dict[str, Any], themes).items():
+            if isinstance(theme, dict):
+                entry = cast(dict[str, Any], theme)
+                if not entry.get("disabled"):
+                    items.append({**entry, "id": theme_id})
         self.browse.set_themes(items)
         self.details.set_catalog(items)
         self._set_suggestions(items)
@@ -2845,7 +2930,7 @@ class ThemeGallery(ViewBase, QMainWindow):
         if target is not None:
             self.open_theme(target)
 
-    def open_theme(self, theme: dict) -> None:
+    def open_theme(self, theme: dict[str, Any]) -> None:
         self.details.open_theme(theme)
         self._pages.setCurrentWidget(self.details)
         self._show_page_buttons(True)
@@ -2913,7 +2998,7 @@ class ThemeGallery(ViewBase, QMainWindow):
     def _run_config_task(self, task: Callable[[], None], busy: str, done: str, action: str) -> None:
         worker = TaskWorker(task, self)
         worker.succeeded.connect(lambda: self._show_config_status(done))
-        worker.failed.connect(lambda error: self._on_config_task_failed(action, error))
+        worker.failed.connect(functools.partial(self._on_config_task_failed, action))
         worker.finished.connect(self._on_config_task_finished)
         worker.finished.connect(worker.deleteLater)
         self._config_worker = worker
@@ -2946,7 +3031,7 @@ class ThemeGallery(ViewBase, QMainWindow):
         # QCompleter puts the suggestion into the line edit only after emitting activated(QModelIndex).
         QTimer.singleShot(0, lambda: self._pick_suggestion(theme))
 
-    def _pick_suggestion(self, theme: dict | None) -> None:
+    def _pick_suggestion(self, theme: dict[str, Any] | None) -> None:
         if theme is None:
             self._submit_search()
             return
@@ -2976,11 +3061,11 @@ class ThemeGallery(ViewBase, QMainWindow):
         self.search_box.setCompleter(completer)
         return completer
 
-    def _set_suggestions(self, items: list[dict]) -> None:
+    def _set_suggestions(self, items: list[dict[str, Any]]) -> None:
         widgets = Counter(name for item in items for name in set(item.get("widgets") or []))
         authors = Counter(item["author"] for item in items if item.get("author"))
         themes = sorted((item for item in items if item.get("name")), key=lambda item: item["name"].casefold())
-        rows: list[tuple[str, str, dict | None]] = [(item["name"], "Theme", item) for item in themes]
+        rows: list[tuple[str, str, dict[str, Any] | None]] = [(item["name"], "Theme", item) for item in themes]
         rows += [(name, "Widget", None) for name in sorted(widgets, key=lambda name: (-widgets[name], name.casefold()))]
         rows += [(name, "Author", None) for name in sorted(authors, key=lambda name: (-authors[name], name.casefold()))]
         self._completer.setModel(SuggestionModel(rows, self._completer))
@@ -2989,13 +3074,15 @@ class ThemeGallery(ViewBase, QMainWindow):
         self.search_box.setText(widget)
         self._submit_search()
 
-    def keyPressEvent(self, a0) -> None:
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
         if a0 is not None and a0.key() == Qt.Key.Key_Escape and self._pages.currentWidget() is self.details:
             self.show_browse()
             return
         super().keyPressEvent(a0)
 
-    def closeEvent(self, a0) -> None:
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         for reply in (self._theme_reply, self._featured_reply):
             if reply is not None:
                 reply.finished.disconnect()

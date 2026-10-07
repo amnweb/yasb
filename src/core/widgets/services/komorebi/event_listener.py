@@ -2,6 +2,7 @@ import json
 import logging
 import threading
 import uuid
+from typing import Any, override
 
 import pywintypes
 import win32file
@@ -25,7 +26,7 @@ class KomorebiEventListener(QThread):
         self.pipe_name = f"{pipe_name}-{uuid.uuid1()}"
         self.buffer_size = buffer_size
         self.event_service = EventService()
-        self.pipe = None
+        self.pipe: int | None = None
 
     def __str__(self):
         return "Komorebi Event Listener"
@@ -42,7 +43,7 @@ class KomorebiEventListener(QThread):
         buffer_size_out = self.buffer_size
         default_timeout_ms = 0
         security_attributes = None
-        self.pipe = win32pipe.CreateNamedPipe(
+        self.pipe = win32pipe.CreateNamedPipe(  # pyright: ignore[reportUnknownMemberType]
             f"\\\\.\\pipe\\{self.pipe_name}",
             open_mode,
             pipe_mode,
@@ -50,7 +51,7 @@ class KomorebiEventListener(QThread):
             buffer_size_in,
             buffer_size_out,
             default_timeout_ms,
-            security_attributes,
+            security_attributes,  # pyright: ignore[reportArgumentType]
         )
         logging.info("Created named pipe %s", self.pipe_name)
 
@@ -62,22 +63,24 @@ class KomorebiEventListener(QThread):
                 pass
             self.pipe = None
 
-    def run(self):
+    @override
+    def run(self) -> None:
         while self._app_running:
             should_reconnect = True
             try:
                 self._create_pipe()
                 self._wait_until_komorebi_online()
+                pipe = self.pipe
 
-                while self._app_running:
+                while self._app_running and pipe is not None:
                     try:
-                        buffer, bytes_to_read, result = win32pipe.PeekNamedPipe(self.pipe, 1)
+                        _, bytes_to_read, _ = win32pipe.PeekNamedPipe(pipe, 1)
                         if not bytes_to_read:
                             if self._stop_event.wait(0.05):
                                 break
                             continue
 
-                        result, data = win32file.ReadFile(self.pipe, bytes_to_read, None)
+                        _, data = win32file.ReadFile(pipe, bytes_to_read, None)
 
                         if not data.strip():
                             continue
@@ -117,11 +120,11 @@ class KomorebiEventListener(QThread):
             client = win32file.CreateFile(
                 f"\\\\.\\pipe\\{self.pipe_name}", win32file.GENERIC_READ, 0, None, win32file.OPEN_EXISTING, 0, None
             )
-            win32file.CloseHandle(client)
+            client.Close()
         except pywintypes.error:
             pass
 
-    def _emit_event(self, event: dict, state: dict) -> None:
+    def _emit_event(self, event: dict[str, Any] | str, state: dict[str, Any]) -> None:
         if isinstance(event, str):
             return
         self.event_service.emit_event(KomorebiEvent.KomorebiUpdate, event, state)
@@ -151,7 +154,7 @@ class KomorebiEventListener(QThread):
             return
 
         try:
-            win32pipe.ConnectNamedPipe(self.pipe, None)
+            win32pipe.ConnectNamedPipe(self.pipe, None)  # pyright: ignore[reportUnknownMemberType]
         except pywintypes.error:
             if self._app_running:
                 raise

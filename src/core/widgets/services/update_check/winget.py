@@ -124,7 +124,7 @@ def _capture_with_conpty(cmd: str, timeout: int = 120, cols: int = 500) -> str |
         buf = (ctypes.c_char * 4096)()
         n = ctypes.wintypes.DWORD()
         while kernel32.ReadFile(out_r, buf, 4096, ctypes.byref(n), None) and n.value:
-            chunks.append(buf[: n.value])
+            chunks.append(buf.raw[: n.value])
 
     t = threading.Thread(target=_reader, daemon=True)
     t.start()

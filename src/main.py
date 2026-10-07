@@ -6,9 +6,9 @@ import signal
 import sys
 import time
 from sys import argv
-from types import TracebackType
+from types import FrameType, TracebackType
 
-import qasync
+import qasync  # pyright: ignore[reportMissingTypeStubs]
 
 from core.application import YASBApplication
 from core.bar_manager import BarManager
@@ -72,7 +72,7 @@ def main():
 
     loop = qasync.QEventLoop(app)
     try:
-        loop.run_until_complete(main_async(app))
+        loop.run_until_complete(main_async(app))  # pyright: ignore[reportUnknownMemberType]
     finally:
         loop.close()
 
@@ -96,7 +96,7 @@ async def main_async(app: YASBApplication):
     # Connect the app's aboutToQuit signal to the close event
     app.aboutToQuit.connect(app_close_event.set)
 
-    def handle_sigint(*args):
+    def handle_sigint(_signum: int, _frame: FrameType | None) -> None:
         logging.info("KeyboardInterrupt (Ctrl+C) detected. Initiating graceful shutdown...")
         app_close_event.set()
 

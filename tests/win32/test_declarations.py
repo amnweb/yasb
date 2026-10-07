@@ -79,7 +79,7 @@ def _referenced_by_library() -> dict[str, dict[str, set[str]]]:
 def _exported(dll: ctypes.CDLL, name: str) -> bool:
     try:
         if name.startswith("#"):
-            dll[int(name[1:])]
+            dll[int(name[1:])]  # pyright: ignore[reportArgumentType]
         else:
             getattr(dll, name)
     except AttributeError:
@@ -93,7 +93,7 @@ def test_referenced_functions_are_exported(library: str):
     if dll is None:
         pytest.skip(f"{library}.dll does not load on this machine")
 
-    found = {}
+    found: dict[str, str] = {}
     for name, sites in _referenced_by_library()[library].items():
         if not _exported(dll, name):
             macro = f" ({name}W is; {name} is only a macro in the SDK headers)" if _exported(dll, f"{name}W") else ""

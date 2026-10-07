@@ -1,9 +1,11 @@
 import datetime
 import os
+from collections.abc import Callable
+from typing import override
 
-from PyQt6 import QtCore
-from PyQt6.QtCore import QPropertyAnimation, Qt
-from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPixmap
+import PyQt6.QtCore as QtCore
+from PyQt6.QtCore import QEvent, QObject, QPropertyAnimation, QRect, Qt
+from PyQt6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QShowEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -13,6 +15,7 @@ from PyQt6.QtWidgets import (
     QStyle,
     QStyleOption,
     QVBoxLayout,
+    QWidget,
 )
 
 from core.utils.qobject import is_valid_qobject
@@ -32,14 +35,14 @@ from core.widgets.services.power_menu.user_info import (
 
 
 class AnimatedWidget(QFrame):
-    def __init__(self, animation_duration, parent=None):
+    def __init__(self, animation_duration: int, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.animation_duration = animation_duration
         self.animation = QPropertyAnimation(self, b"windowOpacity")
         self.animation.finished.connect(self._on_animation_finished)
         self._closing = False
 
-    def fade_in(self):
+    def fade_in(self) -> None:
         self._closing = False
         self.animation.stop()
         self.animation.setDuration(self.animation_duration)
@@ -47,7 +50,7 @@ class AnimatedWidget(QFrame):
         self.animation.setEndValue(1)
         self.animation.start()
 
-    def fade_out(self):
+    def fade_out(self) -> None:
         self._closing = True
         self.animation.stop()
         self.animation.setDuration(self.animation_duration)
@@ -55,14 +58,14 @@ class AnimatedWidget(QFrame):
         self.animation.setEndValue(0)
         self.animation.start()
 
-    def _on_animation_finished(self):
+    def _on_animation_finished(self) -> None:
         if self._closing:
             self._closing = False
             self.hide()
 
 
 class OverlayWidget(AnimatedWidget):
-    def __init__(self, parent, animation_duration, uptime, blur_background):
+    def __init__(self, parent: QWidget, animation_duration: int, uptime: bool, blur_background: bool) -> None:
         super().__init__(animation_duration, parent)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -72,18 +75,22 @@ class OverlayWidget(AnimatedWidget):
         if uptime:
             self.boot_time()
 
-    def update_geometry(self, screen_geometry):
+    def update_geometry(self, screen_geometry: QRect) -> None:
         self.setGeometry(screen_geometry)
 
-    def paintEvent(self, event):
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         opt = QStyleOption()
         opt.initFrom(self)
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(0, 0, 0, 1))
-        self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
+        style = self.style()
+        if style is not None:
+            style.drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
 
-    def showEvent(self, event):
-        super().showEvent(event)
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
+        super().showEvent(a0)
         if self._blur_background_enabled:
             enable_blur(
                 self.winId(),
@@ -92,12 +99,12 @@ class OverlayWidget(AnimatedWidget):
                 BorderColor="None",
             )
 
-    def boot_time(self):
+    def boot_time(self) -> None:
         uptime_seconds = int(GetTickCount64() / 1000)
         delta = datetime.timedelta(seconds=uptime_seconds)
         days, hours = delta.days, delta.seconds // 3600
         minutes = (delta.seconds % 3600) // 60
-        parts = []
+        parts: list[str] = []
         if days > 0:
             parts.append(f"{days} day{'s' if days > 1 else ''}")
         if hours > 0:
@@ -113,6 +120,16 @@ class OverlayWidget(AnimatedWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addStretch()
         layout.addWidget(label)
+
+
+class PopupActionFrame(QFrame):
+    def __init__(self, action: Callable[[], None]) -> None:
+        super().__init__()
+        self._action = action
+
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        self._action()
 
 
 class PowerMenuWidget(BaseWidget):
@@ -132,16 +149,16 @@ class PowerMenuWidget(BaseWidget):
         self.callback_right = self.config.callbacks.on_right
         self.callback_middle = self.config.callbacks.on_middle
 
-        self.main_window = None
-        self._popup = None
+        self.main_window: MainWindow | None = None
+        self._popup: PopupWidget | None = None
 
-    def _cleanup_main_window(self):
+    def _cleanup_main_window(self) -> None:
         if self.main_window:
             self.main_window.overlay.deleteLater()
             self.main_window.deleteLater()
             self.main_window = None
 
-    def _show_main_window(self):
+    def _show_main_window(self) -> None:
         if self.config.menu_style == "popup":
             self._show_popup_menu()
             return
@@ -166,7 +183,7 @@ class PowerMenuWidget(BaseWidget):
             self.main_window.show()
             force_foreground_focus(int(self.main_window.winId()))
 
-    def _show_popup_menu(self):
+    def _show_popup_menu(self) -> None:
         if self._popup and is_valid_qobject(self._popup) and self._popup.isVisible():
             self._popup.hide_animated()
             return
@@ -246,7 +263,7 @@ class PowerMenuWidget(BaseWidget):
 
                 manage_btn = QPushButton("Manage accounts")
                 manage_btn.setProperty("class", "manage-accounts")
-                manage_btn.clicked.connect(lambda: (self._popup.hide(), os.startfile("ms-settings:accounts")))
+                manage_btn.clicked.connect(self._open_account_settings)
                 profile_layout.addWidget(manage_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
                 main_layout.addWidget(profile_frame)
@@ -267,7 +284,7 @@ class PowerMenuWidget(BaseWidget):
                 if action is None:
                     continue
 
-                btn_frame = QFrame()
+                btn_frame = PopupActionFrame(action)
                 btn_frame.setProperty("class", f"button {button_name.replace('_', '-')}")
                 btn_layout = QHBoxLayout(btn_frame)
                 btn_layout.setSpacing(0)
@@ -286,8 +303,6 @@ class PowerMenuWidget(BaseWidget):
                 btn_layout.addWidget(text_label)
                 btn_layout.addStretch()
 
-                btn_frame._action = action
-                btn_frame.mousePressEvent = lambda _, a=action: a()
                 btn_frame.installEventFilter(self)
                 buttons_layout.addWidget(btn_frame)
 
@@ -302,47 +317,53 @@ class PowerMenuWidget(BaseWidget):
         )
         self._popup.show()
 
-    def eventFilter(self, source, event):
-        if isinstance(source, QFrame) and hasattr(source, "_action"):
-            if event.type() == QtCore.QEvent.Type.Enter:
-                base = source.property("class")
+    def _open_account_settings(self) -> None:
+        if self._popup is not None:
+            self._popup.hide()
+        os.startfile("ms-settings:accounts")
+
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        if isinstance(a0, PopupActionFrame) and a1 is not None:
+            if a1.type() == QtCore.QEvent.Type.Enter:
+                base = a0.property("class")
                 if "hover" not in base:
-                    source.setProperty("class", f"{base} hover")
-                    refresh_widget_style(source)
-                    for child in source.findChildren(QLabel):
+                    a0.setProperty("class", f"{base} hover")
+                    refresh_widget_style(a0)
+                    for child in a0.findChildren(QLabel):
                         child_base = child.property("class")
                         if "hover" not in child_base:
                             child.setProperty("class", f"{child_base} hover")
                         refresh_widget_style(child)
-            elif event.type() == QtCore.QEvent.Type.Leave:
-                base = source.property("class")
-                source.setProperty("class", base.replace(" hover", ""))
-                refresh_widget_style(source)
-                for child in source.findChildren(QLabel):
+            elif a1.type() == QtCore.QEvent.Type.Leave:
+                base = a0.property("class")
+                a0.setProperty("class", base.replace(" hover", ""))
+                refresh_widget_style(a0)
+                for child in a0.findChildren(QLabel):
                     child_base = child.property("class")
                     child.setProperty("class", child_base.replace(" hover", ""))
                     refresh_widget_style(child)
-        return super().eventFilter(source, event)
+        return super().eventFilter(a0, a1)
 
 
 class MainWindow(AnimatedWidget):
     def __init__(
         self,
-        parent,
-        uptime,
-        blur,
-        blur_background,
-        animation_duration,
-        button_row,
-        buttons,
-        show_user,
-        profile_size,
-    ):
+        parent: QWidget,
+        uptime: bool,
+        blur: bool,
+        blur_background: bool,
+        animation_duration: int,
+        button_row: int,
+        buttons: dict[str, list[str]],
+        show_user: bool,
+        profile_size: int,
+    ) -> None:
         super().__init__(animation_duration, parent)
 
         self.overlay = OverlayWidget(parent, animation_duration, uptime, blur_background)
         self.button_row = button_row
-        self.buttons_list = []
+        self.buttons_list: list[QPushButton] = []
         self.current_focus_index = -1
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -418,7 +439,7 @@ class MainWindow(AnimatedWidget):
         buttons_layout.setSpacing(0)
         buttons_layout.setContentsMargins(0, 0, 0, 0)
 
-        row_layouts = []
+        row_layouts: list[QHBoxLayout] = []
         for i, (button_name, button_info) in enumerate(buttons.items()):
             icon, label = button_info
             action = getattr(self.power_operations, button_name, self.power_operations.cancel)
@@ -469,10 +490,13 @@ class MainWindow(AnimatedWidget):
 
         self.fade_in()
 
-    def center_on_screen(self):
-        screen = QApplication.screenAt(self.parent().mapToGlobal(QtCore.QPoint(0, 0)))
+    def center_on_screen(self) -> None:
+        parent = self.parentWidget()
+        screen = QApplication.screenAt(parent.mapToGlobal(QtCore.QPoint(0, 0))) if parent is not None else None
         if screen is None:
             screen = QApplication.primaryScreen()
+        if screen is None:
+            return
         screen_geometry = screen.geometry()
         window_geometry = self.geometry()
         x = (screen_geometry.width() - window_geometry.width()) // 2 + screen_geometry.x()
@@ -480,18 +504,21 @@ class MainWindow(AnimatedWidget):
         self.move(x, y)
         self.overlay.update_geometry(screen_geometry)
 
-    def paintEvent(self, event):
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         opt = QStyleOption()
         opt.initFrom(self)
         painter = QPainter(self)
-        self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
+        style = self.style()
+        if style is not None:
+            style.drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
 
-    def _get_base_class(self, source):
+    def _get_base_class(self, source: QWidget) -> str:
         """Get button class without hover state."""
         parts = source.property("class").split()
         return " ".join(p for p in parts if p != "hover")
 
-    def _apply_hover(self, button, hover):
+    def _apply_hover(self, button: QPushButton, hover: bool) -> None:
         """Apply or remove hover class and refresh styles."""
         base = self._get_base_class(button)
         button.setProperty("class", f"{base} hover" if hover else base)
@@ -499,16 +526,20 @@ class MainWindow(AnimatedWidget):
         for child in button.findChildren(QLabel):
             refresh_widget_style(child)
 
-    def eventFilter(self, source, event):
-        if isinstance(source, QPushButton):
-            if event.type() == QtCore.QEvent.Type.Enter:
-                self._apply_hover(source, True)
-            elif event.type() == QtCore.QEvent.Type.Leave:
-                self._apply_hover(source, False)
-        return super().eventFilter(source, event)
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        if isinstance(a0, QPushButton) and a1 is not None:
+            if a1.type() == QtCore.QEvent.Type.Enter:
+                self._apply_hover(a0, True)
+            elif a1.type() == QtCore.QEvent.Type.Leave:
+                self._apply_hover(a0, False)
+        return super().eventFilter(a0, a1)
 
-    def keyPressEvent(self, event):
-        key = event.key()
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is None:
+            return
+        key = a0.key()
         if key == Qt.Key.Key_Escape:
             self.cancel_action()
         elif key == Qt.Key.Key_Right:
@@ -523,11 +554,11 @@ class MainWindow(AnimatedWidget):
             if 0 <= self.current_focus_index < len(self.buttons_list):
                 self.buttons_list[self.current_focus_index].click()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
             return
-        event.accept()
+        a0.accept()
 
-    def navigate_focus(self, step):
+    def navigate_focus(self, step: int) -> None:
         """Navigate button focus by step."""
         if not self.buttons_list:
             return
@@ -585,7 +616,7 @@ class MainWindow(AnimatedWidget):
         new_index = max(0, min(new_index, total_buttons - 1))
         self.set_focused_button(new_index)
 
-    def set_focused_button(self, index):
+    def set_focused_button(self, index: int) -> None:
         """Set focus to the button at the given index."""
         if not self.buttons_list or not (0 <= index < len(self.buttons_list)):
             return
@@ -599,10 +630,11 @@ class MainWindow(AnimatedWidget):
         self._apply_hover(self.buttons_list[index], True)
         self.setFocus()
 
-    def showEvent(self, event):
-        super().showEvent(event)
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
+        super().showEvent(a0)
         self.setFocus()
         self.current_focus_index = -1
 
-    def cancel_action(self):
+    def cancel_action(self) -> None:
         self.power_operations.cancel()

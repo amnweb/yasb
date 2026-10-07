@@ -1,5 +1,6 @@
 # Ignore Python cache directories
 __pycache__/
+.ruff_cache/
 YASB.egg-info/
 *.pyc
 *.pyo

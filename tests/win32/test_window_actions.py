@@ -1,9 +1,15 @@
+from collections.abc import Callable, Iterator
+from typing import TYPE_CHECKING
+
 import pytest
 import win32api
 import win32con
 import win32gui
 
 from core.utils.win32.window_actions import can_minimize
+
+if TYPE_CHECKING:
+    from _win32typing import PyResourceId  # pyright: ignore[reportMissingModuleSource]
 
 WINDOWS = {
     "normal": (win32con.WS_OVERLAPPEDWINDOW, True),
@@ -14,20 +20,20 @@ WINDOWS = {
 
 
 @pytest.fixture(scope="module")
-def window_class():
+def window_class() -> Iterator[PyResourceId]:
     instance = win32api.GetModuleHandle(None)
     wc = win32gui.WNDCLASS()
-    wc.hInstance = instance
-    wc.lpszClassName = "YasbTestWindow"
-    wc.lpfnWndProc = {}
+    wc.hInstance = instance  # pyright: ignore[reportAttributeAccessIssue]
+    wc.lpszClassName = "YasbTestWindow"  # pyright: ignore[reportAttributeAccessIssue]
+    wc.lpfnWndProc = {}  # pyright: ignore[reportAttributeAccessIssue]
     atom = win32gui.RegisterClass(wc)
     yield atom
     win32gui.UnregisterClass(atom, instance)
 
 
 @pytest.fixture
-def make_window(window_class):
-    created = []
+def make_window(window_class: PyResourceId) -> Iterator[Callable[[int], int]]:
+    created: list[int] = []
 
     def make(style: int) -> int:
         hwnd = win32gui.CreateWindow(
@@ -43,11 +49,11 @@ def make_window(window_class):
 
 
 @pytest.mark.parametrize(("style", "expected"), list(WINDOWS.values()), ids=list(WINDOWS))
-def test_can_minimize(make_window, style: int, expected: bool):
+def test_can_minimize(make_window: Callable[[int], int], style: int, expected: bool):
     assert can_minimize(make_window(style)) is expected
 
 
-def test_can_minimize_closed_window(make_window):
+def test_can_minimize_closed_window(make_window: Callable[[int], int]):
     hwnd = make_window(win32con.WS_OVERLAPPEDWINDOW)
     win32gui.DestroyWindow(hwnd)
 

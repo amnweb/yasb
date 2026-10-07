@@ -40,11 +40,30 @@ the Pydantic model's __name__ exactly.
 
 import logging
 from importlib import import_module
-from typing import Any
+from typing import Any, Literal, TypedDict, cast
 
+from pydantic import BaseModel
 from yaml import safe_load
 
 logger = logging.getLogger("deprecation")
+
+
+class RemoveIssue(TypedDict):
+    path: str
+    key: str
+    action: Literal["remove"]
+    message: str
+
+
+class RenameIssue(TypedDict):
+    path: str
+    key: str
+    action: Literal["rename"]
+    new_name: str
+    message: str
+
+
+type DeprecationIssue = RemoveIssue | RenameIssue
 
 # Global - removed from any model that doesn't recognize it
 DEPRECATED_FIELDS: dict[str, str] = {
@@ -147,10 +166,11 @@ SCOPED_RENAMED_FIELDS: dict[str, dict[str, tuple[str, str]]] = {
 }
 
 
-def handle_deprecated_fields(cls: type, data: Any) -> Any:
+def handle_deprecated_fields(cls: type[BaseModel], data: Any) -> Any:
     """Runtime handler - called by model_validator on CustomBaseModel."""
     if not isinstance(data, dict):
         return data
+    data = cast(dict[str, Any], data)
     cls_name = cls.__name__
     deprecated = {**DEPRECATED_FIELDS, **SCOPED_DEPRECATED_FIELDS.get(cls_name, {})}
     renamed = {**RENAMED_FIELDS, **SCOPED_RENAMED_FIELDS.get(cls_name, {})}
@@ -169,11 +189,17 @@ def handle_deprecated_fields(cls: type, data: Any) -> Any:
     return data
 
 
-def _check(data: dict, path: str, class_name: str, issues: list[dict], model: type | None = None):
+def _check(
+    data: dict[str, Any],
+    path: str,
+    class_name: str,
+    issues: list[DeprecationIssue],
+    model: type[BaseModel] | None = None,
+):
     """Check dict keys against global + scoped deprecated/renamed for *class_name*."""
     deprecated = {**DEPRECATED_FIELDS, **SCOPED_DEPRECATED_FIELDS.get(class_name, {})}
     renamed = {**RENAMED_FIELDS, **SCOPED_RENAMED_FIELDS.get(class_name, {})}
-    model_fields = set(model.model_fields) if model is not None and hasattr(model, "model_fields") else set()
+    model_fields: set[str] = set(model.model_fields) if model is not None and hasattr(model, "model_fields") else set()
     for key in data:
         if key in model_fields:
             continue
@@ -185,7 +211,7 @@ def _check(data: dict, path: str, class_name: str, issues: list[dict], model: ty
             issues.append({"path": kp, "key": key, "action": "rename", "new_name": new_name, "message": msg})
 
 
-def _check_model(data: dict, path: str, model: type, issues: list[dict]):
+def _check_model(data: dict[str, Any], path: str, model: type[BaseModel], issues: list[DeprecationIssue]):
     """Check data against a Pydantic model and recurse into its sub-models."""
     import typing
 
@@ -195,28 +221,36 @@ def _check_model(data: dict, path: str, model: type, issues: list[dict]):
         val = data.get(name)
         if isinstance(ann, type) and hasattr(ann, "model_fields"):
             if isinstance(val, dict):
-                _check_model(val, f"{path}.{name}", ann, issues)
+                _check_model(cast(dict[str, Any], val), f"{path}.{name}", cast(type[BaseModel], ann), issues)
         elif args := typing.get_args(ann):
             inner = args[0]
             if isinstance(inner, type) and hasattr(inner, "model_fields") and isinstance(val, list):
-                for i, item in enumerate(val):
+                for i, item in enumerate(cast(list[Any], val)):
                     if isinstance(item, dict):
-                        _check_model(item, f"{path}.{name}[{i}]", inner, issues)
+                        _check_model(
+                            cast(dict[str, Any], item),
+                            f"{path}.{name}[{i}]",
+                            cast(type[BaseModel], inner),
+                            issues,
+                        )
 
 
-def _scan(config: dict) -> list[dict]:
+def _scan(config: dict[str, Any]) -> list[DeprecationIssue]:
     """Walk parsed YAML and collect all deprecated/renamed fields."""
     from core.validation.bar import BarConfig
 
-    issues: list[dict] = []
+    issues: list[DeprecationIssue] = []
 
-    for bar_name, bar in (config.get("bars") or {}).items():
+    bars: dict[str, Any] = config.get("bars") or {}
+    for bar_name, bar in bars.items():
         if isinstance(bar, dict):
-            _check_model(bar, f"bars.{bar_name}", BarConfig, issues)
+            _check_model(cast(dict[str, Any], bar), f"bars.{bar_name}", BarConfig, issues)
 
-    for wname, wdata in (config.get("widgets") or {}).items():
+    widgets: dict[str, Any] = config.get("widgets") or {}
+    for wname, wdata in widgets.items():
         if not isinstance(wdata, dict):
             continue
+        wdata = cast(dict[str, Any], wdata)
         try:
             mod, cls_name = wdata.get("type", "").rsplit(".", 1)
             schema = getattr(import_module(f"core.widgets.{mod}"), cls_name).validation_schema
@@ -224,12 +258,12 @@ def _scan(config: dict) -> list[dict]:
             continue
         opts = wdata.get("options")
         if isinstance(opts, dict):
-            _check_model(opts, f"widgets.{wname}.options", schema, issues)
+            _check_model(cast(dict[str, Any], opts), f"widgets.{wname}.options", schema, issues)
 
     return issues
 
 
-def _patch(raw: str, issues: list[dict]) -> str:
+def _patch(raw: str, issues: list[DeprecationIssue]) -> str:
     """Remove/rename lines in raw text matched by exact YAML path."""
     issue_paths = {i["path"]: i for i in issues}
     lines = raw.splitlines(True)
@@ -269,12 +303,12 @@ def _patch(raw: str, issues: list[dict]) -> str:
     return "".join(result)
 
 
-def migrate_config(raw: str) -> tuple[str, list[dict]]:
+def migrate_config(raw: str) -> tuple[str, list[DeprecationIssue]]:
     """Find and fix deprecated fields. safe_load to find, text to save."""
     config = safe_load(raw)
     if not isinstance(config, dict):
         return raw, []
-    issues = _scan(config)
+    issues = _scan(cast(dict[str, Any], config))
     if not issues:
         return raw, []
     return _patch(raw, issues), issues

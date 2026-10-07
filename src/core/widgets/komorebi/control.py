@@ -1,8 +1,11 @@
 import logging
 import re
 import subprocess
+from collections.abc import Callable
+from typing import override
 
-from PyQt6.QtCore import QEvent, Qt, QThread, pyqtSignal
+from PyQt6.QtCore import QEvent, QObject, Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from core.events.komorebi import KomorebiEvent
@@ -20,13 +23,14 @@ except ImportError:
 
 
 class ExtPopupWidget(PopupWidget):
-    def eventFilter(self, obj, event):
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
         parent = self.parent()
         # When menu is locked, block usually hiding events from komorebi
-        if isinstance(parent, KomorebiControlWidget) and parent._lock_menu:
-            if event.type() == QEvent.Type.Close:
+        if isinstance(parent, KomorebiControlWidget) and parent.lock_menu:
+            if a1 is not None and a1.type() == QEvent.Type.Close:
                 return True
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
 
 class KomorebiControlWidget(BaseWidget):
@@ -42,8 +46,9 @@ class KomorebiControlWidget(BaseWidget):
 
         self._is_komorebi_connected = False
         self._locked_ui = False
-        self._lock_menu = False
-        self._version_text = None
+        self.lock_menu = False
+        self._version_text: str | None = None
+        self.dialog: ExtPopupWidget | None = None
 
         # Initialize the event service
         self._event_service = EventService()
@@ -75,7 +80,7 @@ class KomorebiControlWidget(BaseWidget):
         except Exception:
             pass
 
-    def _on_destroyed(self, *args):
+    def _on_destroyed(self, *args: object) -> None:
         try:
             self._event_service.unregister_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
             self._event_service.unregister_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
@@ -88,10 +93,10 @@ class KomorebiControlWidget(BaseWidget):
         self._version_thread.version_result.connect(self._on_version_result)
         self._version_thread.start()
 
-    def _on_version_result(self, version):
+    def _on_version_result(self, version: str | None):
         """Receives the Komorebi version from the thread and updates the UI."""
         self._version_text = f"komorebi v{version}" if version else None
-        if getattr(self, "dialog", None) and self.dialog.isVisible():
+        if self.dialog is not None and self.dialog.isVisible():
             self._update_menu_button_states()
             # Update the version label in the currently open dialog
             for child in self.dialog.findChildren(QLabel):
@@ -137,9 +142,9 @@ class KomorebiControlWidget(BaseWidget):
         self.reload_btn = QLabel(self.config.icons.reload)
 
         # Connect button click events
-        self.start_btn.mousePressEvent = lambda e: self._start_komorebi()
-        self.stop_btn.mousePressEvent = lambda e: self._stop_komorebi()
-        self.reload_btn.mousePressEvent = lambda e: self._reload_komorebi()
+        self._bind_click(self.start_btn, self._start_komorebi)
+        self._bind_click(self.stop_btn, self._stop_komorebi)
+        self._bind_click(self.reload_btn, self._reload_komorebi)
 
         # Update the button states based on current connection status
         self._update_menu_button_states()
@@ -180,6 +185,13 @@ class KomorebiControlWidget(BaseWidget):
 
         self.dialog.show()
 
+    @staticmethod
+    def _bind_click(label: QLabel, action: Callable[[], None]) -> None:
+        def mouse_press(ev: QMouseEvent | None) -> None:
+            action()
+
+        label.mousePressEvent = mouse_press
+
     def _on_komorebi_connect_event(self) -> None:
         self._is_komorebi_connected = True
         self._locked_ui = False
@@ -198,7 +210,7 @@ class KomorebiControlWidget(BaseWidget):
             except Exception:
                 pass
 
-        self._lock_menu = False
+        self.lock_menu = False
         # If the dialog is visible (and was locked before), force it to regain focus.
         try:
             if hasattr(self, "dialog") and self.dialog is not None and self.dialog.isVisible():
@@ -259,7 +271,7 @@ class KomorebiControlWidget(BaseWidget):
 
     def _build_komorebi_flags(self, include_config: bool = True) -> str:
         """Build command line flags based on configuration."""
-        flags = []
+        flags: list[str] = []
         if self.config.run_whkd:
             flags.append("--whkd")
         if self.config.run_ahk:
@@ -271,12 +283,12 @@ class KomorebiControlWidget(BaseWidget):
         return " ".join(flags)
 
     def _start_komorebi(self):
-        self._lock_menu = True
+        self.lock_menu = True
         if not self._is_komorebi_connected:
             flags = self._build_komorebi_flags(include_config=True)
-            command = f"{self._komorebic._komorebic_path} start {flags}"
+            command = f"{self._komorebic.komorebic_path} start {flags}"
             # If the menu is open, show a transient starting message
-            if hasattr(self, "_version_label") and getattr(self, "dialog", None) and self.dialog.isVisible():
+            if hasattr(self, "_version_label") and self.dialog is not None and self.dialog.isVisible():
                 try:
                     self._version_label.setText("Starting...")
                 except Exception:
@@ -287,17 +299,17 @@ class KomorebiControlWidget(BaseWidget):
         if self._is_komorebi_connected:
             # Build flags for stop without including the --config option
             stop_flags = self._build_komorebi_flags(include_config=False)
-            command = f"{self._komorebic._komorebic_path} stop {stop_flags}"
+            command = f"{self._komorebic.komorebic_path} stop {stop_flags}"
             self._run_komorebi_command(command)
 
     def _reload_komorebi(self):
-        self._lock_menu = True
+        self.lock_menu = True
         if self._is_komorebi_connected:
             self._is_reloading = True
             stop_flags = self._build_komorebi_flags(include_config=False)
             start_flags = self._build_komorebi_flags(include_config=True)
-            command = f"{self._komorebic._komorebic_path} stop {stop_flags} && {self._komorebic._komorebic_path} start {start_flags}"
-            if hasattr(self, "_version_label") and getattr(self, "dialog", None) and self.dialog.isVisible():
+            command = f"{self._komorebic.komorebic_path} stop {stop_flags} && {self._komorebic.komorebic_path} start {start_flags}"
+            if hasattr(self, "_version_label") and self.dialog is not None and self.dialog.isVisible():
                 try:
                     self._version_label.setText("Reloading...")
                 except Exception:
@@ -313,11 +325,12 @@ class KomorebiControlWidget(BaseWidget):
 class VersionCheckThread(QThread):
     version_result = pyqtSignal(str)
 
-    def __init__(self, komorebic_client):
+    def __init__(self, komorebic_client: KomorebiClient):
         super().__init__()
         self._komorebic = komorebic_client
 
-    def run(self):
+    @override
+    def run(self) -> None:
         version = self.get_version()
         self.version_result.emit(version if version else None)
 
@@ -325,8 +338,8 @@ class VersionCheckThread(QThread):
         """Returns the Komorebi version or None if unavailable."""
         try:
             output = subprocess.check_output(
-                [self._komorebic._komorebic_path, "--version"],
-                timeout=self._komorebic._timeout_secs,
+                [self._komorebic.komorebic_path, "--version"],
+                timeout=self._komorebic.timeout_secs,
                 stderr=subprocess.STDOUT,
                 text=True,
                 creationflags=subprocess.CREATE_NO_WINDOW,

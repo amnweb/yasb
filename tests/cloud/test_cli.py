@@ -1,3 +1,5 @@
+# pyright: reportPrivateUsage=false
+
 """Command behaviour for `yasbc cloud`.
 
     python -m pytest tests/cloud/test_cli.py -q
@@ -21,7 +23,7 @@ from core.cloud.session import Session
 class _Client:
     """Records the one call cmd_logout is allowed to make."""
 
-    def __init__(self, sent: list) -> None:
+    def __init__(self, sent: list[str]) -> None:
         self._sent = sent
 
     def logout(self) -> object:
@@ -29,10 +31,10 @@ class _Client:
         return object()
 
 
-def _run_logout(*, signed_in: bool, error: ApiError | None) -> tuple[int, list, list[str]]:
+def _run_logout(*, signed_in: bool, error: ApiError | None) -> tuple[int, list[str], list[str]]:
     previous_env = os.environ.get("LOCALAPPDATA")
     previous_client, previous_run = cli.ApiClient, cli._run_call
-    sent: list = []
+    sent: list[str] = []
 
     with tempfile.TemporaryDirectory() as raw:
         os.environ["LOCALAPPDATA"] = raw
@@ -44,8 +46,14 @@ def _run_logout(*, signed_in: bool, error: ApiError | None) -> tuple[int, list, 
                 session.master_key = b"k" * 32
                 session.save()
 
-            cli.ApiClient = lambda _session: _Client(sent)
-            cli._run_call = lambda _call, *_a, **_k: (None, error)
+            def client(_session: Session) -> _Client:
+                return _Client(sent)
+
+            def run_call(_call: object, *_args: object, **_kwargs: object) -> tuple[None, ApiError | None]:
+                return None, error
+
+            cli.ApiClient = client
+            cli._run_call = run_call
 
             code = cli.cmd_logout()
             left = sorted(p.name for p in session.directory.iterdir() if p.name in (SESSION_FILE, VAULT_FILE))

@@ -10,9 +10,14 @@ import socket
 import struct
 import threading
 import uuid
+from collections.abc import Callable
+from typing import Any, override
 
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication
+
+type EventCallback = Callable[[str, dict[str, Any]], None]
+type ConnectionCallback = Callable[[bool], None]
 
 
 class ObsWebSocketClient:
@@ -34,10 +39,10 @@ class ObsWebSocketClient:
         self._running = False
         self._lock = threading.Lock()
         self._pending: dict[str, threading.Event] = {}
-        self._responses: dict[str, dict] = {}
+        self._responses: dict[str, dict[str, Any]] = {}
         self._recv_thread: threading.Thread | None = None
-        self._event_callbacks: list = []
-        self._connection_callbacks: list = []
+        self._event_callbacks: list[EventCallback] = []
+        self._connection_callbacks: list[ConnectionCallback] = []
 
     @property
     def connected(self) -> bool:
@@ -71,11 +76,11 @@ class ObsWebSocketClient:
             self._cleanup()
             return False
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         self._running = False
         self._cleanup()
 
-    def _cleanup(self):
+    def _cleanup(self) -> None:
         was_connected = self._connected
         self._connected = False
         self._identified = False
@@ -99,15 +104,17 @@ class ObsWebSocketClient:
                 except Exception:
                     pass
 
-    def register_event_callback(self, callback):
+    def register_event_callback(self, callback: EventCallback) -> None:
         if callback not in self._event_callbacks:
             self._event_callbacks.append(callback)
 
-    def register_connection_callback(self, callback):
+    def register_connection_callback(self, callback: ConnectionCallback) -> None:
         if callback not in self._connection_callbacks:
             self._connection_callbacks.append(callback)
 
-    def call(self, request_type: str, request_data: dict | None = None, timeout: float = 5.0) -> dict:
+    def call(
+        self, request_type: str, request_data: dict[str, Any] | None = None, timeout: float = 5.0
+    ) -> dict[str, Any]:
         """Send request and wait for response."""
         if not self.connected:
             raise RuntimeError("Not connected")
@@ -118,9 +125,10 @@ class ObsWebSocketClient:
         with self._lock:
             self._pending[request_id] = event
 
-        msg = {"op": 6, "d": {"requestType": request_type, "requestId": request_id}}
+        d: dict[str, Any] = {"requestType": request_type, "requestId": request_id}
         if request_data:
-            msg["d"]["requestData"] = request_data
+            d["requestData"] = request_data
+        msg = {"op": 6, "d": d}
 
         try:
             self._ws_send(json.dumps(msg))
@@ -144,13 +152,14 @@ class ObsWebSocketClient:
 
         return response.get("responseData", {})
 
-    def send(self, request_type: str, request_data: dict | None = None):
+    def send(self, request_type: str, request_data: dict[str, Any] | None = None) -> None:
         """Fire-and-forget request."""
         if not self.connected:
             return
-        msg = {"op": 6, "d": {"requestType": request_type, "requestId": str(uuid.uuid4())}}
+        d: dict[str, Any] = {"requestType": request_type, "requestId": str(uuid.uuid4())}
         if request_data:
-            msg["d"]["requestData"] = request_data
+            d["requestData"] = request_data
+        msg = {"op": 6, "d": d}
         try:
             self._ws_send(json.dumps(msg))
         except Exception:
@@ -158,6 +167,9 @@ class ObsWebSocketClient:
 
     # WebSocket implementation
     def _ws_handshake(self) -> bool:
+        sock = self._socket
+        if sock is None:
+            return False
         key = base64.b64encode(os.urandom(16)).decode()
         request = (
             f"GET / HTTP/1.1\r\n"
@@ -168,18 +180,21 @@ class ObsWebSocketClient:
             f"Sec-WebSocket-Version: 13\r\n"
             f"\r\n"
         )
-        self._socket.sendall(request.encode())
+        sock.sendall(request.encode())
 
         response = b""
         while b"\r\n\r\n" not in response:
-            chunk = self._socket.recv(1024)
+            chunk = sock.recv(1024)
             if not chunk:
                 return False
             response += chunk
 
         return b"101" in response and b"Upgrade" in response
 
-    def _ws_send(self, data: str):
+    def _ws_send(self, data: str) -> None:
+        sock = self._socket
+        if sock is None:
+            raise ConnectionError("Socket closed")
         payload = data.encode()
         length = len(payload)
         header = bytearray([0x81])
@@ -200,7 +215,7 @@ class ObsWebSocketClient:
         for i in range(length):
             masked[i] ^= mask[i % 4]
 
-        self._socket.sendall(bytes(header) + bytes(masked))
+        sock.sendall(bytes(header) + bytes(masked))
 
     def _ws_recv(self) -> tuple[int, bytes] | None:
         try:
@@ -239,10 +254,13 @@ class ObsWebSocketClient:
             return None
 
     def _recv_exact(self, n: int) -> bytes | None:
+        sock = self._socket
+        if sock is None:
+            return None
         data = b""
         while len(data) < n:
             try:
-                chunk = self._socket.recv(n - len(data))
+                chunk = sock.recv(n - len(data))
                 if not chunk:
                     return None
                 data += chunk
@@ -250,7 +268,7 @@ class ObsWebSocketClient:
                 return None
         return data
 
-    def _receive_loop(self):
+    def _receive_loop(self) -> None:
         while self._running and self._socket:
             try:
                 self._socket.settimeout(0.5)
@@ -272,7 +290,10 @@ class ObsWebSocketClient:
 
         self._cleanup()
 
-    def _ws_send_pong(self, payload: bytes):
+    def _ws_send_pong(self, payload: bytes) -> None:
+        sock = self._socket
+        if sock is None:
+            return
         length = len(payload)
         header = bytearray([0x8A, 0x80 | length])
         mask = os.urandom(4)
@@ -281,11 +302,11 @@ class ObsWebSocketClient:
         for i in range(length):
             masked[i] ^= mask[i % 4]
         try:
-            self._socket.sendall(bytes(header) + bytes(masked))
+            sock.sendall(bytes(header) + bytes(masked))
         except Exception:
             pass
 
-    def _handle_message(self, message: str):
+    def _handle_message(self, message: str) -> None:
         try:
             data = json.loads(message)
             op = data.get("op")
@@ -324,14 +345,13 @@ class ObsWebSocketClient:
         secret = base64.b64encode(hashlib.sha256((secret_key + salt).encode()).digest()).decode()
         return base64.b64encode(hashlib.sha256((secret + challenge).encode()).digest()).decode()
 
-    def _handle_hello(self, payload: dict):
+    def _handle_hello(self, payload: dict[str, Any]) -> None:
         auth = payload.get("authentication")
-        msg = {"op": 1, "d": {"rpcVersion": 1, "eventSubscriptions": self.event_subscriptions}}
+        d: dict[str, Any] = {"rpcVersion": 1, "eventSubscriptions": self.event_subscriptions}
 
         if auth and self.auth_key:
-            msg["d"]["authentication"] = self._obs_ws_auth(
-                self.auth_key, auth.get("salt", ""), auth.get("challenge", "")
-            )
+            d["authentication"] = self._obs_ws_auth(self.auth_key, auth.get("salt", ""), auth.get("challenge", ""))
+        msg = {"op": 1, "d": d}
 
         try:
             self._ws_send(json.dumps(msg))
@@ -353,7 +373,7 @@ class ObsWorker(QThread):
     _users = 0
     _lock = threading.Lock()
 
-    def __init__(self, connection: dict = None):
+    def __init__(self, connection: dict[str, Any] | None = None) -> None:
         super().__init__()
         self._connection = connection or {}
         self.client: ObsWebSocketClient | None = None
@@ -365,22 +385,27 @@ class ObsWorker(QThread):
             app_inst.aboutToQuit.connect(self.stop)
 
     @classmethod
-    def get_instance(cls, connection: dict = None) -> ObsWorker:
+    def get_instance(cls, connection: dict[str, Any] | None = None) -> ObsWorker:
         with cls._lock:
             if cls._instance is None:
                 cls._instance = cls(connection)
             cls._users += 1
             return cls._instance
 
+    @property
+    def connected(self) -> bool:
+        return self._connected
+
     @classmethod
-    def release_instance(cls):
+    def release_instance(cls) -> None:
         with cls._lock:
             cls._users = max(cls._users - 1, 0)
             if cls._users == 0 and cls._instance:
                 cls._instance.stop()
                 cls._instance = None
 
-    def run(self):
+    @override
+    def run(self) -> None:
         self._stop_event.clear()
         while not self._stop_event.is_set():
             try:
@@ -409,13 +434,13 @@ class ObsWorker(QThread):
                 self._cleanup_client()
                 self._stop_event.wait(5)
 
-    def stop(self):
+    def stop(self) -> None:
         self._stop_event.set()
         self._cleanup_client()
         self._set_connected(False)
         self.wait(2000)
 
-    def _cleanup_client(self):
+    def _cleanup_client(self) -> None:
         if self.client:
             try:
                 self.client.disconnect()
@@ -423,17 +448,17 @@ class ObsWorker(QThread):
                 pass
             self.client = None
 
-    def _set_connected(self, connected: bool):
+    def _set_connected(self, connected: bool) -> None:
         if self._connected != connected:
             self._connected = connected
             self.connection_signal.emit(connected)
 
-    def _on_connection(self, connected: bool):
+    def _on_connection(self, connected: bool) -> None:
         self._set_connected(connected)
         if not connected:
             self._cleanup_client()
 
-    def _on_event(self, event_type: str, event_data: dict):
+    def _on_event(self, event_type: str, event_data: dict[str, Any]) -> None:
         if event_type == "RecordStateChanged":
             self.state_signal.emit(event_data)
         elif event_type == "StreamStateChanged":

@@ -2,6 +2,7 @@ import ast
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from functools import cache, cached_property
+from typing import TypeGuard
 
 from tests.support.source import SourceModule, core_modules
 
@@ -69,8 +70,10 @@ class _Scope:
     parent: _Scope | None
     cls: str | None
     is_class: bool = False
-    bindings: dict[str, tuple[ast.expr | _Imported, _Scope]] = field(default_factory=dict)
-    globals_: set[str] = field(default_factory=set)
+    bindings: dict[str, tuple[ast.expr | _Imported, _Scope]] = field(
+        default_factory=lambda: dict[str, tuple[ast.expr | _Imported, _Scope]]()
+    )
+    globals_: set[str] = field(default_factory=set[str])
 
     @property
     def root(self) -> _Scope:
@@ -103,7 +106,7 @@ def _name_of(node: ast.expr) -> str | None:
     return None
 
 
-def _is_self_attr(node: ast.expr) -> bool:
+def _is_self_attr(node: ast.expr) -> TypeGuard[ast.Attribute]:
     return isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "self"
 
 
@@ -311,7 +314,7 @@ class _ModuleAnalysis:
                         if function is not None:
                             site = self._site(node, scope)
                             self.declarations.append(Declaration(function, target.attr, node.value, site))
-            elif isinstance(node, ast.Call):
+            else:
                 function = self.function(node.func, scope) or self._inferred(node.func, scope)
                 if function is not None:
                     self.calls.append(Call(function, self._site(node, scope), node not in self._discarded))

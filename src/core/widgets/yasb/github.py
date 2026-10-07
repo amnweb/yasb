@@ -1,6 +1,5 @@
 import os
 import re
-from collections.abc import Callable
 from typing import Any
 
 from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
@@ -268,16 +267,16 @@ class GithubWidget(BaseWidget):
         if a0 is not None:
             QDesktopServices.openUrl(QUrl(url))
 
-    def _create_container_mouse_press_event(
+    def _bind_container_mouse_press(
         self,
         notification_id: str,
         url: str,
         container_label: QFrame,
-    ) -> Callable[[QMouseEvent | None], None]:
+    ) -> None:
         def mouse_press_event(a0: QMouseEvent | None) -> None:
             self._handle_mouse_press_event(a0, notification_id, url, container_label)
 
-        return mouse_press_event
+        container_label.mousePressEvent = mouse_press_event
 
     def _format_category_title(self, category_type: str) -> str:
         """Return a human-friendly label for a GitHub notification type."""
@@ -432,9 +431,7 @@ class GithubWidget(BaseWidget):
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
 
-        container.mousePressEvent = self._create_container_mouse_press_event(
-            notification["id"], notification["url"], container
-        )
+        self._bind_container_mouse_press(notification["id"], notification["url"], container)
 
         return container
 

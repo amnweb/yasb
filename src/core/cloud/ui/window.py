@@ -1,10 +1,13 @@
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
+from typing import Any, override
 
 from PyQt6.QtCore import QObject, QSettings, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QCloseEvent, QFont
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -79,7 +82,7 @@ class CloudWindow(ViewBase, QMainWindow):
         self._account: Account | None = None
         self._settings = load_settings()
         self._snapshots: list[Snapshot] = []
-        self._dialog = None
+        self._dialog: InputDialog | None = None
         self._spinner_since: float | None = None
 
         self._ops = Operations(self._api, self._session, self)
@@ -213,7 +216,7 @@ class CloudWindow(ViewBase, QMainWindow):
         self._sign_in.cancel()
         self._show_connect()
 
-    def _on_signed_in(self, payload: dict) -> None:
+    def _on_signed_in(self, payload: dict[str, Any]) -> None:
         if not self._session.apply_login(payload):
             self._on_sign_in_failed(BAD_SIGN_IN, "Could Not Sign In")
             return
@@ -238,10 +241,10 @@ class CloudWindow(ViewBase, QMainWindow):
 
     def _load_account(self, *, refresh_list: bool = True) -> None:
         call = self._api.me()
-        call.succeeded.connect(lambda payload: self._on_account(payload, refresh_list))
+        call.succeeded.connect(partial(self._on_account, refresh_list=refresh_list))
         call.failed.connect(self._on_account_failed)
 
-    def _settle(self, action) -> None:
+    def _settle(self, action: Callable[[], object]) -> None:
         """Run *action* once the startup spinner has been up long enough to be seen. Only
         startup sets the clock; every other path runs immediately."""
         if self._spinner_since is None:
@@ -251,7 +254,7 @@ class CloudWindow(ViewBase, QMainWindow):
         self._spinner_since = None
         QTimer.singleShot(max(0, MIN_SPINNER_MS - waited_ms), action)
 
-    def _on_account(self, payload: dict, refresh_list: bool = True) -> None:
+    def _on_account(self, payload: dict[str, Any], refresh_list: bool = True) -> None:
         self._account = Account.from_json(payload)
         self._ops.set_account(self._account)
         self.settings_view.set_can_write(self._account.access.can_write)
@@ -290,7 +293,7 @@ class CloudWindow(ViewBase, QMainWindow):
         self.backups_view.loading_failed()
         self.backups_view.show_error(str(error), title="Could Not Load Backups")
 
-    def _on_backups(self, payload: dict) -> None:
+    def _on_backups(self, payload: dict[str, Any]) -> None:
         """The first page replaces, every page after it appends. Which one comes from the
         response, so replies arriving out of order cannot make page two overwrite the list."""
         page = [Snapshot.from_json(entry) for entry in payload.get("backups", [])]
@@ -314,7 +317,7 @@ class CloudWindow(ViewBase, QMainWindow):
             return
         set_level(enabled)
 
-    def _save_rules(self, rules: list) -> None:
+    def _save_rules(self, rules: list[str]) -> None:
         self._store(replace(self._settings, exclude=clean_rules(rules)))
 
     def _save_auto_backup(self, enabled: bool) -> None:
@@ -444,7 +447,7 @@ class CloudWindow(ViewBase, QMainWindow):
             primary_button_text="Save",
             close_button_text="Cancel",
         )
-        self._dialog.accepted.connect(lambda note: self._ops.save_note(snapshot, note))
+        self._dialog.accepted.connect(partial(self._ops.save_note, snapshot))
         self._dialog.show_dialog()
 
     def _handle_share(self, snapshot_id: str) -> None:
@@ -495,18 +498,20 @@ class CloudWindow(ViewBase, QMainWindow):
         self._mark_in_sync()
         call = self._api.get_backup(snapshot_id)
         call.succeeded.connect(self._on_new_backup)
+
         # The upload succeeded, so a failure here is only a missing row. Saying nothing would
         # read as the backup having been lost.
-        call.failed.connect(
-            lambda _error: self.backups_view.show_error(
+        def row_failed(_error: ApiError) -> None:
+            self.backups_view.show_error(
                 "The backup was saved, but this list could not be updated. Reopen the window to see it.",
                 title="Backup Complete",
             )
-        )
+
+        call.failed.connect(row_failed)
         # Storage used changed, so the footer is refetched either way.
         self._load_account(refresh_list=False)
 
-    def _on_new_backup(self, payload: dict) -> None:
+    def _on_new_backup(self, payload: dict[str, Any]) -> None:
         snapshot = Snapshot.from_json(payload)
         if snapshot.id and self._snapshot(snapshot.id) is None:
             self._snapshots.insert(0, snapshot)
@@ -524,10 +529,10 @@ class CloudWindow(ViewBase, QMainWindow):
             self._snapshots = [s for s in self._snapshots if s.id != snapshot_id]
             self._load_account(refresh_list=False)
 
-    def _on_saved(self, folder) -> None:
+    def _on_saved(self, folder: object) -> None:
         shell_open(str(folder))
 
-    def _on_restored(self, result) -> None:
+    def _on_restored(self, result: object) -> None:
         self._mark_in_sync()
         if getattr(result, "bar_was_running", False) and not getattr(result, "bar_restarted", False):
             self.backups_view.show_error(
@@ -535,12 +540,13 @@ class CloudWindow(ViewBase, QMainWindow):
                 title="Restore Complete",
             )
 
-    def closeEvent(self, event) -> None:
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         QSettings("YASB", "Cloud").setValue("window/geometry", self.saveGeometry())
         self._sign_in.cancel()
         self._ops.cancel_active()
         self._api.abort_all()
-        super().closeEvent(event)
+        super().closeEvent(a0)
 
 
 def _reason(access: Access) -> str:
@@ -614,7 +620,9 @@ class Footer(QFrame):
         layout.addWidget(self._sign_out)
 
         self.apply_styles()
-        QApplication.instance().paletteChanged.connect(self._on_palette_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_palette_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     def set_account(self, account: Account) -> None:
         subscription = account.subscription
@@ -686,7 +694,10 @@ class SignInFlow(QObject):
     def start(self) -> None:
         call = self._api.request_device_code(device_name())
         call.succeeded.connect(self._on_code)
-        call.failed.connect(lambda error: self.failed.emit(str(error), "Could Not Sign In"))
+        call.failed.connect(self._on_code_failed)
+
+    def _on_code_failed(self, error: ApiError) -> None:
+        self.failed.emit(str(error), "Could Not Sign In")
 
     def cancel(self) -> None:
         self._poll.stop()
@@ -696,7 +707,7 @@ class SignInFlow(QObject):
         if self._verification_uri:
             shell_open(self._verification_uri)
 
-    def _on_code(self, payload: dict) -> None:
+    def _on_code(self, payload: dict[str, Any]) -> None:
         self._device_code = str(payload.get("device_code") or "")
         if not self._device_code:
             # Without it there is nothing to poll for. Starting anyway put a blank code on
@@ -734,7 +745,7 @@ class SignInFlow(QObject):
         call.succeeded.connect(self._on_token)
         call.failed.connect(self._on_poll_failed)
 
-    def _on_token(self, payload: dict) -> None:
+    def _on_token(self, payload: dict[str, Any]) -> None:
         # A poll still in flight when cancel() ran lands here. The cleared code says the
         # attempt is over, so do not sign anyone in on the way out.
         if not self._device_code:

@@ -51,6 +51,8 @@ def _enumerate_group_icons(filename: str) -> list[int | str]:
         if not res_rva:
             return []
         sec_tbl = f.read(num_sec * 40)
+        rsrc = b""
+        base = 0
         for i in range(num_sec):
             o = i * 40
             if o + 40 > len(sec_tbl):
@@ -101,7 +103,7 @@ def _enumerate_group_icons(filename: str) -> list[int | str]:
     return names
 
 
-def _load_resource(hmod: int, name, res_type) -> bytes:
+def _load_resource(hmod: int, name: LPCWSTR | str, res_type: LPCWSTR) -> bytes:
     hrsrc = kernel32.FindResourceW(hmod, name, res_type)
     if not hrsrc:
         raise OSError(f"FindResourceW failed (err={kernel32.GetLastError()})")
@@ -159,7 +161,7 @@ class IconExtractor:
         parts.extend(images)
         return b"".join(parts)
 
-    def get_icon(self, num: int = 0, resource_id=None) -> io.BytesIO:
+    def get_icon(self, num: int = 0, resource_id: object = None) -> io.BytesIO:
         return io.BytesIO(self._build_ico(num))
 
     def export_icon(self, filename: str, num: int = 0) -> None:

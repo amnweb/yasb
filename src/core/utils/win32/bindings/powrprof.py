@@ -1,8 +1,9 @@
 """Wrappers for powerprof win32 API functions to make them easier to use and have proper types"""
 
-from ctypes import POINTER, windll, wintypes
+from ctypes import POINTER, Array, c_ubyte, windll, wintypes
 
 from core.utils.win32.structs import GUID
+from core.utils.win32.typecheck import CArgObject
 
 powrprof = windll.powrprof
 
@@ -76,14 +77,14 @@ powrprof.SetSuspendState.restype = wintypes.BOOLEAN
 
 # -- Power management function wrappers -- #
 def PowerEnumerate(
-    RootPowerKey,
-    SchemeGuid,
-    SubGroupOfPowerSettingsGuid,
-    AccessFlags,
-    Index,
-    Buffer,
-    BufferSize,
-):
+    RootPowerKey: int | None,
+    SchemeGuid: CArgObject | None,
+    SubGroupOfPowerSettingsGuid: CArgObject | None,
+    AccessFlags: int,
+    Index: int,
+    Buffer: Array[c_ubyte],
+    BufferSize: CArgObject,
+) -> int:
     return powrprof.PowerEnumerate(
         RootPowerKey,
         SchemeGuid,
@@ -96,13 +97,13 @@ def PowerEnumerate(
 
 
 def PowerReadFriendlyName(
-    RootPowerKey,
-    SchemeGuid,
-    SubGroupOfPowerSettingsGuid,
-    PowerSettingGuid,
-    Buffer,
-    BufferSize,
-):
+    RootPowerKey: int | None,
+    SchemeGuid: CArgObject | None,
+    SubGroupOfPowerSettingsGuid: CArgObject | None,
+    PowerSettingGuid: CArgObject | None,
+    Buffer: Array[c_ubyte] | None,
+    BufferSize: CArgObject,
+) -> int:
     return powrprof.PowerReadFriendlyName(
         RootPowerKey,
         SchemeGuid,
@@ -114,34 +115,58 @@ def PowerReadFriendlyName(
 
 
 def PowerGetActiveScheme(
-    UserRootPowerKey,
-    ActivePolicyGuid,
-):
+    UserRootPowerKey: int | None,
+    ActivePolicyGuid: CArgObject,
+) -> int:
     return powrprof.PowerGetActiveScheme(UserRootPowerKey, ActivePolicyGuid)
 
 
 def PowerSetActiveScheme(
-    UserRootPowerKey,
-    SchemeGuid,
-):
+    UserRootPowerKey: int | None,
+    SchemeGuid: CArgObject,
+) -> int:
     return powrprof.PowerSetActiveScheme(UserRootPowerKey, SchemeGuid)
 
 
-def PowerReadACValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex):
+def PowerReadACValueIndex(
+    RootPowerKey: int | None,
+    SchemeGuid: CArgObject | None,
+    SubGroupGuid: CArgObject | None,
+    PowerSettingGuid: CArgObject | None,
+    ValueIndex: CArgObject,
+) -> int:
     return powrprof.PowerReadACValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex)
 
 
-def PowerReadDCValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex):
+def PowerReadDCValueIndex(
+    RootPowerKey: int | None,
+    SchemeGuid: CArgObject | None,
+    SubGroupGuid: CArgObject | None,
+    PowerSettingGuid: CArgObject | None,
+    ValueIndex: CArgObject,
+) -> int:
     return powrprof.PowerReadDCValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex)
 
 
-def PowerWriteACValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex):
+def PowerWriteACValueIndex(
+    RootPowerKey: int | None,
+    SchemeGuid: CArgObject | None,
+    SubGroupGuid: CArgObject | None,
+    PowerSettingGuid: CArgObject | None,
+    ValueIndex: int,
+) -> int:
     return powrprof.PowerWriteACValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex)
 
 
-def PowerWriteDCValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex):
+def PowerWriteDCValueIndex(
+    RootPowerKey: int | None,
+    SchemeGuid: CArgObject | None,
+    SubGroupGuid: CArgObject | None,
+    PowerSettingGuid: CArgObject | None,
+    ValueIndex: int,
+) -> int:
     return powrprof.PowerWriteDCValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex)
 
 
-def SetSuspendState(bHibernate, bForce, bWakeupEventsDisabled):
+def SetSuspendState(bHibernate: bool, bForce: bool, bWakeupEventsDisabled: bool) -> int:
     return powrprof.SetSuspendState(bHibernate, bForce, bWakeupEventsDisabled)

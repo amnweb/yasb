@@ -9,8 +9,9 @@ whatever the server said about the failure is what the user is shown.
 import json
 import tempfile
 from pathlib import Path
+from typing import cast
 
-from PyQt6.QtNetwork import QNetworkReply
+from PyQt6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from core.cloud.api import error_from, reply_error, save_reply
 
@@ -50,15 +51,17 @@ def test_a_401_keeps_its_status_so_the_refresh_path_recognises_it():
 class _Reply:
     """Only what reply_error touches. A real QNetworkReply needs a network stack."""
 
-    def __init__(self, status: int, body: bytes, error=QNetworkReply.NetworkError.NoError) -> None:
+    def __init__(
+        self, status: int, body: bytes, error: QNetworkReply.NetworkError = QNetworkReply.NetworkError.NoError
+    ) -> None:
         self._status = status
         self._body = body
         self._error = error
 
-    def error(self):
+    def error(self) -> QNetworkReply.NetworkError:
         return self._error
 
-    def attribute(self, _which):
+    def attribute(self, _which: QNetworkRequest.Attribute) -> int | None:
         # Qt returns None for a request that never got a response, which is why the caller
         # cannot simply trust this to be an int.
         return self._status or None
@@ -74,14 +77,14 @@ def test_a_raw_reply_is_read_the_same_way_as_a_tracked_call():
     """The download path streams its own reply, so it decodes through here instead of Call.
     Reporting a fixed sentence there made maintenance, a lapsed plan and a deleted backup
     indistinguishable."""
-    error = reply_error(_Reply(503, _body("maintenance", "Back shortly.")))
+    error = reply_error(cast(QNetworkReply, _Reply(503, _body("maintenance", "Back shortly."))))
 
     assert str(error) == "Back shortly."
     assert error.code == "maintenance"
 
 
 def test_a_raw_reply_that_never_reached_the_server_reads_as_a_connection_problem():
-    assert reply_error(_Reply(0, b"")).code == "network_error"
+    assert reply_error(cast(QNetworkReply, _Reply(0, b""))).code == "network_error"
 
 
 def test_a_download_that_cannot_be_written_comes_back_as_an_error():
@@ -93,7 +96,7 @@ def test_a_download_that_cannot_be_written_comes_back_as_an_error():
         target.mkdir()
 
         try:
-            error = save_reply(_Reply(200, b"payload"), target)
+            error = save_reply(cast(QNetworkReply, _Reply(200, b"payload")), target)
         except Exception as exc:
             raise AssertionError(f"save_reply raised {type(exc).__name__} instead of returning it") from exc
 
@@ -104,6 +107,6 @@ def test_a_download_that_cannot_be_written_comes_back_as_an_error():
 def test_a_download_we_aborted_ourselves_is_not_reported_as_a_failure():
     """Closing the window aborts the download. Read as an error it becomes a dialog about a
     dead connection, on a window that is already going away."""
-    aborted = _Reply(0, b"", QNetworkReply.NetworkError.OperationCanceledError)
+    aborted = cast(QNetworkReply, _Reply(0, b"", QNetworkReply.NetworkError.OperationCanceledError))
 
     assert reply_error(aborted).code == "cancelled"

@@ -1,8 +1,15 @@
-from PyQt6.QtCore import QEasingCurve, QParallelAnimationGroup, QPropertyAnimation, QSize, Qt, pyqtProperty
-from PyQt6.QtGui import QColor, QFont, QFontMetrics, QPainter
+from collections.abc import Callable
+from typing import Any, override
+
+import PyQt6.QtCore as QtCore
+from PyQt6.QtCore import QEasingCurve, QEvent, QParallelAnimationGroup, QPropertyAnimation, QSize, Qt
+from PyQt6.QtGui import QColor, QEnterEvent, QFont, QFontMetrics, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
 
 from core.ui.theme import FONT_FAMILIES, FONT_WEIGHTS, get_tokens, theme_key
+
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _DURATION = 83
 _RADIUS = 4.0
@@ -84,7 +91,9 @@ class Link(QPushButton):
             setattr(self, f"_anim_{name}", anim)
             self._anim_group.addAnimation(anim)
 
-        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     def _build_states(self, t: dict[str, str]) -> None:
         self._states = {
@@ -116,23 +125,23 @@ class Link(QPushButton):
 
     # Animated properties
 
-    @pyqtProperty(QColor)
-    def bg(self) -> QColor:
+    def _get_bg(self) -> QColor:
         return self._bg
 
-    @bg.setter
-    def bg(self, c: QColor) -> None:
+    def _set_bg(self, c: QColor) -> None:
         self._bg = c
         self.update()
 
-    @pyqtProperty(QColor)
-    def fg(self) -> QColor:
+    bg: QColor = pyqtProperty(QColor, _get_bg, _set_bg)
+
+    def _get_fg(self) -> QColor:
         return self._fg
 
-    @fg.setter
-    def fg(self, c: QColor) -> None:
+    def _set_fg(self, c: QColor) -> None:
         self._fg = c
         self.update()
+
+    fg: QColor = pyqtProperty(QColor, _get_fg, _set_fg)
 
     def _animate_to(self, state: str) -> None:
         target = self._states.get(state, self._states["normal"])
@@ -143,32 +152,38 @@ class Link(QPushButton):
             anim.setEndValue(target[name])
         self._anim_group.start()
 
-    def enterEvent(self, event) -> None:
+    @override
+    def enterEvent(self, event: QEnterEvent | None) -> None:
         if self.isEnabled():
             self._animate_to("hover")
         super().enterEvent(event)
 
-    def leaveEvent(self, event) -> None:
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         if self.isEnabled():
             self._animate_to("normal")
-        super().leaveEvent(event)
+        super().leaveEvent(a0)
 
-    def mousePressEvent(self, event) -> None:
+    @override
+    def mousePressEvent(self, e: QMouseEvent | None) -> None:
         if self.isEnabled():
             self._animate_to("pressed")
-        super().mousePressEvent(event)
+        super().mousePressEvent(e)
 
-    def mouseReleaseEvent(self, event) -> None:
+    @override
+    def mouseReleaseEvent(self, e: QMouseEvent | None) -> None:
         if self.isEnabled():
-            self._animate_to("hover" if self.rect().contains(event.pos()) else "normal")
-        super().mouseReleaseEvent(event)
+            self._animate_to("hover" if e is not None and self.rect().contains(e.pos()) else "normal")
+        super().mouseReleaseEvent(e)
 
-    def changeEvent(self, event) -> None:
-        super().changeEvent(event)
-        if event.type() == event.Type.EnabledChange:
+    @override
+    def changeEvent(self, e: QEvent | None) -> None:
+        super().changeEvent(e)
+        if e is not None and e.type() == e.Type.EnabledChange:
             self._animate_to("normal" if self.isEnabled() else "disabled")
 
-    def paintEvent(self, _event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         r = self.rect().adjusted(1, 1, -1, -1).toRectF()

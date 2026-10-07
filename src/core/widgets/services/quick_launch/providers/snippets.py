@@ -7,6 +7,7 @@ import re
 import time
 import uuid
 from datetime import datetime
+from typing import Any, cast
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
@@ -41,7 +42,7 @@ def _resolve_variables(text: str) -> str:
     """
     now = datetime.now()
 
-    def _replace(match: re.Match) -> str:
+    def _replace(match: re.Match[str]) -> str:
         name = match.group(1).lower()
         fmt = match.group(2)
         if name == "date":
@@ -119,7 +120,7 @@ _SendInput.restype = ctypes.wintypes.UINT
 def _send_unicode_string(text: str):
     """Type a string into the focused window using SendInput with KEYEVENTF_UNICODE."""
     VK_RETURN = 0x0D
-    inputs = []
+    inputs: list[_INPUT] = []
     for char in text:
         if char == "\r":
             continue  # skip \r, handle \n as Enter
@@ -165,19 +166,25 @@ class SnippetsProvider(BaseProvider):
     input_placeholder = "Search snippets..."
     icon = ICON_SNIPPET
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
-        self._snippets: list[dict] = self._load_snippets()
+        self._snippets: list[dict[str, Any]] = self._load_snippets()
         self._type_delay: int = self.config.get("type_delay", 200)
         self._editing_id: str | None = None
 
-    def _load_snippets(self) -> list[dict]:
+    def _load_snippets(self) -> list[dict[str, Any]]:
         try:
             if os.path.isfile(_SNIPPETS_FILE):
                 with open(_SNIPPETS_FILE, encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, list):
-                    return [s for s in data if isinstance(s, dict) and s.get("content")]
+                    snippets: list[dict[str, Any]] = []
+                    for item in cast(list[object], data):
+                        if isinstance(item, dict):
+                            snippet = cast(dict[str, Any], item)
+                            if snippet.get("content"):
+                                snippets.append(snippet)
+                    return snippets
         except Exception as e:
             logging.debug("Failed to load snippets: %s", e)
         return []
@@ -190,13 +197,13 @@ class SnippetsProvider(BaseProvider):
         except Exception as e:
             logging.debug("Failed to save snippets: %s", e)
 
-    def _find_snippet(self, snippet_id: str) -> dict | None:
+    def _find_snippet(self, snippet_id: str) -> dict[str, Any] | None:
         for s in self._snippets:
             if s.get("id") == snippet_id:
                 return s
         return None
 
-    def _edit_preview(self, title: str = "", content: str = "") -> dict:
+    def _edit_preview(self, title: str = "", content: str = "") -> dict[str, Any]:
         """Return a preview dict that renders as an inline edit form."""
         return {
             "kind": "edit",
@@ -218,12 +225,12 @@ class SnippetsProvider(BaseProvider):
             return text.strip().startswith(self.prefix)
         return False
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).strip().lower()
 
         if not query:
-            results = self._sorted_snippets()
-            items = [self._snippet_to_result(s) for s in results]
+            snippets = self._sorted_snippets()
+            items = [self._snippet_to_result(s) for s in snippets]
             items.append(
                 ProviderResult(
                     title="Create new snippet",
@@ -236,7 +243,7 @@ class SnippetsProvider(BaseProvider):
             )
             return items
 
-        results = []
+        results: list[ProviderResult] = []
         for s in self._sorted_snippets():
             title = s.get("title", "").lower()
             content = s.get("content", "").lower()
@@ -244,10 +251,10 @@ class SnippetsProvider(BaseProvider):
                 results.append(self._snippet_to_result(s))
         return results
 
-    def _sorted_snippets(self) -> list[dict]:
+    def _sorted_snippets(self) -> list[dict[str, Any]]:
         return sorted(self._snippets, key=lambda s: s.get("last_used", 0), reverse=True)
 
-    def _snippet_to_result(self, snippet: dict) -> ProviderResult:
+    def _snippet_to_result(self, snippet: dict[str, Any]) -> ProviderResult:
         title = snippet.get("title", "Untitled")
         content = snippet.get("content", "")
         snippet_id = snippet.get("id", "")
@@ -346,7 +353,9 @@ class SnippetsProvider(BaseProvider):
 
         return ProviderMenuActionResult()
 
-    def handle_preview_action(self, action_id: str, result: ProviderResult, data: dict) -> ProviderMenuActionResult:
+    def handle_preview_action(
+        self, action_id: str, result: ProviderResult, data: dict[str, Any]
+    ) -> ProviderMenuActionResult:
         if action_id == "cancel":
             self._editing_id = None
             return ProviderMenuActionResult(refresh_results=True)

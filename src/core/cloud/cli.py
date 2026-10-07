@@ -5,18 +5,20 @@ every call here runs on a short-lived event loop and returns when it finishes.
 """
 
 import argparse
+import io
 import re
 import signal
 import sys
 import time
 import unicodedata
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from PyQt6.QtCore import QCoreApplication, QTimer
 
 from core.cloud import logs
-from core.cloud.api import ApiClient, ApiError, approve_uri
+from core.cloud.api import ApiClient, ApiError, Call, approve_uri
 from core.cloud.constants import (
     BAD_SIGN_IN,
     CALL_TIMEOUT_MS,
@@ -30,6 +32,7 @@ from core.cloud.constants import (
 )
 from core.cloud.models import Account, Snapshot, format_size
 from core.cloud.operations import BackupOperation, Operation, RestoreOperation, SaveCopyOperation
+from core.cloud.restore import RestoreOutcome
 from core.cloud.session import Session
 from core.cloud.workers import (
     device_name,
@@ -43,10 +46,10 @@ class _Failed(Exception):
     """Anything that should print a message and exit non-zero."""
 
 
-_APP: QCoreApplication | None = None
-_INTERRUPTED = False
-_TICKER: QTimer | None = None
-_OPERATION: Any = None
+_qt_app: QCoreApplication | None = None
+_interrupted = False
+_ticker: QTimer | None = None
+_operation: Operation | None = None
 """The operation running on this thread, so the interrupt handler can cancel it."""
 
 
@@ -56,10 +59,10 @@ def _app() -> QCoreApplication:
     A module global on purpose: a QCoreApplication with no Python reference is collected the
     moment it is created.
     """
-    global _APP
-    if _APP is None:
-        _APP = QCoreApplication.instance() or QCoreApplication(sys.argv[:1])
-    return _APP
+    global _qt_app
+    if _qt_app is None:
+        _qt_app = QCoreApplication.instance() or QCoreApplication(sys.argv[:1])
+    return _qt_app
 
 
 def _watch_for_interrupt() -> None:
@@ -67,27 +70,27 @@ def _watch_for_interrupt() -> None:
 
     exec() sits in C++ and only delivers a signal when it returns to the interpreter.
     """
-    global _TICKER
-    if _TICKER is not None:
+    global _ticker
+    if _ticker is not None:
         return
 
     app = _app()
 
-    def interrupted(*_args) -> None:
-        global _INTERRUPTED
-        _INTERRUPTED = True
+    def interrupted(*_args: object) -> None:
+        global _interrupted
+        _interrupted = True
         # Cancel here, not on the flag: a running zip or decrypt never checks it.
-        if _OPERATION is not None:
-            _OPERATION.cancel()
+        if _operation is not None:
+            _operation.cancel()
         app.quit()
 
     signal.signal(signal.SIGINT, interrupted)
     # Ctrl-Break kills the process outright on Windows without this.
     if hasattr(signal, "SIGBREAK"):
         signal.signal(signal.SIGBREAK, interrupted)
-    _TICKER = QTimer()
-    _TICKER.timeout.connect(lambda: None)
-    _TICKER.start(200)
+    _ticker = QTimer()
+    _ticker.timeout.connect(lambda: None)
+    _ticker.start(200)
 
 
 def _sleep(seconds: float) -> None:
@@ -98,25 +101,32 @@ def _sleep(seconds: float) -> None:
     """
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
-        if _INTERRUPTED:
+        if _interrupted:
             raise KeyboardInterrupt
         time.sleep(0.05)
-    if _INTERRUPTED:
+    if _interrupted:
         raise KeyboardInterrupt
 
 
-def _run_operation(operation: Operation):
+def _run_operation(operation: Operation) -> object:
     """Run one Operation to completion and return its result. Ctrl-C cancels it."""
-    global _OPERATION
+    global _operation
     app = _app()
-    outcome: list = []
+    outcome: list[object] = []
     problem: list[str] = []
 
-    operation.status.connect(lambda text: print(text, flush=True))
-    operation.failed.connect(problem.append)
-    operation.finished.connect(lambda result: (outcome.append(result), app.quit()))
+    def on_status(text: str) -> None:
+        print(text, flush=True)
 
-    _OPERATION = operation
+    def on_finished(result: object) -> None:
+        outcome.append(result)
+        app.quit()
+
+    operation.status.connect(on_status)
+    operation.failed.connect(problem.append)
+    operation.finished.connect(on_finished)
+
+    _operation = operation
     try:
         operation.start()
         if not outcome:  # start() settles on the spot when it is refused
@@ -124,10 +134,10 @@ def _run_operation(operation: Operation):
             app.exec()
             ceiling.stop()
     finally:
-        _OPERATION = None
+        _operation = None
         operation.cancel()
 
-    if _INTERRUPTED:
+    if _interrupted:
         raise KeyboardInterrupt
     if problem:
         raise _Failed(problem[0])
@@ -144,19 +154,19 @@ def _ceiling(app: QCoreApplication, timeout_ms: int) -> QTimer:
     return timer
 
 
-def _run_call(call, timeout_ms: int = CALL_TIMEOUT_MS) -> tuple[dict | None, ApiError | None]:
+def _run_call(call: Call, timeout_ms: int = CALL_TIMEOUT_MS) -> tuple[dict[str, Any] | None, ApiError | None]:
     """Run one API call to completion on a short-lived event loop.
 
     Both halves come back so the sign-in poll can tell "still waiting" from "denied".
     """
     app = _app()
-    outcome: dict = {}
+    outcome: dict[str, Any] = {}
 
-    def succeeded(payload) -> None:
-        outcome["payload"] = payload if isinstance(payload, dict) else {}
+    def succeeded(payload: object) -> None:
+        outcome["payload"] = cast(dict[str, Any], payload) if isinstance(payload, dict) else {}
         app.quit()
 
-    def failed(error) -> None:
+    def failed(error: ApiError) -> None:
         outcome["error"] = error
         app.quit()
 
@@ -167,14 +177,14 @@ def _run_call(call, timeout_ms: int = CALL_TIMEOUT_MS) -> tuple[dict | None, Api
     app.exec()
     ceiling.stop()
 
-    if _INTERRUPTED:
+    if _interrupted:
         call.abort()
         raise KeyboardInterrupt
 
     return outcome.get("payload"), outcome.get("error")
 
 
-def _wait(call, timeout_ms: int = CALL_TIMEOUT_MS) -> dict:
+def _wait(call: Call, timeout_ms: int = CALL_TIMEOUT_MS) -> dict[str, Any]:
     payload, error = _run_call(call, timeout_ms)
     if error is not None:
         raise _Failed(str(error))
@@ -473,7 +483,7 @@ def cmd_restore(wanted: str, assume_yes: bool) -> int:
         return 1
 
     # After the prompt, so waiting on stdin does not hold the lock.
-    result = _run_operation(RestoreOperation(client, session, snapshot.id))
+    result = cast(RestoreOutcome, _run_operation(RestoreOperation(client, session, snapshot.id)))
 
     print(f"Restored {len(result.restore.restored)} files.")
     if result.bar_was_running and not result.bar_restarted:
@@ -532,7 +542,8 @@ def _parser() -> argparse.ArgumentParser:
 def run(argv: list[str]) -> int:
     # A Windows console is cp1252, so an emoji in a note would abort the command mid-table.
     for stream in (sys.stdout, sys.stderr):
-        stream.reconfigure(encoding="utf-8", errors="replace")
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(encoding="utf-8", errors="replace")
 
     parser = _parser()
     args = parser.parse_args(argv)
@@ -542,7 +553,7 @@ def run(argv: list[str]) -> int:
 
     # Each entry reads its own arguments off the namespace, so adding a command is one line
     # here and one in _parser rather than a branch in the middle of the error handling.
-    actions = {
+    actions: dict[str, Callable[[argparse.Namespace], int]] = {
         "auth": lambda a: cmd_auth(),
         "logout": lambda a: cmd_logout(),
         "status": lambda a: cmd_status(),

@@ -1,70 +1,23 @@
 import ctypes
 import logging
 from ctypes import POINTER, byref, c_void_p, wintypes
+from typing import Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from core.events.service import EventService
+from core.utils.win32.bindings.ntdll import (
+    RtlSubscribeWnfStateChangeNotification,
+    RtlUnsubscribeWnfStateChangeNotification,
+    WnfCallbackType,
+)
+from core.utils.win32.bindings.ole32 import CoCreateInstance, CoInitialize, CoTaskMemFree, CoUninitialize
 from core.utils.win32.structs import GUID
-
-# Load isolated DLL instances to avoid mutating global bindings
-_ole32 = ctypes.WinDLL("ole32")
-_ntdll = ctypes.WinDLL("ntdll")
+from core.utils.win32.typecheck import CFunctionType
 
 COM_CLASS_ID_QUIET_HOURS = GUID(0xF53321FA, 0x34F8, 0x4B7F, (0xB9, 0xA3, 0x36, 0x18, 0x77, 0xCB, 0x94, 0xCF))
 COM_INTERFACE_ID_QUIET_HOURS = GUID(0x6BFF4732, 0x81EC, 0x4FFB, (0xAE, 0x67, 0xB6, 0xC1, 0xBC, 0x29, 0x63, 0x1F))
-
-# COM initialize/uninitialize signatures
-_CoInitialize = _ole32.CoInitialize
-_CoInitialize.restype = wintypes.HRESULT
-_CoInitialize.argtypes = [c_void_p]
-
-_CoUninitialize = _ole32.CoUninitialize
-_CoUninitialize.restype = None
-_CoUninitialize.argtypes = []
-
-_CoCreateInstance = _ole32.CoCreateInstance
-_CoCreateInstance.restype = wintypes.HRESULT
-_CoCreateInstance.argtypes = [
-    POINTER(GUID),
-    c_void_p,
-    wintypes.DWORD,
-    POINTER(GUID),
-    POINTER(c_void_p),
-]
-
-_CoTaskMemFree = _ole32.CoTaskMemFree
-_CoTaskMemFree.restype = None
-_CoTaskMemFree.argtypes = [c_void_p]
-
-# WNF signatures
-WnfCallbackType = ctypes.WINFUNCTYPE(
-    ctypes.c_long,  # NTSTATUS
-    ctypes.c_uint64,  # StateName
-    ctypes.c_ulong,  # ChangeStamp
-    c_void_p,  # TypeId
-    c_void_p,  # CallbackContext
-    c_void_p,  # Buffer
-    ctypes.c_ulong,  # BufferSize
-)
-
-_RtlSubscribeWnfStateChangeNotification = _ntdll.RtlSubscribeWnfStateChangeNotification
-_RtlSubscribeWnfStateChangeNotification.restype = ctypes.c_long
-_RtlSubscribeWnfStateChangeNotification.argtypes = [
-    POINTER(c_void_p),  # Subscription
-    ctypes.c_uint64,  # StateName
-    ctypes.c_ulong,  # ChangeStamp
-    WnfCallbackType,  # Callback
-    c_void_p,  # CallbackContext
-    c_void_p,  # TypeId
-    ctypes.c_ulong,  # SerializationGroup
-    ctypes.c_ulong,  # Unknown
-]
-
-_RtlUnsubscribeWnfStateChangeNotification = _ntdll.RtlUnsubscribeWnfStateChangeNotification
-_RtlUnsubscribeWnfStateChangeNotification.restype = ctypes.c_long
-_RtlUnsubscribeWnfStateChangeNotification.argtypes = [c_void_p]
 
 
 class DndService:
@@ -74,7 +27,7 @@ class DndService:
     WNF_STATE_QUIET_HOURS_CHANGED = 0xD83063EA3BF1C75
 
     _wnf_subscription_handle = c_void_p()
-    _wnf_callback_reference = None
+    _wnf_callback_reference: CFunctionType | None = None
     _wnf_is_active = False
 
     PROFILES = {
@@ -85,18 +38,20 @@ class DndService:
     MODES = {v: k for k, v in PROFILES.items()}
 
     @staticmethod
-    def _get_com_method_from_vtable(com_object_pointer, vtable_index, return_type, *argument_types):
+    def _get_com_method_from_vtable(
+        com_object_pointer: c_void_p, vtable_index: int, return_type: type[Any], *argument_types: type[Any]
+    ) -> CFunctionType:
         """Extracts a C function pointer from a COM object's virtual method table."""
         vtable = ctypes.cast(com_object_pointer, POINTER(POINTER(c_void_p)))
         return ctypes.WINFUNCTYPE(return_type, *argument_types)(vtable[0][vtable_index])
 
     @classmethod
-    def _connect_to_quiet_hours_service(cls):
+    def _connect_to_quiet_hours_service(cls) -> c_void_p:
         """Initializes COM and creates an instance of the QuietHoursSettings COM service."""
-        _CoInitialize(None)
+        CoInitialize(None)
         try:
             com_object_pointer = c_void_p()
-            hresult_code = _CoCreateInstance(
+            hresult_code = CoCreateInstance(
                 byref(COM_CLASS_ID_QUIET_HOURS),
                 None,
                 4,  # CLSCTX_LOCAL_SERVER
@@ -107,18 +62,18 @@ class DndService:
                 raise RuntimeError(f"CoCreateInstance failed with status: 0x{hresult_code & 0xFFFFFFFF:08X}")
             return com_object_pointer
         except Exception:
-            _CoUninitialize()
+            CoUninitialize()
             raise
 
     @classmethod
-    def _release_com_object(cls, com_object_pointer):
+    def _release_com_object(cls, com_object_pointer: c_void_p) -> None:
         """Calls the Release() method on the COM object and uninitializes COM."""
         try:
             vtable = ctypes.cast(com_object_pointer, POINTER(POINTER(c_void_p)))
             release_method = ctypes.WINFUNCTYPE(wintypes.ULONG, c_void_p)(vtable[0][2])
             release_method(com_object_pointer)
         finally:
-            _CoUninitialize()
+            CoUninitialize()
 
     @classmethod
     def get_status(cls) -> str:
@@ -141,7 +96,7 @@ class DndService:
                         return cls.PROFILES.get(profile_str, "unknown")
                 finally:
                     if profile_id_buffer.value:
-                        _CoTaskMemFree(profile_id_buffer)
+                        CoTaskMemFree(profile_id_buffer)
             return "unknown"
         except Exception:
             return "unknown"
@@ -170,7 +125,14 @@ class DndService:
             cls._release_com_object(com_object_pointer)
 
     @staticmethod
-    def _wnf_callback(state_name, change_stamp, type_id, context, buffer, buffer_size):
+    def _wnf_callback(
+        state_name: int,
+        change_stamp: int,
+        type_id: int | None,
+        context: int | None,
+        buffer: int | None,
+        buffer_size: int,
+    ) -> int:
         try:
             status = DndService.get_status()
             EventService().emit_event("dnd_status_changed", status)
@@ -188,9 +150,9 @@ class DndService:
             # Store the callback reference so it isn't garbage collected
             cls._wnf_callback_reference = WnfCallbackType(cls._wnf_callback)
 
-            status = _RtlSubscribeWnfStateChangeNotification(
+            status = RtlSubscribeWnfStateChangeNotification(
                 byref(cls._wnf_subscription_handle),
-                ctypes.c_uint64(cls.WNF_STATE_QUIET_HOURS_CHANGED),
+                cls.WNF_STATE_QUIET_HOURS_CHANGED,
                 0,
                 cls._wnf_callback_reference,
                 None,
@@ -202,10 +164,9 @@ class DndService:
                 cls._wnf_is_active = True
                 logging.info("DndService initialized...")
                 # Ensure cleanup is run when YASB exits
-                if QApplication.instance():
-                    QApplication.instance().aboutToQuit.connect(
-                        cls.shutdown_wnf_listener, Qt.ConnectionType.UniqueConnection
-                    )
+                app = QApplication.instance()
+                if app:
+                    app.aboutToQuit.connect(cls.shutdown_wnf_listener, Qt.ConnectionType.UniqueConnection)  # pyright: ignore[reportCallIssue]
             else:
                 logging.warning("DndService failed with status: 0x%08X", status & 0xFFFFFFFF)
         except Exception:
@@ -217,7 +178,7 @@ class DndService:
         if not cls._wnf_is_active:
             return
 
-        status = _RtlUnsubscribeWnfStateChangeNotification(cls._wnf_subscription_handle)
+        status = RtlUnsubscribeWnfStateChangeNotification(cls._wnf_subscription_handle)
         if status != 0:
             logging.warning("DndService shutdown failed with status: 0x%08X", status & 0xFFFFFFFF)
         else:

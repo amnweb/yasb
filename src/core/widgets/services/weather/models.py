@@ -2,7 +2,7 @@
 
 import re
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 def _strip_percent(v: object) -> object:
@@ -95,11 +95,11 @@ class HourForecast(_WeatherBase):
 class ForecastDayEntry(_WeatherBase):
     date: str = ""
     day: ForecastDay = ForecastDay()
-    hour: list[HourForecast] = Field(default_factory=list)
+    hour: list[HourForecast] = []
 
 
 class Forecast(_WeatherBase):
-    forecastday: list[ForecastDayEntry] = Field(default_factory=list)
+    forecastday: list[ForecastDayEntry] = []
 
 
 class Alert(_WeatherBase):
@@ -109,7 +109,7 @@ class Alert(_WeatherBase):
 
 
 class Alerts(_WeatherBase):
-    alert: list[Alert] = Field(default_factory=list)
+    alert: list[Alert] = []
 
 
 class WeatherApiResponse(_WeatherBase):

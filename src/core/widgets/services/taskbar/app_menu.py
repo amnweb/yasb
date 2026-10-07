@@ -8,13 +8,15 @@ including app-specific menu items for File Explorer, Recycle Bin, Edge, Firefox,
 import json
 import logging
 import os
+from functools import partial
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import pythoncom
 import win32gui
 from humanize import naturalsize
 from PyQt6.QtCore import QPoint, Qt
-from PyQt6.QtGui import QCursor
+from PyQt6.QtGui import QAction, QCursor
 from PyQt6.QtWidgets import QMenu
 from win32comext.shell import shell, shellcon
 
@@ -22,8 +24,32 @@ from core.utils.win32.constants import KnownCLSID
 from core.utils.win32.utils import apply_qmenu_style
 from core.utils.win32.window_actions import close_application
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from _win32typing import PyIDL  # pyright: ignore[reportMissingModuleSource]
+
+    from core.widgets.services.recycle_bin.recycle_bin_monitor import EmptyBinThread
+    from core.widgets.yasb.taskbar import TaskbarWidget
+
 # Global reference to keep thread alive
-_empty_bin_thread_ref = None
+_empty_bin_thread_ref: EmptyBinThread | None = None
+
+
+class LaunchCallback(Protocol):
+    def __call__(self, unique_id_or_hwnd: int | str, extra_arguments: str = "") -> None: ...
+
+
+def _launch(on_launch: LaunchCallback, target: str, extra_arguments: str, checked: bool = False) -> None:
+    on_launch(target, extra_arguments=extra_arguments)
+
+
+def _add_launch_action(
+    menu: QMenu, text: str, on_launch: LaunchCallback, target: str, extra_arguments: str = ""
+) -> None:
+    action = QAction(text, menu)
+    menu.addAction(action)
+    action.triggered.connect(partial(_launch, on_launch, target, extra_arguments))
 
 
 def _empty_recycle_bin() -> None:
@@ -58,7 +84,7 @@ def get_explorer_pinned_folders() -> list[tuple[str, str]]:
     try:
         pythoncom.CoInitialize()
 
-        pinned_folders = []
+        pinned_folders: list[tuple[str, str]] = []
 
         try:
             # Get desktop folder first
@@ -66,26 +92,45 @@ def get_explorer_pinned_folders() -> list[tuple[str, str]]:
 
             # Parse Quick Access using its GUID
             quick_access_path = f"shell:::{{{KnownCLSID.QUICK_ACCESS}}}"
-            pidl = shell.SHParseDisplayName(quick_access_path, 0)
+            pidl = shell.SHParseDisplayName(quick_access_path, 0)  # pyright: ignore[reportUnknownMemberType]
 
             # Bind to Quick Access folder
-            quick_access_folder = desktop.BindToObject(pidl[0], None, shell.IID_IShellFolder)
+            quick_access_folder = desktop.BindToObject(
+                pidl[0],  # pyright: ignore[reportArgumentType]
+                None,  # pyright: ignore[reportArgumentType]
+                shell.IID_IShellFolder,
+            )
 
             # Enumerate folders in Quick Access
-            enum_objects = quick_access_folder.EnumObjects(0, shellcon.SHCONTF_FOLDERS | shellcon.SHCONTF_INCLUDEHIDDEN)
+            enum_objects = quick_access_folder.EnumObjects(  # pyright: ignore[reportUnknownMemberType]
+                0, shellcon.SHCONTF_FOLDERS | shellcon.SHCONTF_INCLUDEHIDDEN
+            )
 
             # Iterate through all items
-            for pidl_item in enum_objects:
+            for pidl_item in cast("Iterable[PyIDL]", enum_objects):
                 try:
                     # Get display name
-                    display_name = quick_access_folder.GetDisplayNameOf(pidl_item, shellcon.SHGDN_NORMAL)
+                    display_name = cast(
+                        str,
+                        quick_access_folder.GetDisplayNameOf(  # pyright: ignore[reportUnknownMemberType]
+                            pidl_item, shellcon.SHGDN_NORMAL
+                        ),
+                    )
 
                     # Get file system path using FORPARSING flag
-                    fs_path = quick_access_folder.GetDisplayNameOf(pidl_item, shellcon.SHGDN_FORPARSING)
+                    fs_path = cast(
+                        str,
+                        quick_access_folder.GetDisplayNameOf(  # pyright: ignore[reportUnknownMemberType]
+                            pidl_item, shellcon.SHGDN_FORPARSING
+                        ),
+                    )
 
                     # Check attributes to ensure it's a folder
-                    attrs = quick_access_folder.GetAttributesOf(
-                        [pidl_item], shellcon.SFGAO_FOLDER | shellcon.SFGAO_FILESYSTEM
+                    attrs = cast(
+                        int,
+                        quick_access_folder.GetAttributesOf(  # pyright: ignore[reportUnknownMemberType]
+                            (pidl_item,), shellcon.SFGAO_FOLDER | shellcon.SFGAO_FILESYSTEM
+                        ),
                     )
                     is_folder = bool(attrs & shellcon.SFGAO_FOLDER)
                     is_filesystem = bool(attrs & shellcon.SFGAO_FILESYSTEM)
@@ -115,7 +160,7 @@ def get_explorer_pinned_folders() -> list[tuple[str, str]]:
         return []
 
 
-def get_windows_terminal_profiles(identifier: str = None) -> list[tuple[str, str]]:
+def get_windows_terminal_profiles(identifier: str | None = None) -> list[tuple[str, str]]:
     """
     Get Windows Terminal profiles from settings.json.
     Automatically detects whether it's stable, preview, or portable version from the identifier.
@@ -164,7 +209,7 @@ def get_windows_terminal_profiles(identifier: str = None) -> list[tuple[str, str
         with open(settings_path, encoding="utf-8") as f:
             settings = json.load(f)
 
-        profiles = []
+        profiles: list[tuple[str, str]] = []
 
         # Get profiles list
         if "profiles" in settings and "list" in settings["profiles"]:
@@ -186,7 +231,7 @@ def get_windows_terminal_profiles(identifier: str = None) -> list[tuple[str, str
         return []
 
 
-def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
+def show_context_menu(taskbar_widget: TaskbarWidget, hwnd: int, pos: QPoint) -> QMenu | None:
     """
     Show context menu for a taskbar button.
 
@@ -197,7 +242,7 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
     """
     try:
         # Get widget and temporarily unset its cursor
-        widget = taskbar_widget._hwnd_to_widget.get(hwnd)
+        widget = taskbar_widget.hwnd_to_widget.get(hwnd)
         if widget:
             try:
                 widget.unsetCursor()
@@ -206,7 +251,7 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
 
         # Determine if this is a pinned-only button (not running)
         is_pinned_only = hwnd < 0
-        is_pinned = is_pinned_only or taskbar_widget._is_app_pinned(hwnd)
+        is_pinned = is_pinned_only or taskbar_widget.is_app_pinned(hwnd)
 
         # Get unique_id
         unique_id = None
@@ -217,20 +262,17 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
                 unique_id = widget.property("unique_id")
         elif hwnd > 0:
             # For running pinned apps, get unique_id from running_pinned
-            if is_pinned and hwnd in taskbar_widget._pin_manager.running_pinned:
-                unique_id = taskbar_widget._pin_manager.running_pinned.get(hwnd)
+            if is_pinned and hwnd in taskbar_widget.pin_manager.running_pinned:
+                unique_id = taskbar_widget.pin_manager.running_pinned.get(hwnd)
             elif not is_pinned:
                 # For running but NOT pinned apps, get the real unique_id
                 from core.widgets.services.taskbar.pin_manager import PinManager
 
                 # Get full window_data from ApplicationWindow if available
-                window_data = {"process_name": "", "title": ""}
-                if (
-                    hasattr(taskbar_widget, "_task_manager")
-                    and taskbar_widget._task_manager
-                    and hwnd in taskbar_widget._task_manager._windows
-                ):
-                    app_window = taskbar_widget._task_manager._windows[hwnd]
+                window_data: dict[str, Any] = {"process_name": "", "title": ""}
+                task_manager = taskbar_widget.task_manager
+                app_window = task_manager.get_window(hwnd) if task_manager else None
+                if app_window is not None:
                     window_data = app_window.as_dict()
                 elif widget:
                     window_data = {
@@ -271,68 +313,79 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
 
         # Add app-specific menu items
         if is_recycle_bin and is_pinned:
-            _add_recycle_bin_menu_items(menu, taskbar_widget._launch_pinned_app)
+            _add_recycle_bin_menu_items(menu, taskbar_widget.launch_pinned_app)
         elif is_explorer:
-            _add_explorer_menu_items(menu, taskbar_widget._launch_pinned_app)
+            _add_explorer_menu_items(menu, taskbar_widget.launch_pinned_app)
         elif is_chromium_browser and unique_id:
-            _add_chromium_browser_menu_items(menu, unique_id, taskbar_widget._launch_pinned_app)
+            _add_chromium_browser_menu_items(menu, unique_id, taskbar_widget.launch_pinned_app)
         elif is_firefox_browser and unique_id:
-            _add_firefox_browser_menu_items(menu, unique_id, taskbar_widget._launch_pinned_app)
+            _add_firefox_browser_menu_items(menu, unique_id, taskbar_widget.launch_pinned_app)
         elif is_vscode and unique_id:
-            _add_vscode_menu_items(menu, unique_id, taskbar_widget._launch_pinned_app)
+            _add_vscode_menu_items(menu, unique_id, taskbar_widget.launch_pinned_app)
         elif is_terminal and unique_id:
-            _add_terminal_menu_items(menu, unique_id, taskbar_widget._launch_pinned_app)
+            _add_terminal_menu_items(menu, unique_id, taskbar_widget.launch_pinned_app)
 
         menu.addSeparator()
 
         # Open App (only show for pinned apps, not for running non-pinned apps)
         if is_pinned and not is_explorer:
-            open_action = menu.addAction("Open app")
-            open_action.triggered.connect(lambda: taskbar_widget._launch_pinned_app(hwnd))
+            open_action = QAction("Open app", menu)
+            menu.addAction(open_action)
+            open_action.triggered.connect(lambda: taskbar_widget.launch_pinned_app(hwnd))
 
         # Pin/Unpin
         if is_pinned:
             menu.addSeparator()
-            pin_action = menu.addAction("Unpin from taskbar")
+            pin_action = QAction("Unpin from taskbar", menu)
+            menu.addAction(pin_action)
             if is_pinned_only:
-                pin_action.triggered.connect(lambda: taskbar_widget._unpin_pinned_only_app(unique_id, hwnd))
+                pin_action.triggered.connect(lambda: taskbar_widget.unpin_pinned_only_app(unique_id or "", hwnd))
             else:
-                pin_action.triggered.connect(lambda: taskbar_widget._unpin_app(hwnd))
+                pin_action.triggered.connect(lambda: taskbar_widget.unpin_app(hwnd))
         else:
-            pin_action = menu.addAction("Pin to taskbar")
-            pin_action.triggered.connect(lambda: taskbar_widget._pin_app(hwnd))
+            pin_action = QAction("Pin to taskbar", menu)
+            menu.addAction(pin_action)
+            pin_action.triggered.connect(lambda: taskbar_widget.pin_app(hwnd))
             menu.addSeparator()
 
         # End task and Close window (only for running apps)
         if not is_pinned_only and win32gui.IsWindow(hwnd):
-            end_task_action = menu.addAction("End task")
+            end_task_action = QAction("End task", menu)
+            menu.addAction(end_task_action)
             end_task_action.triggered.connect(lambda: close_application(hwnd, force=True))
 
-            close_action = menu.addAction("Close window")
+            close_action = QAction("Close window", menu)
+            menu.addAction(close_action)
             close_action.triggered.connect(lambda: close_application(hwnd))
 
-            group_hwnds = taskbar_widget._group_hwnds.get(taskbar_widget._hwnd_to_group.get(hwnd, ""), [])
+            group_hwnds = taskbar_widget.group_hwnds.get(taskbar_widget.hwnd_to_group.get(hwnd, ""), [])
             if len(group_hwnds) > 1:
 
-                def close_all(_checked=False, hwnds=list(group_hwnds)):
+                def close_all(_checked: bool = False, hwnds: list[int] = list(group_hwnds)) -> None:
                     for group_hwnd in hwnds:
                         close_application(group_hwnd)
 
-                menu.addAction("Close all windows").triggered.connect(close_all)
+                close_all_action = QAction("Close all windows", menu)
+                menu.addAction(close_all_action)
+                close_all_action.triggered.connect(close_all)
 
         # Adjust menu position so it appears just outside the bar
         margin = 6
         menu_size = menu.sizeHint()
 
         bar_widget = taskbar_widget.window()
+        if bar_widget is None:
+            return None
         bar_top_left = bar_widget.mapToGlobal(bar_widget.rect().topLeft())
         bar_height = bar_widget.height()
 
         button_center = widget.mapToGlobal(widget.rect().center()) if widget else pos
         new_x = button_center.x() - menu_size.width() / 2
 
-        bar_alignment = getattr(bar_widget, "_alignment", {}) if bar_widget else {}
-        bar_position = bar_alignment.get("position") if isinstance(bar_alignment, dict) else None
+        bar_alignment: object = getattr(bar_widget, "alignment", {}) if bar_widget else {}
+        bar_position = (
+            cast(dict[str, object], bar_alignment).get("position") if isinstance(bar_alignment, dict) else None
+        )
         if bar_position == "top":
             new_y = bar_top_left.y() + bar_height + margin
         else:
@@ -362,7 +415,7 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
         return None
 
 
-def _add_recycle_bin_menu_items(menu: QMenu, on_launch_callback) -> None:
+def _add_recycle_bin_menu_items(menu: QMenu, on_launch_callback: LaunchCallback) -> None:
     """Add Recycle Bin specific menu items."""
     # Get recycle bin info from singleton monitor
     try:
@@ -370,7 +423,7 @@ def _add_recycle_bin_menu_items(menu: QMenu, on_launch_callback) -> None:
 
         monitor = RecycleBinMonitor.get_instance()
         # Use cached info (fast, non-blocking)
-        info = monitor._last_info
+        info = monitor.last_info
         num_items = int(info.get("num_items", 0))
         size_bytes = int(info.get("size_bytes", 0))
     except Exception:
@@ -382,18 +435,19 @@ def _add_recycle_bin_menu_items(menu: QMenu, on_launch_callback) -> None:
         info_text = (
             f"{num_items} item{'s' if num_items != 1 else ''} ({naturalsize(size_bytes, binary=True, format='%.2f')})"
         )
-        info_action = menu.addAction(info_text)
+        info_action = QAction(info_text, menu)
+        menu.addAction(info_action)
         info_action.setEnabled(False)
         menu.addSeparator()
 
     # Add "Open" option to open Recycle Bin
-    open_action = menu.addAction("Open")
-    open_action.triggered.connect(lambda: on_launch_callback(f"explorer:::{{{KnownCLSID.RECYCLE_BIN}}}"))
+    _add_launch_action(menu, "Open", on_launch_callback, f"explorer:::{{{KnownCLSID.RECYCLE_BIN}}}")
 
     menu.addSeparator()
 
     # Add "Empty Recycle Bin" option
-    empty_action = menu.addAction("Empty Recycle Bin")
+    empty_action = QAction("Empty Recycle Bin", menu)
+    menu.addAction(empty_action)
 
     # Check if Recycle Bin is empty and disable the option if it is
     is_empty = num_items == 0 and size_bytes == 0
@@ -405,7 +459,7 @@ def _add_recycle_bin_menu_items(menu: QMenu, on_launch_callback) -> None:
     menu.addSeparator()
 
 
-def _add_explorer_menu_items(menu: QMenu, on_launch_callback) -> None:
+def _add_explorer_menu_items(menu: QMenu, on_launch_callback: LaunchCallback) -> None:
     """Add File Explorer specific menu items."""
     # Get pinned folders from File Explorer's Jump List
     pinned_folders = get_explorer_pinned_folders()
@@ -413,19 +467,16 @@ def _add_explorer_menu_items(menu: QMenu, on_launch_callback) -> None:
     if pinned_folders:
         # Add pinned folders directly to menu
         for folder_name, folder_path in pinned_folders:
-            action = menu.addAction(folder_name)
             # Use explorer: prefix to indicate this is a folder launch
-            action.triggered.connect(lambda _, p=folder_path: on_launch_callback(f"explorer:{p}"))
+            _add_launch_action(menu, folder_name, on_launch_callback, f"explorer:{folder_path}")
         menu.addSeparator()
 
     # Always add "File Explorer" option - opens "This PC"
-    menu.addAction("File Explorer").triggered.connect(
-        lambda: on_launch_callback("explorer:::{20D04FE0-3AEA-1069-A2D8-08002B30309D}")
-    )
+    _add_launch_action(menu, "File Explorer", on_launch_callback, "explorer:::{20D04FE0-3AEA-1069-A2D8-08002B30309D}")
     menu.addSeparator()
 
 
-def _add_chromium_browser_menu_items(menu: QMenu, identifier: str | None, on_launch_callback) -> None:
+def _add_chromium_browser_menu_items(menu: QMenu, identifier: str | None, on_launch_callback: LaunchCallback) -> None:
     """Add Chromium-based browser specific menu items (Edge, Chrome)."""
     if identifier:
         # Determine which browser (Chrome uses --incognito, Edge uses --inprivate)
@@ -434,14 +485,12 @@ def _add_chromium_browser_menu_items(menu: QMenu, identifier: str | None, on_lau
         private_flag = "--incognito" if is_chrome else "--inprivate"
         private_label = "New Incognito Window" if is_chrome else "New InPrivate Window"
 
-        menu.addAction("New Window").triggered.connect(lambda _: on_launch_callback(identifier, extra_arguments=""))
-        menu.addAction(private_label).triggered.connect(
-            lambda _, flag=private_flag: on_launch_callback(identifier, extra_arguments=flag)
-        )
+        _add_launch_action(menu, "New Window", on_launch_callback, identifier)
+        _add_launch_action(menu, private_label, on_launch_callback, identifier, private_flag)
         menu.addSeparator()
 
 
-def _add_firefox_browser_menu_items(menu: QMenu, identifier: str | None, on_launch_callback) -> None:
+def _add_firefox_browser_menu_items(menu: QMenu, identifier: str | None, on_launch_callback: LaunchCallback) -> None:
     """Add Firefox-based browser specific menu items (Firefox, Zen)."""
     if identifier:
         # Check if this is UWP (AUMID) or Win32 (path)
@@ -449,29 +498,23 @@ def _add_firefox_browser_menu_items(menu: QMenu, identifier: str | None, on_laun
 
         if is_uwp:
             # For UWP browsers, format AUMID directly with suffix
-            menu.addAction("New Window").triggered.connect(lambda _: on_launch_callback(identifier))
-            menu.addAction("New Private Window").triggered.connect(
-                lambda _: on_launch_callback(f"{identifier};PrivateBrowsingAUMID")
-            )
+            _add_launch_action(menu, "New Window", on_launch_callback, identifier)
+            _add_launch_action(menu, "New Private Window", on_launch_callback, f"{identifier};PrivateBrowsingAUMID")
         else:
             # For Win32 browsers, use command-line arguments
-            menu.addAction("New Window").triggered.connect(
-                lambda _: on_launch_callback(identifier, extra_arguments="-new-window")
-            )
-            menu.addAction("New Private Window").triggered.connect(
-                lambda _: on_launch_callback(identifier, extra_arguments="-private-window")
-            )
+            _add_launch_action(menu, "New Window", on_launch_callback, identifier, "-new-window")
+            _add_launch_action(menu, "New Private Window", on_launch_callback, identifier, "-private-window")
         menu.addSeparator()
 
 
-def _add_vscode_menu_items(menu: QMenu, identifier: str | None, on_launch_callback) -> None:
+def _add_vscode_menu_items(menu: QMenu, identifier: str | None, on_launch_callback: LaunchCallback) -> None:
     """Add VS Code specific menu items (VS Code and VS Code Insiders)."""
     if identifier:
-        menu.addAction("New Window").triggered.connect(lambda _: on_launch_callback(identifier, extra_arguments="-n"))
+        _add_launch_action(menu, "New Window", on_launch_callback, identifier, "-n")
         menu.addSeparator()
 
 
-def _add_terminal_menu_items(menu: QMenu, identifier: str | None, on_launch_callback) -> None:
+def _add_terminal_menu_items(menu: QMenu, identifier: str | None, on_launch_callback: LaunchCallback) -> None:
     """Add Windows Terminal specific menu items.
 
     Args:
@@ -486,12 +529,9 @@ def _add_terminal_menu_items(menu: QMenu, identifier: str | None, on_launch_call
         if profiles:
             # Add each profile as a menu item
             for profile_name, profile_guid in profiles:
-                action = menu.addAction(profile_name)
-                action.triggered.connect(
-                    lambda _, guid=profile_guid: on_launch_callback(identifier, extra_arguments=f"-p {guid}")
-                )
+                _add_launch_action(menu, profile_name, on_launch_callback, identifier, f"-p {profile_guid}")
             menu.addSeparator()
 
         # Add "New Window" option
-        menu.addAction("New Window").triggered.connect(lambda _: on_launch_callback(identifier, extra_arguments=""))
+        _add_launch_action(menu, "New Window", on_launch_callback, identifier)
         menu.addSeparator()

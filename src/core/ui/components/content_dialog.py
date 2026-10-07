@@ -1,16 +1,19 @@
+from collections.abc import Callable
 from enum import IntEnum
+from typing import Any, override
 
+import PyQt6.QtCore as QtCore
 from PyQt6.QtCore import (
     QEasingCurve,
     QEvent,
+    QObject,
     QParallelAnimationGroup,
     QPropertyAnimation,
     QRect,
     Qt,
-    pyqtProperty,
     pyqtSignal,
 )
-from PyQt6.QtGui import QColor, QFont, QPainter
+from PyQt6.QtGui import QColor, QFont, QKeyEvent, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -24,6 +27,9 @@ from PyQt6.QtWidgets import (
 
 from core.ui.components.button import Button
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
+
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _MIN_W, _MAX_W = 320, 548
 _MIN_H, _MAX_H = 184, 756
@@ -56,7 +62,7 @@ class ContentDialogButton(IntEnum):
     CLOSE = 3
 
 
-class _SmokeLayer(QWidget):
+class SmokeLayer(QWidget):
     """Semi-transparent overlay on the parent."""
 
     clicked = pyqtSignal()
@@ -65,24 +71,27 @@ class _SmokeLayer(QWidget):
         super().__init__(parent)
         self._opacity = 0.0
 
-    @pyqtProperty(float)
-    def smoke_opacity(self) -> float:
+    def _get_smoke_opacity(self) -> float:
         return self._opacity
 
-    @smoke_opacity.setter
-    def smoke_opacity(self, value: float) -> None:
+    def _set_smoke_opacity(self, value: float) -> None:
         self._opacity = value
         self.update()
 
-    def paintEvent(self, _event) -> None:
+    smoke_opacity: float = pyqtProperty(float, _get_smoke_opacity, _set_smoke_opacity)
+
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         if self._opacity > 0:
             painter = QPainter(self)
             painter.fillRect(self.rect(), QColor(0, 0, 0, int(76 * self._opacity)))
             painter.end()
 
-    def mousePressEvent(self, event) -> None:
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
         self.clicked.emit()
-        event.accept()
+        if a0 is not None:
+            a0.accept()
 
 
 class ContentDialog(QWidget):
@@ -128,7 +137,7 @@ class ContentDialog(QWidget):
         self._default_button = default_button
         self._is_closing = False
         self._host = parent
-        self._smoke: _SmokeLayer | None = None
+        self._smoke: SmokeLayer | None = None
         self._natural_w = _MIN_W
         self._natural_h = _MIN_H
         self._center_y = 0
@@ -228,7 +237,9 @@ class ContentDialog(QWidget):
         self._container.setMaximumSize(_MAX_W, _MAX_H)
 
         self._apply_styles()
-        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     def set_title(self, text: str) -> None:
         self._title_label.setText(text)
@@ -296,7 +307,7 @@ class ContentDialog(QWidget):
     def show_dialog(self) -> None:
         parent = self._host
 
-        self._smoke = _SmokeLayer(parent)
+        self._smoke = SmokeLayer(parent)
         self._smoke.setGeometry(parent.rect())
         self._smoke.show()
         self._smoke.raise_()
@@ -315,30 +326,29 @@ class ContentDialog(QWidget):
         self._is_closing = True
         self._play_close()
 
-    @pyqtProperty(int)
-    def slide_offset(self) -> int:
+    def _get_slide_offset(self) -> int:
         return self._slide_offset_val
 
-    @slide_offset.setter
-    def slide_offset(self, value: int) -> None:
+    def _set_slide_offset(self, value: int) -> None:
         self._slide_offset_val = value
         self._position_center(value)
 
+    slide_offset: int = pyqtProperty(int, _get_slide_offset, _set_slide_offset)
+
     def _position_center(self, y_offset: int = 0) -> None:
-        if self._host is None:
-            return
         centre = self._host.mapToGlobal(self._host.rect().center())
         x = centre.x() - self.width() // 2
         y = centre.y() - self.height() // 2 + y_offset
         self.move(x, y)
         self._center_y = centre.y() - self.height() // 2
 
-    def eventFilter(self, obj, event) -> bool:
-        if obj is self._host and event.type() in (QEvent.Type.Resize, QEvent.Type.Move):
-            if self._smoke and event.type() == QEvent.Type.Resize:
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        if a0 is self._host and a1 is not None and a1.type() in (QEvent.Type.Resize, QEvent.Type.Move):
+            if self._smoke and a1.type() == QEvent.Type.Resize:
                 self._smoke.setGeometry(self._host.rect())
             self._position_center(0)
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
     def _play_open(self) -> None:
         group = QParallelAnimationGroup(self)
@@ -411,10 +421,13 @@ class ContentDialog(QWidget):
         self.close_button_click.emit()
         self.hide_dialog()
 
-    def keyPressEvent(self, event) -> None:
-        if event.key() == Qt.Key.Key_Escape:
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is None:
+            return
+        if a0.key() == Qt.Key.Key_Escape:
             self._on_close()
-        elif event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+        elif a0.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             match self._default_button:
                 case ContentDialogButton.PRIMARY if self._primary_btn:
                     self._on_primary()
@@ -422,8 +435,10 @@ class ContentDialog(QWidget):
                     self._on_secondary()
                 case ContentDialogButton.CLOSE if self._close_btn:
                     self._on_close()
+                case _:
+                    pass
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
     def _on_theme_changed(self) -> None:
         key = theme_key()

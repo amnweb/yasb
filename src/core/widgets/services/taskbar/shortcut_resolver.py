@@ -134,7 +134,7 @@ def find_shortcut_by_name(
 ) -> tuple[str, str] | None:
     """Find a Start Menu shortcut whose filename matches any candidate name."""
 
-    normalized = []
+    normalized: list[str] = []
     for name in candidate_names:
         canonical = canonical_display_key(name)
         if canonical:
@@ -227,7 +227,7 @@ def find_app_shortcut(
     # Check cache first to avoid repeated filesystem scans
     for key in target_variants:
         cached_shortcut_path = shortcut_cache.get(key)
-        if cached_shortcut_path and isinstance(cached_shortcut_path, str):
+        if cached_shortcut_path:
             if os.path.exists(cached_shortcut_path):
                 return cached_shortcut_path, Path(cached_shortcut_path).stem
             shortcut_cache.pop(key, None)
@@ -293,7 +293,7 @@ def find_app_shortcut(
         if best_score >= 100:
             break
 
-    if best_match_path is not None:
+    if best_match_path is not None and best_match_name is not None:
         for key in target_variants:
             shortcut_cache[key] = best_match_path
         return best_match_path, best_match_name

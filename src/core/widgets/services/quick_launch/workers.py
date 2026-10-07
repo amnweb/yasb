@@ -5,7 +5,7 @@ from threading import Event
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from core.widgets.services.quick_launch.base_provider import ProviderResult
+from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 
 
 class StartMenuWatcherThread(QThread):
@@ -22,7 +22,7 @@ class StartMenuWatcherThread(QThread):
         if os.path.isdir(uwp_packages):
             start_dirs.append(uwp_packages)
 
-        dirs = []
+        dirs: list[str] = []
         for d in start_dirs:
             if os.path.isdir(d):
                 dirs.append(d)
@@ -45,10 +45,10 @@ class QueryWorker(QThread):
 
     def __init__(self):
         super().__init__()
-        self._queue: SimpleQueue[tuple[str, str, int, list] | None] = SimpleQueue()
+        self._queue: SimpleQueue[tuple[str, str, int, list[BaseProvider]] | None] = SimpleQueue()
         self._cancel = Event()
 
-    def submit(self, query_id: str, text: str, max_results: int, providers: list):
+    def submit(self, query_id: str, text: str, max_results: int, providers: list[BaseProvider]):
         self._cancel.set()
         self._queue.put((query_id, text, max_results, providers))
 
@@ -75,7 +75,7 @@ class QueryWorker(QThread):
             self._cancel.clear()
             self._run_query(query_id, text.lstrip(), max_results, providers)
 
-    def _run_query(self, query_id: str, text: str, max_results: int, providers: list):
+    def _run_query(self, query_id: str, text: str, max_results: int, providers: list[BaseProvider]):
         all_results: list[ProviderResult] = []
         try:
             # Prefixed providers get exclusive handling (require prefix + space)

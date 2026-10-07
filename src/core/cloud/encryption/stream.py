@@ -27,7 +27,7 @@ import struct
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, cast
 
 from core.cloud.encryption.cng import KEY_LEN, NONCE_LEN, TAG_LEN, GcmKey
 from core.cloud.errors import Cancelled, FormatError, IntegrityError
@@ -191,7 +191,7 @@ def _parse_header(handle: BinaryIO) -> tuple[dict[str, object], bytes]:
     if not isinstance(header, dict):
         raise FormatError("Snapshot header must be a JSON object")
 
-    return header, hashlib.sha256(raw).digest()
+    return cast(dict[str, object], header), hashlib.sha256(raw).digest()
 
 
 def _require_int(header: dict[str, object], field: str, low: int, high: int) -> int:

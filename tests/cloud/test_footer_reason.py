@@ -1,3 +1,5 @@
+# pyright: reportPrivateUsage=false
+
 """What the footer tells you about a subscription in trouble.
 
     python -m pytest tests/cloud/test_footer_reason.py -q

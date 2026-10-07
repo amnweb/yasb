@@ -1,5 +1,10 @@
+from collections.abc import Callable
+from typing import Any, override
+
+import PyQt6.QtCore as QtCore
 from PyQt6.QtCore import (
     QEasingCurve,
+    QEvent,
     QParallelAnimationGroup,
     QPoint,
     QPointF,
@@ -8,15 +13,31 @@ from PyQt6.QtCore import (
     QRectF,
     QSize,
     Qt,
-    pyqtProperty,
     pyqtSignal,
 )
-from PyQt6.QtGui import QColor, QCursor, QFont, QFontMetrics, QIcon, QPainter, QPen, QPixmap
+from PyQt6.QtGui import (
+    QColor,
+    QCursor,
+    QEnterEvent,
+    QFont,
+    QFontMetrics,
+    QIcon,
+    QKeyEvent,
+    QMouseEvent,
+    QPainter,
+    QPaintEvent,
+    QPen,
+    QPixmap,
+    QPolygonF,
+)
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import QApplication, QGraphicsDropShadowEffect, QVBoxLayout, QWidget
 
-from core.ui.components.button import _DEFAULT_PADDING, Button
+from core.ui.components.button import DEFAULT_PADDING, Button
 from core.ui.theme import FONT_FAMILIES, get_tokens
+
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _ITEM_HEIGHT = 36
 _ITEM_RADIUS = 4.0
@@ -55,7 +76,15 @@ def _tinted_svg(svg: str, color: QColor, size: int, dpr: float) -> QPixmap:
 class _MenuItem(QWidget):
     clicked = pyqtSignal(str)
 
-    def __init__(self, key: str, label: str, icon_svg: str, icon_column: bool, tokens: dict, parent=None) -> None:
+    def __init__(
+        self,
+        key: str,
+        label: str,
+        icon_svg: str,
+        icon_column: bool,
+        tokens: dict[str, str],
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self._key = key
         self._label = label
@@ -78,21 +107,29 @@ class _MenuItem(QWidget):
         width = self._text_left() + QFontMetrics(self.font()).horizontalAdvance(self._label) + _ITEM_PADDING * 2 + 4
         return QSize(width, _ITEM_HEIGHT)
 
-    def enterEvent(self, event) -> None:
+    @override
+    def enterEvent(self, event: QEnterEvent | None) -> None:
         self._hovered = True
         self.update()
         super().enterEvent(event)
 
-    def leaveEvent(self, event) -> None:
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         self._hovered = False
         self.update()
-        super().leaveEvent(event)
+        super().leaveEvent(a0)
 
-    def mouseReleaseEvent(self, event) -> None:
-        if event.button() == Qt.MouseButton.LeftButton and self.rect().contains(event.position().toPoint()):
+    @override
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
+        if (
+            a0 is not None
+            and a0.button() == Qt.MouseButton.LeftButton
+            and self.rect().contains(a0.position().toPoint())
+        ):
             self.clicked.emit(self._key)
 
-    def paintEvent(self, _event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.rect().adjusted(4, 2, -4, -2).toRectF()
@@ -116,12 +153,13 @@ class _MenuItem(QWidget):
 
 
 class _Separator(QWidget):
-    def __init__(self, tokens: dict, parent=None) -> None:
+    def __init__(self, tokens: dict[str, str], parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._color = QColor(tokens["divider_stroke_default"])
         self.setFixedHeight(_SEPARATOR_HEIGHT)
 
-    def paintEvent(self, _event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
         p.fillRect(QRect(0, self.height() // 2, self.width(), 1), self._color)
         p.end()
@@ -130,7 +168,7 @@ class _Separator(QWidget):
 class _MenuFlyout(QWidget):
     triggered = pyqtSignal(str)
 
-    def __init__(self, items: list[MenuItem], tokens: dict, trigger: QWidget) -> None:
+    def __init__(self, items: list[MenuItem], tokens: dict[str, str], trigger: QWidget) -> None:
         super().__init__(
             trigger, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint
         )
@@ -168,12 +206,10 @@ class _MenuFlyout(QWidget):
         hint = self._container.sizeHint()
         self._container.setFixedSize(max(hint.width(), trigger.width()), hint.height())
 
-    @pyqtProperty(float)
-    def reveal(self) -> float:
+    def _get_reveal(self) -> float:
         return self._reveal
 
-    @reveal.setter
-    def reveal(self, value: float) -> None:
+    def _set_reveal(self, value: float) -> None:
         self._reveal = value
         menu = self._menu_rect
         visible = max(1, round(menu.height() * value))
@@ -186,18 +222,19 @@ class _MenuFlyout(QWidget):
         )
         self._container.move(_SHADOW_MARGIN, _SHADOW_MARGIN - hidden)
 
+    reveal: float = pyqtProperty(float, _get_reveal, _set_reveal)
+
     def popup(self) -> None:
         trigger = self._trigger
         size = self._container.size()
         below = trigger.mapToGlobal(QPoint(0, trigger.height() + _MENU_GAP))
         window = trigger.window()
-        window_right = window.mapToGlobal(QPoint(window.width(), 0)).x()
         x = below.x()
-        if x + size.width() > window_right:
+        if window is not None and x + size.width() > window.mapToGlobal(QPoint(window.width(), 0)).x():
             x = trigger.mapToGlobal(QPoint(trigger.width(), 0)).x() - size.width()
         y = below.y()
-        screen = trigger.screen().availableGeometry()
-        self._upward = y + size.height() > screen.bottom()
+        screen = trigger.screen()
+        self._upward = screen is not None and y + size.height() > screen.availableGeometry().bottom()
         if self._upward:
             y = trigger.mapToGlobal(QPoint(0, -_MENU_GAP)).y() - size.height()
         self._menu_rect = QRect(QPoint(x, y), size)
@@ -221,20 +258,22 @@ class _MenuFlyout(QWidget):
         self._animation = group
         group.start()
 
-    def mousePressEvent(self, event) -> None:
-        if not self._container.geometry().contains(event.position().toPoint()):
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None and not self._container.geometry().contains(a0.position().toPoint()):
             # Qt replays the closing click to the widget under it; on the trigger that would reopen the menu.
-            if self._trigger.rect().contains(self._trigger.mapFromGlobal(event.globalPosition().toPoint())):
+            if self._trigger.rect().contains(self._trigger.mapFromGlobal(a0.globalPosition().toPoint())):
                 self.setAttribute(Qt.WidgetAttribute.WA_NoMouseReplay)
             self.close()
             return
-        super().mousePressEvent(event)
+        super().mousePressEvent(a0)
 
-    def keyPressEvent(self, event) -> None:
-        if event.key() == Qt.Key.Key_Escape:
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is not None and a0.key() == Qt.Key.Key_Escape:
             self.close()
             return
-        super().keyPressEvent(event)
+        super().keyPressEvent(a0)
 
     def _on_item_clicked(self, key: str) -> None:
         self.close()
@@ -263,7 +302,7 @@ class DropDownButton(Button):
         chevron: bool = True,
         parent: QWidget | None = None,
     ) -> None:
-        left, top, right, bottom = _DEFAULT_PADDING
+        left, top, right, bottom = DEFAULT_PADDING
         if chevron:
             right += _CHEVRON_GAP + _CHEVRON_WIDTH
         super().__init__(text, variant=variant, padding=f"{left},{top},{right},{bottom}", parent=parent)
@@ -278,10 +317,12 @@ class DropDownButton(Button):
 
     def sizeHint(self) -> QSize:
         hint = super().sizeHint()
-        left, top, right, bottom = self._padding
+        _, top, _, bottom = self._padding
         return QSize(hint.width(), top + bottom + QFontMetrics(self.font()).height() + 2)
 
     def _update_icon(self) -> None:
+        if not self._icon_svg:
+            return
         screen = QApplication.primaryScreen()
         dpr = screen.devicePixelRatio() if screen is not None else 1.0
         self.setIcon(QIcon(_tinted_svg(self._icon_svg, QColor(get_tokens()["text_primary"]), _ICON_SIZE, dpr)))
@@ -305,14 +346,15 @@ class DropDownButton(Button):
         hovering = self.isVisible() and self.rect().contains(self.mapFromGlobal(QCursor.pos()))
         self._animate_to(self._interaction_state(hovering))
 
-    def paintEvent(self, event) -> None:
-        super().paintEvent(event)
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
+        super().paintEvent(a0)
         if not self._chevron:
             return
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setPen(QPen(self._fg, 1.4, cap=Qt.PenCapStyle.RoundCap, join=Qt.PenJoinStyle.RoundJoin))
-        cx = self.width() - _DEFAULT_PADDING[2] - _CHEVRON_WIDTH / 2
+        cx = self.width() - DEFAULT_PADDING[2] - _CHEVRON_WIDTH / 2
         cy = self.height() / 2
-        p.drawPolyline([QPointF(cx - 3, cy - 1.5), QPointF(cx, cy + 1.5), QPointF(cx + 3, cy - 1.5)])
+        p.drawPolyline(QPolygonF([QPointF(cx - 3, cy - 1.5), QPointF(cx, cy + 1.5), QPointF(cx + 3, cy - 1.5)]))
         p.end()

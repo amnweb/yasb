@@ -3,6 +3,7 @@
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, cast
 
 from core.cloud.constants import AUTOBACKUP_STATE_FILE
 from core.cloud.session import cloud_dir
@@ -12,7 +13,7 @@ from core.cloud.session import cloud_dir
 class State:
     last_seen: str = ""
     last_backed_up: str = ""
-    files: dict[str, str] = field(default_factory=dict)
+    files: dict[str, str] = field(default_factory=dict[str, str])
 
 
 def state_path() -> Path:
@@ -31,11 +32,12 @@ def read_state() -> State:
         return State()
     if not isinstance(data, dict):
         return State()
+    data = cast(dict[str, Any], data)
     seen, backed, files = data.get("last_seen"), data.get("last_backed_up"), data.get("files")
     return State(
         last_seen=seen if isinstance(seen, str) else "",
         last_backed_up=backed if isinstance(backed, str) else "",
-        files=files if isinstance(files, dict) else {},
+        files=cast(dict[str, str], files) if isinstance(files, dict) else {},
     )
 
 

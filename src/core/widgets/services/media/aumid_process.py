@@ -55,7 +55,7 @@ for dll_name in ("kernel32", "shell32"):
 _shell_app_cache: dict[str, tuple[str | None, str | None]] = {}
 
 
-def _enum_processes():
+def enum_processes():
     """Yield (pid, exe_name) for running processes."""
     hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
     if hSnap == wt.HANDLE(-1).value:
@@ -105,7 +105,7 @@ def get_pid_for_window_aumid(aumid: str) -> int | None:
     target = aumid.lower()
     found: list[int] = []
 
-    def _enum(hwnd, _):
+    def _enum(hwnd: int, _extra: None) -> bool:
         if not win32gui.IsWindowVisible(hwnd):
             return True
         wa = get_aumid_for_window(hwnd)
@@ -167,7 +167,7 @@ def get_process_name_for_aumid(aumid: str) -> str | None:
         return os.path.basename(aumid)
 
     if GetApplicationUserModelId is not None:
-        for pid, exe in _enum_processes():
+        for pid, exe in enum_processes():
             hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
             if not hProc:
                 continue
@@ -196,7 +196,7 @@ def get_process_name_for_aumid(aumid: str) -> str | None:
         path = get_process_image_path(pid)
         if path:
             return os.path.basename(path)
-        for p, exe in _enum_processes():
+        for p, exe in enum_processes():
             if p == pid and exe:
                 return os.path.basename(str(exe))
 

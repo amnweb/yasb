@@ -15,6 +15,7 @@ import os
 import shlex
 import subprocess
 from pathlib import Path
+from typing import Any, TypedDict
 
 import win32gui
 import win32process
@@ -49,16 +50,22 @@ class TaskbarSignalBus(QObject):
 _taskbar_signal_bus = TaskbarSignalBus()
 
 
+class _AppsCache(TypedDict):
+    data: dict[str, Any] | None
+    file_path: str | None
+    mtime: float | None
+
+
 class PinManager:
     """
     Manages pinned applications for the taskbar widget.
     """
 
     # Global cache for pinned app icons (shared across all PinManager instances)
-    _icon_cache = {}  # {(unique_id, size, dpi): QPixmap}
+    _icon_cache: dict[tuple[str, int, float], QPixmap] = {}
 
     # Global cache for pinned apps data (shared across all PinManager instances)
-    _apps_global_cache = {
+    _apps_global_cache: _AppsCache = {
         "data": None,  # {"pinned_apps": {}, "pinned_order": []}
         "file_path": None,
         "mtime": None,  # Last modification time for cache invalidation
@@ -94,9 +101,9 @@ class PinManager:
 
     def __init__(self):
         """Initialize the pin manager."""
-        self.pinned_apps = {}  # {unique_id: {path, aumid, icon, process_name, title}}
-        self.pinned_order = []  # [unique_id, ...]
-        self.running_pinned = {}  # Maps hwnd -> unique_id for running pinned apps
+        self.pinned_apps: dict[str, dict[str, str]] = {}
+        self.pinned_order: list[str] = []
+        self.running_pinned: dict[int, str] = {}
 
     @staticmethod
     def get_signal_bus():
@@ -175,9 +182,9 @@ class PinManager:
                     id_type, value, _ = PinManager._parse_unique_id(unique_id)
                     exe_path = value if id_type == "path" else None
                     if not exe_path:
-                        exe_path = metadata.get("path") if isinstance(metadata, dict) else None
+                        exe_path = metadata.get("path")
 
-                    shortcut_path = metadata.get("shortcut_path") if isinstance(metadata, dict) else None
+                    shortcut_path = metadata.get("shortcut_path")
                     if not exe_path or not shortcut_path or not os.path.exists(shortcut_path):
                         continue
 
@@ -203,7 +210,7 @@ class PinManager:
         """Save pinned apps to disk and update global cache."""
         file_path = self.get_pinned_apps_file()
         try:
-            data = {
+            data: dict[str, Any] = {
                 "pinned_apps": self.pinned_apps,
                 "pinned_order": self.pinned_order,
             }
@@ -245,7 +252,7 @@ class PinManager:
         if exe_path and not aumid and not context.is_explorer and not context.explorer_path:
             for key in normalized_targets(exe_path):
                 cached_shortcut = PinManager._shortcut_cache.get(key)
-                if cached_shortcut and isinstance(cached_shortcut, str):
+                if cached_shortcut:
                     if os.path.exists(cached_shortcut):
                         shortcut_path = cached_shortcut
                         shortcut_name = Path(cached_shortcut).stem
@@ -307,7 +314,7 @@ class PinManager:
                     # First check cache
                     for key in normalized_targets(exe_path):
                         cached_shortcut = PinManager._shortcut_cache.get(key)
-                        if cached_shortcut and isinstance(cached_shortcut, str):
+                        if cached_shortcut:
                             if os.path.exists(cached_shortcut):
                                 shortcut_path = cached_shortcut
                                 shortcut_name = Path(cached_shortcut).stem
@@ -389,7 +396,9 @@ class PinManager:
         return metadata
 
     @staticmethod
-    def get_app_identifier(hwnd: int, window_data: dict, *, resolve_shortcut: bool = False) -> tuple[str | None, dict]:
+    def get_app_identifier(
+        hwnd: int, window_data: dict[str, Any], *, resolve_shortcut: bool = False
+    ) -> tuple[str | None, dict[str, str]]:
         """
         Get a unique identifier for an app and its metadata.
         For File Explorer, includes the folder path or shell location in the unique_id to allow
@@ -492,7 +501,9 @@ class PinManager:
 
         return unique_id, metadata
 
-    def pin_app(self, hwnd: int, window_data: dict, icon_image: Image.Image = None, position: int = -1) -> str | None:
+    def pin_app(
+        self, hwnd: int, window_data: dict[str, Any], icon_image: Image.Image | None = None, position: int = -1
+    ) -> str | None:
         """
         Pin an application to the taskbar (pinned apps are global across all monitors).
         """
@@ -545,7 +556,7 @@ class PinManager:
             logging.error("Error pinning app: %s", e)
             return None
 
-    def unpin_app(self, hwnd: int, window_data: dict = None) -> None:
+    def unpin_app(self, hwnd: int, window_data: dict[str, Any] | None = None) -> None:
         """Unpin an application from the taskbar."""
         try:
             # Get unique_id for this app
@@ -636,7 +647,7 @@ class PinManager:
             logging.error("Error deleting cached icon: %s", e)
 
     @staticmethod
-    def _launch_exe(exe_path: str, arguments: str = "", working_dir: str = None) -> None:
+    def _launch_exe(exe_path: str, arguments: str = "", working_dir: str | None = None) -> None:
         """Launch an executable with subprocess, with UAC elevation if needed."""
         # Validate working directory
         if not working_dir or not os.path.exists(working_dir):
@@ -673,7 +684,14 @@ class PinManager:
                 import win32con
 
                 try:
-                    win32api.ShellExecute(0, "runas", exe_path, arguments, working_dir, win32con.SW_SHOWNORMAL)
+                    win32api.ShellExecute(  # pyright: ignore[reportUnknownMemberType]
+                        0,
+                        "runas",
+                        exe_path,
+                        arguments,
+                        working_dir,  # pyright: ignore[reportArgumentType]
+                        win32con.SW_SHOWNORMAL,
+                    )
                 except Exception as shell_error:
                     logging.error("Failed to launch with elevation: %s", shell_error)
                     raise
@@ -702,9 +720,11 @@ class PinManager:
                         os.startfile(f"shell:AppsFolder\\{value}")
                     return
                 except Exception:
-                    args = {"arguments": extra_arguments} if extra_arguments else {}
                     try:
-                        os.startfile(f"shell:AppsFolder\\{value}", **args)
+                        if extra_arguments:
+                            os.startfile(f"shell:AppsFolder\\{value}", arguments=extra_arguments)
+                        else:
+                            os.startfile(f"shell:AppsFolder\\{value}")
                         return
                     except Exception:
                         if extra_arguments:

@@ -1,9 +1,13 @@
 import logging
 import re
+from functools import partial
+from typing import override
 
 from PIL import Image
+from pycaw.api.audioclient import ISimpleAudioVolume
+from pycaw.api.endpointvolume import IAudioEndpointVolume
 from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRect, Qt
-from PyQt6.QtGui import QImage, QPixmap, QWheelEvent
+from PyQt6.QtGui import QImage, QMouseEvent, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from core.utils.qobject import is_valid_qobject
@@ -18,7 +22,7 @@ from core.utils.win32.bindings import user32
 from core.utils.win32.utils import get_app_name_from_pid
 from core.validation.widgets.yasb.volume import VolumeConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.volume.service import AudioOutputService
+from core.widgets.services.volume.service import AudioOutputService, AudioSessionInfo
 
 
 class VolumeWidget(BaseWidget):
@@ -28,11 +32,19 @@ class VolumeWidget(BaseWidget):
         super().__init__(class_name=f"volume-widget {config.class_name}")
         self.config = config
         self._show_alt_label = False
-        self.volume = None
-        self._icon_cache = {}
+        self.volume: IAudioEndpointVolume | None = None
+        self._icon_cache: dict[tuple[int, int, float, bool], Image.Image] = {}
         self._dpi = 1.0
+        self.dialog: PopupWidget | None = None
+        self.volume_slider: QSlider | None = None
+        self.app_toggle_btn: QPushButton | None = None
+        self.app_volumes_container: QFrame | None = None
+        self.app_volumes_expanded = False
+        self.app_volume_animation: QPropertyAnimation | None = None
+        self.device_buttons: dict[str, QPushButton] = {}
+        self._slider_tooltip: CustomToolTip | None = None
 
-        self._parsed_thresholds = []
+        self._parsed_thresholds: list[int] = []
         if isinstance(self.config.icons, dict):
             self._parsed_thresholds = sorted([int(k) for k in self.config.icons.keys() if k.isdigit()])
 
@@ -57,13 +69,21 @@ class VolumeWidget(BaseWidget):
         self.volume = self._service.get_volume_interface()
         self._update_label()
 
+    def on_output_volume_changed(self) -> None:
+        self._update_label()
+        if self.dialog and self.dialog.isVisible():
+            self._update_slider_value()
+
+    def on_output_device_changed(self) -> None:
+        self._reinitialize_audio()
+
     def _reinitialize_audio(self):
         """Update volume interface reference after device change."""
         # Service already reinitialized, just update our reference
         self.volume = self._service.get_volume_interface()
 
         # Close dialog if open (device change means menu data is stale)
-        if hasattr(self, "dialog") and is_valid_qobject(self.dialog):
+        if self.dialog is not None and is_valid_qobject(self.dialog):
             self.dialog.hide()
             # Only reopen menu if we still have a valid device and speakers available
             if self.volume is not None:
@@ -81,7 +101,7 @@ class VolumeWidget(BaseWidget):
 
     def _on_slider_released(self):
         # Hide tooltip when slider is released
-        if hasattr(self, "_slider_tooltip") and self._slider_tooltip:
+        if self._slider_tooltip is not None:
             self._slider_tooltip.hide()
             self._slider_tooltip = None
         if self.config.slider_beep:
@@ -91,7 +111,7 @@ class VolumeWidget(BaseWidget):
             except Exception as e:
                 logging.debug("Failed to play volume sound: %s", e)
 
-    def _show_slider_tooltip(self, slider, value):
+    def _show_slider_tooltip(self, slider: QSlider, value: int) -> None:
         """Show tooltip above slider handle during drag."""
         if not self.config.tooltip or not slider.isSliderDown():
             return
@@ -105,30 +125,32 @@ class VolumeWidget(BaseWidget):
         global_pos = slider.mapToGlobal(slider.rect().topLeft())
         handle_rect = QRect(global_pos.x() + x_offset, global_pos.y(), 1, slider.height())
 
-        if not hasattr(self, "_slider_tooltip") or not self._slider_tooltip:
-            self._slider_tooltip = CustomToolTip()
-            self._slider_tooltip._position = "top"
+        tooltip = self._slider_tooltip
+        if tooltip is None:
+            tooltip = CustomToolTip()
+            tooltip.position = "top"
+            self._slider_tooltip = tooltip
 
-        self._slider_tooltip.label.setText(f"{value}%")
-        self._slider_tooltip.adjustSize()
-        pos = self._slider_tooltip._calculate_position(handle_rect)
-        self._slider_tooltip.move(pos.x(), pos.y())
-        self._slider_tooltip.setWindowOpacity(1.0)
-        self._slider_tooltip.show()
+        tooltip.label.setText(f"{value}%")
+        tooltip.adjustSize()
+        pos = tooltip.calculate_position(handle_rect)
+        tooltip.move(pos.x(), pos.y())
+        tooltip.setWindowOpacity(1.0)
+        tooltip.show()
 
-    def _on_slider_value_changed(self, value):
+    def _on_slider_value_changed(self, value: int) -> None:
         if self.volume is not None:
             try:
                 self.volume.SetMasterVolumeLevelScalar(value / 100, None)
                 # Show tooltip while actively dragging
-                if hasattr(self, "volume_slider"):
+                if self.volume_slider is not None:
                     self._show_slider_tooltip(self.volume_slider, value)
                 if (self.volume.GetMute() != 0) != (value == 0):
                     self.toggle_mute()
             except Exception as e:
                 logging.error("Failed to set volume: %s", e)
 
-    def _set_app_volume(self, volume_interface, value, slider=None):
+    def _set_app_volume(self, volume_interface: ISimpleAudioVolume, value: int, slider: QSlider | None = None) -> None:
         """Set volume for a specific application"""
         try:
             volume_interface.SetMasterVolume(value / 100, None)
@@ -138,7 +160,9 @@ class VolumeWidget(BaseWidget):
         except Exception as e:
             logging.error("Failed to set application volume: %s", e)
 
-    def _toggle_app_mute(self, volume_interface, icon_label, slider, pid):
+    def _toggle_app_mute(
+        self, volume_interface: ISimpleAudioVolume, icon_label: QLabel, slider: QSlider, pid: int
+    ) -> None:
         """Toggle mute state for a specific application"""
         try:
             current_mute = volume_interface.GetMute()
@@ -149,7 +173,15 @@ class VolumeWidget(BaseWidget):
         except Exception as e:
             logging.error("Failed to toggle application mute: %s", e)
 
-    def _update_app_mute_state(self, icon_label, slider, is_muted, pid):
+    def _make_app_mute_handler(
+        self, volume_interface: ISimpleAudioVolume, icon_label: QLabel, slider: QSlider, pid: int
+    ):
+        def handler(a0: QMouseEvent | None) -> None:
+            self._toggle_app_mute(volume_interface, icon_label, slider, pid)
+
+        return handler
+
+    def _update_app_mute_state(self, icon_label: QLabel, slider: QSlider, is_muted: bool, pid: int) -> None:
         """Update the visual state of an app's icon and slider based on mute status"""
         try:
             # Get the original icon
@@ -164,7 +196,9 @@ class VolumeWidget(BaseWidget):
 
     def _toggle_app_volumes(self):
         """Toggle the visibility of application volume sliders with animation"""
-        if not hasattr(self, "app_volumes_container") or not hasattr(self, "app_volumes_expanded"):
+        container = self.app_volumes_container
+        toggle_btn = self.app_toggle_btn
+        if container is None or toggle_btn is None:
             return
 
         # Toggle the expanded state
@@ -172,58 +206,59 @@ class VolumeWidget(BaseWidget):
 
         if self.app_volumes_expanded:
             # Show container first
-            self.app_volumes_container.show()
-            content_height = self.app_volumes_container.sizeHint().height()
+            container.show()
+            content_height = container.sizeHint().height()
             target_height = content_height
             current_height = 0
-            self.app_toggle_btn.setText(self.config.audio_menu.app_icons.toggle_up)
-            self.app_toggle_btn.setProperty("class", "toggle-apps expanded")
+            toggle_btn.setText(self.config.audio_menu.app_icons.toggle_up)
+            toggle_btn.setProperty("class", "toggle-apps expanded")
             if self.config.tooltip:
-                set_tooltip(self.app_toggle_btn, "Collapse application volumes")
+                set_tooltip(toggle_btn, "Collapse application volumes")
         else:
             target_height = 0
-            current_height = self.app_volumes_container.height()
-            self.app_toggle_btn.setText(self.config.audio_menu.app_icons.toggle_down)
-            self.app_toggle_btn.setProperty("class", "toggle-apps")
+            current_height = container.height()
+            toggle_btn.setText(self.config.audio_menu.app_icons.toggle_down)
+            toggle_btn.setProperty("class", "toggle-apps")
             if self.config.tooltip:
-                set_tooltip(self.app_toggle_btn, "Expand application volumes")
+                set_tooltip(toggle_btn, "Expand application volumes")
 
-        refresh_widget_style(self.app_toggle_btn)
+        refresh_widget_style(toggle_btn)
 
         # Stop any existing animation
         if (
-            hasattr(self, "app_volume_animation")
+            self.app_volume_animation is not None
             and self.app_volume_animation.state() == QPropertyAnimation.State.Running
         ):
             self.app_volume_animation.stop()
 
         # Set the starting height immediately before animation
-        self.app_volumes_container.setMaximumHeight(current_height)
+        container.setMaximumHeight(current_height)
 
         # Create animation
-        self.app_volume_animation = QPropertyAnimation(self.app_volumes_container, b"maximumHeight")
-        self.app_volume_animation.setDuration(200)
-        self.app_volume_animation.setStartValue(current_height)
-        self.app_volume_animation.setEndValue(target_height)
-        self.app_volume_animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        animation = QPropertyAnimation(container, b"maximumHeight")
+        animation.setDuration(200)
+        animation.setStartValue(current_height)
+        animation.setEndValue(target_height)
+        animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
 
         # Update dialog size during animation
-        self.app_volume_animation.valueChanged.connect(self._resize_dialog)
+        animation.valueChanged.connect(self._resize_dialog)
 
         # Hide container after animation completes if collapsing
         if not self.app_volumes_expanded:
-            self.app_volume_animation.finished.connect(lambda: self.app_volumes_container.hide())
+            animation.finished.connect(container.hide)
 
-        self.app_volume_animation.start()
+        self.app_volume_animation = animation
+        animation.start()
 
     def _resize_dialog(self):
         """Resize the dialog to fit its content during animation"""
-        if hasattr(self, "dialog"):
+        if self.dialog is not None:
             self.dialog.adjustSize()
 
     def _update_slider_value(self):
         """Helper method to update slider value based on current volume"""
-        if hasattr(self, "volume_slider") and self.volume is not None:
+        if self.volume_slider is not None and self.volume is not None:
             try:
                 current_volume = round(self.volume.GetMasterVolumeLevelScalar() * 100)
                 self.volume_slider.setValue(current_volume)
@@ -241,10 +276,11 @@ class VolumeWidget(BaseWidget):
         name = name.removesuffix(".exe").replace(".", " ").title()
         return name if len(name) <= 23 else f"{name[:20]}..."
 
-    def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.DevicePixelRatioChange:
+    @override
+    def event(self, a0: QEvent | None) -> bool:
+        if a0 is not None and a0.type() == QEvent.Type.DevicePixelRatioChange:
             self._dpi = self.devicePixelRatioF()
-        return super().event(event)
+        return super().event(a0)
 
     def _get_process_icon_pixmap(self, pid: int, icon_size: int = 16, force_grayscale: bool = False) -> QPixmap | None:
         """Get icon for a process and convert to QPixmap with DPI-aware caching"""
@@ -256,7 +292,9 @@ class VolumeWidget(BaseWidget):
                 icon_img = self._icon_cache[cache_key]
             else:
                 # Get current DPI
-                self._dpi = self.screen().devicePixelRatio()
+                screen = self.screen()
+                if screen is not None:
+                    self._dpi = screen.devicePixelRatio()
                 icon_img = get_process_icon(pid)
                 if icon_img:
                     # Resize and convert to RGBA with DPI scaling
@@ -277,7 +315,7 @@ class VolumeWidget(BaseWidget):
                 return None
 
             # Convert to QPixmap
-            data = icon_img.tobytes("raw", "RGBA")
+            data = icon_img.tobytes("raw", "RGBA")  # pyright: ignore[reportUnknownMemberType]
             qimage = QImage(data, icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
             pixmap = QPixmap.fromImage(qimage)
             pixmap.setDevicePixelRatio(self._dpi)
@@ -287,7 +325,7 @@ class VolumeWidget(BaseWidget):
 
         return None
 
-    def _update_device_buttons(self, active_device_id):
+    def _update_device_buttons(self, active_device_id: str) -> None:
         # Update classes for all device buttons
         for device_id, btn in self.device_buttons.items():
             if device_id == active_device_id:
@@ -299,7 +337,9 @@ class VolumeWidget(BaseWidget):
     def _set_default_device(self):
         """Set default audio device using pycaw's built-in method"""
         sender = self.sender()
-        device_id = sender.property("device_id")
+        if sender is None:
+            return
+        device_id: str = sender.property("device_id")
 
         if self._service.set_default_device(device_id):
             self._update_slider_value()
@@ -384,7 +424,7 @@ class VolumeWidget(BaseWidget):
 
         slider_row.addWidget(self.volume_slider)
 
-        audio_sessions = []
+        audio_sessions: list[AudioSessionInfo] = []
         if self.config.audio_menu.show_apps:
             # Get active audio sessions directly from service
             audio_sessions = self._service.get_active_audio_sessions(
@@ -430,7 +470,7 @@ class VolumeWidget(BaseWidget):
                 slider_layout.setContentsMargins(0, 0, 0, 0)
 
                 try:
-                    is_muted = session_info["volume_interface"].GetMute()
+                    is_muted = bool(session_info["volume_interface"].GetMute())
                 except:
                     is_muted = False
 
@@ -480,19 +520,15 @@ class VolumeWidget(BaseWidget):
 
                 # Connect to change app volume
                 app_slider.valueChanged.connect(
-                    lambda value, vol_interface=session_info["volume_interface"], slider=app_slider: (
-                        self._set_app_volume(vol_interface, value, slider)
-                    )
+                    partial(self._set_app_volume, session_info["volume_interface"], slider=app_slider)
                 )
                 # Connect slider release to hide tooltip
                 app_slider.sliderReleased.connect(self._on_slider_released)
 
                 if self.config.audio_menu.show_app_icons and icon_frame and icon_label:
                     # Make icon frame clickable to toggle mute
-                    icon_frame.mousePressEvent = (
-                        lambda event, vol_interface=session_info["volume_interface"], icon=icon_label, slider=app_slider, pid=session_info["pid"]: (
-                            self._toggle_app_mute(vol_interface, icon, slider, pid)
-                        )
+                    icon_frame.mousePressEvent = self._make_app_mute_handler(
+                        session_info["volume_interface"], icon_label, app_slider, session_info["pid"]
                     )
 
                 slider_layout.addWidget(app_slider)
@@ -571,7 +607,8 @@ class VolumeWidget(BaseWidget):
                     0 if self.config.progress_bar.position == "left" else self._widget_container_layout.count(),
                     self.progress_widget,
                 )
-            numeric_value = int(re.search(r"\d+", level_volume).group()) if re.search(r"\d+", level_volume) else 0
+            match = re.search(r"\d+", level_volume)
+            numeric_value = int(match.group()) if match else 0
             self.progress_widget.set_value(numeric_value)
 
         for part in label_parts:
@@ -581,16 +618,16 @@ class VolumeWidget(BaseWidget):
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
                 if "<span" in part and "</span>" in part:
-                    if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                    if widget_index < len(active_widgets):
                         active_widgets[widget_index].setText(formatted_text)
                         self._set_device_state_classes(active_widgets[widget_index], mute_status == 1)
                 else:
-                    if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                    if widget_index < len(active_widgets):
                         active_widgets[widget_index].setText(formatted_text)
                         self._set_device_state_classes(active_widgets[widget_index], mute_status == 1)
                 widget_index += 1
 
-    def _set_device_state_classes(self, widget, muted: bool):
+    def _set_device_state_classes(self, widget: QLabel, muted: bool) -> None:
         """Set or remove the 'muted' and 'no-device' classes on the widget."""
         current_class = widget.property("class") or ""
         classes = set(current_class.split())
@@ -610,9 +647,12 @@ class VolumeWidget(BaseWidget):
         widget.setProperty("class", " ".join(classes))
         refresh_widget_style(widget)
 
-    def _get_volume_icon(self):
-        current_mute_status = self.volume.GetMute()
-        current_volume = round(self.volume.GetMasterVolumeLevelScalar() * 100)
+    def _get_volume_icon(self) -> str:
+        volume = self.volume
+        if volume is None:
+            return ""
+        current_mute_status = volume.GetMute()
+        current_volume = round(volume.GetMasterVolumeLevelScalar() * 100)
         if self.config.tooltip:
             set_tooltip(self, f"Volume {current_volume}% {'(Muted)' if current_mute_status == 1 else ''}")
 
@@ -669,10 +709,11 @@ class VolumeWidget(BaseWidget):
         except Exception as e:
             logging.error("Failed to decrease volume: %s", e)
 
-    def wheelEvent(self, event: QWheelEvent):
-        if self.volume is None:
+    @override
+    def wheelEvent(self, a0: QWheelEvent | None) -> None:
+        if self.volume is None or a0 is None:
             return
-        delta = -event.angleDelta().y() if self.config.invert_wheel else event.angleDelta().y()
+        delta = -a0.angleDelta().y() if self.config.invert_wheel else a0.angleDelta().y()
         if delta > 0:
             self._increase_volume()
         elif delta < 0:

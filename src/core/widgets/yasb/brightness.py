@@ -1,8 +1,10 @@
 import re
 from datetime import datetime
+from functools import partial
+from typing import override
 
-from PyQt6.QtCore import QEvent, QRect, Qt, QTimer
-from PyQt6.QtGui import QShowEvent, QWheelEvent
+from PyQt6.QtCore import QEvent, QObject, QPoint, QRect, Qt, QTimer
+from PyQt6.QtGui import QMouseEvent, QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QStyle, QStyleOptionSlider, QVBoxLayout
 
 from core.utils.qobject import is_valid_qobject
@@ -309,8 +311,8 @@ class BrightnessWidget(BaseWidget):
         key = f"brightness_{hmonitor}"
         self._sliders[key] = bright_slider
         self._slider_types[key] = "brightness"
-        bright_slider.valueChanged.connect(lambda v, k=key: self._on_monitor_slider_changed(k, v))
-        bright_slider.sliderReleased.connect(lambda k=key: self._on_monitor_slider_released(k))
+        bright_slider.valueChanged.connect(partial(self._on_monitor_slider_changed, key))
+        bright_slider.sliderReleased.connect(partial(self._on_monitor_slider_released, key))
         bright_row.addWidget(bright_slider, 1)
 
         sliders_layout.addWidget(bright_row_widget)
@@ -350,8 +352,8 @@ class BrightnessWidget(BaseWidget):
 
         self._sliders[key] = contrast_slider
         self._slider_types[key] = "contrast"
-        contrast_slider.valueChanged.connect(lambda v, k=key: self._on_monitor_slider_changed(k, v))
-        contrast_slider.sliderReleased.connect(lambda k=key: self._on_monitor_slider_released(k))
+        contrast_slider.valueChanged.connect(partial(self._on_monitor_slider_changed, key))
+        contrast_slider.sliderReleased.connect(partial(self._on_monitor_slider_released, key))
         contrast_row.addWidget(contrast_slider, 1)
         sliders_layout.addWidget(contrast_row_widget)
         return True
@@ -378,7 +380,7 @@ class BrightnessWidget(BaseWidget):
     def _on_monitor_slider_released(self, key: str):
         self._hide_slider_tooltip()
 
-    def _show_slider_tooltip(self, value: int, slider: QSlider = None):
+    def _show_slider_tooltip(self, value: int, slider: QSlider | None = None):
         """Show tooltip above slider handle during drag or hover."""
         if not self.config.tooltip:
             return
@@ -393,11 +395,11 @@ class BrightnessWidget(BaseWidget):
 
         if not self._slider_tooltip:
             self._slider_tooltip = CustomToolTip()
-            self._slider_tooltip._position = "top"
+            self._slider_tooltip.position = "top"
 
         self._slider_tooltip.label.setText(str(value))
         self._slider_tooltip.adjustSize()
-        pos = self._slider_tooltip._calculate_position(handle_rect)
+        pos = self._slider_tooltip.calculate_position(handle_rect)
         self._slider_tooltip.move(pos.x(), pos.y())
         self._slider_tooltip.setWindowOpacity(1.0)
         self._slider_tooltip.show()
@@ -408,10 +410,13 @@ class BrightnessWidget(BaseWidget):
             self._slider_tooltip = None
 
     @staticmethod
-    def _is_over_slider_handle(slider: QSlider, pos) -> bool:
+    def _is_over_slider_handle(slider: QSlider, pos: QPoint) -> bool:
+        style = slider.style()
+        if style is None:
+            return False
         option = QStyleOptionSlider()
         slider.initStyleOption(option)
-        handle_rect = slider.style().subControlRect(
+        handle_rect = style.subControlRect(
             QStyle.ComplexControl.CC_Slider,
             option,
             QStyle.SubControl.SC_SliderHandle,
@@ -419,18 +424,19 @@ class BrightnessWidget(BaseWidget):
         )
         return handle_rect.contains(pos)
 
-    def eventFilter(self, obj, event):
-        if isinstance(obj, QSlider) and self.config.tooltip:
-            event_type = event.type()
-            if event_type == QEvent.Type.MouseMove:
-                pos = event.position().toPoint()
-                if self._is_over_slider_handle(obj, pos):
-                    self._show_slider_tooltip(obj.value(), obj)
-                elif not obj.isSliderDown():
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        if isinstance(a0, QSlider) and a1 is not None and self.config.tooltip:
+            event_type = a1.type()
+            if event_type == QEvent.Type.MouseMove and isinstance(a1, QMouseEvent):
+                pos = a1.position().toPoint()
+                if self._is_over_slider_handle(a0, pos):
+                    self._show_slider_tooltip(a0.value(), a0)
+                elif not a0.isSliderDown():
                     self._hide_slider_tooltip()
-            elif event_type == QEvent.Type.Leave and not obj.isSliderDown():
+            elif event_type == QEvent.Type.Leave and not a0.isSliderDown():
                 self._hide_slider_tooltip()
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
     def _check_auto_light(self):
         """Check and apply auto light settings."""

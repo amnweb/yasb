@@ -22,7 +22,8 @@ The tests never touch your real YASB setup. `tests/conftest.py` points `YASB_CON
 | Folder | What it checks |
 |---|---|
 | `smoke/` | Every module imports, and every widget's config schema builds. |
-| `widgets/` | Rules for bar widgets, for example that a widget never calls `winId()` on itself. |
+| `widgets/` | Bar widgets: rules every widget follows (for example, a widget never calls `winId()` on itself), and focused tests for widgets whose logic can break, such as the custom widget's command output, labels and callbacks. |
+| `bar/` | The bar window: building it with each config option, its place on the screen, auto-hide, animations and the context menu, plus the adaptive style's islands, rail, border and edge curves in every combination. Registering it as a Windows app bar is faked. |
 | `win32/` | Our ctypes code against the real Windows SDK, plus window helpers tested on real windows. |
 | `cloud/` | YASB Cloud: API errors, encryption, backups, restores, settings. None of them contact the real server. |
 | `support/` | Helpers the tests share. |
@@ -113,6 +114,6 @@ something fails on a pull request, the bot comments with the failures, and the i
 built until the tests pass. If pytest crashes outright, which is what a bad ctypes call usually
 looks like, the comment says so and shows the end of the log.
 
-The workflows are `.github/workflows/tests.yaml` (runs the tests), `pr-check.yaml` (Ruff, tests and
-builds) and `pr-comment.yaml` (the bot's comment). GitHub always runs `pr-comment.yaml` from `main`,
+The workflows are `.github/workflows/tests.yaml` (runs the tests), `pr-check.yaml` (Ruff, Pyright, tests
+and builds) and `pr-comment.yaml` (the bot's comment). GitHub always runs `pr-comment.yaml` from `main`,
 so a change to it only takes effect after it's merged.

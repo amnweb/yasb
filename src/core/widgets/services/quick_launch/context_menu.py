@@ -1,4 +1,5 @@
 from PyQt6.QtCore import QPoint
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QWidget
 
 from core.utils.win32.utils import apply_qmenu_style
@@ -14,7 +15,7 @@ class QuickLaunchContextMenuService:
 
     @staticmethod
     def show(
-        parent: QWidget,
+        parent: QWidget | None,
         provider: BaseProvider,
         result: ProviderResult,
         global_pos: QPoint,
@@ -28,7 +29,7 @@ class QuickLaunchContextMenuService:
         menu.setProperty("class", "context-menu")
         menu.setContentsMargins(0, 0, 0, 0)
 
-        action_map = {}
+        action_map: dict[QAction, str] = {}
         for item in actions:
             if item.separator_before:
                 menu.addSeparator()

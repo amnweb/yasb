@@ -1,6 +1,5 @@
 """Typed views over the API's JSON, so parsing lives in one place."""
 
-import base64
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -9,13 +8,6 @@ from typing import Any
 def _int(source: dict[str, Any], key: str, default: int = 0) -> int:
     value = source.get(key, default)
     return value if isinstance(value, int) and not isinstance(value, bool) else default
-
-
-def _b64(value: Any) -> bytes:
-    try:
-        return base64.b64decode(value or "")
-    except ValueError, TypeError:
-        return b""
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,6 +109,7 @@ class Snapshot:
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> Snapshot:
+        share: dict[str, Any] = data.get("share") or {}
         return cls(
             id=str(data.get("id", "")),
             size_bytes=_int(data, "size_bytes"),
@@ -125,7 +118,7 @@ class Snapshot:
             app_version=str(data.get("app_version", "")),
             note=str(data.get("note", "")),
             device_name=str(data.get("device_name", "")),
-            share_url=str((data.get("share") or {}).get("url", "")),
+            share_url=str(share.get("url", "")),
         )
 
 

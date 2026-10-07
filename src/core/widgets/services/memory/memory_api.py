@@ -6,7 +6,7 @@ import threading
 from ctypes import wintypes
 from typing import NamedTuple
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.win32.bindings.kernel32 import kernel32
@@ -220,7 +220,7 @@ class MemoryWorker(QThread):
             cls._instance = cls(update_interval)
         return cls._instance
 
-    def __init__(self, update_interval: int, parent=None):
+    def __init__(self, update_interval: int, parent: QObject | None = None):
         super().__init__(parent)
         self._update_interval = update_interval
         self._stop_event = threading.Event()

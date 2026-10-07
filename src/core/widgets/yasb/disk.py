@@ -1,8 +1,11 @@
 import os
 import re
+from functools import partial
+from typing import override
 
 import win32api
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
 from core.utils.utilities import (
@@ -17,14 +20,15 @@ from core.widgets.base import BaseWidget
 class ClickableDiskWidget(QWidget):
     clicked = pyqtSignal()
 
-    def __init__(self, label, parent=None):
+    def __init__(self, label: str, parent: QWidget | None = None):
         super().__init__(parent)
         self.label = label
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
-        super().mousePressEvent(event)
+        super().mousePressEvent(a0)
 
 
 class DiskWidget(BaseWidget):
@@ -81,7 +85,7 @@ class DiskWidget(BaseWidget):
 
         for part in label_parts:
             part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 if "<span" in part and "</span>" in part:
                     # Ensure the icon is correctly set
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
@@ -132,7 +136,7 @@ class DiskWidget(BaseWidget):
             display_label = f"{volume_label} ({label}):" if volume_label else f"{label}:"
 
             clicable_row = ClickableDiskWidget(label)
-            clicable_row.clicked.connect(lambda lbl=label: self.open_explorer(lbl))
+            clicable_row.clicked.connect(partial(self.open_explorer, label))
 
             v_layout = QVBoxLayout(clicable_row)
             h_layout = QHBoxLayout()
@@ -188,7 +192,7 @@ class DiskWidget(BaseWidget):
         )
         self.dialog.show()
 
-    def open_explorer(self, label):
+    def open_explorer(self, label: str) -> None:
         os.startfile(f"{label}:\\")
 
     def _get_space(self, volume_label: str | None = None):
@@ -235,5 +239,4 @@ class DiskWidget(BaseWidget):
             return "medium"
         elif self.config.disk_thresholds.medium < disk_percent <= self.config.disk_thresholds.high:
             return "high"
-        elif self.config.disk_thresholds.high < disk_percent:
-            return "critical"
+        return "critical"

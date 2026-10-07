@@ -19,7 +19,7 @@ from ctypes import c_void_p, cast
 from enum import Enum, auto
 from typing import Any
 
-import comtypes
+import comtypes  # pyright: ignore[reportMissingTypeStubs]
 
 from core.widgets.services.windows_desktops.com import VirtualDesktopApi, get_api
 from core.widgets.services.windows_desktops.interfaces import DesktopInterfaces
@@ -150,7 +150,9 @@ class DesktopNotificationListener:
             self._sink = _sink_type(interfaces)(self._on_event)
             # Register takes the raw interface pointer, not the Python object.
             pointer = cast(
-                self._sink._com_pointers_[interfaces.IVirtualDesktopNotification._iid_],
+                self._sink._com_pointers_[
+                    interfaces.IVirtualDesktopNotification._iid_  # pyright: ignore[reportPrivateUsage]
+                ],
                 c_void_p,
             )
             self._cookie = self._service.Register(pointer)

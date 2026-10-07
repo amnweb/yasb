@@ -18,12 +18,12 @@ import logging
 import os
 import time
 from datetime import datetime, timedelta
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 from core.utils.system import app_data_path
-from core.widgets.services.claude_usage.claude_api import _claude_config_dir
+from core.widgets.services.claude_usage.claude_api import claude_config_dir
 
 logger = logging.getLogger("claude_usage")
 
@@ -38,7 +38,7 @@ DAILY_RETENTION_DAYS = 400
 
 
 def _projects_dir() -> str:
-    return os.path.join(_claude_config_dir(), "projects")
+    return os.path.join(claude_config_dir(), "projects")
 
 
 def _history_cache_path() -> str:
@@ -110,12 +110,14 @@ def _parse_file(path: str) -> dict[str, Any]:
                     obj = json.loads(line)
                 except Exception:
                     continue
-                message = obj.get("message")
-                if not isinstance(message, dict):
+                raw_message = obj.get("message")
+                if not isinstance(raw_message, dict):
                     continue
-                usage = message.get("usage")
-                if not isinstance(usage, dict):
+                message = cast(dict[str, Any], raw_message)
+                raw_usage = message.get("usage")
+                if not isinstance(raw_usage, dict):
                     continue
+                usage = cast(dict[str, Any], raw_usage)
                 counts = [
                     int(usage.get("input_tokens") or 0),
                     int(usage.get("output_tokens") or 0),
@@ -235,7 +237,7 @@ def scan(cache_path: str) -> dict[str, Any]:
 
 def _date_keys_in_range(start: datetime, end: datetime) -> list[str]:
     """Local YYYY-MM-DD keys from start.date() through end.date(), inclusive."""
-    keys = []
+    keys: list[str] = []
     day = start.date()
     last = end.date()
     while day <= last:
@@ -265,7 +267,7 @@ def _sum_hourly(hourly: dict[str, list[int]], hour_key: str, count_cache_read: b
 
 def _hour_keys_in_range(start: datetime, end: datetime) -> list[str]:
     """Local YYYY-MM-DDTHH keys from start's hour through end's hour, inclusive."""
-    keys = []
+    keys: list[str] = []
     cur = start.replace(minute=0, second=0, microsecond=0)
     last = end.replace(minute=0, second=0, microsecond=0)
     while cur <= last:
@@ -276,7 +278,7 @@ def _hour_keys_in_range(start: datetime, end: datetime) -> list[str]:
 
 def _month_keys_in_range(start: datetime, end: datetime) -> list[str]:
     """Local YYYY-MM keys from start's month through end's month, inclusive."""
-    keys = []
+    keys: list[str] = []
     year, month = start.year, start.month
     while (year, month) <= (end.year, end.month):
         keys.append(f"{year:04d}-{month:02d}")

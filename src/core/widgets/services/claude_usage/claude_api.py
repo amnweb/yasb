@@ -3,7 +3,7 @@ import logging
 import os
 import time
 import urllib.request
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 
@@ -36,11 +36,17 @@ def _parse_scoped_limits(payload: dict[str, Any]) -> list[dict[str, Any]]:
     named by ``scope.model.display_name``. Reading it generically means a new model (Fable and
     whatever comes after it) shows up with no code change.
     """
-    scoped = []
-    for entry in payload.get("limits") or []:
-        if not isinstance(entry, dict) or entry.get("kind") != "weekly_scoped":
+    scoped: list[dict[str, Any]] = []
+    limits: list[Any] = payload.get("limits") or []
+    for raw_entry in limits:
+        if not isinstance(raw_entry, dict):
             continue
-        name = ((entry.get("scope") or {}).get("model") or {}).get("display_name")
+        entry = cast(dict[str, Any], raw_entry)
+        if entry.get("kind") != "weekly_scoped":
+            continue
+        scope: dict[str, Any] = entry.get("scope") or {}
+        model: dict[str, Any] = scope.get("model") or {}
+        name = model.get("display_name")
         pct = entry.get("percent")
         if not name or pct is None:
             continue
@@ -49,7 +55,7 @@ def _parse_scoped_limits(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return scoped
 
 
-def _claude_config_dir() -> str:
+def claude_config_dir() -> str:
     return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
 
 
@@ -61,7 +67,7 @@ def _token_expired() -> bool:
     produces a false 'expired' warning.
     """
     try:
-        cred_path = os.path.join(_claude_config_dir(), ".credentials.json")
+        cred_path = os.path.join(claude_config_dir(), ".credentials.json")
         with open(cred_path, encoding="utf-8") as f:
             expires_at = json.load(f)["claudeAiOauth"].get("expiresAt")
         if not expires_at:
@@ -109,7 +115,7 @@ def fetch_usage(cache_path: str, cache_ttl: int) -> dict[str, Any]:
         return cache
 
     try:
-        cred_path = os.path.join(_claude_config_dir(), ".credentials.json")
+        cred_path = os.path.join(claude_config_dir(), ".credentials.json")
         with open(cred_path, encoding="utf-8") as f:
             token = json.load(f)["claudeAiOauth"]["accessToken"]
 
@@ -172,7 +178,7 @@ class ClaudeUsageService(QObject):
 
     data_ready = pyqtSignal(dict)
 
-    _instances: ClassVar[dict[tuple, ClaudeUsageService]] = {}
+    _instances: ClassVar[dict[tuple[int, int], ClaudeUsageService]] = {}
 
     @classmethod
     def get_instance(cls, update_interval_s: int, cache_ttl: int) -> ClaudeUsageService:
@@ -184,7 +190,7 @@ class ClaudeUsageService(QObject):
         inst._refcount += 1
         return inst
 
-    def __init__(self, update_interval_s: int, cache_ttl: int, _key: tuple):
+    def __init__(self, update_interval_s: int, cache_ttl: int, _key: tuple[int, int]):
         super().__init__()
         self._key = _key
         self._refcount = 0

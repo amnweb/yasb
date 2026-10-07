@@ -4,6 +4,9 @@ import os
 import shutil
 import subprocess
 import threading
+from collections.abc import Callable
+from functools import partial
+from typing import cast
 
 import win32con
 import win32gui
@@ -15,7 +18,7 @@ from core.bar_manager import BarManager
 from core.ui.views.about import AboutDialog
 from core.utils.controller import exit_application, reload_application
 from core.utils.shell_utils import shell_open
-from core.utils.update_service import register_update_callback
+from core.utils.update_service import ReleaseInfo, register_update_callback
 from core.utils.win32.utils import disable_autostart, enable_autostart, is_autostart_enabled
 from settings import (
     APP_NAME,
@@ -30,6 +33,14 @@ CLOUD_EXE_PATH = os.path.join(SCRIPT_PATH, "yasb_cloud.exe")
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
 
 
+def _create_popup_menu() -> int:
+    return cast(int, win32gui.CreatePopupMenu())  # pyright: ignore[reportUnknownMemberType]
+
+
+def _append_menu(menu: int, flags: int, item_id: int, label: str) -> None:
+    win32gui.AppendMenu(menu, flags, item_id, label)  # pyright: ignore[reportCallIssue]
+
+
 class SystemTrayManager(QSystemTrayIcon):
     _update_signal = pyqtSignal(object)
 
@@ -38,7 +49,7 @@ class SystemTrayManager(QSystemTrayIcon):
         self._bar_manager = bar_manager
         self._icon = QIcon()
         self._update_available = False
-        self._pending_release_info = None
+        self._pending_release_info: ReleaseInfo | None = None
         self._load_favicon()
         self.setToolTip(APP_NAME)
         self._load_config()
@@ -46,7 +57,7 @@ class SystemTrayManager(QSystemTrayIcon):
         self._update_signal.connect(self._set_update_badge)
         register_update_callback(self._update_signal.emit)
 
-    def _on_tray_activated(self, reason):
+    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason):
         if reason == QSystemTrayIcon.ActivationReason.Context:
             self._show_context_menu()
 
@@ -72,7 +83,7 @@ class SystemTrayManager(QSystemTrayIcon):
         self._icon.addFile(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png"), QSize(48, 48))
         self.setIcon(self._icon)
 
-    def _set_update_badge(self, release_info=None):
+    def _set_update_badge(self, release_info: ReleaseInfo | None = None):
         self._update_available = True
         self._pending_release_info = release_info
         base = QPixmap(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")).scaled(48, 48)
@@ -85,12 +96,12 @@ class SystemTrayManager(QSystemTrayIcon):
         self.setIcon(QIcon(base))
         self.setToolTip("Update available")
 
-    def _try_enable_dark_menu(self, hwnd):
+    def _try_enable_dark_menu(self, hwnd: int):
         try:
             uxtheme = ctypes.WinDLL("uxtheme.dll")
-            uxtheme[135](1)  # undocumented SetPreferredAppMode(AllowDark)
-            uxtheme[133](hwnd, True)  # undocumented AllowDarkModeForWindow
-            uxtheme[136]()  # undocumented FlushMenuThemes
+            uxtheme[135](1)  # pyright: ignore[reportArgumentType]  # undocumented SetPreferredAppMode(AllowDark)
+            uxtheme[133](hwnd, True)  # pyright: ignore[reportArgumentType]  # undocumented AllowDarkModeForWindow
+            uxtheme[136]()  # pyright: ignore[reportArgumentType]  # undocumented FlushMenuThemes
         except Exception:
             logging.debug("Native dark tray menu unavailable", exc_info=True)
 
@@ -99,23 +110,23 @@ class SystemTrayManager(QSystemTrayIcon):
         hmenu = None
         selected_action = None
         try:
-            hmenu = win32gui.CreatePopupMenu()
-            actions = {}
+            hmenu = _create_popup_menu()
+            actions: dict[int, Callable[[], object]] = {}
             cmd_id = [1]
 
-            def add_item(menu, label, action):
-                win32gui.AppendMenu(menu, win32con.MF_STRING, cmd_id[0], label)
+            def add_item(menu: int, label: str, action: Callable[[], object]) -> None:
+                _append_menu(menu, win32con.MF_STRING, cmd_id[0], label)
                 actions[cmd_id[0]] = action
                 cmd_id[0] += 1
 
-            def add_sep(menu):
-                win32gui.AppendMenu(menu, win32con.MF_SEPARATOR, 0, "")
+            def add_sep(menu: int) -> None:
+                _append_menu(menu, win32con.MF_SEPARATOR, 0, "")
 
             if self._update_available:
                 add_item(hmenu, "Update Available", self._open_update_dialog)
                 add_sep(hmenu)
 
-            add_item(hmenu, "Open Config", self._open_config)
+            add_item(hmenu, "Open Config", self.open_config)
             if os.path.exists(CLOUD_EXE_PATH):
                 add_item(hmenu, "YASB Cloud", lambda: shell_open(CLOUD_EXE_PATH))
             if os.path.exists(THEME_EXE_PATH):
@@ -124,25 +135,25 @@ class SystemTrayManager(QSystemTrayIcon):
             add_sep(hmenu)
 
             if self.komorebi_enabled and self.is_wm_installed("komorebi"):
-                km_sub = win32gui.CreatePopupMenu()
+                km_sub = _create_popup_menu()
                 if self.komorebi_start:
-                    add_item(km_sub, "Start Komorebi", lambda: self._run_wm_command("Komorebi", self.komorebi_start))
+                    add_item(km_sub, "Start Komorebi", partial(self._run_wm_command, "Komorebi", self.komorebi_start))
                 if self.komorebi_stop:
-                    add_item(km_sub, "Stop Komorebi", lambda: self._run_wm_command("Komorebi", self.komorebi_stop))
+                    add_item(km_sub, "Stop Komorebi", partial(self._run_wm_command, "Komorebi", self.komorebi_stop))
                 if self.komorebi_reload:
-                    add_item(km_sub, "Reload Komorebi", lambda: self._run_wm_command("Komorebi", self.komorebi_reload))
-                win32gui.AppendMenu(hmenu, win32con.MF_POPUP, km_sub, "Komorebi")
+                    add_item(km_sub, "Reload Komorebi", partial(self._run_wm_command, "Komorebi", self.komorebi_reload))
+                _append_menu(hmenu, win32con.MF_POPUP, km_sub, "Komorebi")
                 add_sep(hmenu)
 
             if self.glazewm_enabled and self.is_wm_installed("glazewm"):
-                gw_sub = win32gui.CreatePopupMenu()
+                gw_sub = _create_popup_menu()
                 if self.glazewm_start:
-                    add_item(gw_sub, "Start GlazeWM", lambda: self._run_wm_command("Glazewm", self.glazewm_start))
+                    add_item(gw_sub, "Start GlazeWM", partial(self._run_wm_command, "Glazewm", self.glazewm_start))
                 if self.glazewm_stop:
-                    add_item(gw_sub, "Stop GlazeWM", lambda: self._run_wm_command("Glazewm", self.glazewm_stop))
+                    add_item(gw_sub, "Stop GlazeWM", partial(self._run_wm_command, "Glazewm", self.glazewm_stop))
                 if self.glazewm_reload:
-                    add_item(gw_sub, "Reload GlazeWM", lambda: self._run_wm_command("Glazewm", self.glazewm_reload))
-                win32gui.AppendMenu(hmenu, win32con.MF_POPUP, gw_sub, "GlazeWM")
+                    add_item(gw_sub, "Reload GlazeWM", partial(self._run_wm_command, "Glazewm", self.glazewm_reload))
+                _append_menu(hmenu, win32con.MF_POPUP, gw_sub, "GlazeWM")
                 add_sep(hmenu)
 
             if AUTOSTART_FILE:
@@ -151,27 +162,30 @@ class SystemTrayManager(QSystemTrayIcon):
                 else:
                     add_item(hmenu, "Enable Autostart", self._enable_startup)
 
-            add_item(hmenu, "Help", lambda: self._open_in_browser(GITHUB_WIKI_URL))
+            add_item(hmenu, "Help", lambda: self.open_in_browser(GITHUB_WIKI_URL))
             add_item(hmenu, "About", self._show_about_dialog)
             add_sep(hmenu)
             add_item(hmenu, "Exit", self._exit_application)
 
             bars = self._bar_manager.bars
-            hwnd = int(bars[0].winId()) if bars else win32gui.GetDesktopWindow()
+            hwnd = int(bars[0].winId()) if bars else cast(int, win32gui.GetDesktopWindow())  # pyright: ignore[reportUnknownMemberType]
             x, y = win32gui.GetCursorPos()
             self._try_enable_dark_menu(hwnd)
             try:
                 win32gui.SetForegroundWindow(hwnd)
             except Exception:
                 logging.debug("Failed to set tray menu owner as foreground window", exc_info=True)
-            cmd = win32gui.TrackPopupMenu(
-                hmenu,
-                win32con.TPM_LEFTALIGN | win32con.TPM_RETURNCMD | win32con.TPM_NONOTIFY,
-                x,
-                y,
-                0,
-                hwnd,
-                None,
+            cmd = cast(
+                int,
+                win32gui.TrackPopupMenu(  # pyright: ignore[reportUnknownMemberType]
+                    hmenu,
+                    win32con.TPM_LEFTALIGN | win32con.TPM_RETURNCMD | win32con.TPM_NONOTIFY,
+                    x,
+                    y,
+                    0,
+                    hwnd,
+                    None,  # pyright: ignore[reportArgumentType]
+                ),
             )
             selected_action = actions.get(cmd)
             try:
@@ -182,7 +196,7 @@ class SystemTrayManager(QSystemTrayIcon):
             logging.exception("Failed to show context menu")
         finally:
             if hmenu:
-                win32gui.DestroyMenu(hmenu)
+                win32gui.DestroyMenu(hmenu)  # pyright: ignore[reportCallIssue]
 
         if selected_action:
             try:
@@ -190,7 +204,7 @@ class SystemTrayManager(QSystemTrayIcon):
             except Exception:
                 logging.exception("Tray menu action failed")
 
-    def is_wm_installed(self, wm) -> bool:
+    def is_wm_installed(self, wm: str) -> bool:
         try:
             wm_path = shutil.which(wm)
             return wm_path is not None
@@ -199,7 +213,8 @@ class SystemTrayManager(QSystemTrayIcon):
             return False
 
     def _enable_startup(self):
-        enable_autostart(APP_NAME, AUTOSTART_FILE)
+        if AUTOSTART_FILE:
+            enable_autostart(APP_NAME, AUTOSTART_FILE)
 
     def _disable_startup(self):
         disable_autostart(APP_NAME)
@@ -207,13 +222,13 @@ class SystemTrayManager(QSystemTrayIcon):
     def _check_startup(self) -> bool:
         return bool(is_autostart_enabled(APP_NAME))
 
-    def _open_config(self):
+    def open_config(self):
         try:
             shell_open(DEFAULT_CONFIG_DIRECTORY)
         except Exception as e:
             logging.error("Failed to open config directory: %s", e)
 
-    def _run_wm_command(self, wm, command):
+    def _run_wm_command(self, wm: str, command: str):
         def wm_command():
             try:
                 subprocess.run(
@@ -234,7 +249,7 @@ class SystemTrayManager(QSystemTrayIcon):
     def _exit_application(self):
         exit_application("Exiting Application from tray...")
 
-    def _open_in_browser(self, url):
+    def open_in_browser(self, url: str):
         try:
             shell_open(url)
         except Exception as e:

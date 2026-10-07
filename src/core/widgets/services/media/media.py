@@ -270,7 +270,7 @@ class WindowsMedia(QObject, metaclass=QSingleton):
     async def _sync_media_properties(self, app_id: str):
         """Fetch media properties via tracked session; never hold the SMTC lock across await."""
         state = self._trackers.get(app_id)
-        if state is None or state.session is None:
+        if state is None:
             return
         try:
             with self._smtc_lock:
@@ -291,7 +291,7 @@ class WindowsMedia(QObject, metaclass=QSingleton):
                 thumb_ref = props.thumbnail
             del props
 
-            if thumb_ref is not None:
+            if thumb_ref is not None:  # pyright: ignore[reportUnnecessaryComparison]
                 thumbnail = await self._get_thumbnail_async(thumb_ref)
             else:
                 thumbnail = None

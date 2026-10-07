@@ -10,6 +10,7 @@ import tempfile
 import time
 import urllib.request
 import winreg
+from typing import Any, cast
 from urllib.parse import urljoin, urlparse
 
 import win32com.client
@@ -37,6 +38,16 @@ def parse_icon_location(value: str) -> tuple[str, int]:
     return icon_file, icon_index
 
 
+def _extract_icon_ex(file_path: str, icon_index: int) -> tuple[list[int], list[int]] | None:
+    result = cast(object, win32gui.ExtractIconEx(file_path, icon_index, 1))  # pyright: ignore[reportUnknownMemberType]
+    if not isinstance(result, tuple):
+        return None
+    pair = cast(tuple[object, ...], result)
+    if len(pair) != 2:
+        return None
+    return cast(tuple[list[int], list[int]], pair)
+
+
 class IconExtractorUtil:
     """
     Extract the icon from a file (ico, exe, dll) and save as PNG in the icons dir.
@@ -46,7 +57,7 @@ class IconExtractorUtil:
     """
 
     @staticmethod
-    def extract_icon_from_path(file_path, icons_dir, size=48):
+    def extract_icon_from_path(file_path: str, icons_dir: str, size: int = 48) -> str | None:
         ext = os.path.splitext(file_path)[1].lower()
         base = os.path.splitext(os.path.basename(file_path))[0]
         temp_png = os.path.join(icons_dir, f"{base}_{int(time.time() * 1000)}.png")
@@ -97,7 +108,7 @@ class IconExtractorUtil:
             return IconExtractorUtil.extract_icon_with_index(file_path, 0, icons_dir, size=size)
 
     @staticmethod
-    def extract_lnk_icon(lnk_path, icons_dir, size=48):
+    def extract_lnk_icon(lnk_path: str, icons_dir: str, size: int = 48) -> str | None:
         """Extract icon from a .lnk shortcut by resolving its IconLocation or target.
 
         *size* controls the requested icon dimensions when using win32 APIs.
@@ -143,7 +154,7 @@ class IconExtractorUtil:
         return None
 
     @staticmethod
-    def extract_icon_with_index(file_path, icon_index, icons_dir, size=48):
+    def extract_icon_with_index(file_path: str, icon_index: int, icons_dir: str, size: int = 48) -> str | None:
         """Extract an icon at a specific index using win32 APIs.
 
         Uses PrivateExtractIconsW (supports any index and a custom *size*)
@@ -156,7 +167,7 @@ class IconExtractorUtil:
             return temp_png
 
         hicon = None
-        cleanup_handles = []
+        cleanup_handles: list[int] = []
         try:
             h = ctypes.wintypes.HICON()
             icon_id = ctypes.c_uint()
@@ -176,20 +187,20 @@ class IconExtractorUtil:
 
             # Fallback to ExtractIconEx (returns 32x32 but handles some edge cases)
             if not hicon:
-                result = win32gui.ExtractIconEx(file_path, icon_index, 1)
-                if not isinstance(result, tuple) or len(result) != 2:
+                pair = _extract_icon_ex(file_path, icon_index)
+                if pair is None:
                     return None
-                large, small = result
+                large, small = pair
                 if not large and icon_index != 0:
                     for handle in (large or []) + (small or []):
-                        win32gui.DestroyIcon(handle)
-                    result = win32gui.ExtractIconEx(file_path, 0, 1)
-                    if not isinstance(result, tuple) or len(result) != 2:
+                        win32gui.DestroyIcon(handle)  # pyright: ignore[reportUnknownMemberType]
+                    pair = _extract_icon_ex(file_path, 0)
+                    if pair is None:
                         return None
-                    large, small = result
+                    large, small = pair
                 if not large:
                     for handle in (large or []) + (small or []):
-                        win32gui.DestroyIcon(handle)
+                        win32gui.DestroyIcon(handle)  # pyright: ignore[reportUnknownMemberType]
                     return None
                 hicon = large[0]
                 cleanup_handles.extend(large)
@@ -208,10 +219,10 @@ class IconExtractorUtil:
             return None
         finally:
             for h in cleanup_handles:
-                win32gui.DestroyIcon(h)
+                win32gui.DestroyIcon(h)  # pyright: ignore[reportUnknownMemberType]
 
     @staticmethod
-    def extract_cpl_icon(path, icons_dir, size=48):
+    def extract_cpl_icon(path: str, icons_dir: str, size: int = 48) -> str | None:
         """Extract icon for a Control Panel item.
 
         Path format: CPL::{clsid}::CanonicalName
@@ -231,7 +242,7 @@ class IconExtractorUtil:
         return None
 
     @staticmethod
-    def extract_default_icon(icons_dir, size=48):
+    def extract_default_icon(icons_dir: str, size: int = 48) -> str | None:
         """Generate a generic Windows application icon as a cached PNG.
 
         Uses shell32.dll index 2 (the standard executable icon) at the
@@ -264,7 +275,7 @@ class IconExtractorUtil:
         return None
 
     @staticmethod
-    def extract_ico_to_png(ico_path, icons_dir, size=48):
+    def extract_ico_to_png(ico_path: str, icons_dir: str, size: int = 48) -> str | None:
         """Convert a .ico file to a cached PNG, resized to *size* x *size*."""
         try:
             path_hash = hashlib.md5(ico_path.lower().encode()).hexdigest()[:10]
@@ -294,7 +305,7 @@ class IconExtractorUtil:
             return None
 
     @staticmethod
-    def extract_url_icon(url_path, icons_dir, size=48):
+    def extract_url_icon(url_path: str, icons_dir: str, size: int = 48) -> str | None:
         """Parse a .url (Internet Shortcut) file and extract its icon."""
         try:
             cfg = configparser.ConfigParser(interpolation=None)
@@ -317,7 +328,7 @@ class IconExtractorUtil:
         return None
 
     @staticmethod
-    def extract_shell_appid_icon(appid, icons_dir, size=48):
+    def extract_shell_appid_icon(appid: str, icons_dir: str, size: int = 48) -> str | None:
         """Extract icon for any AppID via the shell:AppsFolder virtual namespace.
 
         Delegates to :func:`get_icon_for_aumid` from ``aumid_icons`` which uses
@@ -345,7 +356,7 @@ class UrlExtractorUtil:
     """
 
     @staticmethod
-    def extract_from_url(url, icons_dir):
+    def extract_from_url(url: str, icons_dir: str | None) -> tuple[str | None, str | None]:
         try:
             parsed = urlparse(url)
             base_url = f"{parsed.scheme}://{parsed.netloc}"
@@ -369,7 +380,7 @@ class UrlExtractorUtil:
 
             # Fallback to default manifest locations if not found in HTML
             # This is useful for sites that don't explicitly link to a manifest
-            manifest_urls = []
+            manifest_urls: list[str] = []
             if manifest_url:
                 manifest_urls.append(manifest_url)
             manifest_urls += [
@@ -393,7 +404,8 @@ class UrlExtractorUtil:
 
             # Find the largest icon >=192x192
             icons = manifest["icons"]
-            best_icon = None
+            best_icon: dict[str, Any] | None = None
+            fallback_icon: dict[str, Any] | None = None
             best_size = 0
             for icon in icons:
                 purpose = icon.get("purpose", "").strip().lower()
@@ -416,7 +428,7 @@ class UrlExtractorUtil:
                 if best_icon:
                     break
 
-            if not best_icon and "fallback_icon" in locals():
+            if not best_icon and fallback_icon is not None:
                 best_icon = fallback_icon
             if not best_icon:
                 return None, page_title

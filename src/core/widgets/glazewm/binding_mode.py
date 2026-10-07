@@ -78,7 +78,7 @@ class GlazewmBindingModeWidget(BaseWidget):
         }
         for part in label_parts:
             part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 formatted_text = part
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
@@ -92,7 +92,7 @@ class GlazewmBindingModeWidget(BaseWidget):
                     else:
                         active_widgets[widget_index].setText(icon)
                 else:
-                    if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                    if widget_index < len(active_widgets):
                         active_widgets[widget_index].setText(formatted_text)
                         if active_widgets[widget_index].property("class") == "label-offline":
                             active_widgets[widget_index].setProperty("class", "label")

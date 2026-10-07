@@ -14,7 +14,12 @@ from ctypes import HRESULT, POINTER
 from ctypes.wintypes import LPVOID, UINT, WCHAR
 from typing import Any
 
-from comtypes import COMMETHOD, GUID, STDMETHOD, IUnknown
+from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
+    COMMETHOD,  # pyright: ignore[reportUnknownVariableType]
+    GUID,
+    STDMETHOD,  # pyright: ignore[reportUnknownVariableType]
+    IUnknown,
+)
 
 PWSTR = POINTER(WCHAR)
 REFGUID = POINTER(GUID)
@@ -39,13 +44,13 @@ class IObjectArray(IUnknown):
         STDMETHOD(HRESULT, "GetAt", (UINT, REFIID, POINTER(LPVOID))),
     ]
 
-    def get_at(self, index: int, cls: Any) -> Any:
+    def get_at(self, index: int, cls: type[IUnknown]) -> Any:
         """Return the item at index, cast to interface cls."""
         item = POINTER(cls)()
         self.GetAt(index, cls._iid_, item)  # type: ignore[attr-defined]
         return item
 
-    def iter(self, cls: Any) -> Iterator[Any]:
+    def iter(self, cls: type[IUnknown]) -> Iterator[Any]:
         """Iterate the array as instances of cls."""
         for i in range(self.GetCount()):  # type: ignore[attr-defined]
             yield self.get_at(i, cls)

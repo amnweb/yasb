@@ -1,7 +1,11 @@
 """Selection toolbar (copy / save / edit / cancel)."""
 
+from collections.abc import Callable
+from functools import partial
+from typing import override
+
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QColor, QPainter, QPen
+from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPen, QShowEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QWidget
 
 from core.ui.components.button import Button
@@ -19,7 +23,7 @@ from core.widgets.services.control_center.api.screenshot.icons import (
 class ScreenshotToolbar(QFrame):
     """Icon-only toolbar for the selection overlay."""
 
-    def __init__(self, parent: QWidget, on_action):
+    def __init__(self, parent: QWidget, on_action: Callable[[str], None]):
         super().__init__(parent)
         self.on_action = on_action
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
@@ -42,7 +46,7 @@ class ScreenshotToolbar(QFrame):
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setIconSize(self._icon_size)
             set_tooltip(b, tip)
-            b.clicked.connect(lambda _=False, a=action: self.on_action(a))
+            b.clicked.connect(partial(self._trigger, action))
             self._btns[action] = b
             layout.addWidget(b)
 
@@ -52,16 +56,21 @@ class ScreenshotToolbar(QFrame):
         self.btn_cancel = self._btns["cancel"]
         self._reload_icons()
 
+    def _trigger(self, action: str, checked: bool = False) -> None:
+        self.on_action(action)
+
     def _reload_icons(self) -> None:
         dpr = float(self.devicePixelRatioF())
         for action, svg, _ in self._action_svgs:
             self._btns[action].setIcon(svg_to_icon(svg, 16, self._icon_color, dpr=dpr))
 
-    def showEvent(self, e) -> None:
-        super().showEvent(e)
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
+        super().showEvent(a0)
         self._reload_icons()
 
-    def paintEvent(self, _) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         r = self.rect().adjusted(0, 0, -1, -1)

@@ -8,7 +8,7 @@ pytestmark = pytest.mark.sdk
 
 @pytest.mark.parametrize("module", sorted(discovery.win32_constants()))
 def test_values_match_sdk(module: str, sdk: ProbeResult):
-    found = {}
+    found: dict[str, str] = {}
     for name, value in discovery.win32_constants()[module].items():
         c_name = discovery.sdk_constant_name(name)
         native = sdk.constants.get(c_name)

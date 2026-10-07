@@ -3,13 +3,15 @@ import ctypes.wintypes
 import logging
 import platform
 import winreg
+from collections.abc import Collection
 from contextlib import suppress
 from ctypes import GetLastError, byref, c_ulong, create_unicode_buffer
+from typing import Any, NotRequired, TypedDict, cast
 
 import win32api
 import win32gui
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6.QtWidgets import QApplication, QMenu, QWidget
 from win32api import GetMonitorInfo, MonitorFromWindow
 from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowText
 from winrt.windows.management.deployment import PackageManager
@@ -89,7 +91,7 @@ def is_running_under_emulation():
 
 def get_monitor_hwnd(window_hwnd: int) -> int | None:
     monitor = MonitorFromWindow(window_hwnd)
-    if monitor is None:
+    if monitor is None:  # pyright: ignore[reportUnnecessaryComparison]
         return None
     return int(monitor)
 
@@ -97,10 +99,27 @@ def get_monitor_hwnd(window_hwnd: int) -> int | None:
 def get_widget_monitor_hwnd(widget: QWidget) -> int | None:
     # Don't use widget.winId() here, Qt would turn the widget and all its
     # siblings into native windows.
-    return get_monitor_hwnd(int(widget.window().winId()))
+    top = widget.window()
+    if top is None:
+        return None
+    return get_monitor_hwnd(int(top.winId()))
 
 
-def get_monitor_info(monitor_hwnd: int) -> dict:
+class MonitorRect(TypedDict):
+    x: int
+    y: int
+    width: int
+    height: int
+
+
+class MonitorInfo(TypedDict):
+    rect: MonitorRect
+    rect_work_area: MonitorRect
+    flags: int
+    device: str
+
+
+def get_monitor_info(monitor_hwnd: int) -> MonitorInfo:
     monitor_info = GetMonitorInfo(monitor_hwnd)
     return {
         "rect": {
@@ -120,7 +139,13 @@ def get_monitor_info(monitor_hwnd: int) -> dict:
     }
 
 
-def get_process_info(hwnd: int) -> dict:
+class ProcessInfo(TypedDict):
+    name: str | None
+    pid: int
+    path: str | None
+
+
+def get_process_info(hwnd: int) -> ProcessInfo:
     """Get process info { name, pid, path }.
 
     - Returns pid=0 when no valid PID is associated or process is gone.
@@ -248,17 +273,23 @@ def get_app_name_from_pid(pid: int) -> str | None:
 
                 # Get ProductName or FileDescription from executable version info
                 try:
-                    lang, codepage = win32api.GetFileVersionInfo(exe_path, "\\VarFileInfo\\Translation")[0]
+                    translations = cast(
+                        list[tuple[int, int]],
+                        win32api.GetFileVersionInfo(exe_path, "\\VarFileInfo\\Translation"),
+                    )
+                    lang, codepage = translations[0]
                     string_file_info = f"\\StringFileInfo\\{lang:04X}{codepage:04X}\\"
 
                     try:
-                        app_name = win32api.GetFileVersionInfo(exe_path, string_file_info + "FileDescription")
+                        app_name = cast(
+                            str, win32api.GetFileVersionInfo(exe_path, string_file_info + "FileDescription")
+                        )
                         if app_name and app_name.strip():
                             return app_name.strip()
                     except:
                         pass
                     try:
-                        app_name = win32api.GetFileVersionInfo(exe_path, string_file_info + "ProductName")
+                        app_name = cast(str, win32api.GetFileVersionInfo(exe_path, string_file_info + "ProductName"))
                         if app_name and app_name.strip():
                             return app_name.strip()
                     except:
@@ -315,12 +346,12 @@ def get_app_name_from_aumid(aumid: str) -> str | None:
     return None
 
 
-def get_window_extended_frame_bounds(hwnd: int) -> dict:
+def get_window_extended_frame_bounds(hwnd: int) -> dict[str, Any]:
     rect = ctypes.wintypes.RECT()
 
     DwmGetWindowAttribute(
-        ctypes.wintypes.HWND(hwnd),
-        ctypes.wintypes.DWORD(DWMWA_EXTENDED_FRAME_BOUNDS),
+        hwnd,
+        DWMWA_EXTENDED_FRAME_BOUNDS,
         ctypes.byref(rect),
         ctypes.sizeof(rect),
     )
@@ -328,7 +359,14 @@ def get_window_extended_frame_bounds(hwnd: int) -> dict:
     return {"x": rect.left, "y": rect.top, "width": rect.right - rect.left, "height": rect.bottom - rect.top}
 
 
-def get_window_rect(hwnd: int) -> dict:
+class WindowRect(TypedDict):
+    x: int
+    y: int
+    width: int
+    height: int
+
+
+def get_window_rect(hwnd: int) -> WindowRect:
     window_rect = GetWindowRect(hwnd)
     return {
         "x": window_rect[0],
@@ -343,9 +381,22 @@ def is_window_maximized(hwnd: int) -> bool:
     return window_placement[1] == SW_MAXIMIZE
 
 
-def get_hwnd_info(hwnd: int) -> dict:
+class WindowInfo(TypedDict):
+    hwnd: int
+    title: str
+    class_name: str | None
+    process: ProcessInfo
+    monitor_hwnd: int | None
+    monitor_info: MonitorInfo
+    rect: WindowRect
+    app_name: NotRequired[str]
+
+
+def get_hwnd_info(hwnd: int) -> WindowInfo | None:
     with suppress(Exception):
         monitor_hwnd = get_monitor_hwnd(hwnd)
+        if monitor_hwnd is None:
+            return None
         monitor_info = get_monitor_info(monitor_hwnd)
 
         return {
@@ -359,7 +410,7 @@ def get_hwnd_info(hwnd: int) -> dict:
         }
 
 
-def apply_qmenu_style(qwidget: QWidget):
+def apply_qmenu_style(qwidget: QMenu):
     """
     Set blur and rounded corners for a QMenu on Windows 11.
     Fusion style is required for correct rendering and removing qmenu shadow.
@@ -376,7 +427,7 @@ def apply_qmenu_style(qwidget: QWidget):
         # while Qt still holds a raw pointer to it (prevents DEP crash).
         style = QStyleFactory.create("Fusion")
         qwidget.setStyle(style)
-        qwidget._fusion_style_ref = style
+        setattr(qwidget, "_fusion_style_ref", style)
 
         def apply_blur():
             try:
@@ -398,19 +449,21 @@ def get_foreground_hwnd():
     return GetForegroundWindow()
 
 
-def set_foreground_hwnd(hwnd):
+def set_foreground_hwnd(hwnd: int | None) -> None:
     """Set focus to the given HWND"""
     if hwnd and hwnd != 0:
         SetForegroundWindow(int(hwnd))
 
 
-def find_focused_screen(follow_mouse, follow_window, follow_primary=False, screens=None):
+def find_focused_screen(
+    follow_mouse: bool, follow_window: bool, follow_primary: bool = False, screens: Collection[str] | None = None
+) -> str | None:
     """Find the screen that should be focused based on mouse position, active window, or primary screen."""
 
     qt_screens = QApplication.screens()
     primary_screen = QApplication.primaryScreen()
 
-    def is_valid(name):
+    def is_valid(name: str) -> bool:
         return screens is None or any(name in s for s in screens)
 
     # Map device names to Qt screen names for window focus

@@ -1,3 +1,5 @@
+from typing import Any, TypedDict
+
 from core.utils.shell_utils import shell_open
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import (
@@ -40,7 +42,16 @@ from core.widgets.services.quick_launch.providers.resources.icons import (
     ICON_SETTINGS_PAGE_WINDOWS_UPDATE,
 )
 
-_SETTINGS_PAGES = [
+
+class _SettingsPage(TypedDict):
+    keywords: list[str]
+    title: str
+    description: str
+    icon: str
+    uri: str
+
+
+_SETTINGS_PAGES: list[_SettingsPage] = [
     {
         "keywords": ["wifi", "wi-fi", "wireless", "network"],
         "title": "Wi-Fi",
@@ -316,7 +327,7 @@ class SettingsProvider(BaseProvider):
                     return True
         return False
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = (
             self.get_query_text(text).lower()
             if self.prefix and text.strip().startswith(self.prefix)
@@ -335,7 +346,7 @@ class SettingsProvider(BaseProvider):
                 for page in _SETTINGS_PAGES
             ]
 
-        results = []
+        results: list[ProviderResult] = []
         for page in _SETTINGS_PAGES:
             matched = any(query in kw or kw.startswith(query) for kw in page["keywords"])
             if not matched:

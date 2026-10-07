@@ -6,8 +6,7 @@ import re
 import urllib.request
 from collections.abc import Callable
 
-from PyQt6.QtCore import QThread, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 from core.utils.shell_utils import shell_open
 from core.utils.tooltip import set_tooltip
@@ -25,7 +24,7 @@ class GlucoseMonitorWorker(QThread):
     status_updated = pyqtSignal(int, float, str, str)
     error_signal = pyqtSignal(str)
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
 
         self._url: str | None = None
@@ -44,6 +43,8 @@ class GlucoseMonitorWorker(QThread):
             return
 
         try:
+            if self._url is None:
+                raise RuntimeError("URL is not set")
             with urllib.request.urlopen(self._url) as response:
                 data = json.loads(response.read().decode("utf-8"))
                 status = response.status
@@ -152,7 +153,7 @@ class GlucoseMonitor(BaseWidget):
 
         for part in label_parts:
             part = part.strip()
-            if not part or widget_index >= len(active_widgets) or not isinstance(active_widgets[widget_index], QLabel):
+            if not part or widget_index >= len(active_widgets):
                 continue
 
             if "<span" in part and "</span>" in part:
@@ -196,17 +197,17 @@ class GlucoseMonitor(BaseWidget):
         delta_time_in_minutes = int((now - last_update_time).total_seconds() // 60)
         direction = self._direction_icons[direction]
 
-        sgv = self._convert_sgv(sgv)
-        sgv_delta = self._convert_sgv(sgv_delta)
+        sgv_text = self._convert_sgv(sgv)
+        sgv_delta_text = self._convert_sgv(sgv_delta)
 
         self._status_data = {
-            "sgv": sgv,
-            "sgv_delta": sgv_delta,
+            "sgv": sgv_text,
+            "sgv_delta": sgv_delta_text,
             "delta_time_in_minutes": delta_time_in_minutes,
             "direction": direction,
         }
 
-        sgv_as_float = float(sgv)
+        sgv_as_float = float(sgv_text)
         self._is_sgv_in_range = self.config.sgv_range.min <= sgv_as_float <= self.config.sgv_range.max
 
         self._error_message = None

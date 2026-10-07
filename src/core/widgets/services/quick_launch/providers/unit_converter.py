@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 from PyQt6.QtWidgets import QApplication
 
@@ -6,8 +7,9 @@ from core.widgets.services.quick_launch.base_provider import BaseProvider, Provi
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_UNIT
 
 # Each category maps unit aliases to (canonical_name, factor_to_base).
+type _UnitTable = dict[str, tuple[str, float]]
 
-_LENGTH = {
+_LENGTH: _UnitTable = {
     "mm": ("Millimeters", 0.001),
     "millimeter": ("Millimeters", 0.001),
     "millimeters": ("Millimeters", 0.001),
@@ -35,7 +37,7 @@ _LENGTH = {
     "nmi": ("Nautical miles", 1852.0),
 }
 
-_WEIGHT = {
+_WEIGHT: _UnitTable = {
     "mg": ("Milligrams", 0.001),
     "milligram": ("Milligrams", 0.001),
     "milligrams": ("Milligrams", 0.001),
@@ -60,7 +62,7 @@ _WEIGHT = {
     "stones": ("Stones", 6350.29),
 }
 
-_VOLUME = {
+_VOLUME: _UnitTable = {
     "ml": ("Milliliters", 0.001),
     "milliliter": ("Milliliters", 0.001),
     "milliliters": ("Milliliters", 0.001),
@@ -88,7 +90,7 @@ _VOLUME = {
     "teaspoons": ("Teaspoons", 0.00492892),
 }
 
-_SPEED = {
+_SPEED: _UnitTable = {
     "m/s": ("m/s", 1.0),
     "km/h": ("km/h", 1 / 3.6),
     "kmh": ("km/h", 1 / 3.6),
@@ -100,7 +102,7 @@ _SPEED = {
     "ft/s": ("ft/s", 0.3048),
 }
 
-_DATA = {
+_DATA: _UnitTable = {
     "b": ("Bytes", 1),
     "byte": ("Bytes", 1),
     "bytes": ("Bytes", 1),
@@ -121,7 +123,7 @@ _DATA = {
     "petabytes": ("Petabytes", 1024**5),
 }
 
-_TIME = {
+_TIME: _UnitTable = {
     "ms": ("Milliseconds", 0.001),
     "millisecond": ("Milliseconds", 0.001),
     "milliseconds": ("Milliseconds", 0.001),
@@ -147,7 +149,7 @@ _TIME = {
     "years": ("Years", 31_557_600.0),
 }
 
-_CATEGORIES: list[tuple[str, dict]] = [
+_CATEGORIES: list[tuple[str, _UnitTable]] = [
     ("Length", _LENGTH),
     ("Weight", _WEIGHT),
     ("Volume", _VOLUME),
@@ -201,7 +203,7 @@ _QUERY_RE = re.compile(
 )
 
 
-def _find_category(unit: str) -> tuple[str, dict, str, float] | None:
+def _find_category(unit: str) -> tuple[str, _UnitTable, str, float] | None:
     """Return (category_name, table, canonical_name, factor) or None."""
     u = unit.lower().strip()
     for cat_name, table in _CATEGORIES:
@@ -226,10 +228,10 @@ def _format_number(value: float) -> str:
     return f"{value:,.4f}".rstrip("0").rstrip(".")
 
 
-def _get_common_targets(category: str, table: dict, from_canonical: str) -> list[tuple[str, float]]:
+def _get_common_targets(category: str, table: _UnitTable, from_canonical: str) -> list[tuple[str, float]]:
     """Return a list of (canonical_name, factor) for common units other than from_canonical."""
-    seen = set()
-    targets = []
+    seen: set[str] = set()
+    targets: list[tuple[str, float]] = []
     for name, factor in table.values():
         if name != from_canonical and name not in seen:
             seen.add(name)
@@ -251,7 +253,7 @@ class UnitConverterProvider(BaseProvider):
             return True
         return False
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).strip()
         if not query:
             return [
@@ -326,7 +328,7 @@ class UnitConverterProvider(BaseProvider):
 
         # No target unit - show conversions to common units in the same category
         targets = _get_common_targets(cat_name, table, from_name)
-        results = []
+        results: list[ProviderResult] = []
         for to_name, to_factor in targets:
             converted = value * from_factor / to_factor
             display = _format_number(converted)
@@ -360,7 +362,7 @@ class UnitConverterProvider(BaseProvider):
             ]
 
         # No target - show all other temperature units
-        results = []
+        results: list[ProviderResult] = []
         for to_label, to_key in _TEMP_OTHERS[from_label]:
             converted = _from_celsius(celsius, to_key)
             display = _format_number(converted)

@@ -157,7 +157,7 @@ def _get_process_command_line(pid: int) -> str | None:
 
     # Fallback to WMI if NtQueryInformationProcess fails
     try:
-        wmi = win32com.client.GetObject("winmgmts:")
+        wmi = win32com.client.GetObject("winmgmts:")  # pyright: ignore[reportUnknownMemberType]
         processes = wmi.ExecQuery(f"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {pid}")
         for process in processes:
             if process.CommandLine:

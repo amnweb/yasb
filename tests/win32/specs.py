@@ -17,13 +17,16 @@ class Offset:
     member: str
 
 
+FieldMap = MappingProxyType[str, str | Offset | None]
+
+
 @dataclass(frozen=True)
 class Sdk:
     """A type declared by the SDK headers in tests/win32/probe.py:HEADERS."""
 
     c_type: str | None = None
     # Python field name -> C member designator ("pt.x"), Offset, or None for Python-only padding.
-    fields: MappingProxyType = field(default_factory=lambda: MappingProxyType({}))
+    fields: FieldMap = field(default_factory=lambda: FieldMap({}))
     # Python declares only the leading members; the API owns the allocation, so a smaller size is fine.
     prefix: bool = False
 
@@ -33,10 +36,10 @@ class Vendored:
     """A type the SDK does not declare. Its C declaration lives in VENDORED_DECLARATIONS."""
 
     c_type: str
-    fields: MappingProxyType = field(default_factory=lambda: MappingProxyType({}))
+    fields: FieldMap = field(default_factory=lambda: FieldMap({}))
 
 
-def _map(**fields: str | Offset | None) -> MappingProxyType:
+def _map(**fields: str | Offset | None) -> FieldMap:
     return MappingProxyType(fields)
 
 
@@ -56,15 +59,13 @@ STRUCTS: dict[str, Sdk | Vendored] = {
     "core.utils.win32.structs.NOFITYICONDATA_0": Vendored("NOTIFYICONDATA32_0"),
     "core.utils.win32.structs.SHELLTRAYDATA": Vendored("SHELLTRAYDATA"),
     "core.utils.win32.structs.WINNOTIFYICONIDENTIFIER": Vendored("WINNOTIFYICONIDENTIFIER"),
+    "core.utils.win32.structs.SHELLEXECUTEINFO": Sdk("SHELLEXECUTEINFOW", _map(hIconOrMonitor="hIcon")),
     "core.utils.win32.app_bar.AppBarData": Sdk("APPBARDATA"),
     "core.utils.win32.aumid.PROPVARIANT": Sdk(fields=_map(data=Offset("pwszVal"))),
     "core.utils.win32.aumid.PROPVARIANT_UNION": Vendored("PROPVARIANT_UNION"),
     "core.widgets.services.audio_visualizer.loopback._WAVEFORMATEX": Sdk("WAVEFORMATEX"),
     "core.widgets.services.audio_visualizer.loopback._WAVEFORMATEXTENSIBLE": Sdk(
         "WAVEFORMATEXTENSIBLE", _map(wValidBitsPerSample="Samples.wValidBitsPerSample")
-    ),
-    "core.widgets.services.control_center.api.keyboard._SHELLEXECUTEINFO": Sdk(
-        "SHELLEXECUTEINFOW", _map(hIconOrMonitor="hIcon")
     ),
     "core.widgets.services.gpu.gpu_api._AdlTemperature": Vendored("ADLTemperature"),
     "core.widgets.services.gpu.gpu_api._AdlFanSpeedValue": Vendored("ADLFanSpeedValue"),

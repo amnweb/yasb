@@ -4,9 +4,11 @@ import os
 import string
 import threading
 import time
+from collections.abc import Callable
 from ctypes import wintypes
+from typing import TypedDict, override
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtBoundSignal, pyqtSignal
 
 from core.utils.win32.bindings import kernel32, shell32
 from core.utils.win32.constants import (
@@ -31,6 +33,11 @@ from core.utils.win32.constants import (
 from core.utils.win32.structs import SHQUERYRBINFO
 
 
+class BinInfo(TypedDict):
+    size_bytes: int
+    num_items: int
+
+
 class BinInfoWorker(QThread):
     """Reusable worker thread to query recycle bin info on demand"""
 
@@ -41,7 +48,8 @@ class BinInfoWorker(QThread):
         self._request_event = threading.Event()
         self._stop_event = threading.Event()
 
-    def run(self):
+    @override
+    def run(self) -> None:
         """Wait for requests and query bin info"""
         while True:
             self._request_event.wait()
@@ -63,7 +71,7 @@ class BinInfoWorker(QThread):
         self._request_event.set()
         self.wait(1000)
 
-    def _get_recycle_bin_info(self):
+    def _get_recycle_bin_info(self) -> BinInfo:
         """Get information about the Recycle Bin using SHQueryRecycleBinW"""
         info = SHQUERYRBINFO()
         info.cbSize = ctypes.sizeof(info)
@@ -85,14 +93,21 @@ class BinInfoWorker(QThread):
 
 
 class EmptyBinThread(QThread):
-    def __init__(self, monitor, show_confirmation=False, show_progress=False, play_sound=False):
+    def __init__(
+        self,
+        monitor: RecycleBinMonitor,
+        show_confirmation: bool = False,
+        show_progress: bool = False,
+        play_sound: bool = False,
+    ) -> None:
         super().__init__()
         self.monitor = monitor
         self.show_confirmation = show_confirmation
         self.show_progress = show_progress
         self.play_sound = play_sound
 
-    def run(self):
+    @override
+    def run(self) -> None:
         self.monitor.empty_recycle_bin(self.show_confirmation, self.show_progress, self.play_sound)
 
 
@@ -103,11 +118,11 @@ class RecycleBinMonitor(QObject):
     bin_updated = pyqtSignal(dict)
 
     # Add these class variables
-    _instance = None
+    _instance: RecycleBinMonitor | None = None
     _is_monitoring = False
 
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls) -> RecycleBinMonitor:
         """Singleton pattern to ensure only one monitor is running"""
         if cls._instance is None:
             cls._instance = RecycleBinMonitor()
@@ -116,19 +131,23 @@ class RecycleBinMonitor(QObject):
     def __init__(self):
         super().__init__()
         self._active = False
-        self._monitoring_thread = None
-        self._watchers = []  # Win32DirectoryWatcher instances
-        self._last_info = {"size_bytes": 0, "num_items": 0}
+        self._monitoring_thread: threading.Thread | None = None
+        self._watchers: list[Win32DirectoryWatcher] = []
+        self._last_info: BinInfo = {"size_bytes": 0, "num_items": 0}
         self._lock = threading.Lock()
-        self._query_worker = None  # Reusable worker thread for async queries
+        self._query_worker: BinInfoWorker | None = None  # Reusable worker thread for async queries
         self._query_pending = False  # Flag to prevent multiple simultaneous queries
-        self._poll_timer = None  # Timer for periodic polling during bursts
+        self._poll_timer: threading.Timer | None = None  # Timer for periodic polling during bursts
         self._poll_interval = 1  # Poll interval in seconds during bursts
         self._last_change_time = time.monotonic()  # Timestamp of last detected change
         self._last_poll_time = 0.0  # Timestamp of last direct poll trigger
-        self._subscribers = set()  # Track subscribers (widget instances)
+        self._subscribers: set[int] = set()  # Track subscribers (widget instances)
 
-    def subscribe(self, subscriber_id):
+    @property
+    def last_info(self) -> BinInfo:
+        return self._last_info
+
+    def subscribe(self, subscriber_id: int) -> bool:
         """Subscribe to recycle bin updates. Starts monitoring if this is the first subscriber.
 
         Args:
@@ -150,7 +169,7 @@ class RecycleBinMonitor(QObject):
 
         return True
 
-    def unsubscribe(self, subscriber_id):
+    def unsubscribe(self, subscriber_id: int) -> None:
         """Unsubscribe from recycle bin updates. Stops monitoring if this is the last subscriber.
 
         Args:
@@ -214,7 +233,9 @@ class RecycleBinMonitor(QObject):
             self._query_worker.deleteLater()
             self._query_worker = None
 
-    def empty_recycle_bin(self, show_confirmation=False, show_progress=False, play_sound=False):
+    def empty_recycle_bin(
+        self, show_confirmation: bool = False, show_progress: bool = False, play_sound: bool = False
+    ) -> bool:
         """Empty the recycle bin with configurable UI options
 
         Args:
@@ -253,7 +274,9 @@ class RecycleBinMonitor(QObject):
             logging.error("Error emptying recycle bin: %s", e)
             return False
 
-    def empty_recycle_bin_async(self, show_confirmation=False, show_progress=False, play_sound=False):
+    def empty_recycle_bin_async(
+        self, show_confirmation: bool = False, show_progress: bool = False, play_sound: bool = False
+    ) -> tuple[pyqtBoundSignal, EmptyBinThread]:
         """Empty the recycle bin asynchronously with configurable UI options
 
         Args:
@@ -278,7 +301,7 @@ class RecycleBinMonitor(QObject):
             logging.error("Error opening recycle bin: %s", e)
             return False
 
-    def _query_bin_info_async(self, mark_poll_time=True):
+    def _query_bin_info_async(self, mark_poll_time: bool = True) -> None:
         """Request bin info query from the worker thread
 
         Args:
@@ -293,7 +316,7 @@ class RecycleBinMonitor(QObject):
 
         self._query_worker.request_query()
 
-    def _on_bin_info_ready(self, bin_info):
+    def _on_bin_info_ready(self, bin_info: BinInfo) -> None:
         """Handle bin info result from async query and emit if changed"""
         if not bin_info:
             with self._lock:
@@ -374,9 +397,9 @@ class RecycleBinMonitor(QObject):
         if not has_timer:
             self._start_poll_timer()
 
-    def get_all_drives(self):
+    def get_all_drives(self) -> list[str]:
         drive_bitmask = kernel32.GetLogicalDrives()
-        drives = []
+        drives: list[str] = []
         for i in range(26):
             if drive_bitmask & (1 << i):
                 drives.append(string.ascii_uppercase[i] + ":\\")
@@ -399,7 +422,7 @@ class RecycleBinMonitor(QObject):
 class Win32DirectoryWatcher:
     """Small helper that watches a directory for changes using Win32 APIs"""
 
-    def __init__(self, path, callback):
+    def __init__(self, path: str, callback: Callable[[], None]) -> None:
         self.path = path
         self.callback = callback
         self.watch_subtree = True
@@ -497,7 +520,7 @@ class Win32DirectoryWatcher:
             kernel32.CloseHandle(self._stop_event)
             self._stop_event = None
 
-    def stop(self, timeout=None):
+    def stop(self, timeout: float | None = None) -> None:
         if not self._running:
             return
         self._running = False

@@ -193,6 +193,8 @@ Tips
       etc.) and read them from self.config in __init__.
 """
 
+from typing import Any
+
 from core.utils.shell_utils import shell_open
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
@@ -217,7 +219,7 @@ class ExampleProvider(BaseProvider):
     # Optional class attributes
     input_placeholder = "Search examples..."  # placeholder when prefix is active
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         # After super().__init__() you get for free:
         #   self.config   – raw dict from the YAML config
@@ -246,7 +248,7 @@ class ExampleProvider(BaseProvider):
     # Required: get_results
     # Runs on a BACKGROUND THREAD - never touch Qt widgets here.
     # **kwargs is required; the service passes cancel_event through it.
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).lower()
 
         # No query -> show a friendly hint

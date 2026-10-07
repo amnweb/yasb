@@ -5,9 +5,10 @@ import shutil
 import struct
 import subprocess
 import threading
+from typing import override
 
 from PyQt6.QtCore import QEvent, QPointF, QRectF, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath
+from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent
 from PyQt6.QtWidgets import QApplication, QFrame, QLabel
 
 from core.utils.system import app_data_path
@@ -38,11 +39,12 @@ class CavaBar(QFrame):
         )
         self.setContentsMargins(0, 0, 0, 0)
 
-    def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.DevicePixelRatioChange:
+    @override
+    def event(self, e: QEvent | None) -> bool:
+        if e is not None and e.type() == QEvent.Type.DevicePixelRatioChange:
             self._dpr = None
             self.update()
-        return super().event(event)
+        return super().event(e)
 
     def _device_pixel_ratio(self, painter: QPainter) -> float:
         """Return device pixel ratio for the painter's device."""
@@ -63,8 +65,8 @@ class CavaBar(QFrame):
 
     def _get_fade_opacity(self, x_position: float) -> float:
         """Calculate opacity based on position for edge fade effect."""
-        fade_left = self._cava_widget._edge_fade_left
-        fade_right = self._cava_widget._edge_fade_right
+        fade_left = self._cava_widget.edge_fade_left
+        fade_right = self._cava_widget.edge_fade_right
 
         if fade_left <= 0 and fade_right <= 0:
             return 1.0
@@ -92,7 +94,8 @@ class CavaBar(QFrame):
         # Middle area - full opacity
         return 1.0
 
-    def paintEvent(self, event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         """Draw the cava bars according to the selected style."""
         painter = QPainter(self)
 
@@ -139,13 +142,13 @@ class CavaBar(QFrame):
                     for idx, color in enumerate(self._cava_widget.colors):
                         gradient.setColorAt(idx * stop_step, color)
 
-                    if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+                    if self._cava_widget.edge_fade_left > 0 or self._cava_widget.edge_fade_right > 0:
                         fade_opacity = self._get_fade_opacity(rx + rw / 2)
                         painter.setOpacity(fade_opacity)
 
                     painter.fillRect(QRectF(rx, ry, rw, rh), gradient)
                 else:
-                    if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+                    if self._cava_widget.edge_fade_left > 0 or self._cava_widget.edge_fade_right > 0:
                         fade_opacity = self._get_fade_opacity(rx + rw / 2)
                         painter.setOpacity(fade_opacity)
 
@@ -199,7 +202,7 @@ class CavaBar(QFrame):
 
             uy_px = max(0, round(center_y * dpr) - up_px)
             if up_px > 0:
-                if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+                if self._cava_widget.edge_fade_left > 0 or self._cava_widget.edge_fade_right > 0:
                     fade_opacity = self._get_fade_opacity(ux_px / dpr + (band_w_px / dpr) / 2)
                     painter.setOpacity(fade_opacity)
 
@@ -211,7 +214,7 @@ class CavaBar(QFrame):
                 if ly_px + down_px > max_h_px:
                     down_px = max(0, max_h_px - ly_px)
                 if down_px > 0:
-                    if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+                    if self._cava_widget.edge_fade_left > 0 or self._cava_widget.edge_fade_right > 0:
                         fade_opacity = self._get_fade_opacity(ux_px / dpr + (band_w_px / dpr) / 2)
                         painter.setOpacity(fade_opacity)
 
@@ -250,7 +253,7 @@ class CavaBar(QFrame):
 
         widget_w = float(self.width())
         step = widget_w / max(1, n)
-        points = []
+        points: list[QPointF] = []
         min_h_logical = float(self._cava_widget.config.min_bar_height) / dpr
         for i in range(n):
             cx = i * step + step / 2.0
@@ -267,7 +270,7 @@ class CavaBar(QFrame):
         path.lineTo(points[-1].x(), bottom)
         path.closeSubpath()
 
-        if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+        if self._cava_widget.edge_fade_left > 0 or self._cava_widget.edge_fade_right > 0:
             # Draw wave in strips with varying opacity
             widget_width = self.width()
             widget_height = int(height)  # Convert to int for setClipRect
@@ -327,8 +330,8 @@ class CavaBar(QFrame):
         widget_w = float(self.width())
         step = widget_w / max(1, n)
 
-        top_points = []
-        bottom_points = []
+        top_points: list[QPointF] = []
+        bottom_points: list[QPointF] = []
         min_h_logical = float(self._cava_widget.config.min_bar_height) / dpr
         for i in range(n):
             cx = i * step + step / 2.0
@@ -347,7 +350,7 @@ class CavaBar(QFrame):
             combined.lineTo(p)
         combined.closeSubpath()
 
-        if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+        if self._cava_widget.edge_fade_left > 0 or self._cava_widget.edge_fade_right > 0:
             # Draw wave in strips with varying opacity
             widget_width = self.width()
             widget_height = int(height)  # Convert to int for setClipRect
@@ -401,16 +404,17 @@ class CavaWidget(BaseWidget):
         self._stop_cava = False
 
         # Parse edge_fade parameter - support both integer and [left, right] formats
-        if isinstance(self.config.edge_fade, list) and len(self.config.edge_fade) == 2:
-            self._edge_fade_left = self.config.edge_fade[0]
-            self._edge_fade_right = self.config.edge_fade[1]
+        edge_fade = self.config.edge_fade
+        if isinstance(edge_fade, int):
+            self.edge_fade_left = self.edge_fade_right = edge_fade
+        elif len(edge_fade) == 2:
+            self.edge_fade_left, self.edge_fade_right = edge_fade
         else:
-            # Single value applies to both sides
-            self._edge_fade_left = self.config.edge_fade
-            self._edge_fade_right = self.config.edge_fade
+            logging.warning("cava edge_fade must be a number or [left, right], got %s", edge_fade)
+            self.edge_fade_left = self.edge_fade_right = 0
 
         # Set up samples and colors
-        self.samples = [0] * self.config.bars_number
+        self.samples: list[float] = [0.0] * self.config.bars_number
         self.colors = []
 
         # Construct container layout
@@ -446,8 +450,9 @@ class CavaWidget(BaseWidget):
         else:
             self._hide_timer = None
 
-        if QApplication.instance():
-            QApplication.instance().aboutToQuit.connect(self.stop_cava)
+        app = QApplication.instance()
+        if app:
+            app.aboutToQuit.connect(self.stop_cava)
         atexit.register(self.stop_cava)
 
     def _reload_cava(self):
@@ -455,7 +460,7 @@ class CavaWidget(BaseWidget):
         try:
             self.stop_cava()
 
-            self.samples = [0] * self.config.bars_number
+            self.samples = [0.0] * self.config.bars_number
 
             QTimer.singleShot(500, self.start_cava)
 
@@ -494,7 +499,7 @@ class CavaWidget(BaseWidget):
                 except Exception as e:
                     logging.error("Error setting gradient color '%s': %s", color_str, e)
 
-    def on_samples_updated(self, new_samples: list) -> None:
+    def on_samples_updated(self, new_samples: list[float]) -> None:
         try:
             self.samples = new_samples
         except Exception:
@@ -584,12 +589,15 @@ class CavaWidget(BaseWidget):
                     creationflags=subprocess.CREATE_NO_WINDOW,
                 )
 
+                stdout = self._cava_process.stdout
+                if stdout is None:
+                    return
                 chunk = bytesize * self.config.bars_number
                 fmt = bytetype * self.config.bars_number
 
                 while not self._stop_cava:
                     try:
-                        data = self._cava_process.stdout.read(chunk)
+                        data = stdout.read(chunk)
                         if len(data) < chunk:
                             break
                         samples = [val / bytenorm for val in struct.unpack(fmt, data)]

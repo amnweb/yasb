@@ -4,9 +4,16 @@ import ctypes
 import threading
 import time
 from ctypes import HRESULT, POINTER, Structure, byref, c_ulong, c_void_p, c_wchar_p
+from typing import TYPE_CHECKING, Any
 
-from comtypes import CLSCTX_ALL, COMMETHOD, GUID, CoCreateInstance, IUnknown
-from pycaw.api.mmdeviceapi import PROPERTYKEY, IMMDeviceEnumerator
+from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
+    CLSCTX_ALL,
+    COMMETHOD,  # pyright: ignore[reportUnknownVariableType]
+    GUID,
+    CoCreateInstance,
+    IUnknown,
+)
+from pycaw.api.mmdeviceapi import PROPERTYKEY, IMMDevice, IMMDeviceEnumerator
 from pycaw.constants import AudioDeviceState, CLSID_MMDeviceEnumerator
 from pycaw.pycaw import AudioUtilities
 
@@ -44,6 +51,10 @@ class IDeviceTopology(IUnknown):
             (["out"], POINTER(POINTER(IUnknown))),
         ),
     ]
+    if TYPE_CHECKING:
+
+        def GetConnectorCount(self) -> int: ...
+        def GetConnector(self, nIndex: int) -> IUnknown: ...
 
 
 class IConnector(IUnknown):
@@ -58,6 +69,16 @@ class IConnector(IUnknown):
         COMMETHOD([], HRESULT, "GetConnectorIdConnectedTo", (["out"], POINTER(c_wchar_p))),
         COMMETHOD([], HRESULT, "GetDeviceIdConnectedTo", (["out"], POINTER(c_wchar_p))),
     ]
+    if TYPE_CHECKING:
+
+        def GetType(self) -> int: ...
+        def GetDataFlow(self) -> int: ...
+        def ConnectTo(self, pConnectTo: IUnknown) -> None: ...
+        def Disconnect(self) -> None: ...
+        def IsConnected(self) -> int: ...
+        def GetConnectedTo(self) -> IUnknown: ...
+        def GetConnectorIdConnectedTo(self) -> str: ...
+        def GetDeviceIdConnectedTo(self) -> str: ...
 
 
 class IKsControl(IUnknown):
@@ -74,6 +95,9 @@ class IKsControl(IUnknown):
             (["out"], POINTER(c_ulong), "BytesReturned"),
         ),
     ]
+    if TYPE_CHECKING:
+
+        def KsProperty(self, Property: Any, PropertyLength: int, PropertyData: Any, DataLength: int) -> int: ...
 
 
 def _mac_hex(address: str | int) -> str:
@@ -125,9 +149,9 @@ def _activate_ks(enumerator: IMMDeviceEnumerator, device_id: str) -> IKsControl 
         return None
 
 
-def _container_id(device) -> str | None:
+def _container_id(dev: IMMDevice) -> str | None:
     try:
-        val = device._dev.OpenPropertyStore(0).GetValue(_PKEY_CONTAINER)
+        val = dev.OpenPropertyStore(0).GetValue(_PKEY_CONTAINER)
         ptr = val.union.uhVal
         if not ptr:
             return None
@@ -146,9 +170,13 @@ def _ks_controls(address: str | int, device_name: str = "") -> list[IKsControl]:
     candidates: list[tuple[str, str | None, bool]] = []
     for device in AudioUtilities.GetAllDevices():
         friendly = (device.FriendlyName or "").casefold()
-        cid = _container_id(device)
         try:
-            itopo = device._dev.Activate(IID_IDeviceTopology, CLSCTX_ALL, None).QueryInterface(IDeviceTopology)
+            dev = enumerator.GetDevice(device.id)
+        except Exception:
+            continue
+        cid = _container_id(dev)
+        try:
+            itopo = dev.Activate(IID_IDeviceTopology, CLSCTX_ALL, None).QueryInterface(IDeviceTopology)
             count = itopo.GetConnectorCount()
         except Exception:
             continue

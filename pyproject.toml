@@ -62,10 +62,12 @@ Changelog = "https://github.com/amnweb/yasb/releases/latest"
 
 [project.optional-dependencies]
 dev = [
-    "YASB[test]",
+    "YASB[test,packaging]",
     "pre-commit",
     "ruff>=0.15.0",
+    "pyright==1.1.414",
     "pyqt6-stubs",
+    "pycaw-stubs",
     "types-pillow",
     "types-pywin32",
 ]
@@ -122,3 +124,13 @@ docstring-code-format     = true
 quote-style               = "double"
 indent-style              = "space"
 skip-magic-trailing-comma = false
+
+[tool.pyright]
+include = ["."]
+exclude = ["**/__pycache__", "src/build", "src/dist"]
+extraPaths = ["src"]
+pythonVersion = "3.14"
+pythonPlatform = "Windows"
+typeCheckingMode = "strict"
+reportMissingImports = true
+reportUntypedFunctionDecorator = false

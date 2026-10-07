@@ -1,23 +1,14 @@
 import ctypes
-import ctypes.wintypes
 import logging
 import winreg
 from typing import Literal
+
+from core.utils.win32.bindings.user32 import SendNotifyMessage
 
 ThemeMode = Literal["light", "dark"]
 
 _WM_SETTINGCHANGE = 0x001A
 _HWND_BROADCAST = 0xFFFF
-
-_user32_private = ctypes.WinDLL("user32")
-_send_notify_msg = _user32_private.SendNotifyMessageW
-_send_notify_msg.argtypes = [
-    ctypes.wintypes.HWND,
-    ctypes.wintypes.UINT,
-    ctypes.wintypes.WPARAM,
-    ctypes.c_wchar_p,
-]
-_send_notify_msg.restype = ctypes.wintypes.BOOL
 
 
 class ThemeService:
@@ -40,7 +31,8 @@ class ThemeService:
     def _broadcast_setting_change() -> bool:
         """Broadcast WM_SETTINGCHANGE asynchronously to all top-level windows."""
         try:
-            result = _send_notify_msg(_HWND_BROADCAST, _WM_SETTINGCHANGE, 0, "ImmersiveColorSet")
+            area = ctypes.create_unicode_buffer("ImmersiveColorSet")
+            result = SendNotifyMessage(_HWND_BROADCAST, _WM_SETTINGCHANGE, 0, ctypes.addressof(area))
             return bool(result)
         except Exception as exc:
             logging.error("Failed to broadcast setting change: %s", exc)

@@ -27,7 +27,7 @@ def test_vtable_matches_sdk(cls: type, sdk: ProbeResult):
         )
 
     native_methods = sdk.methods.get(key, {})
-    problems = []
+    problems: list[str] = []
     for method in discovery.com_methods(cls):
         if method_key(key, method.c_name) in sdk.errors:
             problems.append(f"slot {method.index}: {c_interface} has no method {method.c_name}")

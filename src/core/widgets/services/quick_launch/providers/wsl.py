@@ -128,7 +128,7 @@ class WslProvider(BaseProvider):
     input_placeholder = "Search WSL distributions..."
     icon = ICON_WSL
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         cfg = config or {}
         self._show_online: bool = bool(cfg.get("show_online", True))
@@ -196,7 +196,7 @@ class WslProvider(BaseProvider):
         except Exception as exc:
             logging.debug("WSL provider: open_terminal failed: %s", exc)
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         # First call start background load and show loader
         if not self._loaded:
             if not self._fetching:
@@ -404,7 +404,7 @@ class WslProvider(BaseProvider):
 
         threading.Thread(target=_do, daemon=True).start()
 
-    def _transition_distro(self, name: str, wsl_args: tuple, new_state: str) -> None:
+    def _transition_distro(self, name: str, wsl_args: tuple[str, ...], new_state: str) -> None:
         """Run a wsl command for one distro, show per-row loader, update state in-place."""
         self._pending.add(name)
         self._emit_refresh()  # show spinner

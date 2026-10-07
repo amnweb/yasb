@@ -1,8 +1,25 @@
 import json
 import logging
+from collections.abc import Callable
+from functools import partial
+from typing import Any, cast, override
 
-from PyQt6.QtCore import QAbstractListModel, QEvent, QMimeData, QModelIndex, QPoint, QRect, QSize, Qt, QTimer, QUrl
+from PyQt6.QtCore import (
+    QAbstractListModel,
+    QEvent,
+    QMimeData,
+    QModelIndex,
+    QObject,
+    QPoint,
+    QPropertyAnimation,
+    QRect,
+    QSize,
+    Qt,
+    QTimer,
+    QUrl,
+)
 from PyQt6.QtGui import (
+    QAction,
     QColor,
     QCursor,
     QDrag,
@@ -10,10 +27,13 @@ from PyQt6.QtGui import (
     QFontMetrics,
     QIcon,
     QImage,
+    QKeyEvent,
     QKeySequence,
+    QMouseEvent,
     QPainter,
     QPalette,
     QPixmap,
+    QScreen,
     QShortcut,
 )
 from PyQt6.QtWidgets import (
@@ -33,6 +53,7 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QVBoxLayout,
+    QWidget,
 )
 
 from core.ui.components.loader import LoaderLine
@@ -42,7 +63,7 @@ from core.utils.win32.utils import apply_qmenu_style, find_focused_screen
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.quick_launch import QuickLaunchConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.quick_launch.base_provider import ProviderResult
+from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.context_menu import QuickLaunchContextMenuService
 from core.widgets.services.quick_launch.icon_utils import load_and_scale_icon, svg_to_pixmap
 from core.widgets.services.quick_launch.providers.resources.icons import (
@@ -61,10 +82,10 @@ class ResultListModel(QAbstractListModel):
 
     _emoji_cache: dict[tuple[str, int, float], QPixmap | None] = {}
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
         self._results: list[ProviderResult] = []
-        self._icons: dict[int, QPixmap] = {}
+        self._icons: dict[int, QPixmap | None] = {}
         self._late_icons: dict[str, QPixmap] = {}
         self._icon_size: int = 0
         self._dpr: float = 1.0
@@ -152,8 +173,10 @@ class ResultListModel(QAbstractListModel):
         img = img.convertToFormat(QImage.Format.Format_ARGB32)
         width, height = img.width(), img.height()
         ptr = img.bits()
+        if ptr is None:
+            return None
         ptr.setsize(img.sizeInBytes())
-        raw = bytes(ptr)
+        raw = ptr.asstring(img.sizeInBytes())
         bpl = img.bytesPerLine()
         scan_width = width * 4
 
@@ -232,7 +255,7 @@ class ResultItemDelegate(QStyledItemDelegate):
         desc_style_label: QLabel,
         sep_style_label: QLabel,
         compact_text: bool = False,
-        parent=None,
+        parent: QObject | None = None,
     ):
         super().__init__(parent)
         self._icon_size = icon_size
@@ -268,11 +291,16 @@ class ResultItemDelegate(QStyledItemDelegate):
         opt.icon = QIcon()
         opt.decorationSize = QSize(0, 0)
         style = opt.widget.style() if opt.widget else QApplication.style()
+        if style is None:
+            return super().sizeHint(option, index)
         return style.sizeFromContents(
             QStyle.ContentsType.CT_ItemViewItem, opt, QSize(option.rect.width(), content_h), opt.widget
         )
 
-    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+    @override
+    def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+        if painter is None:
+            return
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setClipping(True)
@@ -298,6 +326,9 @@ class ResultItemDelegate(QStyledItemDelegate):
         opt.icon = QIcon()
         opt.decorationSize = QSize(0, 0)
         style = opt.widget.style() if opt.widget else QApplication.style()
+        if style is None:
+            painter.restore()
+            return
 
         style.drawPrimitive(QStyle.PrimitiveElement.PE_PanelItemViewItem, opt, painter, opt.widget)
         if not result:
@@ -374,7 +405,8 @@ class ResultItemDelegate(QStyledItemDelegate):
 class ResultListView(QListView):
     """QListView subclass with custom drag support for result items."""
 
-    def startDrag(self, supportedActions):
+    @override
+    def startDrag(self, supportedActions: Qt.DropAction) -> None:
         index = self.currentIndex()
         if not index.isValid():
             return
@@ -396,6 +428,59 @@ class ResultListView(QListView):
         drag.exec(Qt.DropAction.CopyAction | Qt.DropAction.MoveAction | Qt.DropAction.LinkAction)
 
 
+class QuickLaunchPopup(PopupWidget):
+    """The Quick Launch window; its key presses are handled by the owning QuickLaunchWidget."""
+
+    search_container: QFrame
+    content_widget: QFrame
+    prefix_chip: QLabel
+    search_input: QLineEdit
+    prediction_label: QLineEdit
+    results_view: ResultListView
+    empty_widget: QFrame
+    empty_icon: QLabel
+    empty_hint: QLabel
+    preview_frame: QFrame
+    preview_layout: QVBoxLayout
+
+    def __init__(
+        self,
+        parent: QWidget,
+        on_key_press: Callable[[QKeyEvent], None],
+        blur: bool,
+        round_corners: bool,
+        round_corners_type: str,
+        border_color: str,
+        dark_mode: bool,
+    ):
+        super().__init__(
+            parent,
+            blur=blur,
+            round_corners=round_corners,
+            round_corners_type=round_corners_type,
+            border_color=border_color,
+            dark_mode=dark_mode,
+        )
+        self._on_key_press = on_key_press
+
+    @property
+    def popup_content(self) -> QFrame:
+        return self._popup_content
+
+    @property
+    def fade_animation(self) -> QPropertyAnimation:
+        return self._fade_animation
+
+    @property
+    def is_closing(self) -> bool:
+        return self._is_closing
+
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is not None:
+            self._on_key_press(a0)
+
+
 class QuickLaunchWidget(BaseWidget):
     validation_schema = QuickLaunchConfig
     _active_instance: QuickLaunchWidget | None = None
@@ -405,7 +490,7 @@ class QuickLaunchWidget(BaseWidget):
         super().__init__(class_name="quick-launch-widget")
         self.config = config
 
-        self._popup: PopupWidget | None = None
+        self._popup: QuickLaunchPopup | None = None
         self._dpr = 1.0
 
         self._result_model: ResultListModel | None = None
@@ -444,16 +529,25 @@ class QuickLaunchWidget(BaseWidget):
         self.callback_right = self.config.callbacks.on_right
         self.callback_middle = self.config.callbacks.on_middle
 
+    @classmethod
+    def active_instance(cls) -> QuickLaunchWidget | None:
+        return cls._active_instance
+
+    def set_search_text(self, text: str) -> None:
+        if self._popup:
+            self._popup.search_input.setText(text)
+
     def _toggle_quick_launch(self):
         active = QuickLaunchWidget._active_instance
-        if active is not None and active._popup and active._popup.isVisible() and not active._popup._is_closing:
+        if active is not None and active._popup and active._popup.isVisible() and not active._popup.is_closing:
             active._hide_popup()
         else:
-            self._show_popup()
+            self.show_popup()
 
-    def _show_popup(self):
+    def show_popup(self):
         QuickLaunchWidget._active_instance = self
-        self._dpr = self.screen().devicePixelRatio()
+        screen = self.screen()
+        self._dpr = screen.devicePixelRatio() if screen else 1.0
         if not self._popup:
             self._popup = self._create_popup()
 
@@ -461,7 +555,7 @@ class QuickLaunchWidget(BaseWidget):
         search_text = self._last_search_text if self.config.remember_last_query else ""
 
         if active_prefix:
-            self._set_prefix_chip(active_prefix, search_text.removeprefix(active_prefix).lstrip())
+            self.set_prefix_chip(active_prefix, search_text.removeprefix(active_prefix).lstrip())
         else:
             self._clear_prefix_chip()
             self._popup.search_input.blockSignals(True)
@@ -477,7 +571,8 @@ class QuickLaunchWidget(BaseWidget):
 
         if not active_prefix:
             if not self.config.compact_mode:
-                self._loader.start()
+                if self._loader:
+                    self._loader.start()
                 self._update_results(search_text)
             elif search_text.strip():
                 self._update_results(search_text)
@@ -486,7 +581,7 @@ class QuickLaunchWidget(BaseWidget):
         QTimer.singleShot(0, self._reset_scroll_position)
 
     def _hide_popup(self):
-        if not self._popup or self._popup._is_closing:
+        if not self._popup or self._popup.is_closing:
             return
         self._pending_query_id = None
         self._stop_loader()
@@ -494,7 +589,7 @@ class QuickLaunchWidget(BaseWidget):
 
     def _on_popup_closed(self):
         """Called when the fade-out animation finishes."""
-        if not (self._popup and self._popup._is_closing):
+        if not (self._popup and self._popup.is_closing):
             return
         if not self._position_locked:
             self._position_locked = True
@@ -541,7 +636,7 @@ class QuickLaunchWidget(BaseWidget):
         y = (geo.height() - cfg.height) // 3 + geo.y()
         self._popup.move(x, y)
 
-    def _get_target_screen(self):
+    def _get_target_screen(self) -> QScreen:
         screen_mode = "cursor"
         for kb in self.config.keybindings:
             if kb.action == "toggle_quick_launch":
@@ -578,10 +673,11 @@ class QuickLaunchWidget(BaseWidget):
         if self._popup and self._popup.isVisible():
             self._popup.results_view.scrollToTop()
 
-    def _create_popup(self) -> PopupWidget:
+    def _create_popup(self) -> QuickLaunchPopup:
         cfg = self.config.popup
-        popup = PopupWidget(
+        popup = QuickLaunchPopup(
             self,
+            self._handle_key_press,
             blur=cfg.blur,
             round_corners=cfg.round_corners,
             round_corners_type=cfg.round_corners_type,
@@ -589,12 +685,12 @@ class QuickLaunchWidget(BaseWidget):
             dark_mode=cfg.dark_mode,
         )
         popup.setProperty("class", "quick-launch-popup")
-        popup._popup_content.setProperty("class", "container")
+        popup.popup_content.setProperty("class", "container")
         popup.setFixedSize(cfg.width, cfg.height)
-        popup._fade_animation.setDuration(40)
-        popup._fade_animation.finished.connect(self._on_popup_closed)
+        popup.fade_animation.setDuration(40)
+        popup.fade_animation.finished.connect(self._on_popup_closed)
 
-        main_layout = QVBoxLayout(popup._popup_content)
+        main_layout = QVBoxLayout(popup.popup_content)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
@@ -776,7 +872,6 @@ class QuickLaunchWidget(BaseWidget):
         popup.empty_hint = empty_hint
         popup.preview_frame = preview_frame
         popup.preview_layout = preview_layout
-        popup.keyPressEvent = self._handle_key_press
 
         QShortcut(QKeySequence(Qt.Key.Key_Escape), popup).activated.connect(self._hide_popup)
         return popup
@@ -802,7 +897,7 @@ class QuickLaunchWidget(BaseWidget):
             for p in self._service.providers:
                 if p.prefix and search_text.startswith(p.prefix + " "):
                     remaining = search_text[len(p.prefix) + 1 :]
-                    self._set_prefix_chip(p.prefix, remaining)
+                    self.set_prefix_chip(p.prefix, remaining)
                     return
         # Compact mode show/hide results based on whether there is text
         if self.config.compact_mode:
@@ -822,14 +917,14 @@ class QuickLaunchWidget(BaseWidget):
             self._stop_loader()
             self._show_home_page()
             return
-        if full_text.strip():
+        if full_text.strip() and self._loader:
             self._loader.start()
         self._pending_query_id = self._service.async_query(full_text, self.config.max_results)
 
     def _show_home_page(self):
         """Show provider shortcuts as the home page when search is empty."""
         providers = self._service.providers
-        results = []
+        results: list[ProviderResult] = []
         for p in providers:
             if not p.prefix:
                 continue
@@ -844,31 +939,35 @@ class QuickLaunchWidget(BaseWidget):
             )
         self._apply_results(results)
 
-    def _apply_results(self, results: list):
+    def _apply_results(self, results: list[ProviderResult]):
+        popup = self._popup
+        model = self._result_model
+        if popup is None or model is None:
+            return
         prev_selected = self._selected_index
         self._selected_index = -1
 
         if not results:
-            self._result_model.set_results([], 0, 1.0)
+            model.set_results([], 0, 1.0)
             self._clear_preview()
             if self._pending_search_text.strip():
                 # Nothing matched collapse to the search bar
                 self._set_compact_visible(False)
                 return
             self._set_empty_icon(ICON_SEARCH_MAIN)
-            self._popup.empty_hint.setText("Type to search...")
-            self._popup.results_view.setVisible(False)
-            self._popup.empty_widget.setVisible(True)
+            popup.empty_hint.setText("Type to search...")
+            popup.results_view.setVisible(False)
+            popup.empty_widget.setVisible(True)
             return
 
-        if not self._popup.content_widget.isVisible():
+        if not popup.content_widget.isVisible():
             self._set_compact_visible(True)
-        self._popup.empty_widget.setVisible(False)
-        self._popup.results_view.setVisible(True)
-        self._result_model.set_results(results, self.config.icon_size, self._dpr)
+        popup.empty_widget.setVisible(False)
+        popup.results_view.setVisible(True)
+        model.set_results(results, self.config.icon_size, self._dpr)
         self._clear_preview()
 
-        count = self._result_model.rowCount()
+        count = model.rowCount()
         if count > 0:
             scroll_val = self._pending_scroll_value
             self._pending_scroll_value = -1
@@ -881,21 +980,20 @@ class QuickLaunchWidget(BaseWidget):
             else:
                 self._set_selected(self._next_selectable(-1, 1, count))
             if scroll_val >= 0:
-                QTimer.singleShot(
-                    0,
-                    lambda v=scroll_val: (
-                        self._popup
-                        and self._popup.results_view.verticalScrollBar()
-                        and self._popup.results_view.verticalScrollBar().setValue(v)
-                    ),
-                )
+                QTimer.singleShot(0, partial(self._restore_scroll, scroll_val))
+
+    def _restore_scroll(self, value: int) -> None:
+        if self._popup:
+            scroll_bar = self._popup.results_view.verticalScrollBar()
+            if scroll_bar:
+                scroll_bar.setValue(value)
 
     def _set_empty_icon(self, icon_value: str):
         """Render empty-state icon from either inline SVG or icon-font glyph text."""
         if not self._popup:
             return
         label = self._popup.empty_icon
-        if isinstance(icon_value, str) and icon_value.lstrip().startswith("<svg"):
+        if icon_value.lstrip().startswith("<svg"):
             pixmap = svg_to_pixmap(icon_value, 88, self._dpr)
             if not pixmap.isNull():
                 label.setText("")
@@ -904,21 +1002,26 @@ class QuickLaunchWidget(BaseWidget):
         label.setPixmap(QPixmap())
         label.setText(icon_value)
 
-    def _on_view_item_clicked(self, model_index):
+    def _on_view_item_clicked(self, model_index: QModelIndex):
         """Handle click on a list-view item."""
         if self._popup and self._popup.isActiveWindow():
             self._execute_result(model_index.row())
 
-    def _on_view_context_menu(self, pos):
+    def _on_view_context_menu(self, pos: QPoint):
         """Handle right-click context menu on the list view."""
+        if not self._popup:
+            return
         index = self._popup.results_view.indexAt(pos)
         if not index.isValid():
             return
-        global_pos = self._popup.results_view.viewport().mapToGlobal(pos)
+        viewport = self._popup.results_view.viewport()
+        if viewport is None:
+            return
+        global_pos = viewport.mapToGlobal(pos)
         self._show_item_context_menu(index.row(), global_pos)
 
     def _show_item_context_menu(self, index: int, global_pos: QPoint):
-        if not self._result_model:
+        if not self._result_model or not self._popup:
             return
         result = self._result_model.result_at(index)
         if not result or result.is_separator:
@@ -974,9 +1077,10 @@ class QuickLaunchWidget(BaseWidget):
         layout = self._popup.preview_layout
         while layout.count():
             child = layout.takeAt(0)
-            if child.widget():
-                child.widget().hide()
-                child.widget().deleteLater()
+            child_widget = child.widget() if child else None
+            if child_widget:
+                child_widget.hide()
+                child_widget.deleteLater()
         self._popup.preview_frame.setProperty("class", "preview")
         self._popup.preview_frame.setVisible(False)
 
@@ -1106,7 +1210,7 @@ class QuickLaunchWidget(BaseWidget):
 
         self._popup.preview_frame.setVisible(True)
 
-    def _render_edit_preview(self, index: int, preview: dict, layout):
+    def _render_edit_preview(self, index: int, preview: dict[str, Any], layout: QVBoxLayout):
         """Render an inline edit form in the preview panel."""
         if not self._popup or not self._result_model:
             return
@@ -1118,7 +1222,7 @@ class QuickLaunchWidget(BaseWidget):
 
         fields = preview.get("fields", [])
         save_action = preview.get("action", "save")
-        form_widgets: dict = {}
+        form_widgets: dict[str, QLineEdit | QPlainTextEdit] = {}
 
         for field_def in fields:
             fid = field_def.get("id", "")
@@ -1128,6 +1232,7 @@ class QuickLaunchWidget(BaseWidget):
                 lbl.setProperty("class", "preview-title")
                 layout.addWidget(lbl)
 
+            widget: QLineEdit | QPlainTextEdit
             if field_def.get("type") == "multiline":
                 widget = QPlainTextEdit()
                 widget.setPlaceholderText(field_def.get("placeholder", ""))
@@ -1155,13 +1260,13 @@ class QuickLaunchWidget(BaseWidget):
         save_btn = QPushButton("Save")
         save_btn.setProperty("class", "preview-btn save")
 
-        def collect_and_save(_checked=False, _result=result):
-            data = {}
+        def collect_and_save(_checked: bool = False, _result: ProviderResult = result) -> None:
+            data: dict[str, str] = {}
             for fid, w in form_widgets.items():
                 data[fid] = w.toPlainText() if isinstance(w, QPlainTextEdit) else w.text()
             self._handle_preview_action(_result, save_action, data)
 
-        def cancel(_checked=False, _result=result):
+        def cancel(_checked: bool = False, _result: ProviderResult = result) -> None:
             self._handle_preview_action(_result, "cancel", {})
 
         save_btn.clicked.connect(collect_and_save)
@@ -1177,11 +1282,11 @@ class QuickLaunchWidget(BaseWidget):
         if first and not self._popup.search_input.hasFocus():
             QTimer.singleShot(0, first.setFocus)
 
-    def _get_provider(self, name: str):
+    def _get_provider(self, name: str) -> BaseProvider | None:
         """Look up a provider by name."""
         return next((p for p in self._service.providers if p.name == name), None)
 
-    def _handle_preview_action(self, result: ProviderResult, action_id: str, data: dict):
+    def _handle_preview_action(self, result: ProviderResult, action_id: str, data: dict[str, Any]):
         """Forward a preview-panel action to the owning provider."""
         provider = self._get_provider(result.provider)
         if not provider:
@@ -1201,7 +1306,7 @@ class QuickLaunchWidget(BaseWidget):
         if self._popup and self._popup.isVisible() and self._result_model:
             self._result_model.update_icon(result_id, icon_path, self.config.icon_size, self._dpr)
 
-    def _on_query_finished(self, query_id: str, results: list):
+    def _on_query_finished(self, query_id: str, results: list[ProviderResult]):
         if query_id != self._pending_query_id:
             return
         if not self._popup or not self._popup.isVisible():
@@ -1236,15 +1341,18 @@ class QuickLaunchWidget(BaseWidget):
             overlay.setVisible(False)
 
     def _next_selectable(self, current: int, direction: int, count: int) -> int:
+        model = self._result_model
+        if model is None:
+            return current
         idx = current + direction
         while 0 <= idx < count:
-            result = self._result_model.result_at(idx)
+            result = model.result_at(idx)
             if not result or not result.is_separator:
                 return idx
             idx += direction
         return current
 
-    def _handle_key_press(self, event):
+    def _handle_key_press(self, event: QKeyEvent):
         key = event.key()
         count = self._result_model.rowCount() if self._result_model else 0
         if key == Qt.Key.Key_Down and count > 0:
@@ -1278,7 +1386,7 @@ class QuickLaunchWidget(BaseWidget):
             if initial_text and not initial_text.endswith(" "):
                 initial_text += " "
             if prefix and self._popup:
-                self._set_prefix_chip(prefix, initial_text)
+                self.set_prefix_chip(prefix, initial_text)
             return
         should_close = None
         provider = self._get_provider(result.provider)
@@ -1294,7 +1402,7 @@ class QuickLaunchWidget(BaseWidget):
             # Ensure the clicked/selected row is highlighted and its preview rendered.
             self._set_selected(index)
 
-    def _set_prefix_chip(self, prefix: str, initial_text: str = ""):
+    def set_prefix_chip(self, prefix: str, initial_text: str = ""):
         """Activate a prefix chip in the search bar."""
         self._active_prefix = prefix
         self._last_active_prefix = prefix
@@ -1324,7 +1432,7 @@ class QuickLaunchWidget(BaseWidget):
             self._popup.prefix_chip.setText("")
             self._popup.search_input.setPlaceholderText(self.config.search_placeholder)
 
-    def _on_search_input_context_menu(self, pos):
+    def _on_search_input_context_menu(self, pos: QPoint):
         """Show a context menu on the search input."""
         if not self._popup:
             return
@@ -1339,16 +1447,20 @@ class QuickLaunchWidget(BaseWidget):
         clipboard_has_text = bool(clipboard and clipboard.text())
 
         # Text editing actions
-        cut_action = menu.addAction("Cut")
+        cut_action = QAction("Cut", menu)
+        menu.addAction(cut_action)
         cut_action.setEnabled(has_selection)
-        copy_action = menu.addAction("Copy")
+        copy_action = QAction("Copy", menu)
+        menu.addAction(copy_action)
         copy_action.setEnabled(has_selection)
-        paste_action = menu.addAction("Paste")
+        paste_action = QAction("Paste", menu)
+        menu.addAction(paste_action)
         paste_action.setEnabled(clipboard_has_text)
 
         menu.addSeparator()
 
-        select_all_action = menu.addAction("Select All")
+        select_all_action = QAction("Select All", menu)
+        menu.addAction(select_all_action)
         select_all_action.setEnabled(has_text)
 
         menu.addSeparator()
@@ -1413,15 +1525,17 @@ class QuickLaunchWidget(BaseWidget):
         else:
             search.setCursor(QCursor(Qt.CursorShape.SizeAllCursor))
 
-    def eventFilter(self, obj, event):
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
         """Intercept mouse events on search_input for drag-to-move and prefix removal."""
-        if not self._popup or obj is not self._popup.search_input:
-            return super().eventFilter(obj, event)
+        event = a1
+        if not self._popup or a0 is not self._popup.search_input or event is None:
+            return super().eventFilter(a0, a1)
 
         etype = event.type()
 
         # Drag-to-move (only when position is unlocked)
-        if not self._position_locked:
+        if not self._position_locked and isinstance(event, QMouseEvent):
             if etype == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
                 self._drag_offset = event.globalPosition().toPoint() - self._popup.pos()
                 self._set_drag_opacity(0.5)
@@ -1433,6 +1547,9 @@ class QuickLaunchWidget(BaseWidget):
                 self._drag_offset = None
                 self._set_drag_opacity(1.0)
                 return True
+
+        if not isinstance(event, QKeyEvent):
+            return super().eventFilter(a0, a1)
 
         # Alt+P to toggle preview panel
         if (
@@ -1471,13 +1588,13 @@ class QuickLaunchWidget(BaseWidget):
                     self._update_results(text)
                 return True
 
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
     def _set_drag_opacity(self, opacity: float):
         """Set the visual opacity of the popup content during drag."""
         if not self._popup:
             return
-        content = self._popup._popup_content
+        content = self._popup.popup_content
         if opacity >= 1.0:
             content.setGraphicsEffect(None)
         else:
@@ -1485,7 +1602,7 @@ class QuickLaunchWidget(BaseWidget):
             effect.setOpacity(opacity)
             content.setGraphicsEffect(effect)
 
-    def _load_settings(self) -> dict:
+    def _load_settings(self) -> dict[str, Any]:
         """Load the quick launch settings from disk."""
         try:
             path = app_data_path(self._SETTINGS_FILE)
@@ -1495,7 +1612,7 @@ class QuickLaunchWidget(BaseWidget):
             pass
         return {}
 
-    def _save_settings(self, settings: dict):
+    def _save_settings(self, settings: dict[str, Any]):
         """Write the quick launch settings to disk."""
         try:
             path = app_data_path(self._SETTINGS_FILE)
@@ -1508,7 +1625,8 @@ class QuickLaunchWidget(BaseWidget):
         data = self._load_settings()
         pos = data.get("position")
         if isinstance(pos, dict) and "x" in pos and "y" in pos:
-            self._saved_position = QPoint(pos["x"], pos["y"])
+            position = cast(dict[str, Any], pos)
+            self._saved_position = QPoint(position["x"], position["y"])
             self._position_locked = True
 
     def _persist_position(self):

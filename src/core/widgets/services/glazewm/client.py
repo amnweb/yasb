@@ -29,7 +29,7 @@ class Workspace:
     focus: bool = False  # Global focus - only ONE workspace has this True
     is_displayed: bool = False
     num_windows: int = 0
-    windows: list[Window] = field(default_factory=list)
+    windows: list[Window] = field(default_factory=list[Window])
 
 
 @dataclass
@@ -41,8 +41,8 @@ class Monitor:
 
 @dataclass
 class BindingMode:
-    name: str
-    display_name: str
+    name: str | None
+    display_name: str | None
 
 
 class MessageType(StrEnum):
@@ -207,8 +207,8 @@ class GlazewmClient(QObject):
             display_name=data[0].get("displayName", None),
         )
 
-    def _read_windows(self, parent):
-        windows = []
+    def _read_windows(self, parent: dict[str, Any]) -> list[Window]:
+        windows: list[Window] = []
         for child in parent.get("children", []):
             if child.get("type") == "window":
                 windows.append(

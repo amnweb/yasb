@@ -3,6 +3,7 @@ import logging
 import os
 import tempfile
 import time
+from typing import Any
 
 import win32con
 import win32gui
@@ -17,6 +18,7 @@ from core.utils.win32.window_actions import (
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.fuzzy import fuzzy_score
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_WINDOWS_SWITCHER
+from core.widgets.services.taskbar.application_window import ApplicationWindow
 from core.widgets.services.taskbar.window_manager import get_shared_task_manager
 
 
@@ -28,11 +30,12 @@ class WindowSwitcherProvider(BaseProvider):
     icon = ICON_WINDOWS_SWITCHER
     input_placeholder = "Switch to window..."
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self.max_results = self.config.get("max_results", 50)
         self._task_manager = get_shared_task_manager()
-        self._task_manager._keep_cloaked_tasks = True
+        self._task_manager.keep_cloaked_tasks = True
+        self._last_enum_time: float | None = None
 
         self._icons_dir = os.path.join(tempfile.gettempdir(), "yasb_quick_launch_icons")
         os.makedirs(self._icons_dir, exist_ok=True)
@@ -42,12 +45,11 @@ class WindowSwitcherProvider(BaseProvider):
             return text.strip().startswith(self.prefix)
         return True
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         if not self._task_manager.is_initialized():
             now = time.time()
-            if not hasattr(self, "_last_enum_time") or (now - self._last_enum_time > 1.0):
-                self._task_manager._windows.clear()
-                self._task_manager._enumerate_existing_windows()
+            if self._last_enum_time is None or (now - self._last_enum_time > 1.0):
+                self._task_manager.rescan_windows()
                 self._last_enum_time = now
 
         query_text = self.get_query_text(text) if self.prefix and text.startswith(self.prefix) else text
@@ -56,10 +58,10 @@ class WindowSwitcherProvider(BaseProvider):
         windows = list(self._task_manager.get_windows().values())
         taskbar_windows = [w for w in windows if w.is_taskbar_window()]
 
-        z_order = []
+        z_order: list[int] = []
         try:
 
-            def enum_cb(hwnd, lParam):
+            def enum_cb(hwnd: int, lParam: object) -> bool:
                 z_order.append(hwnd)
                 return True
 
@@ -69,10 +71,10 @@ class WindowSwitcherProvider(BaseProvider):
 
         z_order_map = {hwnd: i for i, hwnd in enumerate(z_order)}
 
-        results_data = []
+        results_data: list[tuple[float, int, ApplicationWindow, str, str]] = []
         for win in taskbar_windows:
             # Re-fetch title because the window might still have an old title in the dict
-            title = win.title or win._get_title() or "Unknown"
+            title = win.title or win.get_title() or "Unknown"
             app_id = win.process_name or "Unknown"
 
             if query_lower:
@@ -98,7 +100,7 @@ class WindowSwitcherProvider(BaseProvider):
         results_data.sort(key=lambda x: (-x[0], x[1]))
 
         # Format output
-        results = []
+        results: list[ProviderResult] = []
         for _, _, win, title, app_id in results_data[: self.max_results]:
             icon_path = self._get_window_icon_path(win)
 
@@ -116,7 +118,7 @@ class WindowSwitcherProvider(BaseProvider):
 
         return results
 
-    def _get_window_icon_path(self, win) -> str:
+    def _get_window_icon_path(self, win: ApplicationWindow) -> str:
         from core.utils.win32.app_icons import get_window_icon
 
         is_uwp = win.class_name == "ApplicationFrameWindow"
@@ -174,7 +176,7 @@ class WindowSwitcherProvider(BaseProvider):
                     except Exception:
                         try:
                             win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-                            win32gui.SetActiveWindow(hwnd)
+                            win32gui.SetActiveWindow(hwnd)  # pyright: ignore[reportUnknownMemberType]
                         except Exception:
                             try:
                                 win32gui.ShowWindow(
