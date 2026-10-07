@@ -89,6 +89,8 @@ Pyright reads its settings from `[tool.pyright]` in `pyproject.toml` and checks 
 python -m pytest
 ```
 
+In VS Code, the **Testing** panel lists every test, and the icon next to each one runs or debugs it on its own. It uses the Python interpreter selected in VS Code, so install the `dev` extras there.
+
 The tests also run on every pull request, and the bot comments with any failures. The checks that compare ctypes code with the Windows SDK need Visual Studio or the Build Tools with the **Desktop development with C++** workload; without it they are skipped locally and still run in CI. See [tests/README.md](https://github.com/amnweb/yasb/blob/main/tests/README.md) for what each test guards against and what to do when one fails.
 
 ## Contributing Guidelines
