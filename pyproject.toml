@@ -66,10 +66,10 @@ dev = [
     "pre-commit",
     "ruff>=0.15.0",
     "pyright==1.1.414",
-    "pyqt6-stubs",
-    "pycaw-stubs",
-    "types-pillow",
-    "types-pywin32",
+    "pyqt6-stubs==20250824",
+    "pycaw-stubs==20260927.20261008",
+    "types-pillow==10.2.0.20240822",
+    "types-pywin32==312.0.0.20261006",
 ]
 test = [
     "pytest>=9.1",

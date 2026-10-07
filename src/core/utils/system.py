@@ -33,7 +33,7 @@ def get_build_and_ubr() -> tuple[int, int]:
     ubr: int
     try:
         with OpenKey(HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion", KEY_QUERY_VALUE) as key:
-            ubr: int = QueryValueEx(key, "UBR")[0]
+            ubr = QueryValueEx(key, "UBR")[0]
     except Exception:
         ubr = 0
     return (build, ubr)

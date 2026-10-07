@@ -414,7 +414,7 @@ class CavaWidget(BaseWidget):
             self.edge_fade_left = self.edge_fade_right = 0
 
         # Set up samples and colors
-        self.samples: list[float] = [0.0] * self.config.bars_number
+        self.samples = [0.0] * self.config.bars_number
         self.colors = []
 
         # Construct container layout
