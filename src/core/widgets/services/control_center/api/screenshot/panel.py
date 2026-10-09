@@ -1,12 +1,12 @@
 """Per-monitor freeze overlay panel."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 import win32api
 import win32con
 import win32gui
-from PyQt6.QtCore import QPoint, Qt
-from PyQt6.QtGui import QBrush, QColor, QPainter, QPen
+from PyQt6.QtCore import QPoint, QRect, Qt
+from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QWidget
 
 from core.widgets.services.control_center.api.screenshot.capture import ScreenFreeze
@@ -47,33 +47,41 @@ class ScreenPanel(QWidget):
         except Exception:
             pass
 
-    def _event_physical(self, e) -> QPoint:
+    def _event_physical(self, e: QMouseEvent) -> QPoint:
         """Mouse -> Win32 physical pixels (selection / crop space)."""
         return self.ctrl.local_to_physical(self.freeze, e.position().toPoint())
 
-    def _sel_local(self):
+    def _sel_local(self) -> QRect:
         """Physical selection -> this panel's local paint coordinates."""
         return self.ctrl.physical_to_local_rect(self.freeze, self.ctrl.sel)
 
-    def mousePressEvent(self, e):
-        if e.button() == Qt.MouseButton.LeftButton:
-            self.ctrl.on_press(self._event_physical(e))
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+            self.ctrl.on_press(self._event_physical(a0))
 
-    def mouseMoveEvent(self, e):
-        self.ctrl.on_move(self._event_physical(e))
+    @override
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None:
+            self.ctrl.on_move(self._event_physical(a0))
 
-    def mouseReleaseEvent(self, e):
-        if e.button() == Qt.MouseButton.LeftButton:
-            self.ctrl.on_release(self._event_physical(e))
+    @override
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+            self.ctrl.on_release(self._event_physical(a0))
 
-    def mouseDoubleClickEvent(self, e):
-        if e.button() == Qt.MouseButton.LeftButton:
+    @override
+    def mouseDoubleClickEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
             self.ctrl.on_double_click()
 
-    def keyPressEvent(self, e):
-        self.ctrl.on_key(e)
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is not None:
+            self.ctrl.on_key(a0)
 
-    def paintEvent(self, _):
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         p.drawPixmap(0, 0, self.freeze.pixmap)

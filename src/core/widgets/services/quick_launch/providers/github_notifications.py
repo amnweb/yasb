@@ -3,6 +3,7 @@ import os
 import threading
 import time
 import urllib.error
+from typing import Any
 
 from core.utils.shell_utils import shell_open
 from core.utils.time_utils import get_relative_time
@@ -45,7 +46,7 @@ _REASON_LABELS: dict[str, str] = {
 }
 
 
-def _resolve_icon(notification: dict) -> str:
+def _resolve_icon(notification: dict[str, Any]) -> str:
     """Pick the right colored SVG icon for a notification."""
     ntype = notification.get("type", "")
     if ntype == "Issue":
@@ -82,14 +83,14 @@ class GithubNotificationsProvider(BaseProvider):
     icon = ICON_GITHUB
     input_placeholder = "GitHub Notifications"
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self._token_cfg: str = self.config.get("token", "env")
 
         # Local cache - uses GitHubDataManager for all API calls but keeps its own
         # data copy.  None means "never fetched yet"; empty list means
         # "fetched but nothing came back (or error)".
-        self._cached_data: list[dict] | None = None
+        self._cached_data: list[dict[str, Any]] | None = None
         self._fetching = False
         self._fetch_error: str | None = None
         self._cache_time: float = 0
@@ -99,10 +100,10 @@ class GithubNotificationsProvider(BaseProvider):
     def _resolve_token(self) -> str:
         """Resolve the effective token at call time so OAuth tokens are picked up immediately."""
         if self._token_cfg == "env":
-            return os.getenv("YASB_GITHUB_TOKEN", "") or GitHubDataManager._token or get_saved_token()
+            return os.getenv("YASB_GITHUB_TOKEN", "") or GitHubDataManager.get_token() or get_saved_token()
         elif self._token_cfg:
             return self._token_cfg
-        return GitHubDataManager._token or get_saved_token() or os.getenv("YASB_GITHUB_TOKEN", "")
+        return GitHubDataManager.get_token() or get_saved_token() or os.getenv("YASB_GITHUB_TOKEN", "")
 
     def _fetch_in_background(self):
         """Fetch notifications via GitHubDataManager in a background thread."""
@@ -115,7 +116,7 @@ class GithubNotificationsProvider(BaseProvider):
                 self._fetch_error = None
                 self._cache_time = time.monotonic()
                 # Refresh bar widget so it picks up the latest data (only if there are unread items)
-                if token and token == GitHubDataManager._token:
+                if token and token == GitHubDataManager.get_token():
                     if any(n.get("unread") for n in data):
                         GitHubDataManager.refresh()
             except urllib.error.HTTPError as e:
@@ -147,7 +148,7 @@ class GithubNotificationsProvider(BaseProvider):
             return stripped == self.prefix or stripped.startswith(self.prefix + " ")
         return True
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         token = self._resolve_token()
         if not token:
             return [
@@ -354,7 +355,7 @@ class GithubNotificationsProvider(BaseProvider):
             return text.strip()[len(self.prefix) :].strip()
         return text.strip()
 
-    def _notification_to_result(self, notification: dict) -> ProviderResult:
+    def _notification_to_result(self, notification: dict[str, Any]) -> ProviderResult:
         """Convert a GitHub notification dict to a ProviderResult."""
         title = notification.get("title", "")
         repo = notification.get("repository", "")

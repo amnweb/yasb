@@ -40,7 +40,7 @@ def capture_screens() -> list[ScreenFreeze] | None:
     freezes: list[ScreenFreeze] = []
     for i, s in enumerate(screens_sorted):
         geo = QRect(s.geometry())
-        pm = s.grabWindow(0)
+        pm = s.grabWindow()
         if pm.isNull() or geo.isEmpty():
             return None
         dpr = float(s.devicePixelRatio())

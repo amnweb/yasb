@@ -1,7 +1,8 @@
 import logging
+from typing import TYPE_CHECKING, override
 
-from PyQt6.QtCore import QEvent, QRect, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QScreen
+from PyQt6.QtCore import QEvent, QObject, QRect, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QCloseEvent, QContextMenuEvent, QResizeEvent, QScreen, QShowEvent
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
 
 from core.bar_helper import (
@@ -17,17 +18,14 @@ from core.bar_helper import (
 from core.bar_style import AdaptiveBarFrame, BarFrame
 from core.events.service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
+from core.utils.win32 import app_bar
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.utils import get_monitor_hwnd
 from core.validation.bar import BarConfig
 from settings import APP_BAR_TITLE
 
-try:
-    from core.utils.win32 import app_bar
-
-    IMPORT_APP_BAR_MANAGER_SUCCESSFUL = True
-except ImportError:
-    IMPORT_APP_BAR_MANAGER_SUCCESSFUL = False
+if TYPE_CHECKING:
+    from core.widgets.base import BaseWidget
 
 
 class Bar(QWidget):
@@ -39,42 +37,41 @@ class Bar(QWidget):
         bar_name: str,
         bar_screen: QScreen,
         stylesheet: str,
-        widgets: dict[str, list[QWidget]],
+        widgets: dict[str, list[BaseWidget]],
         config: BarConfig,
         init: bool = False,
     ):
         super().__init__()
+        self.skip_animation = False
         self.config = config
         self._event_service = EventService()
         self.hide()
         self.setScreen(bar_screen)
         self._bar_id = bar_id
         self._bar_name = bar_name
-        self._alignment = self.config.alignment.model_dump()
-        self._align = self._alignment["align"]
-        self._window_flags = self.config.window_flags.model_dump()
-        self._dimensions = self.config.dimensions.model_dump()
-        self._padding = self.config.padding.model_dump()
-        self._animation = self.config.animation.model_dump()
+        self.alignment = self.config.alignment.model_dump()
+        self._align = self.alignment["align"]
+        self.window_flags = self.config.window_flags.model_dump()
+        self.dimensions = self.config.dimensions.model_dump()
+        self.padding = self.config.padding.model_dump()
+        self.animation = self.config.animation.model_dump()
         self._context_menu = self.config.context_menu
         self._layouts = self.config.layouts
-        self._autohide_bar = self._window_flags["auto_hide"]
+        self._autohide_bar = self.window_flags["auto_hide"]
         self._widgets = widgets  # Store widgets reference for context menu
         self._widget_config_map = self.config.widgets.model_dump() or {}
         self._is_auto_width = str(self.config.dimensions.width).lower() == "auto"
         self._style = self.config.style
         self._os_theme_manager = None
-        self._autohide_manager = None
+        self.autohide_manager: AutoHideManager | None = None
         self._maximized_watcher = None
         self._animation_manager = None
         self._auto_width_manager = None
         self._cli_manager = None
-        self._target_screen = bar_screen
+        self.target_screen = bar_screen
 
-        self.screen_name = self._target_screen.name()
-        self.app_bar_edge = (
-            app_bar.AppBarEdge.Top if self._alignment["position"] == "top" else app_bar.AppBarEdge.Bottom
-        )
+        self.screen_name = self.target_screen.name()
+        self.app_bar_edge = app_bar.AppBarEdge.Top if self.alignment["position"] == "top" else app_bar.AppBarEdge.Bottom
 
         self.setWindowTitle(APP_BAR_TITLE)
         self.setStyleSheet(stylesheet)
@@ -84,35 +81,32 @@ class Bar(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         if self._style == "adaptive":
-            self._bar_frame = AdaptiveBarFrame(self, self._alignment["position"], self.config.style_adaptive_exclude)
-            self._bar_frame.setProperty("class", f"bar {self.config.class_name} adaptive")
+            self.bar_frame = AdaptiveBarFrame(self, self.alignment["position"], self.config.style_adaptive_exclude)
+            self.bar_frame.setProperty("class", f"bar {self.config.class_name} adaptive")
         else:
-            self._bar_frame = BarFrame(self)
-            self._bar_frame.setProperty("class", f"bar {self.config.class_name}")
+            self.bar_frame = BarFrame(self)
+            self.bar_frame.setProperty("class", f"bar {self.config.class_name}")
 
         # Force-disable CSS box/text-shadow for the bar and bar frame
         self.setProperty("cssEngineDisableShadow", True)
-        self._bar_frame.setProperty("cssEngineDisableShadow", True)
+        self.bar_frame.setProperty("cssEngineDisableShadow", True)
 
         # Set cursor for the bar frame, so that it doesn't inherit from the parent widget.
-        self._bar_frame.setCursor(Qt.CursorShape.ArrowCursor)
+        self.bar_frame.setCursor(Qt.CursorShape.ArrowCursor)
 
-        if IMPORT_APP_BAR_MANAGER_SUCCESSFUL:
-            self.app_bar_manager = app_bar.Win32AppBar()
-        else:
-            self.app_bar_manager = None
+        self.app_bar_manager = app_bar.Win32AppBar()
 
-        if self._window_flags["always_on_top"]:
+        if self.window_flags["always_on_top"]:
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         try:
-            self._os_theme_manager = OsThemeManager(self._bar_frame, self)
+            self._os_theme_manager = OsThemeManager(self.bar_frame, self)
             self._os_theme_manager.update_theme_class()
         except Exception as e:
             logging.error("Failed to initialize theme manager: %s", e)
             self._os_theme_manager = None
 
-        self._hide_on_fullscreen = self._window_flags["hide_on_fullscreen"] and self._window_flags["always_on_top"]
+        self._hide_on_fullscreen = self.window_flags["hide_on_fullscreen"] and self.window_flags["always_on_top"]
 
         self.position_bar(init)
         self.monitor_hwnd = get_monitor_hwnd(int(self.winId()))
@@ -121,10 +115,10 @@ class Bar(QWidget):
 
         if self._is_auto_width:
             self._auto_width_manager = AutoWidthManager(self, self)
-            self._bar_frame.installEventFilter(self)
+            self.bar_frame.installEventFilter(self)
             QTimer.singleShot(0, self._auto_width_manager.sync)
 
-        self._target_screen.geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
+        self.target_screen.geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)  # pyright: ignore[reportCallIssue]
 
         self._cli_manager = BarCliManager(self, self)
         self.handle_bar_management.connect(self._cli_manager.handle)
@@ -135,16 +129,16 @@ class Bar(QWidget):
         # If animation is enabled, initial show uses fade effect because of DWM issues
         self._initial_show = True
 
-        if (self._hide_on_fullscreen or self._window_flags["windows_app_bar"]) and self.app_bar_manager:
+        if (self._hide_on_fullscreen or self.window_flags["windows_app_bar"]) and self.app_bar_manager:
             AppBarManager().register_bar(int(self.winId()), self)
 
         self.update_app_bar()
 
-        if self._window_flags["auto_hide"]:
-            self._autohide_manager = AutoHideManager(self, self)
-            self._autohide_manager.setup_autohide()
+        if self.window_flags["auto_hide"]:
+            self.autohide_manager = AutoHideManager(self, self)
+            self.autohide_manager.setup_autohide()
 
-        if self._window_flags["hide_on_maximized"] and not self._window_flags["windows_app_bar"]:
+        if self.window_flags["hide_on_maximized"] and not self.window_flags["windows_app_bar"]:
             self._maximized_watcher = MaximizedWindowWatcher(self, self)
 
         if self.config.blur_effect.enabled:
@@ -166,14 +160,14 @@ class Bar(QWidget):
         logging.info(
             "Screen geometry changed. Updating position for bar %s on screen %s",
             self._bar_name,
-            self._target_screen.name(),
+            self.target_screen.name(),
         )
         self.position_bar()
         # Re-register AppBar when screen config changes (resolution/monitor added/removed)
         self.update_app_bar()
 
-        if self._autohide_manager and self._autohide_manager.is_enabled():
-            self._autohide_manager.setup_detection_zone()
+        if self.autohide_manager and self.autohide_manager.is_enabled():
+            self.autohide_manager.setup_detection_zone()
 
         if self._is_auto_width and self._auto_width_manager:
             QTimer.singleShot(0, self._auto_width_manager.sync)
@@ -181,17 +175,17 @@ class Bar(QWidget):
     def update_app_bar(self) -> None:
         if self.app_bar_manager:
             # Always register AppBar for notifications, but only reserve space when windows_app_bar is true
-            reserve_space = self._window_flags["windows_app_bar"]
-            scale_screen_height = self._target_screen.devicePixelRatio() > 1.0
+            reserve_space = self.window_flags["windows_app_bar"]
+            scale_screen_height = self.target_screen.devicePixelRatio() > 1.0
             self.app_bar_manager.create_appbar(
                 self.winId().__int__(),
                 self.app_bar_edge,
-                self._dimensions["height"] + self._padding["top"] + self._padding["bottom"],
-                self._target_screen,
+                self.dimensions["height"] + self.padding["top"] + self.padding["bottom"],
+                self.target_screen,
                 scale_screen_height,
                 self._bar_name,
                 reserve_space,
-                self._window_flags["always_on_top"],
+                self.window_flags["always_on_top"],
             )
 
     def try_remove_app_bar(self) -> None:
@@ -199,53 +193,53 @@ class Bar(QWidget):
             self.app_bar_manager.remove_appbar()
 
     def bar_pos(self, bar_w: int, bar_h: int, screen_w: int, screen_h: int) -> tuple[int, int]:
-        screen_x = self._target_screen.geometry().x()
-        screen_y = self._target_screen.geometry().y()
+        screen_x = self.target_screen.geometry().x()
+        screen_y = self.target_screen.geometry().y()
 
-        if self._align == "center" or self._alignment.get("center", False):
-            available_x = screen_x + self._padding["left"]
-            available_width = screen_w - self._padding["left"] - self._padding["right"]
+        if self._align == "center" or self.alignment.get("center", False):
+            available_x = screen_x + self.padding["left"]
+            available_width = screen_w - self.padding["left"] - self.padding["right"]
             if bar_w >= available_width:
                 x = available_x
             else:
                 x = int(available_x + (available_width - bar_w) / 2)
         elif self._align == "right":
-            x = int(screen_x + screen_w - bar_w - self._padding["right"])
-            min_x = screen_x + self._padding["left"]
+            x = int(screen_x + screen_w - bar_w - self.padding["right"])
+            min_x = screen_x + self.padding["left"]
             if x < min_x:
                 x = min_x
         else:
-            x = int(screen_x + self._padding["left"])
-            max_x = screen_x + screen_w - bar_w - self._padding["right"]
+            x = int(screen_x + self.padding["left"])
+            max_x = screen_x + screen_w - bar_w - self.padding["right"]
             if x > max_x:
                 x = max_x
 
-        if self._alignment["position"] == "bottom":
-            y = int(screen_y + screen_h - bar_h - self._padding["bottom"])
+        if self.alignment["position"] == "bottom":
+            y = int(screen_y + screen_h - bar_h - self.padding["bottom"])
         else:
-            y = int(screen_y + self._padding["top"])
+            y = int(screen_y + self.padding["top"])
 
         return x, y
 
-    def position_bar(self, init=False) -> None:
-        bar_width = self._dimensions["width"]
-        bar_height = self._dimensions["height"]
+    def position_bar(self, init: bool = False) -> None:
+        bar_width = self.dimensions["width"]
+        bar_height = self.dimensions["height"]
 
-        screen_width = self._target_screen.geometry().width()
-        screen_height = self._target_screen.geometry().height()
+        screen_width = self.target_screen.geometry().width()
+        screen_height = self.target_screen.geometry().height()
 
         if self._is_auto_width:
-            if self._bar_frame.layout() is not None:
+            if self.bar_frame.layout() is not None:
                 bar_width = self._auto_width_manager.update() if self._auto_width_manager else 0
             else:
                 bar_width = 0
 
-        elif is_valid_percentage_str(str(self._dimensions["width"])):
-            percent = percent_to_float(self._dimensions["width"])
+        elif is_valid_percentage_str(str(self.dimensions["width"])):
+            percent = percent_to_float(self.dimensions["width"])
             bar_width = int(screen_width * percent)
 
         # Ensure bar width does not exceed screen width
-        available_width = screen_width - self._padding["left"] - self._padding["right"]
+        available_width = screen_width - self.padding["left"] - self.padding["right"]
         if bar_width > available_width:
             bar_width = available_width
 
@@ -253,16 +247,16 @@ class Bar(QWidget):
 
         # Only the window grows for the edge curves, AppBar is still told dimensions.height
         extra = 0
-        if self._style == "adaptive":
+        if isinstance(self.bar_frame, AdaptiveBarFrame):
             spans_screen = bar_width >= screen_width and not self._is_auto_width
-            extra = self._bar_frame.use_edge_curves(spans_screen)
-        if extra and self._alignment["position"] == "bottom":
+            extra = self.bar_frame.use_edge_curves(spans_screen)
+        if extra and self.alignment["position"] == "bottom":
             bar_y -= extra
 
-        self._bar_frame.setGeometry(0, 0, bar_width, bar_height + extra)
+        self.bar_frame.setGeometry(0, 0, bar_width, bar_height + extra)
         self.setGeometry(bar_x, bar_y, bar_width, bar_height + extra)
 
-    def _add_widgets(self, widgets: dict[str, list] = None):
+    def _add_widgets(self, widgets: dict[str, list[BaseWidget]]):
         bar_layout = QGridLayout()
         bar_layout.setContentsMargins(0, 0, 0, 0)
         bar_layout.setSpacing(0)
@@ -296,7 +290,7 @@ class Bar(QWidget):
             layout_container.setLayout(layout)
             bar_layout.addWidget(layout_container, 0, column_num)
 
-        self._bar_frame.setLayout(bar_layout)
+        self.bar_frame.setLayout(bar_layout)
 
     def show_bar(self):
         if self._animation_manager:
@@ -306,75 +300,84 @@ class Bar(QWidget):
         if self._animation_manager:
             self._animation_manager.hide_bar()
 
-    def showEvent(self, event):
-        super().showEvent(event)
-        if self._animation.get("enabled", False) and self._animation_manager:
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
+        super().showEvent(a0)
+        if self.animation.get("enabled", False) and self._animation_manager:
             # Use fade on initial show to avoid DWM blur/shadow flash with slide
             if getattr(self, "_initial_show", False):
                 self._initial_show = False
-                self._animation_manager._start_fade(True)
+                self._animation_manager.start_fade(True)
             else:
                 self.show_bar()
 
-    def closeEvent(self, event):
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         if self._hide_on_fullscreen and self.app_bar_manager:
             AppBarManager().unregister_bar(int(self.winId()))
 
         if self._maximized_watcher:
             self._maximized_watcher.cleanup()
-        if self._autohide_manager:
-            self._autohide_manager.cleanup()
+        if self.autohide_manager:
+            self.autohide_manager.cleanup()
         if self._animation_manager:
             self._animation_manager.cleanup()
         self.try_remove_app_bar()
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         # On a DPI change Qt keeps the old native size when the logical size is unchanged
-        if event.size() != self._bar_frame.size():
+        if a0 is not None and a0.size() != self.bar_frame.size():
             QTimer.singleShot(0, self.position_bar)
 
-    def changeEvent(self, event: QEvent) -> None:
-        if event.type() == QEvent.Type.PaletteChange:
+    @override
+    def changeEvent(self, a0: QEvent | None) -> None:
+        if a0 is not None and a0.type() == QEvent.Type.PaletteChange:
             if self._os_theme_manager:
                 self._os_theme_manager.update_theme_class()
-        super().changeEvent(event)
+        super().changeEvent(a0)
 
-    def eventFilter(self, obj, event):
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
         if (
             self._is_auto_width
             and self._auto_width_manager
-            and obj == self._bar_frame
-            and event.type() == QEvent.Type.LayoutRequest
+            and a0 == self.bar_frame
+            and a1 is not None
+            and a1.type() == QEvent.Type.LayoutRequest
         ):
-            previous_width = self._auto_width_manager._current_auto_width
+            previous_width = self._auto_width_manager.current_auto_width
             new_width = self._auto_width_manager.update()
             if new_width != previous_width:
                 self._auto_width_manager.apply(new_width)
 
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
     def hide(self):
-        if getattr(self, "_skip_animation", False):
+        if self.skip_animation:
             super().hide()
-        elif self.isVisible() and self._animation.get("enabled") and self._animation_manager:
+        elif self.isVisible() and self.animation.get("enabled") and self._animation_manager:
             self._animation_manager.hide_bar()
         else:
             super().hide()
 
-    def contextMenuEvent(self, event):
+    @override
+    def contextMenuEvent(self, a0: QContextMenuEvent | None) -> None:
         """Handle right-click context menu"""
-        if not self._context_menu or not self.rect().contains(event.pos()):
-            event.ignore()
+        if a0 is None:
+            return
+        if not self._context_menu or not self.rect().contains(a0.pos()):
+            a0.ignore()
             return
 
-        widget_at_pos = self.childAt(event.pos())
+        widget_at_pos = self.childAt(a0.pos())
         # If the click is on a widget, ignore the context menu
-        if widget_at_pos and widget_at_pos != self._bar_frame and widget_at_pos != self:
+        if widget_at_pos and widget_at_pos != self.bar_frame and widget_at_pos != self:
             parent_widget = widget_at_pos
             while parent_widget and parent_widget != self:
                 if hasattr(parent_widget, "parent_layout_type"):
-                    event.ignore()
+                    a0.ignore()
                     return
                 parent_widget = parent_widget.parent()
 
@@ -384,4 +387,4 @@ class Bar(QWidget):
             widgets=self._widgets,
             widget_config_map=self._widget_config_map,
             autohide_bar=self._autohide_bar,
-        ).show(event.pos())
+        ).show(a0.pos())

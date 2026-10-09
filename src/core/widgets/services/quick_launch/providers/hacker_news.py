@@ -6,6 +6,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
+from threading import Event
+from typing import Any
 from xml.etree import ElementTree
 
 from PyQt6.QtWidgets import QApplication
@@ -85,9 +87,9 @@ class HackerNewsProvider(BaseProvider):
     icon = ICON_HACKER_NEWS
     input_placeholder = "Search Hacker News..."
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
-        self._cache: dict[str, tuple[float, list[dict]]] = {}
+        self._cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
         self._cache_ttl: int = self.config.get("cache_ttl", 300)
         self._max_items: int = self.config.get("max_items", 30)
         self._disk_loaded = False
@@ -98,7 +100,7 @@ class HackerNewsProvider(BaseProvider):
             return stripped == self.prefix or stripped.startswith(self.prefix + " ")
         return True
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         cancel_event = kwargs.get("cancel_event")
         query = self.get_query_text(text).strip()
         parts = query.split(None, 1)
@@ -128,7 +130,7 @@ class HackerNewsProvider(BaseProvider):
             return True
         return None
 
-    def get_context_menu_actions(self, result):
+    def get_context_menu_actions(self, result: ProviderResult) -> list[ProviderMenuAction]:
 
         actions: list[ProviderMenuAction] = []
         data = result.action_data
@@ -138,7 +140,7 @@ class HackerNewsProvider(BaseProvider):
             actions.append(ProviderMenuAction(id="copy_url", label="Copy URL"))
         return actions
 
-    def execute_context_menu_action(self, action_id, result):
+    def execute_context_menu_action(self, action_id: str, result: ProviderResult) -> ProviderMenuActionResult:
 
         data = result.action_data
         if action_id == "open_comments":
@@ -191,11 +193,11 @@ class HackerNewsProvider(BaseProvider):
                 )
         return results
 
-    def _search_hn(self, query: str, cancel_event) -> list[ProviderResult]:
+    def _search_hn(self, query: str, cancel_event: Event | None) -> list[ProviderResult]:
         """Search all of Hacker News when input doesn't match any topic."""
         return self._fetch_topic("newest", query, cancel_event)
 
-    def _fetch_topic(self, topic: str, keyword: str, cancel_event) -> list[ProviderResult]:
+    def _fetch_topic(self, topic: str, keyword: str, cancel_event: Event | None) -> list[ProviderResult]:
         cache_key = f"{topic}:{keyword}"
         now = time.time()
 
@@ -236,7 +238,7 @@ class HackerNewsProvider(BaseProvider):
             )
         ]
 
-    def _fetch_rss(self, topic: str, keyword: str, cancel_event) -> list[dict]:
+    def _fetch_rss(self, topic: str, keyword: str, cancel_event: Event | None) -> list[dict[str, Any]]:
         path = _TOPICS[topic]["path"]
         url = f"{_HNRSS_BASE}/{path}?count={self._max_items}"
         if keyword:
@@ -252,7 +254,7 @@ class HackerNewsProvider(BaseProvider):
             return []
 
         root = ElementTree.fromstring(xml_data)
-        items: list[dict] = []
+        items: list[dict[str, Any]] = []
         for item_el in root.iter("item"):
             if cancel_event and cancel_event.is_set():
                 break
@@ -281,7 +283,7 @@ class HackerNewsProvider(BaseProvider):
             )
         return items
 
-    def _items_to_results(self, items: list[dict]) -> list[ProviderResult]:
+    def _items_to_results(self, items: list[dict[str, Any]]) -> list[ProviderResult]:
         results: list[ProviderResult] = []
         for item in items:
             parts: list[str] = []
@@ -309,12 +311,12 @@ class HackerNewsProvider(BaseProvider):
             )
         return results
 
-    def _load_disk_cache(self, cache_key: str) -> tuple[float, list[dict]] | None:
+    def _load_disk_cache(self, cache_key: str) -> tuple[float, list[dict[str, Any]]] | None:
         if not self._disk_loaded:
             self._disk_loaded = True
             try:
                 with open(_CACHE_FILE, encoding="utf-8") as f:
-                    all_cache: dict = json.load(f)
+                    all_cache: dict[str, Any] = json.load(f)
                 for key, entry in all_cache.items():
                     if key not in self._cache:
                         self._cache[key] = (entry["ts"], entry["items"])
@@ -325,11 +327,11 @@ class HackerNewsProvider(BaseProvider):
             return self._cache[cache_key]
         return None
 
-    def _save_disk_cache(self, cache_key: str, ts: float, items: list[dict]) -> None:
+    def _save_disk_cache(self, cache_key: str, ts: float, items: list[dict[str, Any]]) -> None:
         try:
             try:
                 with open(_CACHE_FILE, encoding="utf-8") as f:
-                    all_cache: dict = json.load(f)
+                    all_cache: dict[str, Any] = json.load(f)
             except FileNotFoundError, json.JSONDecodeError:
                 all_cache = {}
 
@@ -350,7 +352,7 @@ def _el_text(parent: ElementTree.Element, tag: str) -> str | None:
     return el.text if el is not None else None
 
 
-def _extract_int(pattern: re.Pattern, text: str) -> int | None:
+def _extract_int(pattern: re.Pattern[str], text: str) -> int | None:
     m = pattern.search(text)
     return int(m.group(1)) if m else None
 

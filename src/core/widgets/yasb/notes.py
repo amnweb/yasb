@@ -262,8 +262,6 @@ class NotesWidget(BaseWidget):
                 continue
 
             current_widget = active_widgets[widget_index]
-            if not isinstance(current_widget, QLabel):
-                continue
 
             if "<span" in part and "</span>" in part:
                 icon = re.sub(r"<span.*?>|</span>", "", part).strip()

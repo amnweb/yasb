@@ -5,7 +5,7 @@ from PyQt6.QtCore import QEvent, QPoint, QPropertyAnimation, QRect, Qt, QTimer, 
 from PyQt6.QtGui import QCloseEvent, QCursor, QHideEvent, QResizeEvent, QShowEvent
 from PyQt6.QtWidgets import QApplication, QFrame, QPushButton, QVBoxLayout, QWidget
 
-from core.utils.win32.backdrop import enable_blur  # pyright: ignore[reportUnknownVariableType]
+from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.bindings import user32
 from core.validation.widgets.yasb.systray import SystrayPopupConfig
 from core.widgets.services.systray.systray_widget import DropWidget, IconWidget

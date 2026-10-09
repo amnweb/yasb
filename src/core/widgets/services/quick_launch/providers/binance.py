@@ -2,7 +2,10 @@ import json
 import logging
 import re
 import time
+import urllib.error
+import urllib.request
 import webbrowser
+from typing import Any
 
 from PyQt6.QtWidgets import QApplication
 
@@ -20,7 +23,7 @@ class BinanceProvider(BaseProvider):
     input_placeholder = "Search crypto prices..."
     icon = ICON_BINANCE
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self._pairs: list[str] = [p.upper() for p in self.config.get("pairs", ["BTC/USDT"])]
         self._round: int = self.config.get("round", 2)
@@ -37,7 +40,7 @@ class BinanceProvider(BaseProvider):
             return text.strip().startswith(self.prefix)
         return True
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).strip().upper()
 
         prices = self._get_prices()
@@ -206,8 +209,6 @@ class BinanceProvider(BaseProvider):
 
     def _fetch_prices(self) -> dict[str, float] | None:
         try:
-            import urllib.request
-
             url = f"https://{self._domain}/api/v3/ticker/price"
             logging.debug("Fetching all prices from %s", url)
             req = urllib.request.Request(url, headers={"User-Agent": "yasb/1.0"})

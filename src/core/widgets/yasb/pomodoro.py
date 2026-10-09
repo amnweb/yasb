@@ -1,9 +1,12 @@
 import logging
 import os
 import re
+from collections.abc import Callable
+from typing import Any, TypedDict, override
 
-from PyQt6.QtCore import QPropertyAnimation, QRectF, Qt, QTimer, pyqtProperty
-from PyQt6.QtGui import QColor, QPainter, QPen
+import PyQt6.QtCore as QtCore
+from PyQt6.QtCore import QPropertyAnimation, QRectF, Qt, QTimer
+from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from core.utils.utilities import (
@@ -16,6 +19,19 @@ from core.validation.widgets.yasb.pomodoro import PomodoroConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
 
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
+
+
+class PomodoroState(TypedDict):
+    is_running: bool
+    is_break: bool
+    is_paused: bool
+    is_long_break: bool
+    remaining_time: int | None
+    elapsed_time: int
+    session_count: int
+
 
 class PomodoroWidget(BaseWidget):
     validation_schema = PomodoroConfig
@@ -23,7 +39,7 @@ class PomodoroWidget(BaseWidget):
     # Shared state for all PomodoroWidget instances
     _instances: list[PomodoroWidget] = []
     _shared_timer: QTimer | None = None
-    _shared_state = {
+    _shared_state: PomodoroState = {
         "is_running": False,
         "is_break": False,
         "is_paused": False,
@@ -36,6 +52,7 @@ class PomodoroWidget(BaseWidget):
     def __init__(self, config: PomodoroConfig):
         super().__init__(class_name=f"pomodoro-widget {config.class_name}")
         self.config = config
+        self._dialog: PopupWidget | None = None
         self._show_alt_label = False
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
@@ -69,13 +86,14 @@ class PomodoroWidget(BaseWidget):
         self._update_from_shared_state()
 
     @classmethod
-    def _update_all_instances(cls):
+    def _update_all_instances(cls) -> None:
         # Only update timer if running
         if cls._shared_state["is_running"]:
-            cls._shared_state["remaining_time"] = max(0, cls._shared_state["remaining_time"] - 1)
+            remaining = max(0, (cls._shared_state["remaining_time"] or 0) - 1)
+            cls._shared_state["remaining_time"] = remaining
             cls._shared_state["elapsed_time"] += 1
 
-            if cls._shared_state["remaining_time"] <= 0:
+            if remaining <= 0:
                 # Timer completed, handle transition
                 # Only the first instance should handle the transition!
                 if cls._instances:
@@ -99,7 +117,7 @@ class PomodoroWidget(BaseWidget):
         self._is_break = s["is_break"]
         self._is_paused = s["is_paused"]
         self._is_long_break = s["is_long_break"]
-        self._remaining_time = s["remaining_time"]
+        self._remaining_time = s["remaining_time"] or 0
         self._elapsed_time = s["elapsed_time"]
         self._session_count = s["session_count"]
         self._update_label()
@@ -186,13 +204,13 @@ class PomodoroWidget(BaseWidget):
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
                 if "<span" in part and "</span>" in part:
-                    if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                    if widget_index < len(active_widgets):
                         active_widgets[widget_index].setText(formatted_text)
                         base_class = active_widgets[widget_index].property("class").split()[0]
                         active_widgets[widget_index].setProperty("class", f"{base_class} {class_name}")
                         refresh_widget_style(active_widgets[widget_index])
                 else:
-                    if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                    if widget_index < len(active_widgets):
                         alt_class = "alt" if self._show_alt_label else ""
                         active_widgets[widget_index].setText(formatted_text)
                         base_class = "label"
@@ -410,7 +428,7 @@ class PomodoroWidget(BaseWidget):
         status_text = "Paused" if self._is_paused else ("Break" if self._is_break else "Work")
 
         self._progress_gauge.setStatusText(f"{status_text}\n{self._format_time(self._remaining_time)}")
-        self._status_label = self._progress_gauge._status_label
+        self._status_label = self._progress_gauge.status_label
 
         layout.addWidget(self._progress_gauge)
 
@@ -468,7 +486,7 @@ class PomodoroWidget(BaseWidget):
         )
         self._dialog.show()
 
-    def _format_time(self, seconds):
+    def _format_time(self, seconds: float) -> str:
         # For shorter durations (60 minutes or less), show minutes:seconds
         if seconds < 3600:
             minutes, seconds = divmod(seconds, 60)
@@ -508,9 +526,9 @@ class PomodoroWidget(BaseWidget):
 
 
 class CircularProgressWidget(QWidget):
-    def __init__(self, parent=None, config=None):
+    def __init__(self, parent: QWidget | None = None, *, config: dict[str, Any]):
         super().__init__(parent)
-        self._value = 0
+        self._value: float = 0
         self._maximum = 0
 
         self._background_color = config["circle_background_color"]
@@ -526,10 +544,10 @@ class CircularProgressWidget(QWidget):
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self._status_label = QLabel()
-        self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._status_label.setProperty("class", "status")
-        self._layout.addWidget(self._status_label)
+        self.status_label = QLabel()
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setProperty("class", "status")
+        self._layout.addWidget(self.status_label)
 
         self._animation = QPropertyAnimation(self, b"animationValue")
         self._animation.setDuration(self._animation_duration)
@@ -537,20 +555,20 @@ class CircularProgressWidget(QWidget):
 
         self.setMinimumSize(self._size, self._size)
 
-    def getAnimationValue(self):
+    def getAnimationValue(self) -> float:
         return self._value
 
-    def setAnimationValue(self, value):
+    def setAnimationValue(self, value: float) -> None:
         self._value = value
         self.update()
 
-    animationValue = pyqtProperty(float, getAnimationValue, setAnimationValue)
+    animationValue: float = pyqtProperty(float, getAnimationValue, setAnimationValue)
 
-    def setMaximum(self, maximum):
+    def setMaximum(self, maximum: int) -> None:
         self._maximum = maximum
         self.update()
 
-    def setValue(self, value, skip_animation=False):
+    def setValue(self, value: float, skip_animation: bool = False) -> None:
         if value == self._value:
             return
 
@@ -565,14 +583,15 @@ class CircularProgressWidget(QWidget):
         self._animation.setEndValue(value)
         self._animation.start()
 
-    def setStatusText(self, text):
-        self._status_label.setText(text)
+    def setStatusText(self, text: str) -> None:
+        self.status_label.setText(text)
 
-    def setBreakMode(self, is_break):
+    def setBreakMode(self, is_break: bool) -> None:
         self._is_break = is_break
         self.update()
 
-    def paintEvent(self, event):
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 

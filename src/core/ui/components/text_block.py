@@ -1,9 +1,18 @@
+from typing import TypedDict
+
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget
 
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
 
-_VARIANTS = {
+
+class _Variant(TypedDict):
+    size: int
+    weight: QFont.Weight
+    color: str
+
+
+_VARIANTS: dict[str, _Variant] = {
     "title": {"size": 28, "weight": QFont.Weight.DemiBold, "color": "text_primary"},
     "title-large": {"size": 40, "weight": QFont.Weight.DemiBold, "color": "text_primary"},
     "subtitle": {"size": 20, "weight": QFont.Weight.DemiBold, "color": "text_primary"},
@@ -33,7 +42,9 @@ class TextBlock(QLabel):
         self._default_color = get_tokens()[self._color_key]
         self._apply_color()
 
-        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     def _apply_color(self) -> None:
         self.setStyleSheet(f"color:{self._override or self._default_color}")

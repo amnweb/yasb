@@ -21,6 +21,7 @@ import textwrap
 import time
 import winreg
 from ctypes import GetLastError
+from typing import Any
 
 from win32con import (
     GENERIC_READ,
@@ -98,7 +99,7 @@ class Format:
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         kwargs.setdefault("suggest_on_error", True)
         super().__init__(*args, **kwargs)
 
@@ -942,7 +943,7 @@ class CLIChannelHandler:
         from core.utils.update_service import get_update_service
 
         update_service = get_update_service()
-        current_channel = update_service._current_channel
+        current_channel = update_service.current_channel
         architecture = get_architecture()
 
         # Check if already on target channel
@@ -987,6 +988,9 @@ class CLIChannelHandler:
 
         try:
             release_info = update_service.check_for_updates(channel=target_channel, skip_version_check=True, timeout=15)
+            if release_info is None:
+                print(f"\nError switching channels: no {target_channel} release found.")
+                sys.exit(1)
             if target_channel == "preview":
                 version_display = f"build {release_info.version.replace('preview-', '')}"
             else:
@@ -1072,7 +1076,7 @@ class CLIUpdateHandler:
                 sys.exit(0)
 
             # Update available
-            if update_service._current_channel == "preview":
+            if update_service.current_channel == "preview":
                 print(
                     f"Found {Format.cyan}YASB Reborn{Format.reset} Preview {release_info.version.replace('preview-', '')}"
                 )
@@ -1138,6 +1142,7 @@ class CLIUpdateHandler:
 
                 downloaded = 0
                 chunk_size = 4096
+                bar_length = 30
                 print(f"Downloading {Format.magenta}{msi_url}{Format.reset}")
                 with open(msi_path, "wb") as file:
                     while True:
@@ -1147,7 +1152,6 @@ class CLIUpdateHandler:
                         file.write(chunk)
                         downloaded += len(chunk)
                         percent = downloaded / total_length * 100
-                        bar_length = 30
                         filled = int(bar_length * downloaded / total_length)
                         bar = "\u2588" * filled + "\u2591" * (bar_length - filled)
                         print(f"\r{bar} {percent:.1f}%", end="", flush=True)

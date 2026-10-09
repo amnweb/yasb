@@ -154,7 +154,7 @@ class PowerPlanService:
 
         app = QApplication.instance()
         if app:
-            app.aboutToQuit.connect(cls.shutdown_listener, Qt.ConnectionType.UniqueConnection)
+            app.aboutToQuit.connect(cls.shutdown_listener, Qt.ConnectionType.UniqueConnection)  # pyright: ignore[reportCallIssue]
 
     @classmethod
     def shutdown_listener(cls) -> None:

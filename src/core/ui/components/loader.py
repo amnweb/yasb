@@ -2,11 +2,18 @@
 Loading indicators: Spinner (indeterminate circular) and LoaderLine (horizontal).
 """
 
-from PyQt6.QtCore import QEasingCurve, QElapsedTimer, QEvent, QObject, QPropertyAnimation, Qt, QTimer, pyqtProperty
+from collections.abc import Callable
+from typing import Any, override
+
+import PyQt6.QtCore as QtCore
+from PyQt6.QtCore import QEasingCurve, QElapsedTimer, QEvent, QObject, QPropertyAnimation, Qt, QTimer
 from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPalette, QPen
 from PyQt6.QtWidgets import QWidget
 
 from core.utils.qobject import is_valid_qobject
+
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 
 class Spinner(QWidget):
@@ -38,7 +45,8 @@ class Spinner(QWidget):
         p = 2 * t - 2
         return 0.5 * p * p * p + 1
 
-    def paintEvent(self, event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         m = self._pen_width / 2.0 + 1.0
@@ -170,10 +178,16 @@ class LoaderLine(QWidget):
         except RuntimeError:
             pass
 
-    def eventFilter(self, obj: QObject, event: QEvent):
-        if self._auto_position_enabled and obj is self._target_widget and event.type() == QEvent.Type.Resize:
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        if (
+            self._auto_position_enabled
+            and a0 is self._target_widget
+            and a1 is not None
+            and a1.type() == QEvent.Type.Resize
+        ):
             self._position_in_widget()
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
     def start(self) -> None:
         if self._animation.state() == QPropertyAnimation.State.Running:
@@ -195,9 +209,10 @@ class LoaderLine(QWidget):
         self._offset = value
         self.update()
 
-    offset = pyqtProperty(float, fget=getOffset, fset=setOffset)
+    offset: float = pyqtProperty(float, fget=getOffset, fset=setOffset)
 
-    def paintEvent(self, event: QPaintEvent):
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         if not self.isVisible():
             return
         w = self.width()

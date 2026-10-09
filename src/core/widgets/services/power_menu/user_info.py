@@ -1,10 +1,14 @@
 import os
 import winreg
 from functools import cache
+from typing import TYPE_CHECKING, cast
 
 import win32api
 import win32con
 import win32security
+
+if TYPE_CHECKING:
+    from _win32typing import PySID  # pyright: ignore[reportMissingModuleSource]
 
 
 @cache
@@ -20,9 +24,14 @@ def get_windows_username() -> str:
 def get_account_type() -> str:
     """Get account type: Administrator or Standard User."""
     try:
-        token = win32security.OpenProcessToken(win32api.GetCurrentProcess(), win32con.TOKEN_QUERY)
+        token = win32security.OpenProcessToken(  # pyright: ignore[reportUnknownMemberType]
+            win32api.GetCurrentProcess(), win32con.TOKEN_QUERY
+        )
         admin_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
-        groups = win32security.GetTokenInformation(token, win32security.TokenGroups)
+        groups = cast(
+            "list[tuple[PySID, int]]",
+            win32security.GetTokenInformation(token, win32security.TokenGroups),  # pyright: ignore[reportUnknownMemberType]
+        )
         for sid, _ in groups:
             if sid == admin_sid:
                 return "Administrator"
@@ -54,8 +63,14 @@ def get_user_email() -> str | None:
 def get_user_avatar_path() -> str | None:
     """Get the current user's account picture from registry using the process token SID."""
     try:
-        token = win32security.OpenProcessToken(win32api.GetCurrentProcess(), win32con.TOKEN_QUERY)
-        sid = win32security.ConvertSidToStringSid(win32security.GetTokenInformation(token, win32security.TokenUser)[0])
+        token = win32security.OpenProcessToken(  # pyright: ignore[reportUnknownMemberType]
+            win32api.GetCurrentProcess(), win32con.TOKEN_QUERY
+        )
+        user = cast(
+            "tuple[PySID, int]",
+            win32security.GetTokenInformation(token, win32security.TokenUser),  # pyright: ignore[reportUnknownMemberType]
+        )
+        sid = win32security.ConvertSidToStringSid(user[0])
         with winreg.OpenKey(
             winreg.HKEY_LOCAL_MACHINE,
             f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AccountPicture\\Users\\{sid}",

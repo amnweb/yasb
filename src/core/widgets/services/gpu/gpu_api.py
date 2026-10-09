@@ -1,10 +1,10 @@
 import ctypes
 import logging
 import threading
-from ctypes import byref, wintypes
-from typing import NamedTuple
+from ctypes import Array, byref, c_byte, c_char, wintypes
+from typing import NamedTuple, NotRequired, TypedDict
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.win32.bindings.pdh import pdh
@@ -18,7 +18,7 @@ _VENDOR_WARP = 0x1414
 
 
 class GpuData(NamedTuple):
-    index: int
+    gpu_index: int
     name: str
     utilization: float
     mem_total: int
@@ -29,6 +29,23 @@ class GpuData(NamedTuple):
     temp: int
     fan_speed: int
     power_draw: float
+
+
+class _DxgiGpu(TypedDict):
+    name: str
+    vram_total: int
+    shared_total: int
+    luid_str: str
+    vendor_id: int
+
+
+class _LuidInfo(TypedDict):
+    index: int
+    name: str
+    vram_total: int
+    shared_total: int
+    nvml_handle: NotRequired[ctypes.c_void_p]
+    adl_index: NotRequired[int]
 
 
 class _PdhItemW(ctypes.Structure):
@@ -107,12 +124,12 @@ def _luid_str(name: str) -> str:
     return ("_".join(parts[:3]) if len(parts) >= 3 else name).lower()
 
 
-def _read_dxgi_gpus() -> list[dict]:
+def _read_dxgi_gpus() -> list[_DxgiGpu]:
     """Enumerate physical GPU adapters via DXGI COM vtable dispatch.
 
     Skips Microsoft WARP software adapter.
     """
-    result = []
+    result: list[_DxgiGpu] = []
     try:
         dxgi = ctypes.WinDLL("dxgi.dll")
         dxgi.CreateDXGIFactory1.restype = ctypes.c_long
@@ -250,7 +267,7 @@ class _AdlState:
         self._odn_fan = False
         self._od5_temp = False
         self._od5_fan = False
-        self._malloc_blocks: dict[int, ctypes.Array] = {}
+        self._malloc_blocks: dict[int, Array[c_char]] = {}
         self._malloc_cb = _ADL_MALLOC(self._malloc)
 
     def _malloc(self, size: int) -> int:
@@ -346,10 +363,10 @@ class _AdlState:
 class GpuApi:
     def __init__(self, gpu_indices: set[int]) -> None:
         self._gpu_indices = gpu_indices
-        self._luid_info: dict[str, dict] = {}
-        self._dxgi_gpus: list[dict] = []
+        self._luid_info: dict[str, _LuidInfo] = {}
+        self._dxgi_gpus: list[_DxgiGpu] = []
         self._ready = False
-        self._pdh_bufs: dict[int, ctypes.Array] = {}
+        self._pdh_bufs: dict[int, Array[c_byte]] = {}
 
         self._nvml = _NvmlState()
         self._adl = _AdlState()
@@ -429,7 +446,7 @@ class GpuApi:
 
             result.append(
                 GpuData(
-                    index=info["index"],
+                    gpu_index=info["index"],
                     name=info["name"],
                     utilization=round(util.get(luid, 0.0), 1),
                     mem_total=total,
@@ -443,6 +460,9 @@ class GpuApi:
                 )
             )
         return result
+
+    def available_indices(self) -> set[int]:
+        return {info["index"] for info in self._luid_info.values()}
 
     def close(self) -> None:
         pdh.PdhCloseQuery(self._query)
@@ -459,7 +479,7 @@ class GpuApi:
         if not count.value:
             return []
         needed = buf_size.value
-        key = counter.value
+        key = counter.value or 0
         buf = self._pdh_bufs.get(key)
         if buf is None or ctypes.sizeof(buf) < needed:
             buf = (ctypes.c_byte * needed)()
@@ -468,21 +488,21 @@ class GpuApi:
         if pdh.PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, byref(buf_size), byref(count), buf) != 0:
             return []
         items = ctypes.cast(buf, ctypes.POINTER(_PdhItemW))
-        result = []
+        result: list[tuple[str, float]] = []
         for i in range(count.value):
             ptr = items[i].szName
             name = ctypes.wstring_at(ptr) if ptr else ""
             result.append((name, items[i].doubleValue))
         return result
 
-    def _build_luid_info(self, all_luids: list[str]) -> dict[str, dict]:
+    def _build_luid_info(self, all_luids: list[str]) -> dict[str, _LuidInfo]:
         """Map PDH LUIDs to DXGI adapter info. Index follows DXGI order.
         Only includes LUIDs that have a matching DXGI adapter."""
         luid_to_dxgi = {g["luid_str"]: g for g in self._dxgi_gpus}
         all_luid_set = set(all_luids)
         dxgi_ordered = [g["luid_str"] for g in self._dxgi_gpus if g["luid_str"] in all_luid_set]
 
-        result: dict[str, dict] = {}
+        result: dict[str, _LuidInfo] = {}
         for i, luid in enumerate(dxgi_ordered):
             dg = luid_to_dxgi[luid]
             result[luid] = {
@@ -529,7 +549,7 @@ class GpuWorker(QThread):
     def add_index(self, index: int) -> None:
         self._gpu_indices.add(index)
 
-    def __init__(self, update_interval: int, parent=None):
+    def __init__(self, update_interval: int, parent: QObject | None = None):
         super().__init__(parent)
         self._update_interval = update_interval
         self._gpu_indices: set[int] = set()
@@ -548,7 +568,7 @@ class GpuWorker(QThread):
         api = GpuApi(self._gpu_indices)
         try:
             api.prime()
-            available = {info["index"] for info in api._luid_info.values()}
+            available = api.available_indices()
             missing = self._gpu_indices - available
             if missing:
                 logger.warning("GpuWorker gpu_index %s not found. Available indices: %s", missing, sorted(available))

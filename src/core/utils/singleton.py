@@ -1,7 +1,7 @@
 from threading import Lock
 from typing import Any
 
-from PyQt6 import sip
+import PyQt6.sip as sip
 from PyQt6.QtCore import QObject
 
 

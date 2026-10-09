@@ -1,5 +1,7 @@
 import ctypes
 import logging
+from ctypes import wintypes
+from typing import Any, TypedDict
 
 from core.utils.win32.bindings.kernel32 import kernel32
 from core.utils.win32.bindings.psapi import psapi
@@ -7,6 +9,13 @@ from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, PROCES
 from core.utils.win32.structs import PROCESS_MEMORY_COUNTERS, PROCESSENTRY32
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_KILL_PROCESS
+
+
+class _ProcessGroup(TypedDict):
+    name: str
+    pids: list[int]
+    total_mem: int
+
 
 _PROTECTED_PROCESSES = frozenset(
     {
@@ -42,9 +51,9 @@ def _get_process_memory(pid: int) -> int:
 
 def _enumerate_processes() -> list[tuple[int, str]]:
     """Return list of (pid, exe_name) for all running processes."""
-    results = []
+    results: list[tuple[int, str]] = []
     snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-    if snapshot == ctypes.wintypes.HANDLE(-1).value:
+    if snapshot == wintypes.HANDLE(-1).value:
         return results
     try:
         entry = PROCESSENTRY32()
@@ -88,7 +97,7 @@ class KillProcessProvider(BaseProvider):
             return True
         return False
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         if self.prefix and text.strip().startswith(self.prefix):
             query = self.get_query_text(text).lower()
         elif text.strip().lower().startswith("kill "):
@@ -107,7 +116,7 @@ class KillProcessProvider(BaseProvider):
             ]
 
         # Gather matching processes, grouped by name
-        proc_map: dict[str, dict] = {}
+        proc_map: dict[str, _ProcessGroup] = {}
         try:
             for pid, exe_name in _enumerate_processes():
                 name_lower = exe_name.lower()
@@ -127,7 +136,7 @@ class KillProcessProvider(BaseProvider):
             logging.debug("Process enumeration error: %s", e)
             return []
 
-        results = []
+        results: list[ProviderResult] = []
         for key in sorted(proc_map, key=lambda k: proc_map[k]["total_mem"], reverse=True):
             entry = proc_map[key]
             count = len(entry["pids"])

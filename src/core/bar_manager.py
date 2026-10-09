@@ -2,7 +2,7 @@ import logging
 import uuid
 from contextlib import suppress
 
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QApplication
 from qt_css_engine import TransitionEngine, extract_rules
@@ -36,13 +36,13 @@ class BarManager(QObject):
         GlobalState.set_stylesheet(self.stylesheet)
         GlobalState.set_tooltip_options(self.config.tooltip)
         self.event_service = EventService()
-        self.widget_event_listeners = set()
+        self.widget_event_listeners: set[type[QThread]] = set()
         self.bars: list[Bar] = []
         self.config.bars = {n: bar for n, bar in self.config.bars.items() if bar.enabled}
-        self._threads = {}
+        self._threads: dict[type[QThread], QThread] = {}
         self._active_listeners = {}
         self._widget_builder = WidgetBuilder(self.config.widgets)
-        self._prev_listeners = set()
+        self._prev_listeners: set[type[QThread]] = set()
         self._hotkey_listener: HotkeyListener | None = None
         self._hotkey_dispatcher: HotkeyDispatcher | None = None
         self._collected_keybindings: list[HotkeyBinding] = []
@@ -50,7 +50,10 @@ class BarManager(QObject):
 
         self.styles_modified.connect(self.on_styles_modified)
         self.config_modified.connect(self.on_config_modified)
-        self._app = QApplication.instance()
+        app = QApplication.instance()
+        if not isinstance(app, QApplication):
+            raise RuntimeError("BarManager requires a running QApplication")
+        self._app = app
         self._app.installEventFilter(self.animation_engine)
         self._app.aboutToQuit.connect(self.stop_listener_threads)
         self._app.screenAdded.connect(self.on_screens_update)
@@ -119,16 +122,16 @@ class BarManager(QObject):
             logging.info("Stopping %s...", listener.__name__)
             with suppress(KeyError):
                 thread = self._threads[listener]
-                if hasattr(thread, "stop"):
+                stop = getattr(thread, "stop", None)
+                if callable(stop):
                     try:
-                        thread.stop()
+                        stop()
                     except Exception as e:
                         logging.debug("Thread stop() raised for %s: %s", listener.__name__, e)
-                if hasattr(thread, "quit"):
-                    try:
-                        thread.quit()
-                    except Exception:
-                        pass
+                try:
+                    thread.quit()
+                except Exception:
+                    pass
                 thread.wait(1000)
         self._threads.clear()
         self.widget_event_listeners.clear()
@@ -196,6 +199,8 @@ class BarManager(QObject):
         pending = list(active_widget_names)
         while pending:
             widget_config = self.config.widgets.get(pending.pop(), {})
+            if not isinstance(widget_config, dict):
+                continue
             if widget_config.get("type", "").endswith("grouper.GrouperWidget"):
                 for child in widget_config.get("options", {}).get("widgets", []):
                     if child not in active_widget_names:
@@ -203,7 +208,7 @@ class BarManager(QObject):
                         pending.append(child)
 
         for widget_name, widget_config in self.config.widgets.items():
-            if widget_name not in active_widget_names:
+            if widget_name not in active_widget_names or not isinstance(widget_config, dict):
                 continue
 
             options = widget_config.get("options", {})
@@ -253,7 +258,9 @@ class BarManager(QObject):
 
         # Set screen_name on all widgets and disable duplicate hotkey handlers
         widgets_with_keybindings = {
-            name for name, cfg in self.config.widgets.items() if cfg.get("options", {}).get("keybindings")
+            name
+            for name, cfg in self.config.widgets.items()
+            if isinstance(cfg, dict) and cfg.get("options", {}).get("keybindings")
         }
         for widget_list in bar_widgets.values():
             for widget in widget_list:
@@ -261,7 +268,7 @@ class BarManager(QObject):
                 if widget.widget_name in widgets_with_keybindings:
                     key = (widget.widget_name, screen.name())
                     if key in self._registered_hotkey_widgets:
-                        widget._hotkey_enabled = False
+                        widget.hotkey_enabled = False
                         logging.info(
                             "%s on screen %s already has hotkey handler registered from another bar.",
                             widget.widget_name,

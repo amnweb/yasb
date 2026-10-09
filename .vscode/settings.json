@@ -14,6 +14,8 @@
 		"src/build": true,
 		"src/dist": true
 	},
+	"python.testing.pytestEnabled": true,
+	"python.testing.unittestEnabled": false,
 	"[python]": {
         "editor.formatOnSave": true,
 		"editor.codeActionsOnSave": {

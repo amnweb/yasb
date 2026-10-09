@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from PyQt6.QtWidgets import QApplication
@@ -274,7 +275,7 @@ class WorldClockProvider(BaseProvider):
     input_placeholder = "Search cities or timezones..."
     icon = ICON_CLOCK
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self._pinned: list[str] = self._load_pinned()
 
@@ -284,7 +285,7 @@ class WorldClockProvider(BaseProvider):
                 with open(_PINNED_FILE, encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, list):
-                    return [c for c in data if isinstance(c, str) and c in _CITIES]
+                    return [c for c in cast(list[object], data) if isinstance(c, str) and c in _CITIES]
         except Exception as e:
             logging.debug("Failed to load pinned cities: %s", e)
         return []
@@ -305,7 +306,7 @@ class WorldClockProvider(BaseProvider):
             return True
         return False
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).strip().lower()
         now_utc = datetime.now(UTC)
         try:
@@ -315,15 +316,15 @@ class WorldClockProvider(BaseProvider):
 
         if not query:
             show_cities = self._pinned if self._pinned else _DEFAULT_CITIES
-            results = []
+            results: list[ProviderResult] = []
             for city in show_cities:
                 tz_id = _CITIES.get(city)
                 if tz_id:
                     results.append(_build_result(city, tz_id, now_utc, local_dt, pinned=city in self._pinned))
             return results
 
-        pinned_results = []
-        regular_results = []
+        pinned_results: list[ProviderResult] = []
+        regular_results: list[ProviderResult] = []
         for city, tz_id in _CITIES.items():
             if query in city.lower() or query in tz_id.lower():
                 pinned = self.is_pinned(city)

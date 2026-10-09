@@ -1,7 +1,11 @@
 import logging
 from collections import deque
+from collections.abc import Callable
+from functools import partial
+from typing import Any
 
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout
 
 from core.events.komorebi import KomorebiEvent
@@ -10,7 +14,7 @@ from core.utils.utilities import PopupWidget
 from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.validation.widgets.komorebi.active_layout import ActiveLayoutConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.komorebi.client import KomorebiClient
+from core.widgets.services.komorebi.client import KomorebiClient, KomorebiNode
 
 try:
     from core.widgets.services.komorebi.event_listener import KomorebiEventListener
@@ -57,9 +61,11 @@ class ActiveLayoutWidget(BaseWidget):
         self._reset_layouts()
         self._event_service = EventService()
         self._komorebic = KomorebiClient()
-        self._komorebi_screen = None
-        self._komorebi_workspaces = []
-        self._focused_workspace = {}
+        self._komorebi_screen: KomorebiNode | None = None
+        self._komorebi_workspaces: list[KomorebiNode] = []
+        self._focused_workspace: KomorebiNode = {}
+        self._komorebi_state: KomorebiNode
+        self._screen_hwnd: int | None = None
         # Set the cursor to be a pointer when hovering over the button
         self._active_layout_text = QLabel()
         self._active_layout_text.setProperty("class", "label")
@@ -109,7 +115,7 @@ class ActiveLayoutWidget(BaseWidget):
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        def create_menu_item(icon, text, click_handler):
+        def create_menu_item(icon: str, text: str, action: Callable[[], None]) -> QFrame:
             item = QFrame()
             item.setProperty("class", "menu-item")
             item_layout = QHBoxLayout(item)
@@ -128,22 +134,22 @@ class ActiveLayoutWidget(BaseWidget):
             text_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             item_layout.addWidget(text_label)
 
-            item.mousePressEvent = click_handler
+            def mouse_press(a0: QMouseEvent | None) -> None:
+                action()
+
+            item.mousePressEvent = mouse_press
             return item
 
         for layout in self.config.layouts:
             icon = getattr(self.config.layout_icons, layout)
             text = layout.replace("_", " ").title()
 
-            def handler(event, l=layout):
-                self._on_layout_menu_selected(l)
+            main_layout.addWidget(create_menu_item(icon, text, partial(self._on_layout_menu_selected, layout)))
 
-            main_layout.addWidget(create_menu_item(icon, text, handler))
+        self._menu.add_separator(main_layout)
 
-        self._menu._add_separator(main_layout)
-
-        def make_toggle_handler(func):
-            def handler(event):
+        def make_toggle_handler(func: Callable[[], None]) -> Callable[[], None]:
+            def handler() -> None:
                 func()
                 self._menu.hide()
 
@@ -171,7 +177,7 @@ class ActiveLayoutWidget(BaseWidget):
         )
         self._menu.show()
 
-    def _on_layout_menu_selected(self, layout):
+    def _on_layout_menu_selected(self, layout: str):
         layout_cmd = layout.replace("_", "-")
         self.change_layout(layout_cmd)
         self._menu.hide()
@@ -180,6 +186,8 @@ class ActiveLayoutWidget(BaseWidget):
         self._layouts = deque([x.replace("_", "-") for x in self.config.layouts])
 
     def change_layout(self, layout: str):
+        if self._komorebi_screen is None:
+            return
         self._komorebic.change_layout(self._komorebi_screen["index"], self._focused_workspace["index"], layout)
 
     def _first_layout(self):
@@ -246,7 +254,7 @@ class ActiveLayoutWidget(BaseWidget):
         except Exception:
             pass
 
-    def _on_destroyed(self, *args):
+    def _on_destroyed(self, *args: object) -> None:
         try:
             self._event_service.unregister_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
             self._event_service.unregister_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
@@ -264,22 +272,22 @@ class ActiveLayoutWidget(BaseWidget):
         except Exception:
             pass
 
-    def _on_komorebi_connect_event(self, state: dict) -> None:
+    def _on_komorebi_connect_event(self, state: dict[str, Any]) -> None:
         self._update_active_layout(state, is_connect_event=True)
         if self.isHidden():
             self.show()
 
-    def _on_komorebi_layout_change_event(self, _event: dict, state: dict) -> None:
+    def _on_komorebi_layout_change_event(self, _event: dict[str, Any], state: dict[str, Any]) -> None:
         self._update_active_layout(state)
 
     def _on_komorebi_disconnect_event(self) -> None:
         if self.config.hide_if_offline:
             self.hide()
 
-    def _update_active_layout(self, state: dict, is_connect_event=False):
+    def _update_active_layout(self, state: dict[str, Any], is_connect_event: bool = False):
         try:
-            if self._update_komorebi_state(state):
-                self._focused_workspace = self._komorebic.get_focused_workspace(self._komorebi_screen)
+            if self._update_komorebi_state(state) and self._komorebi_screen is not None:
+                self._focused_workspace = self._komorebic.get_focused_workspace(self._komorebi_screen) or {}
 
                 if not self._focused_workspace:
                     return
@@ -302,7 +310,7 @@ class ActiveLayoutWidget(BaseWidget):
         except Exception:
             logging.exception("Failed to update komorebi status and widget button state")
 
-    def _get_layout_label_info(self):
+    def _get_layout_label_info(self) -> tuple[str, str]:
         if self._komorebi_state.get("is_paused", False):
             layout_name = "Paused"
             layout_icon = self.config.layout_icons.paused
@@ -321,14 +329,23 @@ class ActiveLayoutWidget(BaseWidget):
 
         return layout_name, layout_icon
 
-    def _update_komorebi_state(self, komorebi_state: dict):
+    def _update_komorebi_state(self, komorebi_state: KomorebiNode) -> bool:
         try:
-            self._screen_hwnd = get_widget_monitor_hwnd(self)
+            screen_hwnd = get_widget_monitor_hwnd(self)
+            self._screen_hwnd = screen_hwnd
             self._komorebi_state = komorebi_state
 
             if self._komorebi_state:
-                self._komorebi_screen = self._komorebic.get_screen_by_hwnd(self._komorebi_state, self._screen_hwnd)
-                self._komorebi_workspaces = self._komorebic.get_workspaces(self._komorebi_screen)
+                screen = (
+                    self._komorebic.get_screen_by_hwnd(self._komorebi_state, screen_hwnd)
+                    if screen_hwnd is not None
+                    else None
+                )
+                self._komorebi_screen = screen
+                if screen is None:
+                    return False
+                self._komorebi_workspaces = self._komorebic.get_workspaces(screen)
                 return True
         except TypeError:
             return False
+        return False

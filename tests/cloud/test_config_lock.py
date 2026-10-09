@@ -1,3 +1,5 @@
+# pyright: reportPrivateUsage=false
+
 """One operation on the configuration directory at a time.
 
 Backup and restore share a single lock, so any of them excludes the others - in this process
@@ -6,24 +8,28 @@ and in another one, which is what stops a CLI restore running under the window's
     python -m pytest tests/cloud/test_config_lock.py -q
 """
 
+from pathlib import Path
+
 import pytest
 from PyQt6.QtGui import QCloseEvent
+from PyQt6.QtWidgets import QApplication
 
 from core.cloud.api import ApiClient
 from core.cloud.constants import BUSY_MESSAGE
+from core.cloud.models import Account
 from core.cloud.session import Session
 from core.cloud.ui.window import CloudWindow, Operations
 from core.cloud.workers import config_lock
 
 
 @pytest.fixture
-def cloud_home(tmp_path, monkeypatch):
+def cloud_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     return tmp_path
 
 
 @pytest.fixture
-def ops(qapp, cloud_home):
+def ops(qapp: QApplication, cloud_home: Path) -> Operations:
     session = _signed_in()
     return Operations(ApiClient(session), session)
 
@@ -34,7 +40,7 @@ def _refusals(operations: Operations) -> list[str]:
     return seen
 
 
-def test_a_second_holder_cannot_take_the_lock(cloud_home):
+def test_a_second_holder_cannot_take_the_lock(cloud_home: Path):
     """The cross-process case. A separate instance is what another yasbc run would hold."""
     held = config_lock()
     assert held.tryLock(0)
@@ -45,7 +51,7 @@ def test_a_second_holder_cannot_take_the_lock(cloud_home):
     assert config_lock().tryLock(0)
 
 
-def test_restore_is_refused_while_something_else_holds_the_lock(ops):
+def test_restore_is_refused_while_something_else_holds_the_lock(ops: Operations):
     other = config_lock()
     assert other.tryLock(0)
     try:
@@ -57,7 +63,7 @@ def test_restore_is_refused_while_something_else_holds_the_lock(ops):
     assert refused == [BUSY_MESSAGE]
 
 
-def test_backup_is_refused_while_a_restore_holds_the_lock(ops, monkeypatch):
+def test_backup_is_refused_while_a_restore_holds_the_lock(ops: Operations, monkeypatch: pytest.MonkeyPatch):
     """The pairing that used to be unguarded: a restore replacing the directory a backup
     is reading would archive it half-swapped."""
     monkeypatch.setattr(ops, "_session", _signed_in())
@@ -74,7 +80,7 @@ def test_backup_is_refused_while_a_restore_holds_the_lock(ops, monkeypatch):
     assert refused == [BUSY_MESSAGE]
 
 
-def test_cancelling_a_restore_gives_back_its_lock_and_its_temp_file(ops, cloud_home):
+def test_cancelling_a_restore_gives_back_its_lock_and_its_temp_file(ops: Operations, cloud_home: Path):
     """The reason operations own their resources: one release path, reached by every exit.
     Cancelling used to leave the lock held and the blob on disk, because only the success
     callback cleaned up."""
@@ -89,7 +95,7 @@ def test_cancelling_a_restore_gives_back_its_lock_and_its_temp_file(ops, cloud_h
     assert not any(blob.exists() for blob in blobs), "and must take its temporary file with it"
 
 
-def test_a_second_operation_is_refused_while_one_is_active(ops):
+def test_a_second_operation_is_refused_while_one_is_active(ops: Operations):
     refused = _refusals(ops)
     ops.restore("first")
     ops.restore("second")
@@ -98,7 +104,7 @@ def test_a_second_operation_is_refused_while_one_is_active(ops):
     ops.cancel_active()
 
 
-def test_closing_the_window_cancels_rather_than_refusing(qapp, cloud_home):
+def test_closing_the_window_cancels_rather_than_refusing(qapp: QApplication, cloud_home: Path):
     """Closing always closes. Whatever is running is cancelled and released; the user is
     never asked to wait and never shown a dialog about it."""
     window = CloudWindow()
@@ -125,7 +131,5 @@ def _signed_in() -> Session:
     return session
 
 
-def _account():
-    from core.cloud.models import Account
-
+def _account() -> Account:
     return Account.from_json({"user": {"id": "u", "email": "e@example.com"}})

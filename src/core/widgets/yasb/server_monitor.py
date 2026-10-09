@@ -2,9 +2,10 @@ import logging
 import os
 import re
 from datetime import datetime
+from typing import Any, cast, override
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QUrl
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtGui import QCloseEvent, QDesktopServices, QMouseEvent
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.ui.components.loader import LoaderLine
@@ -25,10 +26,10 @@ class ServerMonitor(BaseWidget):
         super().__init__(class_name="server-widget")
         self.config = config
         self._show_alt_label = False
-        self._last_refresh_time = None
-        self._server_status_data = None
+        self._last_refresh_time: datetime | None = None
+        self._server_status_data: list[dict[str, Any]] | None = None
         self._first_run = True
-        self._animations = []
+        self._animations: list[QPropertyAnimation] = []
         self._icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png")
 
         # Construct container
@@ -74,8 +75,10 @@ class ServerMonitor(BaseWidget):
             except RuntimeError:
                 return
 
-    def _handle_status_update(self, run_id: int, status_data):
-        status_list: list[dict] = [dict(s) for s in (status_data or []) if isinstance(s, dict)]
+    def _handle_status_update(self, run_id: int, status_data: list[Any]):
+        status_list: list[dict[str, Any]] = [
+            dict(cast(dict[str, Any], s)) for s in (status_data or []) if isinstance(s, dict)
+        ]
 
         online_count = sum(1 for s in status_list if s.get("status") == "Online")
         offline_count = sum(1 for s in status_list if s.get("status") == "Offline")
@@ -125,10 +128,11 @@ class ServerMonitor(BaseWidget):
         except RuntimeError:
             return
 
-    def closeEvent(self, event):
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         self._release_service()
         self._cleanup_logging()
-        super().closeEvent(event)
+        super().closeEvent(a0)
 
     def _cleanup_logging(self):
         # Ensure all logging handlers are flushed and closed properly
@@ -154,16 +158,11 @@ class ServerMonitor(BaseWidget):
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
-        try:
-            online_count = self._server_status_data[-1]["online_count"]
-            offline_count = self._server_status_data[-1]["offline_count"]
-            ssl_warning = self._server_status_data[-1]["ssl_warning"]
-            total_count = len(self.config.servers)
-        except Exception:
-            online_count = 0
-            offline_count = 0
-            ssl_warning = False
-            total_count = len(self.config.servers)
+        total_count = len(self.config.servers)
+        summary = self._server_status_data[-1] if self._server_status_data else {}
+        online_count = summary.get("online_count", 0)
+        offline_count = summary.get("offline_count", 0)
+        ssl_warning = summary.get("ssl_warning", False)
 
         if offline_count > 0:
             self._widget_container.setProperty("class", "widget-container error")
@@ -176,7 +175,7 @@ class ServerMonitor(BaseWidget):
 
         for part in label_parts:
             part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 if "<span" in part and "</span>" in part:
                     # Ensure the icon is correctly set
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
@@ -238,7 +237,11 @@ class ServerMonitor(BaseWidget):
         # Add reload button
         reload_button = QLabel(self.config.icons.reload)
         reload_button.setProperty("class", "reload-button")
-        reload_button.mousePressEvent = lambda _: self._trigger_reload()
+
+        def reload_pressed(ev: QMouseEvent | None) -> None:
+            self._trigger_reload()
+
+        reload_button.mousePressEvent = reload_pressed
         header_layout.addWidget(reload_button)
         layout.addWidget(header_widget)
 
@@ -291,26 +294,34 @@ class ServerMonitor(BaseWidget):
             return
         while layout.count() > 1:
             item = layout.takeAt(1)
-            if item.widget():
-                item.widget().deleteLater()
+            widget = item.widget() if item is not None else None
+            if widget:
+                widget.deleteLater()
 
         server_data_list = self._server_status_data
         scroll_area = self._build_server_rows(server_data_list)
         layout.addWidget(scroll_area)
 
-        try:
-            header_widget = layout.itemAt(0).widget()
-            refresh_label = header_widget.layout().itemAt(0).widget()
-            refresh_time = self._get_time_ago()
-            refresh_label.setText(f"Last check {refresh_time}")
-        except Exception:
-            pass
+        header_item = layout.itemAt(0)
+        header_widget = header_item.widget() if header_item else None
+        header_layout = header_widget.layout() if header_widget else None
+        label_item = header_layout.itemAt(0) if header_layout else None
+        refresh_label = label_item.widget() if label_item else None
+        if isinstance(refresh_label, QLabel):
+            refresh_label.setText(f"Last check {self._get_time_ago()}")
 
     def _trigger_reload(self):
         self._set_menu_loader(True)
         self._service.start_now()
 
-    def _build_server_rows(self, server_data_list):
+    @staticmethod
+    def _bind_open_url(widget: QWidget, url: str) -> None:
+        def mouse_press(a0: QMouseEvent | None) -> None:
+            QDesktopServices.openUrl(QUrl(url))
+
+        widget.mousePressEvent = mouse_press
+
+    def _build_server_rows(self, server_data_list: list[dict[str, Any]] | None) -> QScrollArea:
         scroll_area = QScrollArea(self)
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -381,7 +392,7 @@ class ServerMonitor(BaseWidget):
                 _server_url = (
                     f"https://{server_data['url']}" if self.config.ssl_check else f"http://{server_data['url']}"
                 )
-                row_widget.mousePressEvent = lambda _, url=_server_url: (QDesktopServices.openUrl(QUrl(url)), None)[1]
+                self._bind_open_url(row_widget, _server_url)
                 row_widget_layout = QVBoxLayout(row_widget)
                 row_widget_layout.setContentsMargins(0, 0, 0, 0)
                 row_widget_layout.setSpacing(0)

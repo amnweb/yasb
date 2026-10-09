@@ -1,8 +1,10 @@
 import logging
 import os
 import subprocess
+from collections.abc import Callable
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.shell_utils import shell_open
@@ -27,7 +29,7 @@ class HomeWidget(BaseWidget):
         self.callback_middle = self.config.callbacks.on_middle
         self.callback_right = self.config.callbacks.on_right
 
-    def create_menu_action(self, menu_item: MenuItemConfig):
+    def create_menu_action(self, menu_item: MenuItemConfig) -> Callable[[], object]:
         action_keys = [key for key in ("command", "uri", "path") if getattr(menu_item, key, None)]
         if len(action_keys) > 1:
             return lambda: logging.error("Home menu item must define only one of: 'path', 'uri', or 'command'.")
@@ -71,6 +73,8 @@ class HomeWidget(BaseWidget):
                 else logging.error("The system cannot find the file specified: '%s'", path)
             )
 
+        return lambda: logging.error("Home menu item missing 'path', 'uri', or 'command'.")
+
     def _create_menu(self):
         self._menu = PopupWidget(
             self,
@@ -94,7 +98,7 @@ class HomeWidget(BaseWidget):
                 lambda: shell_open("winver"),
             )
 
-            self._menu._add_separator(main_layout)
+            self._menu.add_separator(main_layout)
 
             self._add_menu_item(main_layout, self.config.menu_labels.system, lambda: os.startfile("ms-settings:"))
 
@@ -104,18 +108,18 @@ class HomeWidget(BaseWidget):
                 lambda: shell_open("taskmgr"),
             )
 
-            self._menu._add_separator(main_layout)
+            self._menu.add_separator(main_layout)
 
         # Custom menu items
         if isinstance(self.config.menu_list, list):
             for menu_item in self.config.menu_list:
                 if menu_item.separator:
-                    self._menu._add_separator(main_layout)
+                    self._menu.add_separator(main_layout)
                     continue
                 if menu_item.title:
                     self._add_menu_item(main_layout, menu_item.title, self.create_menu_action(menu_item))
         if self.config.menu_list is not None and len(self.config.menu_list) > 0 and self.config.power_menu:
-            self._menu._add_separator(main_layout)
+            self._menu.add_separator(main_layout)
 
         if self.config.power_menu:
             self._add_menu_item(
@@ -127,7 +131,7 @@ class HomeWidget(BaseWidget):
             self._add_menu_item(main_layout, self.config.menu_labels.restart, lambda: self.power_operations.restart())
             self._add_menu_item(main_layout, self.config.menu_labels.shutdown, lambda: self.power_operations.shutdown())
 
-            self._menu._add_separator(main_layout)
+            self._menu.add_separator(main_layout)
 
             self._add_menu_item(main_layout, self.config.menu_labels.lock, lambda: self.power_operations.lock())
             self._add_menu_item(main_layout, self.config.menu_labels.logout, lambda: self.power_operations.signout())
@@ -141,7 +145,7 @@ class HomeWidget(BaseWidget):
         )
         self._menu.show()
 
-    def _add_menu_item(self, layout, text, triggered_func):
+    def _add_menu_item(self, layout: QVBoxLayout, text: str, triggered_func: Callable[[], object]) -> QWidget:
         # Create widget container
         item = QWidget()
         item_layout = QHBoxLayout(item)
@@ -156,8 +160,8 @@ class HomeWidget(BaseWidget):
         item_layout.addWidget(label)
 
         # Add click event
-        def mouse_press_handler(event):
-            if event.button() == Qt.MouseButton.LeftButton:
+        def mouse_press_handler(a0: QMouseEvent | None) -> None:
+            if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
                 self._menu.hide()
                 triggered_func()
 

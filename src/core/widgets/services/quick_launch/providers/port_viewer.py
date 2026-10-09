@@ -3,7 +3,9 @@ import logging
 import os
 import subprocess
 import tempfile
+from ctypes import wintypes
 from dataclasses import dataclass
+from typing import Any, cast
 
 from PyQt6.QtWidgets import QApplication
 
@@ -13,7 +15,7 @@ from core.utils.win32.structs import PROCESSENTRY32
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_PORT
 
-_DEFAULT_APP_ICON_PNG: str | None = None
+_default_app_icon_png: str | None = None
 
 
 def _get_quick_launch_icons_dir() -> str:
@@ -28,9 +30,9 @@ def _get_quick_launch_icons_dir() -> str:
 def _get_default_app_icon_png() -> str:
     """Return a cached default Windows application icon PNG path, or ""."""
 
-    global _DEFAULT_APP_ICON_PNG
-    if _DEFAULT_APP_ICON_PNG is not None:
-        return _DEFAULT_APP_ICON_PNG
+    global _default_app_icon_png
+    if _default_app_icon_png is not None:
+        return _default_app_icon_png
 
     try:
         import win32api
@@ -42,21 +44,31 @@ def _get_default_app_icon_png() -> str:
         icons_dir = _get_quick_launch_icons_dir()
         default_png = os.path.join(icons_dir, "_default_app.png")
         if os.path.isfile(default_png):
-            _DEFAULT_APP_ICON_PNG = default_png
+            _default_app_icon_png = default_png
             return default_png
 
         size = win32api.GetSystemMetrics(win32con.SM_CXICON)
-        hicon = win32gui.LoadImage(0, win32con.IDI_APPLICATION, win32con.IMAGE_ICON, size, size, win32con.LR_SHARED)
+        hicon = cast(
+            int,
+            win32gui.LoadImage(
+                0,
+                win32con.IDI_APPLICATION,  # pyright: ignore[reportArgumentType]
+                win32con.IMAGE_ICON,
+                size,
+                size,
+                win32con.LR_SHARED,
+            ),
+        )
         if hicon:
             img = hicon_to_image(hicon)
             if img is not None:
                 img.save(default_png, format="PNG")
-                _DEFAULT_APP_ICON_PNG = default_png
+                _default_app_icon_png = default_png
                 return default_png
     except Exception:
         pass
 
-    _DEFAULT_APP_ICON_PNG = ""
+    _default_app_icon_png = ""
     return ""
 
 
@@ -110,7 +122,10 @@ def _get_cached_exe_icon_png(exe_path: str) -> str:
             return cached_png
 
         # ExtractIconEx returns ([large...], [small...])
-        large, small = win32gui.ExtractIconEx(exe_path, 0, 1)
+        large, small = cast(
+            tuple[list[int], list[int]],
+            win32gui.ExtractIconEx(exe_path, 0, 1),  # pyright: ignore[reportUnknownMemberType]
+        )
         hicon = 0
         if large:
             hicon = large[0]
@@ -132,10 +147,10 @@ def _get_cached_exe_icon_png(exe_path: str) -> str:
             try:
                 if large:
                     for hi in large:
-                        win32gui.DestroyIcon(hi)
+                        win32gui.DestroyIcon(hi)  # pyright: ignore[reportUnknownMemberType]
                 if small:
                     for hi in small:
-                        win32gui.DestroyIcon(hi)
+                        win32gui.DestroyIcon(hi)  # pyright: ignore[reportUnknownMemberType]
             except Exception:
                 pass
     except Exception:
@@ -168,7 +183,7 @@ def _enumerate_processes() -> dict[int, str]:
 
     proc_map: dict[int, str] = {}
     snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-    if snapshot == ctypes.wintypes.HANDLE(-1).value:
+    if snapshot == wintypes.HANDLE(-1).value:
         return proc_map
     try:
         entry = PROCESSENTRY32()
@@ -286,12 +301,12 @@ class PortViewerProvider(BaseProvider):
     input_placeholder = "Search open ports..."
     icon = ICON_PORT
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self._tcp_listening_only: bool = bool(self.config.get("tcp_listening_only", True))
         self._include_established: bool = bool(self.config.get("include_established", False))
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query_raw = self.get_query_text(text)
         query = query_raw.strip()
         if not query:
@@ -440,7 +455,7 @@ class PortViewerProvider(BaseProvider):
                 title = f"{e.protocol.upper()} {e.local}"
                 if proc:
                     title += f"  ({proc})"
-                desc_bits = []
+                desc_bits: list[str] = []
                 if e.state:
                     desc_bits.append(e.state)
                 if pid is not None:

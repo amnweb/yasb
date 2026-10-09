@@ -3,21 +3,51 @@ import logging
 import re
 import time
 from datetime import datetime
+from pathlib import Path
+from typing import NotRequired, TypedDict
 
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.system import app_data_path
-from core.widgets.services.traffic.network_api import NetworkAPI
+from core.widgets.services.traffic.network_api import IOCounters, NetworkAPI
+
+
+class InterfaceData(TypedDict):
+    total_bytes_sent: int
+    total_bytes_recv: int
+    today_sent: int
+    today_recv: int
+    today_date: str | None
+    session_start_sent: int | None
+    session_start_recv: int | None
+    today_start_sent: int | None
+    today_start_recv: int | None
+    session_start_time: float
+    _loaded: bool
+
+
+class NetworkData(TypedDict):
+    upload_speed: str
+    download_speed: str
+    raw_upload_speed: str
+    raw_download_speed: str
+    today_uploaded: str
+    today_downloaded: str
+    session_uploaded: str
+    session_downloaded: str
+    session_duration: str
+    alltime_uploaded: str
+    alltime_downloaded: str
+    current_io: NotRequired[IOCounters]
+    reset_occurred: NotRequired[bool]
 
 
 class TrafficDataManager:
     """Manages traffic data storage, loading, and calculations for all interfaces"""
 
     # Class-level storage for interface data
-    _interface_data: dict[
-        str, dict
-    ] = {}  # {interface: {total_bytes_sent, total_bytes_recv, today_sent, today_recv, etc}}
-    _global_data_folder = None
+    _interface_data: dict[str, InterfaceData] = {}
+    _global_data_folder: Path | None = None
     _interface_last_save_times: dict[str, float] = {}  # Track save time per interface
     _quit_handler_registered = False  # Track if global quit handler is registered
 
@@ -55,7 +85,7 @@ class TrafficDataManager:
     def destroy(cls):
         """Save data for all active interfaces on application quit"""
         try:
-            saved_interfaces = []
+            saved_interfaces: list[str] = []
             for interface in cls._interface_data.keys():
                 if cls._interface_data[interface].get("_loaded", False):
                     cls.save_interface_data(interface)
@@ -65,7 +95,7 @@ class TrafficDataManager:
             logging.error("Error saving interfaces on quit: %s", e)
 
     @classmethod
-    def get_interface_data_file(cls, interface: str):
+    def get_interface_data_file(cls, interface: str) -> Path | None:
         """Get the data file path for a specific interface"""
         if cls._global_data_folder is None:
             return None
@@ -78,12 +108,11 @@ class TrafficDataManager:
         return cls._global_data_folder / f"yasb_traffic_{safe_interface}.json"
 
     @classmethod
-    def initialize_interface(cls, interface: str):
+    def initialize_interface(cls, interface: str) -> tuple[int | None, int | None]:
         """Initialize interface data if not already loaded"""
         if interface in cls._interface_data and cls._interface_data[interface].get("_loaded", False):
-            return cls._interface_data[interface]["session_start_sent"], cls._interface_data[interface][
-                "session_start_recv"
-            ]
+            data = cls._interface_data[interface]
+            return data["session_start_sent"], data["session_start_recv"]
 
         # Initialize defaults
         cls._interface_data[interface] = {
@@ -109,14 +138,13 @@ class TrafficDataManager:
         cls.initialize_today_tracking(interface)
 
         # Mark as loaded
-        cls._interface_data[interface]["_loaded"] = True
+        data = cls._interface_data[interface]
+        data["_loaded"] = True
 
-        return cls._interface_data[interface]["session_start_sent"], cls._interface_data[interface][
-            "session_start_recv"
-        ]
+        return data["session_start_sent"], data["session_start_recv"]
 
     @classmethod
-    def get_session_duration(cls, interface: str):
+    def get_session_duration(cls, interface: str) -> str:
         """Get how long ago the session started as a human readable string"""
         if interface not in cls._interface_data:
             return "just now"
@@ -151,13 +179,14 @@ class TrafficDataManager:
         if data_file and data_file.exists():
             try:
                 with open(data_file) as f:
-                    data = json.load(f)
+                    saved = json.load(f)
 
-                cls._interface_data[interface]["total_bytes_sent"] = data.get("total_sent", 0)
-                cls._interface_data[interface]["total_bytes_recv"] = data.get("total_recv", 0)
-                cls._interface_data[interface]["today_sent"] = data.get("today_sent", 0)
-                cls._interface_data[interface]["today_recv"] = data.get("today_recv", 0)
-                cls._interface_data[interface]["today_date"] = data.get("today_date", None)
+                data = cls._interface_data[interface]
+                data["total_bytes_sent"] = saved.get("total_sent", 0)
+                data["total_bytes_recv"] = saved.get("total_recv", 0)
+                data["today_sent"] = saved.get("today_sent", 0)
+                data["today_recv"] = saved.get("today_recv", 0)
+                data["today_date"] = saved.get("today_date", None)
 
             except Exception as e:
                 logging.error("Error loading traffic data for interface %s: %s", interface, e)
@@ -189,7 +218,7 @@ class TrafficDataManager:
         speed_threshold: dict[str, int],
         max_label_length: int = 0,
         max_label_length_align: str = "left",
-    ):
+    ) -> NetworkData | None:
         """Calculate all network data including speeds, totals, and handle counter resets"""
         try:
             current_io = cls.get_interface_io_counters(interface)
@@ -308,6 +337,7 @@ class TrafficDataManager:
         try:
             if interface not in cls._interface_data:
                 return
+            data = cls._interface_data[interface]
 
             today = datetime.now().strftime("%Y-%m-%d")
 
@@ -317,42 +347,36 @@ class TrafficDataManager:
                 return
 
             # Session baseline is ONLY set once per interface (when first instance loads)
-            if (
-                cls._interface_data[interface]["session_start_sent"] is None
-                or cls._interface_data[interface]["session_start_recv"] is None
-            ):
-                cls._interface_data[interface]["session_start_sent"] = current_io.bytes_sent
-                cls._interface_data[interface]["session_start_recv"] = current_io.bytes_recv
+            if data["session_start_sent"] is None or data["session_start_recv"] is None:
+                data["session_start_sent"] = current_io.bytes_sent
+                data["session_start_recv"] = current_io.bytes_recv
 
             # Check if it's a new day
-            if cls._interface_data[interface]["today_date"] != today:
+            if data["today_date"] != today:
                 # New day - reset today counters and set new baseline
-                cls._interface_data[interface]["today_date"] = today
-                cls._interface_data[interface]["today_sent"] = 0
-                cls._interface_data[interface]["today_recv"] = 0
-                cls._interface_data[interface]["today_start_sent"] = current_io.bytes_sent
-                cls._interface_data[interface]["today_start_recv"] = current_io.bytes_recv
+                data["today_date"] = today
+                data["today_sent"] = 0
+                data["today_recv"] = 0
+                data["today_start_sent"] = current_io.bytes_sent
+                data["today_start_recv"] = current_io.bytes_recv
             else:
                 # Same day - calculate baseline from existing today data
-                cls._interface_data[interface]["today_start_sent"] = (
-                    current_io.bytes_sent - cls._interface_data[interface]["today_sent"]
-                )
-                cls._interface_data[interface]["today_start_recv"] = (
-                    current_io.bytes_recv - cls._interface_data[interface]["today_recv"]
-                )
+                data["today_start_sent"] = current_io.bytes_sent - data["today_sent"]
+                data["today_start_recv"] = current_io.bytes_recv - data["today_recv"]
 
         except Exception as e:
             logging.error("Error initializing today tracking for %s: %s", interface, e)
             if interface in cls._interface_data:
-                cls._interface_data[interface]["today_start_sent"] = 0
-                cls._interface_data[interface]["today_start_recv"] = 0
-                if cls._interface_data[interface]["session_start_sent"] is None:
-                    cls._interface_data[interface]["session_start_sent"] = 0
-                if cls._interface_data[interface]["session_start_recv"] is None:
-                    cls._interface_data[interface]["session_start_recv"] = 0
+                data = cls._interface_data[interface]
+                data["today_start_sent"] = 0
+                data["today_start_recv"] = 0
+                if data["session_start_sent"] is None:
+                    data["session_start_sent"] = 0
+                if data["session_start_recv"] is None:
+                    data["session_start_recv"] = 0
 
     @classmethod
-    def get_interface_io_counters(cls, interface: str):
+    def get_interface_io_counters(cls, interface: str) -> IOCounters | None:
         """Get IO counters for a specific interface"""
         try:
             if interface.lower() == "auto":
@@ -373,58 +397,54 @@ class TrafficDataManager:
             return None
 
     @classmethod
-    def update_today_and_total_tracking(cls, interface: str, current_io):
+    def update_today_and_total_tracking(cls, interface: str, current_io: IOCounters):
         """Update today tracking and total data for a specific interface"""
         try:
             if interface not in cls._interface_data:
                 return
+            data = cls._interface_data[interface]
 
             today = datetime.now().strftime("%Y-%m-%d")
 
             # Check if day has changed
-            if cls._interface_data[interface]["today_date"] != today:
+            if data["today_date"] != today:
                 # Day changed - finalize yesterday's data and reset for today
-                cls._interface_data[interface]["today_date"] = today
-                cls._interface_data[interface]["today_start_sent"] = current_io.bytes_sent
-                cls._interface_data[interface]["today_start_recv"] = current_io.bytes_recv
-                cls._interface_data[interface]["today_sent"] = 0
-                cls._interface_data[interface]["today_recv"] = 0
+                data["today_date"] = today
+                data["today_start_sent"] = current_io.bytes_sent
+                data["today_start_recv"] = current_io.bytes_recv
+                data["today_sent"] = 0
+                data["today_recv"] = 0
                 return
 
             # Normal tracking - calculate today's totals and incremental changes
-            previous_today_sent = cls._interface_data[interface]["today_sent"]
-            previous_today_recv = cls._interface_data[interface]["today_recv"]
+            previous_today_sent = data["today_sent"]
+            previous_today_recv = data["today_recv"]
 
             # Update today's data based on current counters
-            if (
-                cls._interface_data[interface]["today_start_sent"] is not None
-                and cls._interface_data[interface]["today_start_recv"] is not None
-            ):
+            today_start_sent = data["today_start_sent"]
+            today_start_recv = data["today_start_recv"]
+            if today_start_sent is not None and today_start_recv is not None:
                 # Handle counter resets
-                if current_io.bytes_sent >= cls._interface_data[interface]["today_start_sent"]:
-                    cls._interface_data[interface]["today_sent"] = (
-                        current_io.bytes_sent - cls._interface_data[interface]["today_start_sent"]
-                    )
-                if current_io.bytes_recv >= cls._interface_data[interface]["today_start_recv"]:
-                    cls._interface_data[interface]["today_recv"] = (
-                        current_io.bytes_recv - cls._interface_data[interface]["today_start_recv"]
-                    )
+                if current_io.bytes_sent >= today_start_sent:
+                    data["today_sent"] = current_io.bytes_sent - today_start_sent
+                if current_io.bytes_recv >= today_start_recv:
+                    data["today_recv"] = current_io.bytes_recv - today_start_recv
 
             # Calculate how much today's data increased
-            today_diff_sent = cls._interface_data[interface]["today_sent"] - previous_today_sent
-            today_diff_recv = cls._interface_data[interface]["today_recv"] - previous_today_recv
+            today_diff_sent = data["today_sent"] - previous_today_sent
+            today_diff_recv = data["today_recv"] - previous_today_recv
 
             # Update total data by the same amount that today's data increased
             if today_diff_sent > 0:
-                cls._interface_data[interface]["total_bytes_sent"] += today_diff_sent
+                data["total_bytes_sent"] += today_diff_sent
             if today_diff_recv > 0:
-                cls._interface_data[interface]["total_bytes_recv"] += today_diff_recv
+                data["total_bytes_recv"] += today_diff_recv
 
         except Exception as e:
             logging.error("Error updating today and total tracking for %s: %s", interface, e)
 
     @classmethod
-    def get_today_totals(cls, interface: str):
+    def get_today_totals(cls, interface: str) -> tuple[int, int]:
         """Get today's upload/download totals for a specific interface"""
         try:
             if interface not in cls._interface_data:
@@ -436,14 +456,14 @@ class TrafficDataManager:
         return 0, 0
 
     @classmethod
-    def get_total_data(cls, interface: str):
+    def get_total_data(cls, interface: str) -> tuple[int, int]:
         """Get total upload/download data for a specific interface"""
         if interface not in cls._interface_data:
             return 0, 0
         return cls._interface_data[interface]["total_bytes_sent"], cls._interface_data[interface]["total_bytes_recv"]
 
     @classmethod
-    def get_session_baseline(cls, interface: str):
+    def get_session_baseline(cls, interface: str) -> tuple[int | None, int | None]:
         """Get session baseline for a specific interface"""
         if interface not in cls._interface_data:
             return 0, 0
@@ -457,6 +477,7 @@ class TrafficDataManager:
         try:
             if interface not in cls._interface_data:
                 return
+            data = cls._interface_data[interface]
 
             # Get current IO counters for new baseline
             current_io = cls.get_interface_io_counters(interface)
@@ -464,15 +485,15 @@ class TrafficDataManager:
                 return
 
             # Reset all tracked data
-            cls._interface_data[interface]["total_bytes_sent"] = 0
-            cls._interface_data[interface]["total_bytes_recv"] = 0
-            cls._interface_data[interface]["today_sent"] = 0
-            cls._interface_data[interface]["today_recv"] = 0
-            cls._interface_data[interface]["session_start_sent"] = current_io.bytes_sent
-            cls._interface_data[interface]["session_start_recv"] = current_io.bytes_recv
-            cls._interface_data[interface]["today_start_sent"] = current_io.bytes_sent
-            cls._interface_data[interface]["today_start_recv"] = current_io.bytes_recv
-            cls._interface_data[interface]["today_date"] = datetime.now().strftime("%Y-%m-%d")
+            data["total_bytes_sent"] = 0
+            data["total_bytes_recv"] = 0
+            data["today_sent"] = 0
+            data["today_recv"] = 0
+            data["session_start_sent"] = current_io.bytes_sent
+            data["session_start_recv"] = current_io.bytes_recv
+            data["today_start_sent"] = current_io.bytes_sent
+            data["today_start_recv"] = current_io.bytes_recv
+            data["today_date"] = datetime.now().strftime("%Y-%m-%d")
 
             cls.save_interface_data(interface)
 
@@ -480,7 +501,7 @@ class TrafficDataManager:
             logging.error("Error resetting interface data for %s: %s", interface, e)
 
     @classmethod
-    def should_save_data(cls, interface: str):
+    def should_save_data(cls, interface: str) -> bool:
         """Check if data should be saved for a specific interface (every 10 seconds per interface)"""
         current_time = time.time()
         if interface not in cls._interface_last_save_times:
@@ -493,7 +514,7 @@ class TrafficDataManager:
         return False
 
     @classmethod
-    def format_data_size(cls, bytes_value):
+    def format_data_size(cls, bytes_value: float) -> str:
         """Format data size in bytes to human readable format"""
         if bytes_value >= 1024**4:  # TB
             return f"{bytes_value / (1024**4):.3f} TB"
@@ -505,7 +526,9 @@ class TrafficDataManager:
             return "< 1 MB"
 
     @classmethod
-    def format_speed(cls, bytes_per_sec, speed_unit="bits", hide_decimal=False, threshold=0):
+    def format_speed(
+        cls, bytes_per_sec: float, speed_unit: str = "bits", hide_decimal: bool = False, threshold: float = 0
+    ) -> str:
         """Format speed with correct units based on configuration"""
 
         if bytes_per_sec < threshold:

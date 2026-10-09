@@ -1,48 +1,19 @@
 import asyncio
 import ctypes
 import logging
-from ctypes import POINTER, byref, c_void_p
+from ctypes import byref, c_void_p
 
 import winrt.windows.ui.notifications.management as management
 from PyQt6.QtCore import QThread, pyqtSignal
 from winrt.windows.ui.notifications import NotificationKinds
 
 from core.events.service import EventService
-
-_ntdll = ctypes.WinDLL("ntdll")
-
-WnfCallbackType = ctypes.WINFUNCTYPE(
-    ctypes.c_long,  # NTSTATUS
-    ctypes.c_uint64,  # StateName
-    ctypes.c_ulong,  # ChangeStamp
-    c_void_p,  # TypeId
-    c_void_p,  # CallbackContext
-    c_void_p,  # Buffer
-    ctypes.c_ulong,  # BufferSize
+from core.utils.win32.bindings.ntdll import (
+    WNF_SUPPORTED,
+    RtlSubscribeWnfStateChangeNotification,
+    RtlUnsubscribeWnfStateChangeNotification,
+    WnfCallbackType,
 )
-
-try:
-    _RtlSubscribeWnfStateChangeNotification = _ntdll.RtlSubscribeWnfStateChangeNotification
-    _RtlSubscribeWnfStateChangeNotification.restype = ctypes.c_long
-    _RtlSubscribeWnfStateChangeNotification.argtypes = [
-        POINTER(c_void_p),
-        ctypes.c_uint64,
-        ctypes.c_ulong,
-        WnfCallbackType,
-        c_void_p,
-        c_void_p,
-        ctypes.c_ulong,
-        ctypes.c_ulong,
-    ]
-
-    _RtlUnsubscribeWnfStateChangeNotification = _ntdll.RtlUnsubscribeWnfStateChangeNotification
-    _RtlUnsubscribeWnfStateChangeNotification.restype = ctypes.c_long
-    _RtlUnsubscribeWnfStateChangeNotification.argtypes = [c_void_p]
-    WNF_SUPPORTED = True
-except AttributeError:
-    _RtlSubscribeWnfStateChangeNotification = None
-    _RtlUnsubscribeWnfStateChangeNotification = None
-    WNF_SUPPORTED = False
 
 # Win11: Action Center toast total
 WNF_SHEL_NOTIFICATION_TOTAL = 0x0D83063EA3B8D035
@@ -60,7 +31,7 @@ class WindowsNotificationEventListener(QThread):
         self._loop: asyncio.AbstractEventLoop | None = None
         self._async_stop_event: asyncio.Event | None = None
         self._stopped = False
-        self._listener = None
+        self._listener: management.UserNotificationListener | None = None
         self._wnf_sub = None
         self._wnf_active = False
         self._wnf_cb = WnfCallbackType(self._wnf_toast_callback)
@@ -130,15 +101,16 @@ class WindowsNotificationEventListener(QThread):
 
     def _try_subscribe(self, state: int, name: str) -> bool:
         """Subscribe to a WNF state. Returns True on success."""
-        if not WNF_SUPPORTED:
+        callback = self._wnf_cb
+        if not WNF_SUPPORTED or callback is None:
             return False
         try:
             sub = c_void_p()
-            status = _RtlSubscribeWnfStateChangeNotification(
+            status = RtlSubscribeWnfStateChangeNotification(
                 byref(sub),
-                ctypes.c_uint64(state),
+                state,
                 0,
-                self._wnf_cb,
+                callback,
                 None,
                 None,
                 0,
@@ -170,14 +142,22 @@ class WindowsNotificationEventListener(QThread):
         if not self._wnf_active or not WNF_SUPPORTED or not self._wnf_sub:
             return
         try:
-            _RtlUnsubscribeWnfStateChangeNotification(self._wnf_sub)
+            RtlUnsubscribeWnfStateChangeNotification(self._wnf_sub)
         except Exception:
             pass
         self._wnf_sub = None
         self._wnf_active = False
         logging.debug("Unsubscribed from WNF notifications")
 
-    def _wnf_toast_callback(self, _state_name, _change_stamp, _type_id, _context, buffer, buffer_size):
+    def _wnf_toast_callback(
+        self,
+        _state_name: int,
+        _change_stamp: int,
+        _type_id: int | None,
+        _context: int | None,
+        buffer: int | None,
+        buffer_size: int,
+    ) -> int:
         """Buffer u32 is the count (Win11 total / Win10 unread badge). Skip unchanged values."""
         try:
             if not buffer or buffer_size < 4:
@@ -199,11 +179,14 @@ class WindowsNotificationEventListener(QThread):
                 logging.debug("Failed to schedule clear notifications: %s", e)
 
     async def _do_clear_all_notifications(self):
+        listener = self._listener
+        if listener is None:
+            return
         try:
-            notifications = await self._listener.get_notifications_async(NotificationKinds.TOAST)
+            notifications = await listener.get_notifications_async(NotificationKinds.TOAST)
             for n in notifications:
                 try:
-                    self._listener.remove_notification(n.id)
+                    listener.remove_notification(n.id)
                 except Exception as e:
                     logging.debug("Failed to remove notification %s: %s", n.id, e)
             self.total_notifications = 0

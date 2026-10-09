@@ -22,6 +22,7 @@ from ctypes.wintypes import (
     HBRUSH,
     HICON,
     HINSTANCE,
+    HKEY,
     HWND,
     INT,
     LONG,
@@ -769,4 +770,24 @@ class PDH_FMT_COUNTERVALUE_DOUBLE(ct.Structure):
         ("CStatus", DWORD),
         ("padding", DWORD),
         ("doubleValue", ct.c_double),
+    ]
+
+
+class SHELLEXECUTEINFO(ct.Structure):
+    _fields_ = [
+        ("cbSize", DWORD),
+        ("fMask", ct.c_ulong),
+        ("hwnd", HWND),
+        ("lpVerb", LPCWSTR),
+        ("lpFile", LPCWSTR),
+        ("lpParameters", LPCWSTR),
+        ("lpDirectory", LPCWSTR),
+        ("nShow", ct.c_int),
+        ("hInstApp", HINSTANCE),
+        ("lpIDList", c_void_p),
+        ("lpClass", LPCWSTR),
+        ("hkeyClass", HKEY),
+        ("dwHotKey", DWORD),
+        ("hIconOrMonitor", HANDLE),
+        ("hProcess", HANDLE),
     ]

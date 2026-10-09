@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -13,8 +14,8 @@ class ProviderResult:
     icon_char: str = ""
     provider: str = ""
     id: str = ""
-    action_data: dict = field(default_factory=dict)
-    preview: dict = field(default_factory=dict)
+    action_data: dict[str, Any] = field(default_factory=dict[str, Any])
+    preview: dict[str, Any] = field(default_factory=dict[str, Any])
     css_class: str = ""
     is_separator: bool = False
     is_loading: bool = False
@@ -46,7 +47,7 @@ class BaseProvider(ABC):
     icon: str = ""
     input_placeholder: str = "Type to search..."
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
         raw = self.config.get("prefix", "*")
         self.prefix: str | None = None if raw == "*" else raw
@@ -62,7 +63,7 @@ class BaseProvider(ABC):
         return True
 
     @abstractmethod
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         """Return results for the given search text."""
 
     @abstractmethod
@@ -77,7 +78,9 @@ class BaseProvider(ABC):
         """Execute a context-menu action for a result."""
         return ProviderMenuActionResult()
 
-    def handle_preview_action(self, action_id: str, result: ProviderResult, data: dict) -> ProviderMenuActionResult:
+    def handle_preview_action(
+        self, action_id: str, result: ProviderResult, data: dict[str, Any]
+    ) -> ProviderMenuActionResult:
         """Handle an action from an inline edit form in the preview panel."""
         return ProviderMenuActionResult()
 

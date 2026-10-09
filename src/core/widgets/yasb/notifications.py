@@ -2,7 +2,6 @@ import logging
 import re
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QLabel
 
 from core.events.service import EventService
 from core.utils.system import is_windows_10
@@ -98,7 +97,7 @@ class NotificationsWidget(BaseWidget):
             for option, value in label_options:
                 part = part.replace(option, str(value))
 
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 if "<span" in part and "</span>" in part:
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(icon)

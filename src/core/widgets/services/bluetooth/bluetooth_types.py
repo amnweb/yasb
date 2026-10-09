@@ -141,7 +141,7 @@ class DeviceInfo:
     status_text: str = "Not connected"
     battery: int | None = None
     is_le: bool = False
-    profiles: list[str] = field(default_factory=list)
+    profiles: list[str] = field(default_factory=list[str])
 
     @property
     def supports_connect(self) -> bool:
@@ -158,7 +158,7 @@ class DeviceInfo:
 @dataclass
 class BluetoothStatus:
     radio_on: bool = False
-    devices: list[DeviceInfo] = field(default_factory=list)
+    devices: list[DeviceInfo] = field(default_factory=list[DeviceInfo])
 
     @property
     def connected_devices(self) -> list[DeviceInfo]:

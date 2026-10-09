@@ -6,11 +6,11 @@ from collections.abc import Callable
 from enum import StrEnum
 from typing import Any, Literal, cast
 
+import PyQt6.QtCore as QtCore
 from PIL import Image, ImageChops
 from PIL.ImageDraw import ImageDraw
 from PIL.ImageQt import ImageQt
 from pycaw.pycaw import AudioUtilities
-from PyQt6 import QtCore
 from PyQt6.QtCore import QEvent, QObject, QRectF, Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import (
@@ -1259,7 +1259,7 @@ class RoundedClickableLabel(ClickableLabel):
 
     def paintEvent(self, a0: QPaintEvent | None):
         pix = self.pixmap()
-        if pix is None or pix.isNull() or self._corner_radius <= 0:
+        if pix.isNull() or self._corner_radius <= 0:
             super().paintEvent(a0)
             return
 

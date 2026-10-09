@@ -2,11 +2,12 @@ import faulthandler
 import logging
 import sys
 import warnings
+from collections.abc import Callable
 from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from os.path import join
 
-from PyQt6.QtCore import QtMsgType, qFormatLogMessage, qInstallMessageHandler
+from PyQt6.QtCore import QMessageLogContext, QtMsgType, qFormatLogMessage, qInstallMessageHandler
 
 from core.config import get_config_dir
 from settings import APP_NAME, BUILD_VERSION, DEFAULT_LOG_FILENAME
@@ -64,10 +65,10 @@ def _suppress_third_party_warnings():
 
 # Suppress Qt internal messages (e.g. QObject::disconnect wildcard warnings from QWebSocket)
 _QT_SUPPRESSED_PREFIXES = ("QObject::disconnect", "Could not create pixmap from")
-_original_qt_handler = None
+_original_qt_handler: Callable[[QtMsgType, QMessageLogContext, str | None], None] | None = None
 
 
-def _qt_message_handler(msg_type: QtMsgType, context, message: str):
+def _qt_message_handler(msg_type: QtMsgType, context: QMessageLogContext, message: str | None) -> None:
     if message and message.startswith(_QT_SUPPRESSED_PREFIXES):
         return
     if _original_qt_handler:
@@ -97,9 +98,11 @@ def init_logger():
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(ColoredFormatter(CONSOLE_FORMAT, datefmt=CONSOLE_DATETIME))
-    logging.basicConfig(level=logging.DEBUG, handlers=[file_handler, console_handler], encoding="utf-8")
+    handlers: list[logging.Handler] = [file_handler, console_handler]
+    logging.basicConfig(level=logging.DEBUG, handlers=handlers)
     # c_stack is dead on Windows
-    faulthandler.enable(file=file_handler.stream, all_threads=True, c_stack=False)
+    if file_handler.stream is not None:
+        faulthandler.enable(file=file_handler.stream, all_threads=True, c_stack=False)
     logging.info("%s v%s", APP_NAME, BUILD_VERSION)
 
 

@@ -4,6 +4,7 @@ import os
 import shutil
 import sqlite3
 import tempfile
+from typing import Any
 
 from core.utils.shell_utils import shell_open
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
@@ -33,9 +34,9 @@ class BookmarksProvider(BaseProvider):
     input_placeholder = "Search bookmarks..."
     icon = ICON_BOOKMARK
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
-        self._bookmarks: list[dict] = []
+        self._bookmarks: list[dict[str, Any]] = []
         self._last_mtime: dict[str, float] = {}
         self._loaded = False
 
@@ -102,7 +103,7 @@ class BookmarksProvider(BaseProvider):
         if not self._needs_reload(sources):
             return
 
-        bookmarks: list[dict] = []
+        bookmarks: list[dict[str, Any]] = []
         for browser_name, fpath in sources:
             try:
                 if browser_name in _FIREFOX_PATHS:
@@ -119,8 +120,8 @@ class BookmarksProvider(BaseProvider):
         self._bookmarks = bookmarks
         self._loaded = True
 
-    def _parse_chromium(self, filepath: str) -> list[dict]:
-        results: list[dict] = []
+    def _parse_chromium(self, filepath: str) -> list[dict[str, Any]]:
+        results: list[dict[str, Any]] = []
         try:
             with open(filepath, encoding="utf-8") as fh:
                 data = json.load(fh)
@@ -132,7 +133,7 @@ class BookmarksProvider(BaseProvider):
             logging.debug("Bookmarks: chromium parse error: %s", e)
         return results
 
-    def _walk_node(self, node: dict, out: list[dict], folder: str) -> None:
+    def _walk_node(self, node: dict[str, Any], out: list[dict[str, Any]], folder: str) -> None:
         ntype = node.get("type")
         if ntype == "url":
             out.append(
@@ -148,8 +149,8 @@ class BookmarksProvider(BaseProvider):
             for child in node.get("children", []):
                 self._walk_node(child, out, sub)
 
-    def _parse_firefox(self, db_path: str) -> list[dict]:
-        results: list[dict] = []
+    def _parse_firefox(self, db_path: str) -> list[dict[str, Any]]:
+        results: list[dict[str, Any]] = []
         tmp: str | None = None
         try:
             fd, tmp = tempfile.mkstemp(suffix=".sqlite", prefix="yasb_ff_bm_")
@@ -177,7 +178,7 @@ class BookmarksProvider(BaseProvider):
                         pass
         return results
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text)
         self._load_bookmarks()
 
@@ -215,7 +216,7 @@ class BookmarksProvider(BaseProvider):
 
         return [self._to_result(bm) for bm in matches]
 
-    def _to_result(self, bm: dict) -> ProviderResult:
+    def _to_result(self, bm: dict[str, Any]) -> ProviderResult:
         title = bm.get("title") or bm.get("url", "")
         url = bm.get("url", "")
         folder = bm.get("folder", "")

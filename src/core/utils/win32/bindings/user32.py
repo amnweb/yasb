@@ -153,11 +153,20 @@ user32.SetPropW.restype = BOOL
 user32.RemovePropW.argtypes = [HWND, LPCWSTR]
 user32.RemovePropW.restype = HANDLE
 
+user32.GetPropW.argtypes = [HWND, LPCWSTR]
+user32.GetPropW.restype = HANDLE
+
 user32.SetTaskmanWindow.argtypes = [HWND]
 user32.SetTaskmanWindow.restype = BOOL
 
 user32.SendNotifyMessageW.argtypes = [HWND, UINT, WPARAM, LPARAM]
 user32.SendNotifyMessageW.restype = c_int
+
+user32.GetDesktopWindow.argtypes = []
+user32.GetDesktopWindow.restype = HWND
+
+user32.WaitForInputIdle.argtypes = [HANDLE, DWORD]
+user32.WaitForInputIdle.restype = DWORD
 
 user32.PostMessageW.argtypes = [HWND, UINT, WPARAM, LPARAM]
 user32.PostMessageW.restype = c_int
@@ -353,12 +362,24 @@ def RemoveProp(hwnd: int, lpString: str) -> int | None:
     return user32.RemovePropW(hwnd, lpString)
 
 
+def GetProp(hwnd: int, lpString: str) -> int | None:
+    return user32.GetPropW(hwnd, lpString)
+
+
 def SetTaskmanWindow(hwnd: int) -> bool:
     return user32.SetTaskmanWindow(hwnd)
 
 
 def SendNotifyMessage(hwnd: int, msg: int, wParam: int, lParam: int) -> int:
     return user32.SendNotifyMessageW(hwnd, msg, wParam, lParam)
+
+
+def GetDesktopWindow() -> int:
+    return user32.GetDesktopWindow()
+
+
+def WaitForInputIdle(hProcess: int, dwMilliseconds: int) -> int:
+    return user32.WaitForInputIdle(hProcess, dwMilliseconds)
 
 
 def PostMessage(hwnd: int, msg: int, wParam: int, lParam: int) -> int:
@@ -475,7 +496,7 @@ def SetForegroundWindow(hwnd: int) -> bool:
     return bool(user32.SetForegroundWindow(hwnd))
 
 
-def SetWindowCompositionAttribute(hwnd: int, data: LPVOID) -> int:
+def SetWindowCompositionAttribute(hwnd: int, data: CArgObject) -> int:
     return user32.SetWindowCompositionAttribute(hwnd, data)
 
 
@@ -556,7 +577,7 @@ def SendMessageTimeoutW(
     lParam: int,
     fuFlags: int,
     uTimeout: int,
-    lpdwResult,
+    lpdwResult: CArgObject,
 ) -> int:
     """Direct wrapper with the wide-character entrypoint name for robustness."""
     return user32.SendMessageTimeoutW(hwnd, msg, wParam, lParam, fuFlags, uTimeout, lpdwResult)

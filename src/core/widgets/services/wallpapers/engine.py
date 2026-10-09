@@ -26,9 +26,21 @@ import math
 import os
 import winreg
 from ctypes import wintypes
+from typing import override
 
-from PyQt6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QImage, QImageReader, QPainter, QPainterPath, QPixmap, QPolygonF
+import PyQt6.sip as sip
+from PyQt6.QtCore import QByteArray, QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, QTimer, pyqtSignal
+from PyQt6.QtGui import (
+    QCloseEvent,
+    QColor,
+    QImage,
+    QImageReader,
+    QPainter,
+    QPainterPath,
+    QPaintEvent,
+    QPixmap,
+    QPolygonF,
+)
 from PyQt6.QtWidgets import QApplication, QWidget
 from win32con import (
     GWL_EXSTYLE,
@@ -41,6 +53,8 @@ from win32con import (
     WS_POPUP,
 )
 
+from core.utils.win32.typecheck import CPointer
+
 logger = logging.getLogger("wallpaper_engine")
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 
@@ -49,6 +63,9 @@ ULONG_PTR = ctypes.c_ulonglong
 LONG_PTR = ctypes.c_ssize_t
 
 WM_SPAWN_WORKER = 0x052C
+
+# (x, y, width, height, device pixel ratio) of one monitor, in logical pixels.
+type ScreenArea = tuple[int, int, int, int, float]
 HWND_TOP = HWND(0)
 
 EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, HWND, wintypes.LPARAM)
@@ -112,7 +129,7 @@ def _enum_physical_monitors() -> list[tuple[int, int, int, int]]:
     rects: list[tuple[int, int, int, int]] = []
 
     @MonitorEnumProc
-    def _cb(hmon, hdc, lprect, _):
+    def _cb(hmon: int, hdc: int, lprect: CPointer[wintypes.RECT], _: int) -> bool:
         r = lprect.contents
         rects.append((r.left, r.top, r.right, r.bottom))
         return True
@@ -195,7 +212,7 @@ def _panorama_threshold(landscape: bool) -> float:
     return value / 1000.0 if value else default
 
 
-def _monitors_tile_a_rectangle(areas) -> bool:
+def _monitors_tile_a_rectangle(areas: list[ScreenArea]) -> bool:
     """Whether the monitors cover their bounding box exactly, with no step or gap.
 
     Windows builds a region from the monitor rects and refuses to span unless
@@ -219,7 +236,7 @@ def _monitors_tile_a_rectangle(areas) -> bool:
     return covered == (right - left) * (bottom - top)
 
 
-def _wants_autospan(px: QPixmap, areas) -> bool:
+def _wants_autospan(px: QPixmap, areas: list[ScreenArea]) -> bool:
     """Whether Windows would turn this fit/fill into a span.
 
     Windows calls this autospan. A landscape image wider than the panorama
@@ -326,10 +343,10 @@ def _locate_workerw() -> int:
         logger.warning("Could not locate Progman. Wallpaper animation skipped.")
         return 0
     user32.SendMessageTimeoutW(progman, WM_SPAWN_WORKER, 0, 0, 0, 1000, ctypes.byref(ULONG_PTR()))
-    worker = HWND()
+    worker = 0
 
     @EnumChildProc
-    def _child_proc(hwnd, _):
+    def _child_proc(hwnd: int, _: int) -> bool:
         nonlocal worker
         if worker:
             return False
@@ -345,7 +362,7 @@ def _locate_workerw() -> int:
     if not worker:
 
         @EnumWindowsProc
-        def _enum_proc(hwnd, _):
+        def _enum_proc(hwnd: int, _: int) -> bool:
             nonlocal worker
             if worker:
                 return False
@@ -365,7 +382,7 @@ def _locate_workerw() -> int:
     return worker
 
 
-def _attach_to_workerw(widget: QWidget) -> bool:
+def _attach_to_workerw(widget: WallpaperEngine) -> bool:
     """Parent *widget* to WorkerW and compute per-monitor screen areas."""
     worker = _locate_workerw()
     if not worker:
@@ -386,7 +403,7 @@ def _attach_to_workerw(widget: QWidget) -> bool:
     ww, wh = wr.right - wr.left, wr.bottom - wr.top
     dpr = widget.devicePixelRatioF() or 1.0
 
-    areas = []
+    areas: list[ScreenArea] = []
     for ml, mt, mr, mb in _enum_physical_monitors():
         areas.append(
             (
@@ -433,7 +450,7 @@ class WallpaperEngine(QWidget):
         self._animation = animation
         self._progress = 0.0
         self._committed = False
-        self._areas: list[tuple[int, int, int, int, float]] = []
+        self._areas: list[ScreenArea] = []
         self._dpr = 1.0
         self._per_screen_scaled_old: list[tuple[QPixmap, int, int]] = []
         self._per_screen_scaled_new: list[tuple[QPixmap, int, int]] = []
@@ -443,7 +460,9 @@ class WallpaperEngine(QWidget):
         self._pixmap_old = QPixmap()
         self._resources_freed = False
 
-        self.setGeometry(QApplication.primaryScreen().geometry())
+        primary = QApplication.primaryScreen()
+        if primary is not None:
+            self.setGeometry(primary.geometry())
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
@@ -493,7 +512,7 @@ class WallpaperEngine(QWidget):
         self.setWindowOpacity(1.0)
         self._timeline.start()
 
-    def set_screen_areas(self, areas: list[tuple[int, int, int, int, float]]) -> None:
+    def set_screen_areas(self, areas: list[ScreenArea]) -> None:
         if areas:
             min_x = min(dx for dx, _, _, _, _ in areas)
             min_y = min(dy for _, dy, _, _, _ in areas)
@@ -516,7 +535,9 @@ class WallpaperEngine(QWidget):
         px = _apply_transcode_cap(px)
         dpr = self._dpr
         if dpr != 1.0:
-            areas = [(*(int(round(v * dpr)) for v in (dx, dy, dw, dh)), d) for dx, dy, dw, dh, d in areas]
+            areas = [
+                (round(dx * dpr), round(dy * dpr), round(dw * dpr), round(dh * dpr), d) for dx, dy, dw, dh, d in areas
+            ]
             px = QPixmap(px)
             px.setDevicePixelRatio(dpr)
         vw = max(dx + dw for dx, _, dw, _, _ in areas) if areas else int(round(self.width() * dpr))
@@ -554,7 +575,9 @@ class WallpaperEngine(QWidget):
             Qt.TransformationMode.SmoothTransformation,
         )
 
-    def _scale_span(self, px: QPixmap, areas, vw: int, vh: int, cover: bool = True) -> list[tuple[QPixmap, int, int]]:
+    def _scale_span(
+        self, px: QPixmap, areas: list[ScreenArea], vw: int, vh: int, cover: bool = True
+    ) -> list[tuple[QPixmap, int, int]]:
         """One image across the whole virtual desktop, each monitor clips its part.
 
         *cover* is false only when a fit has been autospanned. Windows keeps the
@@ -567,7 +590,7 @@ class WallpaperEngine(QWidget):
         oy = _trunc_div(vh - scaled.height(), 3 if cover else 2)
         return [(scaled, ox - dx, oy - dy) for dx, dy, _, _, _ in areas]
 
-    def _scale_tile(self, px: QPixmap, areas, vw: int, vh: int) -> list[tuple[QPixmap, int, int]]:
+    def _scale_tile(self, px: QPixmap, areas: list[ScreenArea], vw: int, vh: int) -> list[tuple[QPixmap, int, int]]:
         """Repeat the image at its native size from the virtual desktop origin.
 
         Windows never scales a tiled wallpaper, whatever its size, and the grid
@@ -700,7 +723,8 @@ class WallpaperEngine(QWidget):
         rect.addRect(QRectF(float(dx), float(dy), float(dw), float(dh)))
         return circ.intersected(rect)
 
-    def paintEvent(self, _) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
 
         t = self._progress
@@ -758,14 +782,20 @@ class WallpaperEngine(QWidget):
                 wl.wait(1000)
             self._wallpaper_loader = None
 
-    def nativeEvent(self, _, message):
+    @override
+    def nativeEvent(
+        self, eventType: QByteArray | bytes | bytearray | memoryview, message: sip.voidptr | None
+    ) -> tuple[bool, sip.voidptr | None]:
+        if message is None:
+            return False, sip.voidptr(0)
         msg = ctypes.cast(int(message), ctypes.POINTER(wintypes.MSG)).contents
         if msg.message == WM_DESTROY:
             self._free_resources()
             self.deleteLater()
-            return True, 0
-        return False, 0
+            return True, sip.voidptr(0)
+        return False, sip.voidptr(0)
 
-    def closeEvent(self, event) -> None:
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         self._free_resources()
-        super().closeEvent(event)
+        super().closeEvent(a0)

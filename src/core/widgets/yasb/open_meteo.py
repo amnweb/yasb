@@ -69,7 +69,7 @@ class OpenMeteoWidget(BaseWidget):
         self._geocoding_fetcher: GeocodingFetcher | None = None
 
         # Location
-        self._widget_id: str | None = None
+        self._widget_id: str = ""
         self._location_data: dict[str, Any] | None = None
 
         # Retry timer
@@ -221,7 +221,7 @@ class OpenMeteoWidget(BaseWidget):
             return
 
         # Full weather card
-        self._build_weather_card()
+        self._build_weather_card(self._weather_data)
 
     def _show_location_setup(self):
         layout = QVBoxLayout()
@@ -255,7 +255,8 @@ class OpenMeteoWidget(BaseWidget):
         self._search_results: list[dict[str, Any]] = []
 
         # Create geocoding fetcher
-        self._geocoding_fetcher = GeocodingFetcher(self.dialog)
+        geocoding_fetcher = GeocodingFetcher(self.dialog)
+        self._geocoding_fetcher = geocoding_fetcher
 
         # Debounce timer for search
         debounce_timer = QTimer(self.dialog)
@@ -268,7 +269,7 @@ class OpenMeteoWidget(BaseWidget):
         def do_search():
             query = search_input.text().strip()
             if len(query) >= 2:
-                self._geocoding_fetcher.search(query)
+                geocoding_fetcher.search(query)
             else:
                 results_list.clear()
                 results_list.setVisible(False)
@@ -313,7 +314,7 @@ class OpenMeteoWidget(BaseWidget):
 
         search_input.textChanged.connect(on_text_changed)
         debounce_timer.timeout.connect(do_search)
-        self._geocoding_fetcher.results_ready.connect(on_results)
+        geocoding_fetcher.results_ready.connect(on_results)
         results_list.itemClicked.connect(on_item_selected)
 
         self.dialog.setLayout(layout)
@@ -352,7 +353,7 @@ class OpenMeteoWidget(BaseWidget):
         )
         self.dialog.show()
 
-    def _build_weather_card(self):
+    def _build_weather_card(self, weather_data: dict[str, Any]):
         main_layout = QVBoxLayout()
 
         # Buttons container for temperature/rain/snow
@@ -415,7 +416,7 @@ class OpenMeteoWidget(BaseWidget):
         frame_today.setProperty("class", "open-meteo-card-today")
         layout_today = QVBoxLayout(frame_today)
 
-        today_label0 = QLabel(f"{self._weather_data['{location}']} {self._weather_data['{temp}']}")
+        today_label0 = QLabel(f"{weather_data['{location}']} {weather_data['{temp}']}")
         today_label0.setProperty("class", "label location")
         today_label0.setAlignment(Qt.AlignmentFlag.AlignCenter)
         set_tooltip(today_label0, "Click to change location", delay=400, position="bottom")
@@ -431,12 +432,12 @@ class OpenMeteoWidget(BaseWidget):
 
         sunrise_icon_label = QLabel(self.config.icons.sunnyDay)
         sunrise_icon_label.setProperty("class", "label sunrisesunset-icon")
-        sunrise_text_label = QLabel(f"{self._weather_data.get('{sunrise}', 'N/A')}")
+        sunrise_text_label = QLabel(f"{weather_data.get('{sunrise}', 'N/A')}")
         sunrise_text_label.setProperty("class", "label sunrisesunset")
 
         sunset_icon_label = QLabel(self.config.icons.clearNight)
         sunset_icon_label.setProperty("class", "label sunrisesunset-icon")
-        sunset_text_label = QLabel(f"{self._weather_data.get('{sunset}', 'N/A')}")
+        sunset_text_label = QLabel(f"{weather_data.get('{sunset}', 'N/A')}")
         sunset_text_label.setProperty("class", "label sunrisesunset")
 
         today_sunrise_sunset_container_layout.addWidget(sunrise_icon_label)
@@ -445,9 +446,9 @@ class OpenMeteoWidget(BaseWidget):
         today_sunrise_sunset_container_layout.addWidget(sunset_icon_label)
         today_sunrise_sunset_container_layout.addWidget(sunset_text_label)
 
-        rain_c = self._weather_data.get("{rain_chance}", 0)
-        snow_c = self._weather_data.get("{snow_chance}", 0)
-        precip_parts = []
+        rain_c = weather_data.get("{rain_chance}", 0)
+        snow_c = weather_data.get("{snow_chance}", 0)
+        precip_parts: list[str] = []
         if rain_c != "N/A" and isinstance(rain_c, (int, float)) and rain_c > 0:
             precip_parts.append(f"Rain chance {rain_c}%")
         if snow_c != "N/A" and isinstance(snow_c, (int, float)) and snow_c > 0:
@@ -459,13 +460,13 @@ class OpenMeteoWidget(BaseWidget):
             precip_str = " \u2022 ".join(precip_parts) + " \u2022 "
 
         today_label1 = QLabel(
-            f"Feels like {self._weather_data['{feelslike}']} \u2022 "
-            f"{self._weather_data['{condition_text}']} \u2022 "
-            f"Humidity {self._weather_data['{humidity}']} \u2022 "
-            f"Pressure {self._weather_data['{pressure}']}\n"
-            f"Cloud {self._weather_data['{cloud}']}% \u2022 "
+            f"Feels like {weather_data['{feelslike}']} \u2022 "
+            f"{weather_data['{condition_text}']} \u2022 "
+            f"Humidity {weather_data['{humidity}']} \u2022 "
+            f"Pressure {weather_data['{pressure}']}\n"
+            f"Cloud {weather_data['{cloud}']}% \u2022 "
             f"{precip_str}"
-            f"UV Index {self._weather_data['{uv}']}"
+            f"UV Index {weather_data['{uv}']}"
         )
         today_label1.setProperty("class", "label")
         today_label1.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -524,9 +525,9 @@ class OpenMeteoWidget(BaseWidget):
             elif i == 1:
                 day_text = "Tomorrow"
             else:
-                day_text = self._weather_data.get(f"{{day{i}_full_name}}", "")
-            min_temp = self._weather_data[f"{{day{i}_min_temp}}"]
-            max_temp = self._weather_data[f"{{day{i}_max_temp}}"]
+                day_text = weather_data.get(f"{{day{i}_full_name}}", "")
+            min_temp = weather_data[f"{{day{i}_min_temp}}"]
+            max_temp = weather_data[f"{{day{i}_max_temp}}"]
 
             # Main vertical layout
             layout_day = QVBoxLayout()
@@ -537,7 +538,7 @@ class OpenMeteoWidget(BaseWidget):
 
             # 1. Weather icon
             row_day_icon_label = QLabel()
-            day_code = self._weather_data.get(f"{{day{i}_weather_code}}", 0)
+            day_code = weather_data.get(f"{{day{i}_weather_code}}", 0)
             _, icon_key, _ = get_weather_icon(int(day_code), True)
             dpr = row_day_icon_label.devicePixelRatioF()
             pixmap = get_weather_icon_pixmap(icon_key, self.config.weather_card.icon_size, dpr)
@@ -723,9 +724,9 @@ class OpenMeteoWidget(BaseWidget):
             hourly_humidity = hourly.get("relative_humidity_2m", [])
             hourly_codes = hourly.get("weather_code", [])
             hourly_wind = hourly.get("wind_speed_10m", [])
-            hourly_precip_prob = hourly.get("precipitation_probability", [])
-            hourly_rain_vol = hourly.get("rain", [])
-            hourly_snow_vol = hourly.get("snowfall", [])
+            hourly_precip_prob: list[float | None] = hourly.get("precipitation_probability", [])
+            hourly_rain_vol: list[float | None] = hourly.get("rain", [])
+            hourly_snow_vol: list[float | None] = hourly.get("snowfall", [])
 
             # Determine sunrise/sunset for is_day per hour
             daily_sunrise = daily.get("sunrise", [])
@@ -799,8 +800,8 @@ class OpenMeteoWidget(BaseWidget):
             today_rain_vol = hourly_rain_vol[:24] if hourly_rain_vol else []
             today_snow_vol = hourly_snow_vol[:24] if hourly_snow_vol else []
 
-            max_rain_chance = 0
-            max_snow_chance = 0
+            max_rain_chance: float = 0
+            max_snow_chance: float = 0
 
             for i, prob in enumerate(today_precip_prob):
                 if prob is None:

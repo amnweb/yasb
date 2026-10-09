@@ -9,6 +9,8 @@ from typing import Any
 
 from PyQt6.QtCore import QTimer
 
+type NotificationsCallback = Callable[[list[dict[str, Any]]], None]
+
 
 class GitHubDataManager:
     """
@@ -18,7 +20,7 @@ class GitHubDataManager:
     REQUEST_TIMEOUT = 15
 
     _shared_data: list[dict[str, Any]] = []
-    _callbacks: list[Callable] = []
+    _callbacks: list[NotificationsCallback] = []
     _lock = threading.Lock()
     _timer: QTimer | None = None
     _timer_interval: int = 300000  # Default 5 minutes
@@ -89,20 +91,24 @@ class GitHubDataManager:
         cls._on_timer()
 
     @classmethod
+    def get_token(cls) -> str | None:
+        return cls._token
+
+    @classmethod
     def set_token(cls, token: str) -> None:
         """Update the token after OAuth and trigger an immediate fetch."""
         cls._token = token
         cls._on_timer()
 
     @classmethod
-    def register_callback(cls, callback: Callable) -> None:
+    def register_callback(cls, callback: NotificationsCallback) -> None:
         """Register a callback to be called when data is updated."""
         with cls._lock:
             if callback not in cls._callbacks:
                 cls._callbacks.append(callback)
 
     @classmethod
-    def unregister_callback(cls, callback: Callable) -> None:
+    def unregister_callback(cls, callback: NotificationsCallback) -> None:
         """Unregister a callback."""
         with cls._lock:
             if callback in cls._callbacks:
@@ -271,11 +277,11 @@ class GitHubDataManager:
         """Fetch notifications from GitHub API. Returns [] on any error."""
         try:
             return cls._get_all_notifications(token, only_unread, max_notification, reason_filters, show_comment_count)
-        except urllib.error.URLError:
-            logging.error("GitHubDataManager no internet connection. Unable to fetch notifications.")
-            return []
         except urllib.error.HTTPError as e:
             logging.error("GitHubDataManager HTTP error occurred: %s - %s", e.code, e.reason)
+            return []
+        except urllib.error.URLError:
+            logging.error("GitHubDataManager no internet connection. Unable to fetch notifications.")
             return []
         except Exception as e:
             logging.error("GitHubDataManager an unexpected error occurred: %s", e)
@@ -329,7 +335,7 @@ class GitHubDataManager:
         query_string = "&".join(f"{k}={v}" for k, v in params.items())
         next_url: str | None = f"{url}?{query_string}"
 
-        all_notifications: list[dict] = []
+        all_notifications: list[dict[str, Any]] = []
         while next_url and len(all_notifications) < max_notification:
             req = urllib.request.Request(next_url, headers=headers)
             with urllib.request.urlopen(req, timeout=cls.REQUEST_TIMEOUT) as response:
@@ -347,7 +353,7 @@ class GitHubDataManager:
         # Trim to requested maximum
         all_notifications = all_notifications[:max_notification]
 
-        result = []
+        result: list[dict[str, Any]] = []
         if all_notifications:
             for notification in all_notifications:
                 # Extract nested values once

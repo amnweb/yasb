@@ -13,7 +13,7 @@ logger = logging.getLogger("taskbar_peek")
 # resolved here rather than in the dwmapi bindings: a build that stops exporting it leaves peek
 # unavailable instead of breaking the import for everything else that uses dwmapi
 try:
-    _activate_live_preview = windll.dwmapi[113]
+    _activate_live_preview = windll.dwmapi[113]  # pyright: ignore[reportArgumentType]
     _activate_live_preview.argtypes = [BOOL, HWND, HWND, UINT, POINTER(RECT)]
     _activate_live_preview.restype = ctypes.c_long
 except Exception:
@@ -49,11 +49,11 @@ def activate_live_preview(activate: bool, hwnd_peek: int = 0, hwnd_caller: int =
     return True
 
 
-def exclude_from_peek(hwnd) -> bool:
+def exclude_from_peek(hwnd: int) -> bool:
     """Keep one of our own windows painted while peek fades every other one."""
     try:
         value = ctypes.c_int(1)
-        hresult = DwmSetWindowAttribute(int(hwnd), DWMWA_EXCLUDED_FROM_PEEK, ctypes.byref(value), ctypes.sizeof(value))
+        hresult = DwmSetWindowAttribute(hwnd, DWMWA_EXCLUDED_FROM_PEEK, ctypes.byref(value), ctypes.sizeof(value))
     except Exception:
         logger.exception("Could not exclude %s from peek, it will fade along with the desktop", hwnd)
         return False

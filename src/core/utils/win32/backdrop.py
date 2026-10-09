@@ -2,6 +2,8 @@ import ctypes
 import logging
 import sys
 
+import PyQt6.sip as sip
+
 from core.utils.win32.bindings import (
     DwmExtendFrameIntoClientArea,
     DwmSetWindowAttribute,
@@ -33,7 +35,7 @@ def HEXtoRGBAint(HEX: str) -> int:
     return int(alpha + blue + green + red, base=16)
 
 
-def set_accent_policy(hwnd, accent_state, gradient_color=0, accent_flags=0):
+def set_accent_policy(hwnd: int, accent_state: int, gradient_color: int = 0, accent_flags: int = 0) -> None:
     accent = ACCENTPOLICY()
     accent.AccentState = accent_state
     accent.AccentFlags = accent_flags
@@ -49,14 +51,14 @@ def set_accent_policy(hwnd, accent_state, gradient_color=0, accent_flags=0):
         raise ctypes.WinError()
 
 
-def set_dark_mode(hwnd):
+def set_dark_mode(hwnd: int) -> None:
     value = ctypes.c_int(1)
     result = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(value), ctypes.sizeof(value))
     if result != 0:
         raise ctypes.WinError()
 
 
-def set_window_corner_preference(hwnd, preference, border_color):
+def set_window_corner_preference(hwnd: int, preference: int, border_color: str) -> None:
     preference_value = ctypes.c_int(preference)
     result = DwmSetWindowAttribute(
         hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ctypes.byref(preference_value), ctypes.sizeof(preference_value)
@@ -78,7 +80,13 @@ def set_window_corner_preference(hwnd, preference, border_color):
         raise ctypes.WinError()
 
 
-def enable_blur(hwnd, DarkMode=False, RoundCorners=False, RoundCornersType="normal", BorderColor="System"):
+def enable_blur(
+    hwnd: int | sip.voidptr,
+    DarkMode: bool = False,
+    RoundCorners: bool = False,
+    RoundCornersType: str = "normal",
+    BorderColor: str = "System",
+) -> None:
     hwnd = int(hwnd)
     try:
         if sys.getwindowsversion().build >= 22000:
@@ -100,9 +108,8 @@ def is_mica_supported() -> bool:
     return sys.getwindowsversion().build >= 22000
 
 
-def enable_mica(hwnd):
+def enable_mica(hwnd: int) -> None:
     """Apply Mica backdrop to a window. Requires Windows 11 build 22000+."""
-    hwnd = int(hwnd)
     build = sys.getwindowsversion().build
     try:
         margins = MARGINS(-1, -1, -1, -1)
@@ -117,9 +124,8 @@ def enable_mica(hwnd):
         logging.debug("Failed to apply mica: %s", e)
 
 
-def enable_dwm_frame(hwnd):
+def enable_dwm_frame(hwnd: int) -> None:
     """Apply DWM frame effects (shadow + rounded corners) to a frameless window."""
-    hwnd = int(hwnd)
     try:
         margins = MARGINS(1, 1, 1, 1)
         DwmExtendFrameIntoClientArea(hwnd, margins)

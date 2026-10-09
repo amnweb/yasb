@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+from typing import Any, cast
 
 from PyQt6.QtWidgets import QApplication
 
@@ -14,29 +15,32 @@ from core.widgets.services.quick_launch.base_provider import (
 )
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_EMOJI
 
-_EMOJI_DATA: list[dict] | None = None
+_emoji_data: list[dict[str, Any]] | None = None
 from settings import IS_FROZEN
 
-if IS_FROZEN:
-    _DATA_FILE = os.path.join(os.path.dirname(sys.executable), "lib", "emoji.json")
-else:
-    _DATA_FILE = os.path.join(os.path.dirname(__file__), "resources", "emoji.json")
+_DATA_FILE = (
+    os.path.join(os.path.dirname(sys.executable), "lib", "emoji.json")
+    if IS_FROZEN
+    else os.path.join(os.path.dirname(__file__), "resources", "emoji.json")
+)
 
 _PINNED_FILE = str(app_data_path("quick_launch_emoji_pins.json"))
 
 
-def _load_emoji_data() -> list[dict]:
+def _load_emoji_data() -> list[dict[str, Any]]:
     """Load emoji data from the bundled JSON file."""
-    global _EMOJI_DATA
-    if _EMOJI_DATA is not None:
-        return _EMOJI_DATA
+    global _emoji_data
+    if _emoji_data is not None:
+        return _emoji_data
+    data: list[dict[str, Any]]
     try:
         with open(_DATA_FILE, encoding="utf-8") as f:
-            _EMOJI_DATA = json.load(f)
+            data = json.load(f)
     except Exception as e:
         logging.error("Failed to load emoji data: %s", e)
-        _EMOJI_DATA = []
-    return _EMOJI_DATA
+        data = []
+    _emoji_data = data
+    return data
 
 
 class EmojiProvider(BaseProvider):
@@ -47,7 +51,7 @@ class EmojiProvider(BaseProvider):
     input_placeholder = "Search emojis..."
     icon = ICON_EMOJI
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self._pinned: dict[str, str] = self._load_pinned()
 
@@ -59,7 +63,7 @@ class EmojiProvider(BaseProvider):
                 if isinstance(data, dict):
                     return {
                         str(emoji): str(name)
-                        for emoji, name in data.items()
+                        for emoji, name in cast(dict[object, object], data).items()
                         if isinstance(emoji, str) and emoji.strip() and isinstance(name, str)
                     }
         except Exception as e:
@@ -96,7 +100,7 @@ class EmojiProvider(BaseProvider):
             return True
         return False
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).strip().lower()
         if not query:
             results: list[ProviderResult] = []
@@ -159,7 +163,7 @@ class EmojiProvider(BaseProvider):
         return (pinned_results + regular_results)[:limit]
 
     @staticmethod
-    def _matches(query: str, entry: dict) -> bool:
+    def _matches(query: str, entry: dict[str, Any]) -> bool:
         name = entry.get("name", "").lower()
         aliases = entry.get("aliases", [])
         tags = entry.get("tags", [])

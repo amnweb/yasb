@@ -3,10 +3,10 @@ import time
 from calendar import monthrange
 from datetime import date, datetime
 from math import log1p
-from typing import Any
+from typing import Any, override
 
 from PyQt6.QtCore import QEasingCurve, QPointF, Qt, QTimer, QVariantAnimation
-from PyQt6.QtGui import QPainter, QPainterPath
+from PyQt6.QtGui import QCloseEvent, QPainter, QPainterPath, QPaintEvent, QResizeEvent
 from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -25,7 +25,7 @@ from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, build_progress_widget, refresh_widget_style
 from core.validation.widgets.yasb.codex_usage import CodexUsageConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.codex_usage.codex_api import CodexUsageService
+from core.widgets.services.codex_usage.codex_api import CodexUsageService, as_dict, as_list
 
 
 class UsageBar(QFrame):
@@ -50,8 +50,9 @@ class UsageBar(QFrame):
             fill_width = max(fill_width, self.height())
         self._fill.setGeometry(0, 0, fill_width, self.height())
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         self._update_fill()
 
 
@@ -75,8 +76,9 @@ class TokenBar(QFrame):
             width = max(width, self.height())
         self._fill.setGeometry(0, 0, width, self.height())
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         self._update_fill()
 
 
@@ -108,7 +110,8 @@ class RefreshButton(QPushButton):
         self._angle = 0.0
         self.update()
 
-    def paintEvent(self, event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         option = QStyleOptionButton()
         self.initStyleOption(option)
         option.text = ""
@@ -197,9 +200,10 @@ class CodexUsageWidget(BaseWidget):
         self.destroyed.connect(lambda *_: self._release_service())
         self._update_label()
 
-    def closeEvent(self, event) -> None:
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         self._release_service()
-        super().closeEvent(event)
+        super().closeEvent(a0)
 
     def _release_service(self) -> None:
         if self._service_released:
@@ -250,8 +254,7 @@ class CodexUsageWidget(BaseWidget):
             self._refresh_status.hide()
 
     def _window(self, name: str) -> dict[str, Any]:
-        value = self._data.get(name)
-        return value if isinstance(value, dict) else {}
+        return as_dict(self._data.get(name)) or {}
 
     @staticmethod
     def _percent(value: Any) -> str:
@@ -394,17 +397,16 @@ class CodexUsageWidget(BaseWidget):
         self._show_menu()
 
     def _show_menu(self) -> None:
-        if not is_valid_qobject(self._menu):
-            self._build_menu()
+        menu = self._menu if is_valid_qobject(self._menu) else self._build_menu()
         self._sync_menu()
-        self._menu.adjustSize()
-        self._menu.setPosition(
+        menu.adjustSize()
+        menu.setPosition(
             alignment=self.config.menu.alignment,
             direction=self.config.menu.direction,
             offset_left=self.config.menu.offset_left,
             offset_top=self.config.menu.offset_top,
         )
-        self._menu.show()
+        menu.show()
         self._service.refresh_now()
 
     def _build_section(self, name: str, fallback_title: str) -> QFrame:
@@ -697,10 +699,10 @@ class CodexUsageWidget(BaseWidget):
         self._sync_heatmap()
 
     def _sync_heatmap(self) -> None:
-        tokens = self._data.get("tokens")
-        if not isinstance(tokens, dict):
+        tokens = as_dict(self._data.get("tokens"))
+        if tokens is None:
             return
-        daily = tokens.get("daily") if isinstance(tokens.get("daily"), dict) else {}
+        daily = as_dict(tokens.get("daily")) or {}
         current_month = date.today().replace(day=1)
         earliest_navigation_month = self._shift_month(current_month, -11)
         try:
@@ -846,12 +848,19 @@ class CodexUsageWidget(BaseWidget):
             self._sync_pager()
 
     def _sync_pager(self) -> None:
-        if not is_valid_qobject(self._pager) or not is_valid_qobject(self._page_stack):
+        if (
+            not is_valid_qobject(self._pager)
+            or not is_valid_qobject(self._page_stack)
+            or self._page_navigation is None
+            or self._page_previous is None
+            or self._page_next is None
+            or self._page_indicator is None
+        ):
             return
-        tokens = self._data.get("tokens")
-        has_tokens = self.config.show_token_usage and isinstance(tokens, dict)
-        models = tokens.get("models") if has_tokens and isinstance(tokens.get("models"), dict) else {}
-        daily = tokens.get("daily") if has_tokens and isinstance(tokens.get("daily"), dict) else {}
+        tokens = as_dict(self._data.get("tokens")) if self.config.show_token_usage else None
+        has_tokens = tokens is not None
+        models = (as_dict(tokens.get("models")) or {}) if tokens is not None else {}
+        daily = (as_dict(tokens.get("daily")) or {}) if tokens is not None else {}
         reset_credits = self._data.get("reset_credits")
 
         if is_valid_qobject(self._overview_tokens):
@@ -891,8 +900,8 @@ class CodexUsageWidget(BaseWidget):
             f"{titles[self._current_page]} page, {index + 1} of {len(visible_pages)}"
         )
 
-    def _build_menu(self) -> None:
-        self._menu = PopupWidget(
+    def _build_menu(self) -> PopupWidget:
+        menu = PopupWidget(
             self,
             self.config.menu.blur,
             self.config.menu.round_corners,
@@ -900,8 +909,9 @@ class CodexUsageWidget(BaseWidget):
             self.config.menu.border_color,
             persistent=True,
         )
-        self._menu.setProperty("class", "codex-usage-menu")
-        layout = QVBoxLayout(self._menu)
+        self._menu = menu
+        menu.setProperty("class", "codex-usage-menu")
+        layout = QVBoxLayout(menu)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
@@ -931,12 +941,13 @@ class CodexUsageWidget(BaseWidget):
         layout.addWidget(self._build_section("primary", "Primary"))
         layout.addWidget(self._build_section("secondary", "Secondary"))
         layout.addWidget(self._build_pager())
+        return menu
 
     def _sync_reset_credits(self) -> None:
         if not is_valid_qobject(self._reset_credits_count):
             return
-        summary = self._data.get("reset_credits")
-        if not isinstance(summary, dict):
+        summary = as_dict(self._data.get("reset_credits"))
+        if summary is None:
             return
         available_count = summary.get("available_count")
         available_count = max(0, int(available_count)) if isinstance(available_count, (int, float)) else 0
@@ -944,7 +955,7 @@ class CodexUsageWidget(BaseWidget):
         self._reset_credits_count.setText(f"{available_count} {suffix}")
 
         credits = summary.get("credits")
-        credit_items = [credit for credit in credits if isinstance(credit, dict)] if isinstance(credits, list) else []
+        credit_items = [item for raw in as_list(credits) or [] if (item := as_dict(raw)) is not None]
         if is_valid_qobject(self._reset_credits_empty):
             if credits is None and available_count:
                 message = f"{available_count} reset {suffix} available; details unavailable"
@@ -994,16 +1005,15 @@ class CodexUsageWidget(BaseWidget):
             widgets["date"].setText(self._fmt_reset_at(window.get("resets_at")))
             refresh_widget_style(widgets["remaining"])
 
-        tokens = self._data.get("tokens")
-        has_tokens = self.config.show_token_usage and isinstance(tokens, dict)
-        if has_tokens:
-            periods = tokens.get("periods") if isinstance(tokens.get("periods"), dict) else {}
+        tokens = as_dict(self._data.get("tokens")) if self.config.show_token_usage else None
+        if tokens is not None:
+            periods = as_dict(tokens.get("periods")) or {}
             for name, widget in self._token_widgets.items():
                 widget.setText(self._format_tokens(periods.get(name)))
 
             self._sync_heatmap()
 
-            models = tokens.get("models") if isinstance(tokens.get("models"), dict) else {}
+            models = as_dict(tokens.get("models")) or {}
             model_items = [
                 (model, value) for model, value in models.items() if isinstance(value, (int, float)) and value >= 0
             ][: len(self._model_widgets)]

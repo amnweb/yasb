@@ -1,8 +1,15 @@
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, pyqtProperty, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPen, QWheelEvent
+from collections.abc import Callable
+from typing import Any, override
+
+import PyQt6.QtCore as QtCore
+from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRectF, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QEnterEvent, QFont, QMouseEvent, QPainter, QPaintEvent, QPen, QWheelEvent
 from PyQt6.QtWidgets import QApplication, QSizePolicy, QWidget
 
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
+
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 TRACK_H = 4
 THUMB_RADIUS = 6
@@ -59,7 +66,9 @@ class Slider(QWidget):
         self._anim_scale.setDuration(_DURATION)
         self._anim_scale.setEasingCurve(QEasingCurve.Type.OutQuad)
 
-        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     def _build_colors(self, t: dict[str, str]) -> None:
         self._accent = _resolve(t, "accent_fill_default")
@@ -78,14 +87,14 @@ class Slider(QWidget):
 
     # Properties
 
-    @pyqtProperty(float)
-    def thumb_scale(self) -> float:
+    def _get_thumb_scale(self) -> float:
         return self._thumb_scale
 
-    @thumb_scale.setter
-    def thumb_scale(self, v: float) -> None:
+    def _set_thumb_scale(self, v: float) -> None:
         self._thumb_scale = v
         self.update()
+
+    thumb_scale: float = pyqtProperty(float, _get_thumb_scale, _set_thumb_scale)
 
     def value(self) -> int:
         return self._value
@@ -122,43 +131,51 @@ class Slider(QWidget):
         ratio = max(0.0, min(1.0, (px - x) / w)) if w > 0 else 0.0
         return round(self._min + ratio * (self._max - self._min))
 
-    def mousePressEvent(self, e: QMouseEvent) -> None:
-        if e.button() == Qt.MouseButton.LeftButton:
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
             tx, _, _, _ = self._track_rect()
-            if e.position().x() < tx - THUMB_OUTER_RADIUS:
+            if a0.position().x() < tx - THUMB_OUTER_RADIUS:
                 self.labelClicked.emit()
                 return
             self._dragging = True
-            self.set_value(self._value_from_x(e.position().x()))
+            self.set_value(self._value_from_x(a0.position().x()))
             self._animate_thumb(0.7)
 
-    def mouseMoveEvent(self, e: QMouseEvent) -> None:
-        if self._dragging:
-            self.set_value(self._value_from_x(e.position().x()))
+    @override
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+        if self._dragging and a0 is not None:
+            self.set_value(self._value_from_x(a0.position().x()))
 
-    def mouseReleaseEvent(self, e: QMouseEvent) -> None:
-        if e.button() == Qt.MouseButton.LeftButton and self._dragging:
+    @override
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton and self._dragging:
             self._dragging = False
             self._animate_thumb(1.0)
 
-    def wheelEvent(self, e: QWheelEvent) -> None:
-        dy = e.angleDelta().y()
+    @override
+    def wheelEvent(self, a0: QWheelEvent | None) -> None:
+        if a0 is None:
+            return
+        dy = a0.angleDelta().y()
         if dy == 0:
-            dy = e.angleDelta().x()
+            dy = a0.angleDelta().x()
         if dy == 0:
-            e.ignore()
+            a0.ignore()
             return
         notches = dy // 120
         if notches == 0:
             notches = 1 if dy > 0 else -1
         self.set_value(self._value + notches * self._step)
-        e.accept()
+        a0.accept()
 
-    def enterEvent(self, event) -> None:
+    @override
+    def enterEvent(self, event: QEnterEvent | None) -> None:
         self._hover = True
         self.update()
 
-    def leaveEvent(self, event) -> None:
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         self._hover = False
         self.update()
 
@@ -168,7 +185,8 @@ class Slider(QWidget):
         self._anim_scale.setEndValue(target)
         self._anim_scale.start()
 
-    def paintEvent(self, _event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 

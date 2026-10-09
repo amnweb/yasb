@@ -2,6 +2,7 @@ import atexit
 import logging
 import os
 import re
+from typing import override
 
 import win32gui
 import win32process
@@ -14,6 +15,7 @@ from core.events.service import EventService
 from core.events.win32 import WinEvent
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utils import (
+    WindowInfo,
     get_app_name_from_aumid,
     get_app_name_from_pid,
     get_hwnd_info,
@@ -55,9 +57,11 @@ class ActiveWindowWidget(BaseWidget):
     def __init__(self, config: ActiveWindowConfig):
         super().__init__(class_name=f"active-window-widget {config.class_name}")
         self.config = config
-        self.dpi = None
-        self._win_info = None
-        self._tracked_hwnd = None
+        self.dpi: float | None = None
+        self._win_info: WindowInfo | None = None
+        self._tracked_hwnd: int | None = None
+        self._uwp_retry_count = 0
+        self.pixmap: QPixmap | None = None
         self._show_alt = False
         self._active_label = config.label
         self._event_service = EventService()
@@ -78,8 +82,8 @@ class ActiveWindowWidget(BaseWidget):
         self._ignore_window.classes += IGNORED_CLASSES
         self._ignore_window.processes += IGNORED_PROCESSES
         self._ignore_window.titles += IGNORED_TITLES
-        self._icon_cache = dict()
-        self._app_name_cache = dict()
+        self._icon_cache: dict[tuple[int, str, float | None], Image.Image | None] = {}
+        self._app_name_cache: dict[int, str] = {}
         if self.config.label_icon:
             self._widget_container_layout.addWidget(self._window_icon_label)
         self._widget_container_layout.addWidget(self._window_title_text)
@@ -106,7 +110,7 @@ class ActiveWindowWidget(BaseWidget):
         self._window_update_timer = QTimer(self)
         self._window_update_timer.setSingleShot(True)
         self._window_update_timer.timeout.connect(self._process_debounced_update)
-        self._pending_window_update = None
+        self._pending_window_update: tuple[int, WinEvent] | None = None
         self._last_update_time = QElapsedTimer()
         self._last_update_time.start()
 
@@ -118,7 +122,7 @@ class ActiveWindowWidget(BaseWidget):
         except Exception:
             pass
 
-    def _on_destroyed(self, *args):
+    def _on_destroyed(self, *args: object) -> None:
         try:
             # Unregister all events we registered
             self._event_service.unregister_event(WinEvent.EventSystemForeground, self.foreground_change)
@@ -149,7 +153,7 @@ class ActiveWindowWidget(BaseWidget):
                 if count > 0 and case:
                     transform = getattr(result, case, None)
                     if callable(transform):
-                        result = transform()
+                        result = str(transform())
             except re.error as e:
                 logging.warning("Invalid regex pattern '%s': %s", pattern, e)
                 continue
@@ -204,8 +208,7 @@ class ActiveWindowWidget(BaseWidget):
                 try:
                     fg_info = get_hwnd_info(fg)
                     if fg_info and fg_info.get("title") and fg_info.get("process"):
-                        fg_process = fg_info.get("process")
-                        if isinstance(fg_process, dict) and fg_process.get("pid") != CURRENT_PROCESS_ID:
+                        if fg_info["process"]["pid"] != CURRENT_PROCESS_ID:
                             self._on_focus_change_event(fg, WinEvent.WinEventOutOfContext)
                             return
                 except Exception:
@@ -220,14 +223,15 @@ class ActiveWindowWidget(BaseWidget):
         self._active_label = self.config.label_alt if self._show_alt else self.config.label
         self._update_text()
 
-    def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.DevicePixelRatioChange:
+    @override
+    def event(self, a0: QEvent | None) -> bool:
+        if a0 is not None and a0.type() == QEvent.Type.DevicePixelRatioChange:
             dpr = self.devicePixelRatioF()
             if dpr != self.dpi:
                 self.dpi = dpr
                 if self._win_info:
                     self._on_focus_change_event(self._win_info["hwnd"], WinEvent.WinEventOutOfContext)
-        return super().event(event)
+        return super().event(a0)
 
     def _on_focus_change_event(self, hwnd: int, event: WinEvent) -> None:
         win_info = get_hwnd_info(hwnd)
@@ -242,10 +246,11 @@ class ActiveWindowWidget(BaseWidget):
 
         monitor_name = win_info["monitor_info"].get("device", None)
         widget_monitor = get_widget_monitor_hwnd(self)
+        screen = self.screen()
 
         if (
             self.config.monitor_exclusive
-            and self.screen().name() != monitor_name
+            and (screen is None or screen.name() != monitor_name)
             and win_info.get("monitor_hwnd", "Unknown") != widget_monitor
         ):
             self._set_no_window_or_hide()
@@ -285,7 +290,7 @@ class ActiveWindowWidget(BaseWidget):
     def _process_window_update(self, hwnd: int, event: WinEvent) -> None:
         self._on_focus_change_event(hwnd, event)
 
-    def _update_window_title(self, hwnd: int, win_info: dict, event: WinEvent) -> None:
+    def _update_window_title(self, hwnd: int, win_info: WindowInfo, event: WinEvent) -> None:
         try:
             if hwnd != win32gui.GetForegroundWindow():
                 return
@@ -300,9 +305,9 @@ class ActiveWindowWidget(BaseWidget):
             if is_uwp:
                 try:
                     parent_pid = process["pid"]
-                    found_pids = []
+                    found_pids: list[int] = []
 
-                    def _collect_pids(child_hwnd, _):
+                    def _collect_pids(child_hwnd: int, _: object) -> bool:
                         _, child_pid = win32process.GetWindowThreadProcessId(child_hwnd)
                         if child_pid and child_pid != parent_pid:
                             found_pids.append(child_pid)
@@ -320,11 +325,9 @@ class ActiveWindowWidget(BaseWidget):
 
             # If UWP child process isn't attached yet, retry after a short delay
             if is_uwp and pid_for_name == process["pid"]:
-                if not hasattr(self, "_uwp_retry_count"):
-                    self._uwp_retry_count = 0
                 if self._uwp_retry_count < 5:
                     self._uwp_retry_count += 1
-                    QTimer.singleShot(100, lambda h=hwnd: self._on_focus_change_event(h, WinEvent.WinEventOutOfContext))
+                    QTimer.singleShot(100, lambda: self._on_focus_change_event(hwnd, WinEvent.WinEventOutOfContext))
                     return
             self._uwp_retry_count = 0
 
@@ -353,7 +356,8 @@ class ActiveWindowWidget(BaseWidget):
                 if cache_key in self._icon_cache:
                     icon_img = self._icon_cache[cache_key]
                 else:
-                    self.dpi = self.screen().devicePixelRatio()
+                    screen = self.screen()
+                    self.dpi = screen.devicePixelRatio() if screen is not None else self.devicePixelRatioF()
                     icon_img = get_window_icon(hwnd)
                     if icon_img:
                         icon_img = icon_img.resize(
@@ -366,9 +370,14 @@ class ActiveWindowWidget(BaseWidget):
                         if len(self._icon_cache) > 128:
                             self._icon_cache.pop(next(iter(self._icon_cache)))
                 if icon_img:
-                    qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
+                    qimage = QImage(
+                        icon_img.tobytes(),  # pyright: ignore[reportUnknownMemberType]
+                        icon_img.width,
+                        icon_img.height,
+                        QImage.Format.Format_RGBA8888,
+                    )
                     self.pixmap = QPixmap.fromImage(qimage)
-                    self.pixmap.setDevicePixelRatio(self.dpi)
+                    self.pixmap.setDevicePixelRatio(self.dpi or 1.0)
                 else:
                     self.pixmap = None
 
@@ -378,11 +387,11 @@ class ActiveWindowWidget(BaseWidget):
                 or process["name"] in self._ignore_window.processes
             ):
                 win_info["title"] = ""
-                return win_info["title"]
+                return
             else:
                 if "title" in win_info and len(win_info["title"]) > 0:
                     win_info["title"] = self._rewrite_filter(win_info["title"])
-                if "process" in win_info and "name" in win_info["process"]:
+                if win_info["process"]["name"]:
                     win_info["process"]["name"] = self._rewrite_filter(win_info["process"]["name"])
                 if "app_name" in win_info and win_info["app_name"]:
                     win_info["app_name"] = self._rewrite_filter(win_info["app_name"])

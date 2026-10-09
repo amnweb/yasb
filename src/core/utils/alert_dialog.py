@@ -1,7 +1,9 @@
 import logging
 import sys
+from typing import override
 
 from PyQt6.QtCore import QEasingCurve, QParallelAnimationGroup, QPoint, QPropertyAnimation, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -120,11 +122,14 @@ class AlertDialog(QWidget):
         container_layout.addWidget(self._btn_bar, 0)
 
         self._apply_styles()
-        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
-    def mousePressEvent(self, event) -> None:
-        if event.button() == Qt.MouseButton.LeftButton:
-            if self._btn_bar.geometry().contains(event.pos()):
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+            if self._btn_bar.geometry().contains(a0.pos()):
                 return
             if wh := self.windowHandle():
                 wh.startSystemMove()
@@ -236,7 +241,7 @@ def raise_info_alert(
     title: str,
     msg: str,
     informative_msg: str,
-    additional_details: str = None,
+    additional_details: str | None = None,
     rich_text: bool = False,
     exit_on_close: bool = False,
 ) -> None:

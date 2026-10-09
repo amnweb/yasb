@@ -3,13 +3,18 @@ import glob
 import os
 import re
 import winreg
+from collections.abc import Callable, Iterator
+from typing import Any
 
 from PyQt6.QtCore import (
     QThread,
     pyqtSignal,
 )
 
-_APPS_CACHE = None
+# (name, path, description) - path is a file, "UWP::<appid>" or "CPL::<clsid>::<canonical name>".
+type AppEntry = tuple[str, str, str | None]
+
+_apps_cache: list[AppEntry] | None = None
 
 _CPL_NS_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel\NameSpace"
 _APPS_FOLDER = "shell:::{4234d49b-0245-4df3-b780-3893943456e1}"
@@ -22,7 +27,7 @@ def _load_indirect_string(resource: str) -> str | None:
     return buf.value if hr == 0 else None
 
 
-def _reg_value(key, name: str, default=None):
+def _reg_value(key: winreg.HKEYType, name: str, default: Any = None) -> Any:
     """Read a single registry value, returning *default* on failure."""
     try:
         val, _ = winreg.QueryValueEx(key, name)
@@ -31,7 +36,7 @@ def _reg_value(key, name: str, default=None):
         return default
 
 
-def _resolve_reg_string(key, value_name: str) -> str | None:
+def _resolve_reg_string(key: winreg.HKEYType, value_name: str) -> str | None:
     """Read a registry string and resolve it if it is a @resource reference."""
     raw = _reg_value(key, value_name)
     if not raw:
@@ -41,7 +46,7 @@ def _resolve_reg_string(key, value_name: str) -> str | None:
     return raw
 
 
-def _enumerate_control_panel_items():
+def _enumerate_control_panel_items() -> Iterator[tuple[str, str, str, str | None]]:
     """Yield (name, clsid, canonical_name, description) for each Control Panel item."""
     with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, _CPL_NS_KEY) as ns:
         i = 0
@@ -89,14 +94,14 @@ class AppListLoader(QThread):
     apps_loaded = pyqtSignal(list)
 
     @staticmethod
-    def clear_cache():
-        global _APPS_CACHE
-        _APPS_CACHE = None
+    def clear_cache() -> None:
+        global _apps_cache
+        _apps_cache = None
 
     def run(self):
-        global _APPS_CACHE
-        if _APPS_CACHE is not None:
-            self.apps_loaded.emit(_APPS_CACHE)
+        global _apps_cache
+        if _apps_cache is not None:
+            self.apps_loaded.emit(_apps_cache)
             return
 
         filter_keywords = {
@@ -120,10 +125,10 @@ class AppListLoader(QThread):
             os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Start Menu"),
             os.path.expandvars(r"%PROGRAMDATA%\Microsoft\Windows\Start Menu"),
         ]
-        apps = []
-        seen_names = set()
+        apps: list[AppEntry] = []
+        seen_names: set[str] = set()
 
-        def should_filter_app(name):
+        def should_filter_app(name: str) -> bool:
             """Check if app name contains any filter keywords"""
             name_lower = name.lower()
 
@@ -137,7 +142,7 @@ class AppListLoader(QThread):
 
             return False
 
-        def is_duplicate(name):
+        def is_duplicate(name: str) -> bool:
             """Check if name (or its space-stripped form) was already seen.
 
             Some shortcuts use CamelCase without spaces (e.g. "LiveCaptions")
@@ -148,7 +153,7 @@ class AppListLoader(QThread):
             stripped = lower.replace(" ", "")
             return lower in seen_names or stripped in seen_names
 
-        def mark_seen(name):
+        def mark_seen(name: str) -> None:
             lower = name.lower()
             seen_names.add(lower)
             seen_names.add(lower.replace(" ", ""))
@@ -188,13 +193,15 @@ class AppListLoader(QThread):
         except Exception:
             pass
 
-        _APPS_CACHE = apps
+        _apps_cache = apps
         self.apps_loaded.emit(apps)
 
 
 class ShortcutResolver:
     @staticmethod
-    def resolve_lnk_target(lnk_path, warning_callback=None):
+    def resolve_lnk_target(
+        lnk_path: str, warning_callback: Callable[[str], object] | None = None
+    ) -> tuple[str, str | None, str] | tuple[None, None, None]:
         """
         Resolve the target path, icon location, and display name from a .lnk file.
         If warning_callback is provided, it will be called with an error message on failure.
@@ -224,5 +231,5 @@ class ShortcutResolver:
                 return full_command, None, app_name
         except Exception:
             if warning_callback:
-                warning_callback("Failed to resolve shortcut: {lnk_path}")
+                warning_callback(f"Failed to resolve shortcut: {lnk_path}")
             return None, None, None

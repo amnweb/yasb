@@ -69,7 +69,7 @@ def _is_first_party(module: str) -> bool:
 
 
 def test_cloud_only_imports_allowed_first_party_modules():
-    violations = []
+    violations: list[str] = []
     for path in _modules():
         for name in _imported_names(path):
             if not _is_first_party(name):
@@ -81,7 +81,7 @@ def test_cloud_only_imports_allowed_first_party_modules():
 
 
 def test_encryption_has_no_qt_or_cross_package_dependency():
-    violations = []
+    violations: list[str] = []
     for path in _encryption_modules():
         for name in _imported_names(path):
             root = name.split(".")[0]
@@ -99,7 +99,7 @@ def test_encryption_never_uses_the_random_module():
     This replaces an earlier wrapper module that existed only to centralise this rule. A
     test enforces it without making every call site route through an extra indirection.
     """
-    violations = []
+    violations: list[str] = []
     for path in _encryption_modules():
         for name in _imported_names(path):
             if name == "random" or name.startswith("random."):
@@ -111,7 +111,7 @@ def test_encryption_never_uses_the_random_module():
 def test_encryption_uses_no_third_party_packages():
     """The client constraint: stdlib and ctypes only, no new dependencies."""
     stdlib = set(sys.stdlib_module_names)
-    violations = []
+    violations: list[str] = []
     for path in _encryption_modules():
         for name in _imported_names(path):
             root = name.split(".")[0]
@@ -135,7 +135,7 @@ def test_no_secrets_or_credentials_are_hardcoded():
     Only module-level constants assigned a literal are flagged: that is what an embedded
     credential actually looks like. Names of locals and parameters are irrelevant.
     """
-    violations = []
+    violations: list[str] = []
 
     for path in _modules():
         text = path.read_text(encoding="utf-8")

@@ -4,6 +4,7 @@ import os
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from core.utils.win32.app_loader import AppEntry
 from core.utils.win32.icon_extractor import IconExtractorUtil
 
 # Standard icon sizes found in ICO / PE resources.
@@ -32,7 +33,7 @@ class IconResolverWorker(QThread):
 
     icon_ready = pyqtSignal(str, str)
 
-    def __init__(self, apps: list[tuple[str, str, object]], icons_dir: str, size: int = 48):
+    def __init__(self, apps: list[AppEntry], icons_dir: str, size: int = 48):
         super().__init__()
         self._apps = apps
         self._icons_dir = icons_dir

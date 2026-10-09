@@ -1,13 +1,12 @@
 import re
 
 from humanize import naturalsize
-from PyQt6.QtWidgets import QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
 from core.validation.widgets.yasb.recycle_bin import RecycleBinConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
+from core.widgets.services.recycle_bin.recycle_bin_monitor import BinInfo, EmptyBinThread, RecycleBinMonitor
 
 
 class RecycleBinWidget(BaseWidget):
@@ -17,9 +16,9 @@ class RecycleBinWidget(BaseWidget):
         super().__init__(class_name=f"recycle-bin-widget {config.class_name}")
         self.config = config
         self._show_alt_label = False
-        self._bin_info = {"num_items": 0, "size_bytes": 0}
+        self._bin_info: BinInfo = {"num_items": 0, "size_bytes": 0}
         self._is_emptying = False
-        self._empty_thread = None
+        self._empty_thread: EmptyBinThread | None = None
 
         self.monitor = RecycleBinMonitor.get_instance()
         self.monitor.subscribe(id(self))
@@ -69,7 +68,7 @@ class RecycleBinWidget(BaseWidget):
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
                 if "<span" in part and "</span>" in part:
-                    if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                    if widget_index < len(active_widgets):
                         active_widgets[widget_index].setText(formatted_text)
                         base_class = active_widgets[widget_index].property("class").split()[0]
                         target_class = f"{base_class} {class_name}"
@@ -77,7 +76,7 @@ class RecycleBinWidget(BaseWidget):
                             active_widgets[widget_index].setProperty("class", target_class)
                             refresh_widget_style(active_widgets[widget_index])
                 else:
-                    if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                    if widget_index < len(active_widgets):
                         alt_class = "alt" if self._show_alt_label else ""
                         active_widgets[widget_index].setText(formatted_text)
                         base_class = "label"
@@ -99,7 +98,7 @@ class RecycleBinWidget(BaseWidget):
         else:
             return self.config.icons.bin_empty
 
-    def _on_bin_update(self, bin_info: dict):
+    def _on_bin_update(self, bin_info: BinInfo):
         self._bin_info = bin_info
         self._update_label()
 
@@ -137,4 +136,3 @@ class RecycleBinWidget(BaseWidget):
             self.monitor.unsubscribe(id(self))  # Unsubscribe when widget is destroyed
         except Exception:
             pass
-        super().shutdown()

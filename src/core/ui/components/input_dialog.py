@@ -1,13 +1,17 @@
+from collections.abc import Callable
+from typing import Any, override
+
+import PyQt6.QtCore as QtCore
 from PyQt6.QtCore import (
     QEasingCurve,
     QEvent,
+    QObject,
     QParallelAnimationGroup,
     QPropertyAnimation,
     Qt,
-    pyqtProperty,
     pyqtSignal,
 )
-from PyQt6.QtGui import QColor, QFont, QPainter, QPen
+from PyQt6.QtGui import QColor, QFocusEvent, QFont, QKeyEvent, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -21,8 +25,11 @@ from PyQt6.QtWidgets import (
 )
 
 from core.ui.components.button import Button
-from core.ui.components.content_dialog import _SmokeLayer
+from core.ui.components.content_dialog import SmokeLayer
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
+
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _MIN_W, _MAX_W = 360, 548
 _PAD = 24
@@ -62,18 +69,21 @@ class _FocusLineEdit(QLineEdit):
         self._accent_color = QColor(color)
         self.update()
 
-    def focusInEvent(self, event) -> None:
-        super().focusInEvent(event)
+    @override
+    def focusInEvent(self, a0: QFocusEvent | None) -> None:
+        super().focusInEvent(a0)
         self._focused = True
         self.update()
 
-    def focusOutEvent(self, event) -> None:
-        super().focusOutEvent(event)
+    @override
+    def focusOutEvent(self, a0: QFocusEvent | None) -> None:
+        super().focusOutEvent(a0)
         self._focused = False
         self.update()
 
-    def paintEvent(self, event) -> None:
-        super().paintEvent(event)
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
+        super().paintEvent(a0)
         if not self._focused:
             return
         painter = QPainter(self)
@@ -128,7 +138,7 @@ class InputDialog(QWidget):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self._host = parent
-        self._smoke: _SmokeLayer | None = None
+        self._smoke: SmokeLayer | None = None
         self._slide_offset_val = 0
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowOpacity(0.0)
@@ -220,7 +230,9 @@ class InputDialog(QWidget):
         layout.addWidget(self._btn_bar)
 
         self._apply_styles()
-        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     @property
     def text(self) -> str:
@@ -248,8 +260,10 @@ class InputDialog(QWidget):
         self._compute_size()
 
         host = self._host
+        if host is None:
+            return
 
-        self._smoke = _SmokeLayer(host)
+        self._smoke = SmokeLayer(host)
         self._smoke.setGeometry(host.rect())
         self._smoke.show()
         self._smoke.raise_()
@@ -268,14 +282,14 @@ class InputDialog(QWidget):
         self._is_closing = True
         self._play_close()
 
-    @pyqtProperty(int)
-    def slide_offset(self) -> int:
+    def _get_slide_offset(self) -> int:
         return self._slide_offset_val
 
-    @slide_offset.setter
-    def slide_offset(self, value: int) -> None:
+    def _set_slide_offset(self, value: int) -> None:
         self._slide_offset_val = value
         self._position_center(value)
+
+    slide_offset: int = pyqtProperty(int, _get_slide_offset, _set_slide_offset)
 
     def _position_center(self, y_offset: int = 0) -> None:
         if self._host is None:
@@ -283,12 +297,14 @@ class InputDialog(QWidget):
         centre = self._host.mapToGlobal(self._host.rect().center())
         self.move(centre.x() - self.width() // 2, centre.y() - self.height() // 2 + y_offset)
 
-    def eventFilter(self, obj, event) -> bool:
-        if obj is self._host and event.type() in (QEvent.Type.Resize, QEvent.Type.Move):
-            if self._smoke and event.type() == QEvent.Type.Resize:
-                self._smoke.setGeometry(self._host.rect())
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        host = self._host
+        if host is not None and a0 is host and a1 is not None and a1.type() in (QEvent.Type.Resize, QEvent.Type.Move):
+            if self._smoke and a1.type() == QEvent.Type.Resize:
+                self._smoke.setGeometry(host.rect())
             self._position_center(0)
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
     def _play_open(self) -> None:
         group = QParallelAnimationGroup(self)
@@ -353,13 +369,16 @@ class InputDialog(QWidget):
         self.rejected.emit()
         self.hide_dialog()
 
-    def keyPressEvent(self, event) -> None:
-        if event.key() == Qt.Key.Key_Escape:
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is None:
+            return
+        if a0.key() == Qt.Key.Key_Escape:
             self._on_close()
-        elif event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+        elif a0.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self._on_primary()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
     def _on_theme_changed(self) -> None:
         key = theme_key()

@@ -9,7 +9,7 @@ from ctypes import POINTER, WINFUNCTYPE, byref, c_void_p
 
 from PIL import Image
 
-from core.utils.win32.aumid import GUID, _ensure_com_initialized
+from core.utils.win32.aumid import GUID, ensure_com_initialized
 from core.utils.win32.bindings import (
     DeleteObject,
     GetDC,
@@ -62,7 +62,7 @@ def _hbitmap_to_image(hbitmap: int) -> Image.Image | None:
     """Convert a Windows HBITMAP to a PIL Image."""
     # Get bitmap info
     bmp = BITMAP()
-    res = GetObject(wt.HBITMAP(hbitmap), ctypes.sizeof(BITMAP), ctypes.byref(bmp))
+    res = GetObject(hbitmap, ctypes.sizeof(BITMAP), ctypes.byref(bmp))
     if res == 0:
         return None
 
@@ -93,11 +93,13 @@ def _hbitmap_to_image(hbitmap: int) -> Image.Image | None:
             return None
         # Convert buffer to bytes and interpret as BGRA
         raw_bytes = ctypes.string_at(ctypes.addressof(pixel_buffer), buf_size)
-        return Image.frombuffer("RGBA", (width, height), raw_bytes, "raw", "BGRA", 0, 1)
+        return Image.frombuffer(  # pyright: ignore[reportUnknownMemberType]
+            "RGBA", (width, height), raw_bytes, "raw", "BGRA", 0, 1
+        )
     finally:
         ReleaseDC(None, hdc)
         try:
-            DeleteObject(wt.HBITMAP(hbitmap))
+            DeleteObject(hbitmap)
         except Exception:
             pass
 
@@ -116,7 +118,7 @@ def get_icon_for_aumid(aumid: str, size: int = 48) -> Image.Image | None:
     if not aumid:
         return None
 
-    _ensure_com_initialized()
+    ensure_com_initialized()
     path = f"shell:AppsFolder\\{aumid}"
     ppv = c_void_p()
     hr = SHCreateItemFromParsingName(path, None, byref(IID_IShellItemImageFactory), byref(ppv))

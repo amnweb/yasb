@@ -21,7 +21,15 @@ from ctypes.wintypes import BOOL, DWORD, HWND, INT, LPCWSTR, LPVOID, RECT, SIZE,
 from dataclasses import dataclass
 from typing import Any
 
-from comtypes import CLSCTX_LOCAL_SERVER, COMMETHOD, GUID, STDMETHOD, CoCreateInstance, COMError, IUnknown
+from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
+    CLSCTX_LOCAL_SERVER,
+    COMMETHOD,  # pyright: ignore[reportUnknownVariableType]
+    GUID,
+    STDMETHOD,  # pyright: ignore[reportUnknownVariableType]
+    CoCreateInstance,
+    COMError,
+    IUnknown,
+)
 
 from core.utils.win32.com_base import HSTRING, PWSTR, REFGUID, REFIID, IObjectArray, IServiceProvider
 
@@ -121,7 +129,7 @@ class IApplicationView(IUnknown):
     _iid_ = GUID("{372E1D3B-38D3-42E4-A15B-8AB2B178F513}")
 
 
-IApplicationView._methods_ = [
+IApplicationView._methods_ = [  # pyright: ignore[reportPrivateUsage]
     # IInspectable
     STDMETHOD(HRESULT, "GetIids", (POINTER(ULONG), POINTER(POINTER(GUID)))),
     STDMETHOD(HRESULT, "GetRuntimeClassName", (POINTER(HSTRING),)),
@@ -666,16 +674,16 @@ def _make_manager_internal(tier: int, desktop: type[IUnknown]) -> type[IUnknown]
     """
     takes_hwnd = TIER_20231 <= tier < TIER_22621
 
-    def get_all_desktops(self):
+    def get_all_desktops(self: Any) -> Any:
         return self.GetDesktops(0) if takes_hwnd else self.GetDesktops()
 
-    def get_current_desktop(self):
+    def get_current_desktop(self: Any) -> Any:
         return self.GetCurrentDesktop(0) if takes_hwnd else self.GetCurrentDesktop()
 
-    def create_desktop(self):
+    def create_desktop(self: Any) -> Any:
         return self.CreateDesktopW(0) if takes_hwnd else self.CreateDesktopW()
 
-    def switch_desktop(self, target):
+    def switch_desktop(self: Any, target: Any) -> Any:
         return self.SwitchDesktop(0, target) if takes_hwnd else self.SwitchDesktop(target)
 
     return type(
@@ -836,7 +844,7 @@ def _service_provider() -> Any:
     return CoCreateInstance(CLSID_ImmersiveShell, IServiceProvider, CLSCTX_LOCAL_SERVER)
 
 
-def _manager_available(provider: Any, iid: GUID) -> bool:
+def manager_available(provider: Any, iid: GUID) -> bool:
     """Does the shell hand out the desktop manager under this interface GUID?"""
     pointer = POINTER(IUnknown)()
     try:
@@ -865,7 +873,7 @@ def resolve_tier() -> int:
 
     provider = _service_provider()
     for tier in PROBE_ORDER:
-        if not _manager_available(provider, MANAGER_GUID_BY_TIER[tier]):
+        if not manager_available(provider, MANAGER_GUID_BY_TIER[tier]):
             continue
         # 22449 added a method to the 21313 interface without changing its GUID.
         if tier == TIER_21313 and build >= TIER_22449:

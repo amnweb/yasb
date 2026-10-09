@@ -1,6 +1,7 @@
 """Native YASB audio visualizer, event-driven WASAPI loopback capture."""
 
 import time
+from typing import override
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
 from PyQt6.QtGui import QHideEvent, QShowEvent
@@ -216,8 +217,9 @@ class AudioVisualizerWidget(BaseWidget):
         if self._analyzer_r is not None:
             self._analyzer_r.set_sample_rate(sample_rate)
 
-    def showEvent(self, event: QShowEvent) -> None:
-        super().showEvent(event)
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
+        super().showEvent(a0)
         self._token.attach()
         self._token.set_visible(True)
         if self._idle_hidden:
@@ -225,8 +227,9 @@ class AudioVisualizerWidget(BaseWidget):
         if not self._service.is_active:
             self._reset_visual()
 
-    def hideEvent(self, event: QHideEvent) -> None:
-        super().hideEvent(event)
+    @override
+    def hideEvent(self, a0: QHideEvent | None) -> None:
+        super().hideEvent(a0)
         self._fade_timer.stop()
         self._audio_active = False
         self._reset_visual()

@@ -9,10 +9,11 @@ import urllib.error
 import urllib.request
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any, override
 
 import certifi
-from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QImage
+from PyQt6.QtCore import QObject, Qt, QThread, QTimer, QUrl, pyqtSignal
+from PyQt6.QtGui import QCloseEvent, QImage
 from PyQt6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -20,6 +21,7 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QTextBrowser,
     QVBoxLayout,
+    QWidget,
 )
 
 from core.ui.components.button import Button
@@ -50,7 +52,7 @@ class ReleaseFetcher(QThread):
     up_to_date = pyqtSignal(str)
     error = pyqtSignal(str)
 
-    def __init__(self, current_version: str, parent=None):
+    def __init__(self, current_version: str, parent: QObject | None = None):
         super().__init__(parent)
         self._current_version = current_version
         self._update_service = get_update_service()
@@ -83,7 +85,9 @@ class DownloadWorker(QThread):
     finished = pyqtSignal(Path)
     error = pyqtSignal(str)
 
-    def __init__(self, download_url: str, output_path: Path, expected_size: int | None = None, parent=None):
+    def __init__(
+        self, download_url: str, output_path: Path, expected_size: int | None = None, parent: QObject | None = None
+    ):
         super().__init__(parent)
         self._download_url = download_url
         self._output_path = output_path
@@ -155,7 +159,7 @@ class _ImageLoaderWorker(QThread):
 
     finished = pyqtSignal(dict)  # {url_str: QImage}
 
-    def __init__(self, urls: list[str], max_width: int, parent=None):
+    def __init__(self, urls: list[str], max_width: int, parent: QObject | None = None):
         super().__init__(parent)
         self._urls = urls
         self._max_width = max_width
@@ -184,7 +188,7 @@ class _RemoteImageTextBrowser(QTextBrowser):
 
     images_loaded = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self._image_cache: dict[str, QImage] = {}
         self._image_worker: _ImageLoaderWorker | None = None
@@ -202,7 +206,8 @@ class _RemoteImageTextBrowser(QTextBrowser):
             self._apply_html()
             QTimer.singleShot(0, self.images_loaded.emit)
             return
-        max_width = max(self.viewport().width() - 20, 200)
+        viewport = self.viewport()
+        max_width = max((viewport.width() if viewport is not None else 0) - 20, 200)
         self._image_worker = _ImageLoaderWorker(urls, max_width, parent=self)
         self._image_worker.finished.connect(self._on_images_loaded)
         self._image_worker.start()
@@ -210,8 +215,9 @@ class _RemoteImageTextBrowser(QTextBrowser):
     def _on_images_loaded(self, images: dict[str, QImage]) -> None:
         self._image_cache.update(images)
         doc = self.document()
-        for url_str, img in images.items():
-            doc.addResource(2, QUrl(url_str), img)  # 2 = ImageResource
+        if doc is not None:
+            for url_str, img in images.items():
+                doc.addResource(2, QUrl(url_str), img)  # 2 = ImageResource
         self._apply_html()
         self._image_worker = None
         self.images_loaded.emit()
@@ -219,22 +225,25 @@ class _RemoteImageTextBrowser(QTextBrowser):
     def _apply_html(self) -> None:
         """Set the pending HTML content into the document."""
         if self._pending_html is not None:
-            self.document().setHtml(self._pending_html)
+            doc = self.document()
+            if doc is not None:
+                doc.setHtml(self._pending_html)
             self._pending_html = None
 
-    def loadResource(self, type_: int, url: QUrl) -> object:  # noqa: N802
-        if type_ == 2 and url.scheme() in ("http", "https"):
-            cached = self._image_cache.get(url.toString())
+    @override
+    def loadResource(self, type: int, name: QUrl) -> Any:  # noqa: N802
+        if type == 2 and name.scheme() in ("http", "https"):
+            cached = self._image_cache.get(name.toString())
             if cached is not None:
                 return cached
             return QImage()
-        return super().loadResource(type_, url)
+        return super().loadResource(type, name)
 
 
 class UpdateDialog(ViewBase, QDialog):
     def __init__(
         self,
-        parent=None,
+        parent: QWidget | None = None,
         on_install_started: Callable[[], None] | None = None,
         release_info: ReleaseInfo | None = None,
     ):
@@ -283,8 +292,10 @@ class UpdateDialog(ViewBase, QDialog):
             f"QTextBrowser {{ background: transparent; border: none; color: {text_color};"
             f" selection-background-color: {selection_bg}; }}"
         )
-        self.changelog_view.document().setDefaultStyleSheet(
-            f"""
+        changelog_doc = self.changelog_view.document()
+        if changelog_doc is not None:
+            changelog_doc.setDefaultStyleSheet(
+                f"""
             body, p, li {{
                 font-size: 10pt;
                 font-family: 'Segoe UI';
@@ -339,8 +350,9 @@ class UpdateDialog(ViewBase, QDialog):
                 height: auto;
             }}
             """
-        )
-        self.changelog_view.document().setIndentWidth(20)
+            )
+        if changelog_doc is not None:
+            changelog_doc.setIndentWidth(20)
         self.changelog_view.setOpenExternalLinks(True)
         self.changelog_view.setMinimumHeight(260)
         self.changelog_view.setContentsMargins(6, 6, 6, 6)
@@ -425,7 +437,7 @@ class UpdateDialog(ViewBase, QDialog):
 
         # Display title with version and architecture
         update_service = get_update_service()
-        if update_service._current_channel == "preview":
+        if update_service.current_channel == "preview":
             version_display = f"New Preview Build ({release_info.version.replace('preview-', '')})"
         else:
             version_display = f"Version {release_info.version}"
@@ -575,9 +587,10 @@ class UpdateDialog(ViewBase, QDialog):
             return None
         return worker
 
-    def closeEvent(self, event) -> None:
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         self._cancel_active_download()
-        super().closeEvent(event)
+        super().closeEvent(a0)
 
     def _set_close_button_state(self, *, is_cancel: bool) -> None:
         self.close_button.setText("Cancel" if is_cancel else "Close")

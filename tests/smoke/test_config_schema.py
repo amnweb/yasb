@@ -1,13 +1,13 @@
 import pytest
 from pydantic import BaseModel
 
+from core.validation.config import YasbConfig
+from core.widgets.registry import WIDGET_REGISTRY
 from tests.support.source import import_core_modules
 
 
 def _registered_widgets():
     import_core_modules()
-    from core.widgets.registry import WIDGET_REGISTRY
-
     return [pytest.param(widget, id=name) for name, widget in sorted(WIDGET_REGISTRY.items())]
 
 
@@ -21,6 +21,4 @@ def test_widget_has_a_config_schema(widget: type):
 
 
 def test_yasb_config_schema_builds():
-    from core.validation.config import YasbConfig
-
     YasbConfig.model_json_schema()

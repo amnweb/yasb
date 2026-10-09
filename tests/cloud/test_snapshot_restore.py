@@ -184,7 +184,7 @@ HOSTILE_NAMES = [
 
 
 def test_every_hostile_entry_name_is_rejected():
-    accepted = []
+    accepted: list[str] = []
     for name in HOSTILE_NAMES:
         try:
             validate_member(name)
@@ -356,7 +356,7 @@ def test_rollback_restores_the_original_after_a_mid_restore_failure():
         # can put it back.
         original_replace = os.replace
 
-        def failing_replace(src, dst, *args, **kwargs):
+        def failing_replace(src: object, dst: object, *args: object, **kwargs: object) -> None:
             raise OSError(5, "simulated failure")
 
         os.replace = failing_replace
@@ -483,10 +483,10 @@ def test_a_failed_rollback_is_reported_not_swallowed():
         original_replace = os.replace
         original_extractall = zipfile.ZipFile.extractall
 
-        def failing_replace(src, dst, *args, **kwargs):
+        def failing_replace(src: object, dst: object, *args: object, **kwargs: object) -> None:
             raise OSError(5, "simulated failure")
 
-        def failing_extractall(self, *args, **kwargs):
+        def failing_extractall(self: zipfile.ZipFile, *args: object, **kwargs: object) -> None:
             raise OSError(5, "the rollback failed too")
 
         os.replace = failing_replace

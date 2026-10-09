@@ -3,27 +3,29 @@ import logging
 import math
 import operator
 import re
+from collections.abc import Callable
+from typing import Any
 
 from PyQt6.QtWidgets import QApplication
 
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_CALCULATOR
 
-_OPS = {
+_OPS: dict[type[ast.AST], Callable[..., Any]] = {
     ast.Add: operator.add,
     ast.Sub: operator.sub,
     ast.Mult: operator.mul,
-    ast.Div: operator.truediv,
-    ast.FloorDiv: operator.floordiv,
+    ast.Div: operator.truediv,  # pyright: ignore[reportUnknownMemberType]
+    ast.FloorDiv: operator.floordiv,  # pyright: ignore[reportUnknownMemberType]
     ast.Mod: operator.mod,
-    ast.Pow: operator.pow,
+    ast.Pow: operator.pow,  # pyright: ignore[reportUnknownMemberType]
     ast.UAdd: operator.pos,
     ast.USub: operator.neg,
 }
 
 _MAX_EXPONENT = 10000
 
-_NAMES: dict[str, float | object] = {
+_NAMES: dict[str, Any] = {
     "pi": math.pi,
     "e": math.e,
     "abs": abs,
@@ -49,7 +51,7 @@ def _safe_eval(expr: str) -> int | float:
     return _eval(ast.parse(expr, mode="eval").body)
 
 
-def _eval(node: ast.AST) -> int | float:
+def _eval(node: ast.AST) -> Any:
     if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
         return node.value
     if isinstance(node, ast.UnaryOp) and type(node.op) in _OPS:
@@ -98,7 +100,7 @@ class CalculatorProvider(BaseProvider):
         )
         return has_digit and has_operator
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).replace(",", "")
         if not query:
             return [
@@ -122,7 +124,7 @@ class CalculatorProvider(BaseProvider):
 
             # Format result
             if isinstance(result_val, float):
-                if result_val == int(result_val) and abs(result_val) < 1e15:
+                if result_val == float(int(result_val)) and abs(result_val) < 1e15:
                     display = str(int(result_val))
                 else:
                     display = f"{result_val:g}"

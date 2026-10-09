@@ -87,6 +87,13 @@ class SystrayWidget(BaseWidget):
     _systray_about_to_quit_signal = None
 
     @classmethod
+    def systray_monitor_hwnd(cls) -> int | None:
+        client = cls._systray_client_instance
+        if isinstance(client, SystrayMonitor) and client.hwnd:
+            return client.hwnd
+        return None
+
+    @classmethod
     def get_monitor_instance(cls, hook: bool = False):
         """
         Since we don't want multiple systray monitors or hooks,

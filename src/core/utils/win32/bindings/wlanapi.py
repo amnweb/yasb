@@ -271,7 +271,7 @@ def WlanDeleteProfile(
     )
 
 
-def WlanFreeMemory(pMemory: CPointer[Any] | c_void_p) -> None:
+def WlanFreeMemory(pMemory: CPointer[Any] | c_void_p | c_wchar_p) -> None:
     return wlanapi.WlanFreeMemory(pMemory)
 
 

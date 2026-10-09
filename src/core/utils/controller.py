@@ -11,6 +11,7 @@ from core.events.service import EventService
 from core.utils.cli_server import CliPipeHandler
 
 _reload_lock = threading.Lock()
+_cli_pipe_handler: CliPipeHandler | None = None
 
 
 def reload_application(msg: str = "Reloading Application..."):
@@ -19,8 +20,8 @@ def reload_application(msg: str = "Reloading Application..."):
         return
     try:
         logging.info(msg)
-        if hasattr(sys, "_cli_pipe_handler") and sys._cli_pipe_handler is not None:
-            sys._cli_pipe_handler.stop_cli_pipe_server()
+        if _cli_pipe_handler is not None:
+            _cli_pipe_handler.stop_cli_pipe_server()
 
         app = QApplication.instance()
         if isinstance(app, YASBApplication):
@@ -42,8 +43,8 @@ def reload_application(msg: str = "Reloading Application..."):
 def exit_application(msg: str = "Exiting Application..."):
     logging.info(msg)
     try:
-        if hasattr(sys, "_cli_pipe_handler") and sys._cli_pipe_handler is not None:
-            sys._cli_pipe_handler.stop_cli_pipe_server()
+        if _cli_pipe_handler is not None:
+            _cli_pipe_handler.stop_cli_pipe_server()
 
         app = QApplication.instance()
         if isinstance(app, YASBApplication):
@@ -87,4 +88,5 @@ def process_cli_command(command: str):
 def start_cli_server():
     handler = CliPipeHandler(process_cli_command)
     handler.start_cli_pipe_server()
-    sys._cli_pipe_handler = handler
+    global _cli_pipe_handler
+    _cli_pipe_handler = handler

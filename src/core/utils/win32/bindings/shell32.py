@@ -4,18 +4,28 @@ This module exposes the `shell32` handle and sets argtypes/restype for the Shell
 functions we call from Python so ctypes marshaling is explicit and safe.
 """
 
-from ctypes import HRESULT, POINTER, c_int, c_uint, c_void_p, c_wchar_p, windll
+from ctypes import HRESULT, POINTER, Array, c_int, c_uint, c_void_p, c_wchar, c_wchar_p, windll
+from ctypes.wintypes import BOOL, DWORD, HANDLE, HWND
+from typing import TYPE_CHECKING
 
-import comtypes
-from comtypes import COMMETHOD, GUID
+import comtypes  # pyright: ignore[reportMissingTypeStubs]
+from comtypes import COMMETHOD, GUID  # pyright: ignore[reportUnknownVariableType, reportMissingTypeStubs]
 
 from core.utils.win32.constants import SW_SHOWNORMAL
+from core.utils.win32.structs import SHELLEXECUTEINFO
+from core.utils.win32.typecheck import CArgObject
 
 shell32 = windll.shell32
 
 # https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew
 shell32.ShellExecuteW.argtypes = [c_void_p, c_wchar_p, c_wchar_p, c_wchar_p, c_wchar_p, c_int]
 shell32.ShellExecuteW.restype = c_void_p
+
+shell32.ShellExecuteExW.argtypes = [POINTER(SHELLEXECUTEINFO)]
+shell32.ShellExecuteExW.restype = BOOL
+
+shell32.SHGetFolderPathW.argtypes = [HWND, c_int, HANDLE, DWORD, c_wchar_p]
+shell32.SHGetFolderPathW.restype = HRESULT
 
 
 def shell_execute(
@@ -38,6 +48,14 @@ def shell_execute(
         Handle value >32 on success, <=32 on error.
     """
     return shell32.ShellExecuteW(None, verb, file, parameters, directory, show_cmd)
+
+
+def ShellExecuteEx(pExecInfo: CArgObject) -> bool:
+    return bool(shell32.ShellExecuteExW(pExecInfo))
+
+
+def SHGetFolderPath(csidl: int, pszPath: Array[c_wchar]) -> int:
+    return shell32.SHGetFolderPathW(None, csidl, None, 0, pszPath)
 
 
 # IDesktopWallpaper COM interface for Windows 10/11
@@ -65,6 +83,13 @@ class IDesktopWallpaper(comtypes.IUnknown):
         ),
         COMMETHOD([], HRESULT, "GetMonitorDevicePathCount", (["out"], POINTER(c_uint), "count")),
     ]
+
+    if TYPE_CHECKING:
+
+        def SetWallpaper(self, monitorID: str | None, wallpaper: str) -> None: ...
+        def GetWallpaper(self, monitorID: str | None) -> str: ...
+        def GetMonitorDevicePathAt(self, monitorIndex: int) -> str: ...
+        def GetMonitorDevicePathCount(self) -> int: ...
 
 
 CLSID_DesktopWallpaper = GUID("{C2CF3110-460E-4fc1-B9D0-8A1C0C9CC4BD}")

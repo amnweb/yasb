@@ -4,9 +4,10 @@ import ssl
 import urllib.error
 import urllib.request
 from datetime import datetime
+from typing import Any, override
 from urllib.parse import urlparse
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 logger = logging.getLogger("server_monitor")
 
@@ -14,15 +15,15 @@ logger = logging.getLogger("server_monitor")
 class ServerCheckWorker(QThread):
     status_updated = pyqtSignal(list)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
-        self.servers: list[dict] = []
+        self.servers: list[dict[str, Any]] = []
         self.ssl_check: bool = True
         self.ssl_verify: bool = True
         self.timeout: int = 5
         self.running = True
 
-    def set_servers(self, servers: list[dict], ssl_verify: bool, ssl_check: bool, timeout: int) -> None:
+    def set_servers(self, servers: list[dict[str, Any]], ssl_verify: bool, ssl_check: bool, timeout: int) -> None:
         self.servers = servers
         self.ssl_check = ssl_check
         self.ssl_verify = ssl_verify
@@ -47,13 +48,14 @@ class ServerCheckWorker(QThread):
                 continue
         return False
 
+    @override
     def run(self) -> None:
         if not self.running:
             return
 
         if not self._has_internet():
             logger.warning("No internet connection detected, skipping server checks")
-            server_statuses = [
+            server_statuses: list[dict[str, Any]] = [
                 {
                     "url": s["url"],
                     "name": s["name"],
@@ -68,7 +70,7 @@ class ServerCheckWorker(QThread):
             self.status_updated.emit(server_statuses)
             return
 
-        server_statuses: list[dict] = []
+        server_statuses = []
 
         for server in self.servers:
             if not self.running:
@@ -80,7 +82,7 @@ class ServerCheckWorker(QThread):
 
         self.status_updated.emit(server_statuses)
 
-    def check_single_server(self, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict:
+    def check_single_server(self, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict[str, Any]:
         ping_result = self.ping_server(server, ssl_verify, ssl_check, timeout)
 
         return {
@@ -92,7 +94,7 @@ class ServerCheckWorker(QThread):
             "no_internet": ping_result.get("no_internet", False),
         }
 
-    def ping_server(self, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict:
+    def ping_server(self, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict[str, Any]:
         """Check server availability and collect status information."""
         http_status = None
         response_time = None
@@ -112,7 +114,8 @@ class ServerCheckWorker(QThread):
             try:
                 with urllib.request.urlopen(request, timeout=timeout, context=context) as response:
                     http_status = response.status
-                    parsed_url = urlparse(response.url)
+                    final_url: str = response.url
+                    parsed_url = urlparse(final_url)
                     final_hostname = parsed_url.netloc or server
             except urllib.error.HTTPError as e:
                 http_status = e.code
@@ -155,7 +158,10 @@ class ServerCheckWorker(QThread):
             with socket.create_connection((hostname, 443), timeout=timeout) as sock:
                 with context.wrap_socket(sock, server_hostname=hostname) as ssock:
                     cert = ssock.getpeercert()
-                    exp_date = datetime.strptime(cert["notAfter"], "%b %d %H:%M:%S %Y %Z")
+                    not_after = cert.get("notAfter") if cert else None
+                    if not isinstance(not_after, str):
+                        return None
+                    exp_date = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z")
                     return (exp_date - datetime.now()).days
         except OSError as e:
             reason = str(e).lower()

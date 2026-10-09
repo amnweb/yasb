@@ -88,17 +88,17 @@ class Win32AppBar:
     def __init__(
         self,
     ):
-        self.app_bar_data = None
+        self.app_bar_data: AppBarData | None = None
         self.callback_message = APPBAR_CALLBACK_MESSAGE
 
     def create_appbar(
         self,
         hwnd: int,
-        edge: AppBarEdge,
+        edge: int,
         app_bar_height: int,
         screen: QScreen,
         scale_screen: bool = False,
-        bar_name: str = None,
+        bar_name: str | None = None,
         reserve_space: bool = True,
         always_on_top: bool = False,
     ):
@@ -120,21 +120,24 @@ class Win32AppBar:
             self.set_position()
 
     def position_bar(
-        self, app_bar_height: int, screen: QScreen, scale_screen: bool = False, bar_name: str = None
+        self, app_bar_height: int, screen: QScreen, scale_screen: bool = False, bar_name: str | None = None
     ) -> None:
+        data = self.app_bar_data
+        if data is None:
+            return
         geometry = screen.geometry()
         bar_height = int(app_bar_height * screen.devicePixelRatio())
         screen_height = int(geometry.height() * screen.devicePixelRatio() if scale_screen else geometry.height())
 
-        self.app_bar_data.rc.left = geometry.x()
-        self.app_bar_data.rc.right = geometry.x() + geometry.width()
+        data.rc.left = geometry.x()
+        data.rc.right = geometry.x() + geometry.width()
 
-        if self.app_bar_data.uEdge == AppBarEdge.Top:
-            self.app_bar_data.rc.top = screen.geometry().y()
-            self.app_bar_data.rc.bottom = screen.geometry().y() + bar_height
+        if data.uEdge == AppBarEdge.Top:
+            data.rc.top = screen.geometry().y()
+            data.rc.bottom = screen.geometry().y() + bar_height
         else:
-            self.app_bar_data.rc.top = screen.geometry().y() + screen_height - bar_height
-            self.app_bar_data.rc.bottom = screen.geometry().y() + screen_height
+            data.rc.top = screen.geometry().y() + screen_height - bar_height
+            data.rc.bottom = screen.geometry().y() + screen_height
         bar_info = f"Bar {bar_name}" if bar_name else "Bar"
         logging.debug(
             "%s Created on Screen: %s [Bar Height: %spx, DPI Scale: %s]",
@@ -144,18 +147,24 @@ class Win32AppBar:
             screen.devicePixelRatio(),
         )
 
+    def _send(self, message: int) -> None:
+        if self.app_bar_data is None:
+            return
+        shell32.SHAppBarMessage(message, P_APPBAR_DATA(self.app_bar_data))
+
     def register_new(self):
-        self.app_bar_data.uCallbackMessage = self.callback_message
-        shell32.SHAppBarMessage(AppBarMessage.New, P_APPBAR_DATA(self.app_bar_data))
+        if self.app_bar_data is not None:
+            self.app_bar_data.uCallbackMessage = self.callback_message
+        self._send(AppBarMessage.New)
 
     def window_pos_changed(self):
-        shell32.SHAppBarMessage(AppBarMessage.WindowPosChanged, P_APPBAR_DATA(self.app_bar_data))
+        self._send(AppBarMessage.WindowPosChanged)
 
     def query_appbar_position(self):
-        shell32.SHAppBarMessage(AppBarMessage.QueryPos, P_APPBAR_DATA(self.app_bar_data))
+        self._send(AppBarMessage.QueryPos)
 
     def set_position(self):
-        shell32.SHAppBarMessage(AppBarMessage.SetPos, P_APPBAR_DATA(self.app_bar_data))
+        self._send(AppBarMessage.SetPos)
 
     def remove_appbar(self):
-        shell32.SHAppBarMessage(AppBarMessage.Remove, P_APPBAR_DATA(self.app_bar_data))
+        self._send(AppBarMessage.Remove)

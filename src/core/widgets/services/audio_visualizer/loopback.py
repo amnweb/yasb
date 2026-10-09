@@ -5,10 +5,18 @@ import threading
 import time
 from array import array
 from ctypes import POINTER, Structure, c_ubyte, c_uint16, c_uint32, c_uint64, c_void_p, cast
+from typing import TYPE_CHECKING, Any
 
 import win32event
-from comtypes import CLSCTX_ALL, COMMETHOD, GUID, HRESULT, COMError, IUnknown
-from pycaw.api.mmdeviceapi import PROPERTYKEY
+from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
+    CLSCTX_ALL,
+    COMMETHOD,  # pyright: ignore[reportUnknownVariableType]
+    GUID,
+    HRESULT,
+    COMError,
+    IUnknown,
+)
+from pycaw.api.mmdeviceapi import PROPERTYKEY, IMMDevice, IMMDeviceEnumerator
 from pycaw.callbacks import MMNotificationClient
 from pycaw.constants import DEVICE_STATE, STGM
 from pycaw.pycaw import AudioUtilities, EDataFlow, ERole, IAudioClient
@@ -31,6 +39,7 @@ _PKEY_DEVICE_FRIENDLY_NAME.pid = 14
 # Returned by magnitudes() before the first frame and while the stream is idle.
 _SILENT_SPECTRUM: list[float] = [0.0] * (FFT_SIZE // 2)
 
+IID_IAudioClient = GUID("{1CB9AD4C-DBFA-4C32-B178-C2F568A703B2}")
 IID_IAudioCaptureClient = GUID("{C8ADBD64-E71E-48A0-A4DE-185C395CD317}")
 KSDATAFORMAT_SUBTYPE_IEEE_FLOAT = GUID("{00000003-0000-0010-8000-00AA00389B71}")
 KSDATAFORMAT_SUBTYPE_PCM = GUID("{00000001-0000-0010-8000-00AA00389B71}")
@@ -123,6 +132,12 @@ class IAudioCaptureClient(IUnknown):
         ),
     ]
 
+    if TYPE_CHECKING:
+
+        def GetBuffer(self) -> tuple[Any, int, int, int, int]: ...
+        def ReleaseBuffer(self, NumFramesRead: int) -> None: ...
+        def GetNextPacketSize(self) -> int: ...
+
 
 class UnsupportedFormatError(RuntimeError):
     """The endpoint mix format cannot be decoded, and retrying will not help."""
@@ -140,7 +155,7 @@ def _decode_stereo(buf: bytes, channels: int, sample_code: str, scale: float) ->
     roughly 20x faster than walking every frame from Python. Float mix formats
     need no scaling at all, which is the overwhelmingly common case.
     """
-    samples = array(sample_code)
+    samples: array[float] = array(sample_code)
     samples.frombytes(buf)
     if channels >= 2:
         left = samples[0::channels]
@@ -152,7 +167,7 @@ def _decode_stereo(buf: bytes, channels: int, sample_code: str, scale: float) ->
     return [v * scale for v in left], [v * scale for v in right]
 
 
-def _friendly_name(device) -> str:
+def _friendly_name(device: IMMDevice) -> str:
     try:
         value = device.OpenPropertyStore(STGM.STGM_READ.value).GetValue(_PKEY_DEVICE_FRIENDLY_NAME)
     except COMError:
@@ -171,7 +186,7 @@ class _WasapiLoopbackClient:
     switch can never leave a stale frame stride behind.
     """
 
-    def __init__(self, device, audio_event: int) -> None:
+    def __init__(self, device: IMMDevice, audio_event: int) -> None:
         self.sample_rate = 48000
         self.channels = 2
         self.frame_bytes = 8
@@ -188,8 +203,8 @@ class _WasapiLoopbackClient:
         kind = {"f": "float", "h": "int16", "i": "int32"}.get(self.sample_code, self.sample_code)
         return f"{self.sample_rate} Hz, {self.channels} ch, {self.bits}-bit {kind}"
 
-    def _open(self, device, audio_event: int) -> None:
-        client = device.Activate(IAudioClient._iid_, CLSCTX_ALL, None).QueryInterface(IAudioClient)
+    def _open(self, device: IMMDevice, audio_event: int) -> None:
+        client = device.Activate(IID_IAudioClient, CLSCTX_ALL, None).QueryInterface(IAudioClient)
 
         wfx = client.GetMixFormat()
         try:
@@ -212,12 +227,12 @@ class _WasapiLoopbackClient:
         self.stale_timeout_ms = max(_STALE_TIMEOUT_MIN_MS, int(period_ms * _STALE_TIMEOUT_PERIODS) + 1)
 
         client.SetEventHandle(audio_event)
-        capture = client.GetService(IAudioCaptureClient._iid_).QueryInterface(IAudioCaptureClient)
+        capture = client.GetService(IID_IAudioCaptureClient).QueryInterface(IAudioCaptureClient)
         client.Start()
         self._client = client
         self.capture = capture
 
-    def _read_format(self, wfx) -> None:
+    def _read_format(self, wfx: Any) -> None:
         fmt = cast(wfx, POINTER(_WAVEFORMATEX)).contents
         self.sample_rate = max(1, int(fmt.nSamplesPerSec))
         self.channels = max(1, int(fmt.nChannels))
@@ -276,7 +291,9 @@ class _RenderDeviceWatcher(MMNotificationClient):
         self._service = service
         self._last_states: dict[str, int] = {}
 
-    def on_default_device_changed(self, flow, flow_id, role, role_id, default_device_id) -> None:
+    def on_default_device_changed(
+        self, flow: str, flow_id: int, role: str, role_id: int, default_device_id: str | None
+    ) -> None:
         if flow_id != EDataFlow.eRender.value or role_id != ERole.eMultimedia.value:
             return
         device_id, follows_default = self._service.endpoint
@@ -285,12 +302,12 @@ class _RenderDeviceWatcher(MMNotificationClient):
         logging.debug("Audio visualizer: default device changed to %s, reopening", default_device_id)
         self._service.request_reopen()
 
-    def on_device_added(self, added_device_id) -> None:
+    def on_device_added(self, added_device_id: str) -> None:
         if self._service.waiting_for_source:
             logging.debug("Audio visualizer: device %s added, reopening", added_device_id)
             self._service.request_reopen()
 
-    def on_device_state_changed(self, device_id, new_state, new_state_id) -> None:
+    def on_device_state_changed(self, device_id: str, new_state: str, new_state_id: int) -> None:
         if self._last_states.get(device_id) == new_state_id:
             return
         self._last_states[device_id] = new_state_id
@@ -370,7 +387,7 @@ class AudioVisualizerCaptureService(QObject):
         self._device_dirty = False
         self._format_rejected = False
         self._thread: threading.Thread | None = None
-        self._enumerator = None
+        self._enumerator: IMMDeviceEnumerator | None = None
         self._watcher: _RenderDeviceWatcher | None = None
 
         self._audio_event = win32event.CreateEvent(None, False, False, None)  # auto-reset
@@ -519,7 +536,7 @@ class AudioVisualizerCaptureService(QObject):
         """
         return self._channel_mags.get(channel, _SILENT_SPECTRUM)
 
-    def _safe_emit(self, signal_name: str, *args) -> None:
+    def _safe_emit(self, signal_name: str, *args: object) -> None:
         try:
             getattr(self, signal_name).emit(*args)
         except RuntimeError:
@@ -643,7 +660,11 @@ class AudioVisualizerCaptureService(QObject):
                     # swapping devices mid-track does not blip the bars to zero.
                     self._last_audio_ns = time.monotonic_ns()
 
-                rc = win32event.WaitForMultipleObjects(handles, False, client.stale_timeout_ms)
+                rc = int(
+                    win32event.WaitForMultipleObjects(  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+                        handles, False, client.stale_timeout_ms
+                    )
+                )
                 if rc == win32event.WAIT_OBJECT_0 + _STOP:
                     break
                 if rc == win32event.WAIT_OBJECT_0 + _WAKE:
@@ -696,9 +717,13 @@ class AudioVisualizerCaptureService(QObject):
         """Has no real audio arrived for ``timeout_ms``? Capture thread only."""
         return time.monotonic_ns() - self._last_audio_ns >= timeout_ms * 1_000_000
 
-    def _park(self, handles: list, timeout_ms: int) -> bool:
+    def _park(self, handles: list[int], timeout_ms: int) -> bool:
         """Block on wake/stop. Returns True when shutdown was requested."""
-        rc = win32event.WaitForMultipleObjects(handles, False, timeout_ms)
+        rc = int(
+            win32event.WaitForMultipleObjects(  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+                handles, False, timeout_ms
+            )
+        )
         return rc == win32event.WAIT_OBJECT_0 + _STOP
 
     def _take_device_dirty(self) -> bool:
@@ -733,7 +758,7 @@ class AudioVisualizerCaptureService(QObject):
         )
         return client
 
-    def _pick_device(self, enumerator):
+    def _pick_device(self, enumerator: IMMDeviceEnumerator) -> IMMDevice:
         """The configured device while it is active, otherwise the default one."""
         if self._source != _AUTO_SOURCE:
             device = self._find_source(enumerator)
@@ -745,7 +770,7 @@ class AudioVisualizerCaptureService(QObject):
         self._endpoint = (device.GetId(), True)
         return device
 
-    def _find_source(self, enumerator):
+    def _find_source(self, enumerator: IMMDeviceEnumerator) -> IMMDevice | None:
         collection = enumerator.EnumAudioEndpoints(EDataFlow.eRender.value, DEVICE_STATE.ACTIVE.value)
         for i in range(collection.GetCount()):
             device = collection.Item(i)

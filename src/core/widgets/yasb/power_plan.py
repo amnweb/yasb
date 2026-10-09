@@ -2,7 +2,7 @@ import logging
 import re
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout
+from PyQt6.QtWidgets import QFrame, QPushButton, QVBoxLayout
 
 from core.events.service import EventService
 from core.utils.utilities import PopupWidget, refresh_widget_style
@@ -111,7 +111,7 @@ class PowerPlanWidget(BaseWidget):
                 formatted_text = part
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
-                if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                if widget_index < len(active_widgets):
                     active_widgets[widget_index].setText(formatted_text)
                     alt_class = "alt" if self._show_alt_label else ""
                     base_class = "icon" if "<span" in part else f"label {alt_class}"
@@ -147,7 +147,11 @@ class PowerPlanWidget(BaseWidget):
             btn = QPushButton(plan.name)
             is_active = self._active_guid is not None and svc.guids_equal(plan.guid, self._active_guid)
             btn.setProperty("class", "button active" if is_active else "button")
-            btn.clicked.connect(lambda checked, g=plan.guid, n=plan.name: self._change_plan(g, n))
+
+            def on_click(_checked: bool, guid: GUID = plan.guid, name: str = plan.name) -> None:
+                self._change_plan(guid, name)
+
+            btn.clicked.connect(on_click)
             frame_layout.addWidget(btn)
 
         frame.setLayout(frame_layout)

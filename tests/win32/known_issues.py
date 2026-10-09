@@ -27,7 +27,7 @@ EXPORTS: dict[str, dict[str, str]] = {}
 UNDECLARED: dict[str, tuple[str, ...]] = {}
 
 
-def xfail_if_known(table: dict[str, str], key: str) -> tuple:
+def xfail_if_known(table: dict[str, str], key: str) -> tuple[pytest.MarkDecorator, ...]:
     if key not in table:
         return ()
     reason = f"known issue: {table[key]} (if this passes now, delete {key!r} from tests/win32/known_issues.py)"

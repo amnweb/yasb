@@ -16,7 +16,7 @@ def _params():
 
 
 @pytest.mark.parametrize("cls", list(_params()))
-def test_layout_matches_sdk(cls: type, sdk: ProbeResult):
+def test_layout_matches_sdk(cls: type[ctypes.Structure | ctypes.Union], sdk: ProbeResult):
     key = discovery.type_id(cls)
     spec = specs.struct_spec(key, cls.__name__)
     if struct_key(key) in sdk.errors:
@@ -30,7 +30,7 @@ def test_layout_matches_sdk(cls: type, sdk: ProbeResult):
         )
 
     native = sdk.structs[key]
-    problems = []
+    problems: list[str] = []
     fields_match = True
     for name, ctype in discovery.struct_fields(cls):
         target = spec.fields.get(name, name)

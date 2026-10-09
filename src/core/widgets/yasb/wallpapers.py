@@ -1,10 +1,11 @@
+from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.tooltip import set_tooltip
 from core.utils.win32.utils import find_focused_screen
 from core.validation.widgets.yasb.wallpapers import WallpapersConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.wallpapers.gallery import TYPES
+from core.widgets.services.wallpapers.gallery import TYPES, Cards
 from core.widgets.services.wallpapers.manager import WallpaperManager
 
 
@@ -14,7 +15,7 @@ class WallpapersWidget(BaseWidget):
     def __init__(self, config: WallpapersConfig):
         super().__init__(0, class_name="wallpapers-widget")
         self.config = config
-        self._image_gallery = None
+        self._image_gallery: Cards | None = None
         self._manager = WallpaperManager()
         self._manager.configure(
             self.config.image_path,
@@ -40,13 +41,14 @@ class WallpapersWidget(BaseWidget):
         self.callback_right = self.config.callbacks.on_right
 
     def _on_toggle_gallery_request(self, screen: str):
-        current_screen = self.window().screen() if self.window() else None
+        window = self.window()
+        current_screen = window.screen() if window else None
         current_screen_name = current_screen.name() if current_screen else None
 
         if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
             self._toggle_widget()
 
-    def _target_screen(self):
+    def _target_screen(self) -> QScreen | None:
         """The screen the gallery should open on, per the keybinding."""
         mode = "active"
         for binding in self.config.keybindings:
@@ -69,8 +71,6 @@ class WallpapersWidget(BaseWidget):
             self._image_gallery.fade_out_and_close_gallery()
         else:
             gallery_type = TYPES[self.config.gallery.type]
-            self._image_gallery = gallery_type(
-                self.config.image_path,
-                self.config.gallery.model_dump(),
-            )
-            self._image_gallery.fade_in_gallery(parent=self, screen=self._target_screen())
+            gallery = gallery_type(self.config.image_path, self.config.gallery)
+            self._image_gallery = gallery
+            gallery.fade_in_gallery(parent=self, screen=self._target_screen())

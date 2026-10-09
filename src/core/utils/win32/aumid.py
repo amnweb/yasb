@@ -175,7 +175,7 @@ ERROR_INSUFFICIENT_BUFFER = 0x7A
 GPS_DEFAULT = 0  # Default flags for SHGetPropertyStoreFromParsingName
 
 
-def _ensure_com_initialized():
+def ensure_com_initialized():
     try:
         # COINIT_APARTMENTTHREADED is default for CoInitialize
         hr = CoInitialize(None)
@@ -190,7 +190,7 @@ def get_aumid_for_window(hwnd: int) -> str | None:
     1. Try PKEY_AppUserModel_ID from the window's IPropertyStore.
     2. Fallback: Query the process AUMID using GetApplicationUserModelId for the window's PID.
     """
-    _ensure_com_initialized()
+    ensure_com_initialized()
 
     # 1) Window property store
     store_ptr = c_void_p()
@@ -245,7 +245,7 @@ def get_aumid_from_shortcut(shortcut_path: str) -> str | None:
     """
     import os
 
-    _ensure_com_initialized()
+    ensure_com_initialized()
 
     if not os.path.exists(shortcut_path):
         return None
@@ -328,12 +328,12 @@ def activate_app_by_aumid(aumid: str, fallback_process_name: str | None = None) 
     """
     from core.utils.win32.window_actions import force_foreground_focus, restore_window
 
-    found_hwnd = None
-    fallback_pids = _pids_for_exe_tree(fallback_process_name) if fallback_process_name else set()
+    found_hwnd: int | None = None
+    fallback_pids: set[int] = _pids_for_exe_tree(fallback_process_name) if fallback_process_name else set()
 
-    WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+    WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, wt.HWND, wt.LPARAM)
 
-    def enum_window_callback(hwnd, _):
+    def enum_window_callback(hwnd: int, _: int) -> bool:
         nonlocal found_hwnd
         if not user32.IsWindowVisible(hwnd):
             return True

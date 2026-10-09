@@ -10,7 +10,7 @@ logger = logging.getLogger("system_colors")
 
 
 class SystemColorsService:
-    _instance = None
+    _instance: SystemColorsService | None = None
 
     @classmethod
     def start_service(cls) -> None:
@@ -29,7 +29,7 @@ class SystemColorsService:
         self._token = None
         self._css_path = os.path.join(DEFAULT_CONFIG_DIRECTORY, "yasb_colors.css")
 
-        self._colors_to_fetch = []
+        self._colors_to_fetch: list[tuple[str, viewmanagement.UIColorType, str]] = []
         color_names = [
             "ACCENT",
             "ACCENT_DARK1",
@@ -68,7 +68,7 @@ class SystemColorsService:
             self._token = None
             logger.info("System Colors Service stopped.")
 
-    def _on_color_values_changed(self, sender, args):
+    def _on_color_values_changed(self, sender: viewmanagement.UISettings | None, args: object) -> None:
         self._generate_css()
 
     def _generate_css(self):

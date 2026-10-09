@@ -1,6 +1,10 @@
+# pyright: reportPrivateUsage=false
+
 import ctypes
+from _ctypes import CFuncPtr
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any, TypeGuard
 
 POINTER_SIZE = ctypes.sizeof(ctypes.c_void_p)
 
@@ -27,7 +31,7 @@ class Abi:
     pointee: Abi | None = None
 
     @classmethod
-    def from_json(cls, value: list) -> Abi:
+    def from_json(cls, value: list[Any]) -> Abi:
         kind, size, *rest = value
         return cls(kind, size, cls.from_json(rest[0]) if rest else None)
 
@@ -51,7 +55,24 @@ def _simple(code: str, size: int) -> Abi:
     return Abi("i" if code in _SIGNED_CODES else "u", size)
 
 
-def of(ctype, *, argument: bool = False, opaque: Callable[[type], bool] | None = None) -> Abi:
+def _is_pointer(ctype: type) -> TypeGuard[type[ctypes._Pointer[Any]]]:
+    return issubclass(ctype, ctypes._Pointer)
+
+
+def _is_array(ctype: type) -> TypeGuard[type[ctypes.Array[Any]]]:
+    return issubclass(ctype, ctypes.Array)
+
+
+def _is_simple(ctype: type) -> TypeGuard[type[ctypes._SimpleCData[Any]]]:
+    return issubclass(ctype, ctypes._SimpleCData)
+
+
+def _type_attr(ctype: type) -> Any:
+    # typeshed declares _type_ per instance (and not at all on _SimpleCData); ctypes sets it on the class.
+    return getattr(ctype, "_type_")
+
+
+def of(ctype: object, *, argument: bool = False, opaque: Callable[[type], bool] | None = None) -> Abi:
     if ctype is None:
         return Abi("v", 0)
     if not isinstance(ctype, type):
@@ -59,23 +80,23 @@ def of(ctype, *, argument: bool = False, opaque: Callable[[type], bool] | None =
             # ctypes reads the native return value as c_int when restype is a plain callable.
             return Abi("i", ctypes.sizeof(ctypes.c_int))
         raise TypeError(f"not a ctypes type: {ctype!r}")
-    if issubclass(ctype, ctypes._Pointer):
-        if opaque is not None and opaque(ctype._type_):
+    if _is_pointer(ctype):
+        if opaque is not None and opaque(_type_attr(ctype)):
             return Abi("p", POINTER_SIZE, Abi("v", 0))
-        return Abi("p", POINTER_SIZE, of(ctype._type_))
-    if issubclass(ctype, ctypes._CFuncPtr):
-        return Abi("p", POINTER_SIZE, Abi("fn", 0))
-    if issubclass(ctype, ctypes.Array):
-        element = of(ctype._type_)
+        return Abi("p", POINTER_SIZE, of(_type_attr(ctype)))
+    if _is_array(ctype):
+        element = of(_type_attr(ctype))
         return Abi("p", POINTER_SIZE, element) if argument else Abi("a", ctypes.sizeof(ctype), element)
+    if _is_simple(ctype):
+        return _simple(_type_attr(ctype), ctypes.sizeof(ctype))
+    if issubclass(ctype, CFuncPtr):
+        return Abi("p", POINTER_SIZE, Abi("fn", 0))
     if issubclass(ctype, (ctypes.Structure, ctypes.Union)):
         return Abi("s", ctypes.sizeof(ctype))
-    if issubclass(ctype, ctypes._SimpleCData):
-        return _simple(ctype._type_, ctypes.sizeof(ctype))
     raise TypeError(f"unsupported ctypes type: {ctype!r}")
 
 
-def describe(ctype) -> str:
+def describe(ctype: object) -> str:
     if ctype is None:
         return "None"
     if isinstance(ctype, type):

@@ -1,18 +1,20 @@
 import logging
 from collections.abc import Callable
-from typing import Any
+from functools import partial
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
-from PyQt6.QtGui import QMouseEvent
+from PyQt6.QtGui import QAction, QMouseEvent
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QMenu, QVBoxLayout, QWidget
 
 from core.bar_helper import GlobalState
 from core.utils.qobject import is_valid_qobject
 from core.utils.system import is_windows_10
 from core.utils.utilities import ElidedLabel, refresh_widget_style
+from core.utils.win32.structs import GUID
 from core.utils.win32.utils import apply_qmenu_style
+from core.validation.widgets.yasb.control_center import PowerSectionConfig
 from core.widgets.services.power_mode import power_mode_api
-from core.widgets.services.power_plan.power_plan_api import PowerPlanService
+from core.widgets.services.power_plan.power_plan_api import PowerPlanInfo, PowerPlanService
 
 
 class PowerPlanButton(QFrame):
@@ -38,13 +40,13 @@ class PowerPlanButton(QFrame):
 class PowerSectionWidget(QFrame):
     """Section containing power plan and power mode controls."""
 
-    def __init__(self, parent: QWidget, config: object):
+    def __init__(self, parent: QWidget, config: PowerSectionConfig):
         super().__init__(parent)
         self.config = config
         self.setProperty("class", "section power")
 
-        self._plans = []
-        self._power_plan_active_guid = None
+        self._plans: list[PowerPlanInfo] = []
+        self._power_plan_active_guid: GUID | None = None
         self._menus: dict[str, QMenu] = {}
 
         layout = QVBoxLayout(self)
@@ -124,8 +126,8 @@ class PowerSectionWidget(QFrame):
         self,
         key: str,
         button: QWidget,
-        items: list[tuple[str, Any]],
-        on_select: Callable[[Any, str], None],
+        items: list[tuple[str, GUID]],
+        on_select: Callable[[GUID, str], None],
     ) -> None:
         other_key = "mode" if key == "plan" else "plan"
         if other_key in self._menus:
@@ -148,8 +150,9 @@ class PowerSectionWidget(QFrame):
         menu.setMinimumWidth(button.width())
 
         for label, val in items:
-            action = menu.addAction(label)
-            action.triggered.connect(lambda checked=False, v=val, l=label: on_select(v, l))
+            action = QAction(label, menu)
+            menu.addAction(action)
+            action.triggered.connect(partial(self._on_menu_item_triggered, on_select, val, label))
 
         menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         self._menus[key] = menu
@@ -158,6 +161,12 @@ class PowerSectionWidget(QFrame):
         button.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
         button.update()
         menu.popup(pos)
+
+    @staticmethod
+    def _on_menu_item_triggered(
+        on_select: Callable[[GUID, str], None], value: GUID, label: str, checked: bool = False
+    ) -> None:
+        on_select(value, label)
 
     def _show_power_plan_menu(self) -> None:
         items = [(plan.name, plan.guid) for plan in self._plans]
@@ -190,7 +199,7 @@ class PowerSectionWidget(QFrame):
         if not is_windows_10():
             self._refresh_mode_state()
 
-    def _apply_power_plan(self, guid, name: str) -> None:
+    def _apply_power_plan(self, guid: GUID, name: str) -> None:
         svc = PowerPlanService.instance()
         if self._power_plan_active_guid and svc.guids_equal(guid, self._power_plan_active_guid):
             return
@@ -250,7 +259,7 @@ class PowerSectionWidget(QFrame):
         self._mode_enabled = power_mode_api.is_mode_supported()
         self._apply_mode_button_state()
 
-    def _apply_power_mode(self, guid, name: str) -> None:
+    def _apply_power_mode(self, guid: GUID, name: str) -> None:
         if not power_mode_api.set_mode(guid):
             logging.error("Failed to set power mode to %s", name)
         if self._mode_label and is_valid_qobject(self._mode_label):

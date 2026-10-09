@@ -19,8 +19,8 @@ from ctypes import POINTER
 from dataclasses import dataclass
 from typing import Any
 
-import comtypes
-from comtypes import GUID, COMError
+import comtypes  # pyright: ignore[reportMissingTypeStubs]
+from comtypes import GUID, COMError, IUnknown  # pyright: ignore[reportMissingTypeStubs]
 
 from core.utils.win32.bindings.user32 import AllowSetForegroundWindow
 from core.utils.win32.com_base import HSTRING, IServiceProvider
@@ -78,7 +78,7 @@ class _ComObjects(threading.local):
 def _init_com() -> None:
     """Join the thread to a COM apartment if it is not already in one."""
     try:
-        comtypes.CoInitializeEx()
+        comtypes.CoInitializeEx()  # pyright: ignore[reportUnknownMemberType]
     except (OSError, COMError) as e:
         # Usually means the thread is already in a multi-threaded apartment,
         # which is fine for our purposes.
@@ -94,12 +94,13 @@ class VirtualDesktopApi:
     def _provider(self) -> Any:
         return comtypes.CoCreateInstance(CLSID_ImmersiveShell, IServiceProvider, comtypes.CLSCTX_LOCAL_SERVER)
 
-    def _query(self, provider: Any, cls: Any, clsid: GUID | None = None) -> Any:
+    def _query(self, provider: Any, cls: type[IUnknown], clsid: GUID | None = None) -> Any:
         pointer = POINTER(cls)()
-        provider.QueryService(clsid or cls._iid_, cls._iid_, pointer)
+        iid: GUID = cls._iid_  # pyright: ignore[reportPrivateUsage]
+        provider.QueryService(clsid or iid, iid, pointer)
         return pointer
 
-    def _ensure(self) -> _ComObjects:
+    def ensure(self) -> _ComObjects:
         """Create this thread's COM objects if it does not have them yet."""
         com = self._com
         if com.manager is not None:
@@ -132,7 +133,10 @@ class VirtualDesktopApi:
 
     @property
     def interfaces(self) -> DesktopInterfaces:
-        return self._ensure().interfaces
+        interfaces = self.ensure().interfaces
+        if interfaces is None:
+            raise VirtualDesktopError("Virtual desktop interfaces are not initialized")
+        return interfaces
 
     @property
     def supports_names(self) -> bool:
@@ -147,15 +151,15 @@ class VirtualDesktopApi:
     def available(self) -> bool:
         """Is the virtual desktop API usable at all on this machine?"""
         try:
-            self._ensure()
+            self.ensure()
         except VirtualDesktopUnsupportedError, COMError, OSError, AttributeError:
             logger.warning("Virtual desktop API unavailable", exc_info=True)
             return False
         return True
 
-    def _find(self, guid: str) -> Any:
+    def find(self, guid: str) -> Any:
         """Resolve a desktop GUID to its COM object without enumerating."""
-        com = self._ensure()
+        com = self.ensure()
         try:
             return com.manager.FindDesktop(GUID(guid))
         except (COMError, OSError, ValueError) as e:
@@ -167,8 +171,8 @@ class VirtualDesktopApi:
         The only call that enumerates. 21313 and later expose GetName on the
         desktop itself; earlier builds reach it through IVirtualDesktop2.
         """
-        com = self._ensure()
-        interfaces = com.interfaces
+        com = self.ensure()
+        interfaces = self.interfaces
         array = com.manager.get_all_desktops()
 
         if interfaces.tier >= TIER_21313:
@@ -190,35 +194,35 @@ class VirtualDesktopApi:
 
     def current_guid(self) -> str:
         """The GUID of the desktop currently in view."""
-        com = self._ensure()
+        com = self.ensure()
         return str(com.manager.get_current_desktop().GetID())
 
     def count(self) -> int:
         """How many desktops exist, without building the full list."""
-        com = self._ensure()
+        com = self.ensure()
         return com.manager.get_all_desktops().GetCount()
 
     def switch_to(self, guid: str) -> None:
         """Switch to the desktop with this GUID."""
-        com = self._ensure()
+        com = self.ensure()
         AllowSetForegroundWindow(ASFW_ANY)
-        com.manager.switch_desktop(self._find(guid))
+        com.manager.switch_desktop(self.find(guid))
 
     def create(self) -> str:
         """Create a desktop and return its GUID."""
-        com = self._ensure()
+        com = self.ensure()
         return str(com.manager.create_desktop().GetID())
 
     def remove(self, guid: str, fallback_guid: str | None = None) -> None:
         """Delete a desktop, moving to `fallback_guid` if it was in view."""
-        com = self._ensure()
+        com = self.ensure()
         if fallback_guid is None:
             desktops = self.list_desktops()
             fallback = next((d for d in desktops if d.guid != guid), None)
             if fallback is None:
                 raise VirtualDesktopError("Cannot remove the only remaining desktop")
             fallback_guid = fallback.guid
-        com.manager.RemoveDesktop(self._find(guid), self._find(fallback_guid))
+        com.manager.RemoveDesktop(self.find(guid), self.find(fallback_guid))
 
     def rename(self, guid: str, name: str) -> None:
         """Rename a desktop.
@@ -226,31 +230,31 @@ class VirtualDesktopApi:
         SetName lives on the manager from 21313 onward. Before that it is only
         reachable through the derived Windows 10 interface.
         """
-        com = self._ensure()
+        com = self.ensure()
         if not self.supports_names:
             raise VirtualDesktopError("Renaming desktops requires Windows 10 build 19041 or later")
-        target = com.manager if com.interfaces.tier >= TIER_21313 else com.manager2
+        target = com.manager if self.interfaces.tier >= TIER_21313 else com.manager2
         if target is None:
             raise VirtualDesktopError("This build reports no interface that can rename desktops")
-        target.SetName(self._find(guid), HSTRING(name))
+        target.SetName(self.find(guid), HSTRING(name))
 
     def set_wallpaper(self, guid: str, path: str) -> None:
         """Set one desktop's wallpaper."""
-        com = self._ensure()
+        com = self.ensure()
         if not self.supports_wallpaper:
             raise VirtualDesktopError("Per-desktop wallpapers require Windows 11")
-        com.manager.SetWallpaper(self._find(guid), HSTRING(path))
+        com.manager.SetWallpaper(self.find(guid), HSTRING(path))
 
     def set_wallpaper_all(self, path: str) -> None:
         """Set the wallpaper on every desktop."""
-        com = self._ensure()
+        com = self.ensure()
         if not self.supports_wallpaper:
             raise VirtualDesktopError("Per-desktop wallpapers require Windows 11")
         com.manager.SetWallpaperForAllDesktops(HSTRING(path))
 
     def view_for_hwnd(self, hwnd: int) -> Any:
         """Get the shell's view object for a window handle."""
-        com = self._ensure()
+        com = self.ensure()
         return com.views.GetViewForHwnd(hwnd)
 
     def try_view_for_hwnd(self, hwnd: int) -> Any | None:
@@ -273,17 +277,17 @@ class VirtualDesktopApi:
 
     def move_view(self, view: Any, guid: str) -> None:
         """Move a window to the desktop with this GUID."""
-        com = self._ensure()
-        com.manager.MoveViewToDesktop(view, self._find(guid))
+        com = self.ensure()
+        com.manager.MoveViewToDesktop(view, self.find(guid))
 
     def is_view_pinned(self, view: Any) -> bool:
-        return bool(self._ensure().pinned.IsViewPinned(view))
+        return bool(self.ensure().pinned.IsViewPinned(view))
 
     def pin_view(self, view: Any) -> None:
-        self._ensure().pinned.PinView(view)
+        self.ensure().pinned.PinView(view)
 
     def unpin_view(self, view: Any) -> None:
-        self._ensure().pinned.UnpinView(view)
+        self.ensure().pinned.UnpinView(view)
 
     def _app_id(self, view: Any) -> Any:
         """A view's app id, or None.
@@ -302,21 +306,21 @@ class VirtualDesktopApi:
         app_id = self._app_id(view)
         if app_id is None:
             return False
-        return bool(self._ensure().pinned.IsAppIdPinned(app_id))
+        return bool(self.ensure().pinned.IsAppIdPinned(app_id))
 
     def pin_app(self, view: Any) -> None:
         app_id = self._app_id(view)
         if app_id is not None:
-            self._ensure().pinned.PinAppID(app_id)
+            self.ensure().pinned.PinAppID(app_id)
 
     def unpin_app(self, view: Any) -> None:
         app_id = self._app_id(view)
         if app_id is not None:
-            self._ensure().pinned.UnpinAppID(app_id)
+            self.ensure().pinned.UnpinAppID(app_id)
 
     def notification_service(self) -> Any:
         """Acquire the service that desktop change callbacks register with."""
-        self._ensure()
+        self.ensure()
         return self._query(
             self._provider(), IVirtualDesktopNotificationService, CLSID_VirtualDesktopNotificationService
         )

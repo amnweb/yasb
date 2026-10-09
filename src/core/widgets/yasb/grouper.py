@@ -1,7 +1,9 @@
 import logging
-from typing import Any
+from collections.abc import Callable, Mapping
+from typing import Any, override
 
-from PyQt6.QtCore import QEvent
+from PyQt6.QtCore import QEvent, QObject, QThread
+from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QPushButton
 
 from core.utils.widget_builder import WidgetBuilder
@@ -17,7 +19,7 @@ class GrouperWidget(BaseWidget):
     _listener_threads: dict[type, Any] = {}
     _listener_refcounts: dict[type, int] = {}
 
-    def __init__(self, config: GrouperWidgetConfig, widget_configs: dict | None = None):
+    def __init__(self, config: GrouperWidgetConfig, widget_configs: Mapping[str, Any] | None = None):
         super().__init__(class_name=config.class_name)
         self.config = config
         self._widget_configs = widget_configs or {}
@@ -27,9 +29,9 @@ class GrouperWidget(BaseWidget):
         self._collapsed = self._collapse_options.enabled
         self._exclude_widgets = self._collapse_options.exclude_widgets
         self._widgets_list = self.config.widgets
-        self._child_widgets = []
-        self._child_widget_names = {}
-        self._local_listeners = set()
+        self._child_widgets: list[BaseWidget] = []
+        self._child_widget_names: dict[BaseWidget, str] = {}
+        self._local_listeners: set[type[QThread]] = set()
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -69,13 +71,13 @@ class GrouperWidget(BaseWidget):
             for widget_name in self._widgets_list:
                 child_widget = None
                 try:
-                    child_widget = widget_builder._build_widget(widget_name)
+                    child_widget = widget_builder.build_widget(widget_name)
                     if child_widget:
                         # Propagate bar context to child widgets so they behave like top-level widgets
                         try:
                             child_widget.bar_id = self.bar_id
                             child_widget.monitor_hwnd = self.monitor_hwnd
-                            child_widget.parent_layout_type = getattr(self, "parent_layout_type", None)
+                            child_widget.parent_layout_type = self.parent_layout_type
                         except Exception:
                             pass
                         self._child_widgets.append(child_widget)
@@ -85,22 +87,22 @@ class GrouperWidget(BaseWidget):
                         if self._collapse_button:
                             original_setVisible = child_widget.setVisible
 
-                            def make_visibility_overrides(widget_name, original):
-                                def setVisible_override(visible):
+                            def make_visibility_overrides(widget_name: str, original: Callable[[bool], None]):
+                                def setVisible_override(visible: bool) -> None:
                                     # If collapsed and not excluded, force hidden
                                     if self._collapsed and widget_name not in self._exclude_widgets:
                                         original(False)
                                     else:
                                         original(visible)
 
-                                def show_override():
+                                def show_override() -> None:
                                     # If collapsed and not excluded, don't show
                                     if self._collapsed and widget_name not in self._exclude_widgets:
                                         original(False)
                                     else:
                                         original(True)
 
-                                def hide_override():
+                                def hide_override() -> None:
                                     original(False)
 
                                 return setVisible_override, show_override, hide_override
@@ -139,39 +141,39 @@ class GrouperWidget(BaseWidget):
                     cw.bar_id = self.bar_id
                     cw.monitor_hwnd = monitor_hwnd
                     cw.screen_name = self.screen_name
-                    cw.parent_layout_type = getattr(self, "parent_layout_type", None)
+                    cw.parent_layout_type = self.parent_layout_type
                 except Exception:
                     pass
         except Exception:
             logging.error("GrouperWidget failed to propagate bar context to child widgets")
 
-    def showEvent(self, event):
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
         self._propagate_bar_context()
         if self._hide_empty:
             self._update_grouper_visibility()
-        super().showEvent(event)
+        super().showEvent(a0)
 
-    def eventFilter(self, obj, event):
-        if self._hide_empty and obj in self._child_widgets:
-            if event.type() in (QEvent.Type.Show, QEvent.Type.ShowToParent, QEvent.Type.Hide, QEvent.Type.HideToParent):
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        if self._hide_empty and a1 is not None and a0 in self._child_widgets:
+            if a1.type() in (QEvent.Type.Show, QEvent.Type.ShowToParent, QEvent.Type.Hide, QEvent.Type.HideToParent):
                 try:
                     self._update_grouper_visibility()
                 except RuntimeError:
                     pass
 
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
     def _update_grouper_visibility(self):
         try:
             if not self._hide_empty:
                 return
 
-            pruned_children: list[Any] = []
+            pruned_children: list[BaseWidget] = []
             any_visible = False
 
             for child in self._child_widgets:
-                if child is None:
-                    continue
                 try:
                     if not child.isHidden():
                         any_visible = True
@@ -214,10 +216,9 @@ class GrouperWidget(BaseWidget):
             if self._hide_empty:
                 self._update_grouper_visibility()
 
-    def _handle_child_destroyed(self, obj=None):
+    def _handle_child_destroyed(self, obj: QObject | None = None) -> None:
         try:
-            if obj in self._child_widgets:
-                self._child_widgets.remove(obj)
+            self._child_widgets = [child for child in self._child_widgets if child is not obj]
             self._update_grouper_visibility()
         except Exception:
             logging.error("GrouperWidget failed to handle child widget destruction")

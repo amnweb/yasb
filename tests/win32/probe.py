@@ -1,8 +1,9 @@
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
-from tests.win32.msvc import Toolchain, compile_cpp, run
+from tests.win32.msvc import Build, Toolchain, compile_cpp, run
 
 HEADERS = (
     "winsock2.h",
@@ -183,19 +184,19 @@ class VtableRequest:
 @dataclass
 class ProbeResult:
     toolchain: str
-    structs: dict[str, dict] = field(default_factory=dict)
-    fields: dict[str, dict[str, dict]] = field(default_factory=dict)
-    functions: dict[str, dict] = field(default_factory=dict)
-    vtables: dict[str, dict] = field(default_factory=dict)
-    methods: dict[str, dict[str, dict]] = field(default_factory=dict)
-    constants: dict[str, dict] = field(default_factory=dict)
-    errors: dict[str, str] = field(default_factory=dict)
+    structs: dict[str, dict[str, Any]] = field(default_factory=dict[str, dict[str, Any]])
+    fields: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict[str, dict[str, dict[str, Any]]])
+    functions: dict[str, dict[str, Any]] = field(default_factory=dict[str, dict[str, Any]])
+    vtables: dict[str, dict[str, Any]] = field(default_factory=dict[str, dict[str, Any]])
+    methods: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict[str, dict[str, dict[str, Any]]])
+    constants: dict[str, dict[str, Any]] = field(default_factory=dict[str, dict[str, Any]])
+    errors: dict[str, str] = field(default_factory=dict[str, str])
 
-    def to_json(self) -> dict:
+    def to_json(self) -> dict[str, Any]:
         return self.__dict__.copy()
 
     @classmethod
-    def from_json(cls, data: dict) -> ProbeResult:
+    def from_json(cls, data: dict[str, Any]) -> ProbeResult:
         return cls(**data)
 
 
@@ -289,7 +290,7 @@ def _render(items: dict[str, _Item], vendored: str) -> tuple[str, dict[int, str]
     return "\n".join(lines) + "\n", line_map
 
 
-def _failed_items(build, line_map: dict[int, str], source_name: str) -> dict[str, str]:
+def _failed_items(build: Build, line_map: dict[int, str], source_name: str) -> dict[str, str]:
     failed: dict[str, str] = {}
     block_error = ""
     block_keys: set[str] = set()
@@ -302,7 +303,7 @@ def _failed_items(build, line_map: dict[int, str], source_name: str) -> dict[str
         is_error = " error " in f" {diag.text}" or diag.text.startswith("error")
         if is_error:
             flush()
-            block_error, block_keys = diag.text, set()
+            block_error, block_keys = diag.text, set[str]()
         if diag.file == source_name and diag.line in line_map:
             block_keys.add(line_map[diag.line])
     flush()
@@ -320,6 +321,7 @@ def _probe_once(
         source, line_map = _render(active, vendored)
         build = compile_cpp(toolchain, source, workdir, name=f"probe{attempt}")
         if build.ok:
+            assert build.executable is not None
             return run(build.executable), excluded
         failed = _failed_items(build, line_map, f"probe{attempt}.cpp")
         if not failed:
@@ -334,7 +336,7 @@ def _probe_once(
 
 def _parse(output: str, result: ProbeResult) -> None:
     for line in output.splitlines():
-        record = json.loads(line)
+        record: dict[str, Any] = json.loads(line)
         kind, _, rest = record.pop("k").partition("|")
         if kind == "S":
             result.structs[rest] = record

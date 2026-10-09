@@ -1,9 +1,20 @@
 import logging
 from ctypes import byref, wintypes
+from typing import TYPE_CHECKING, override
 
 import win32gui
-from PyQt6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, QRect, Qt, QTimer
-from PyQt6.QtGui import QCursor, QFontMetrics, QImage, QPixmap, QRegion
+from PyQt6.QtCore import QEasingCurve, QEvent, QPoint, QPropertyAnimation, QRect, Qt, QTimer
+from PyQt6.QtGui import (
+    QCursor,
+    QEnterEvent,
+    QFontMetrics,
+    QHideEvent,
+    QImage,
+    QMouseEvent,
+    QPixmap,
+    QRegion,
+    QShowEvent,
+)
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 from core.utils.utilities import refresh_widget_style
@@ -24,6 +35,9 @@ from core.utils.win32.structs import DWM_THUMBNAIL_PROPERTIES, RECT, SIZE
 from core.utils.win32.window_actions import close_application
 from core.widgets.services.taskbar.peek import activate_live_preview, exclude_from_peek, is_live_preview_available
 
+if TYPE_CHECKING:
+    from core.widgets.yasb.taskbar import TaskbarWidget
+
 logger = logging.getLogger("taskbar_thumbnail")
 
 
@@ -35,39 +49,42 @@ def ceil(count: int, per: int) -> int:
 class ThumbnailHost(QWidget):
     """Custom widget to host DWM thumbnail and capture mouse clicks."""
 
-    def __init__(self, preview_popup, item, parent=None):
+    def __init__(self, preview_popup: PreviewPopup, item: PreviewItem, parent: QWidget | None = None):
         super().__init__(parent)
-        self._preview_popup = preview_popup
+        self.preview_popup = preview_popup
         self._item = item
         self._hwnd = item.hwnd
         self.setMouseTracking(True)
 
-    def enterEvent(self, event):
+    @override
+    def enterEvent(self, event: QEnterEvent | None) -> None:
         """Notify preview that mouse entered thumbnail and hover its item."""
         try:
-            if self._preview_popup:
-                self._preview_popup._cancel_hide()
+            if self.preview_popup:
+                self.preview_popup.cancel_hide()
             self._item.set_hovered(True, peek=True)
         except RuntimeError:
             pass
         super().enterEvent(event)
 
-    def leaveEvent(self, event):
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         """Notify preview that mouse left thumbnail, and drop the item's hover with it."""
         try:
-            if self._preview_popup:
-                self._preview_popup._schedule_hide()
+            if self.preview_popup:
+                self.preview_popup.schedule_hide()
             self._item.set_hovered(False, peek=True)
         except RuntimeError:
             pass
-        super().leaveEvent(event)
+        super().leaveEvent(a0)
 
-    def mousePressEvent(self, event):
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
         """Forward click to preview to bring the hosted window to foreground."""
-        if self._preview_popup:
-            self._preview_popup.activate_window(self._hwnd)
+        if self.preview_popup:
+            self.preview_popup.activate_window(self._hwnd)
         else:
-            super().mousePressEvent(event)
+            super().mousePressEvent(a0)
 
 
 class PreviewAnimation:
@@ -138,7 +155,7 @@ class PreviewItem(QFrame):
     SPACING = 6
 
     def __init__(self, popup: PreviewPopup, hwnd: int, title: str | None, icon: QPixmap | None, flashing: bool):
-        super().__init__(popup._content)
+        super().__init__(popup.content)
         self.setProperty("class", "preview-item flashing" if flashing else "preview-item")
         self._popup = popup
         self.hwnd = hwnd
@@ -164,7 +181,11 @@ class PreviewItem(QFrame):
         self.close_button.setText("\ue8bb")
         self.close_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.close_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.close_button.mousePressEvent = lambda e: popup.close_window(self.hwnd)
+
+        def close_pressed(ev: QMouseEvent | None) -> None:
+            popup.close_window(self.hwnd)
+
+        self.close_button.mousePressEvent = close_pressed
 
         self._header_width = 0
 
@@ -209,7 +230,7 @@ class PreviewItem(QFrame):
 
     def round_outer_corners(self, radius: int, at_left: bool, at_right: bool, at_top: bool, at_bottom: bool):
         """Match the popup radius on the corners this item sits on, so a hovered item is not square."""
-        corners = []
+        corners: list[str] = []
         if radius > 0:
             for name, touching in (
                 ("top-left", at_top and at_left),
@@ -231,7 +252,7 @@ class PreviewItem(QFrame):
         """
         if hovered:
             # Only one window is ever hovered, so a neighbour that missed its own leave lets go here
-            for other in self._popup._items:
+            for other in self._popup.items:
                 if other is not self:
                     other.set_hovered(False)
         if self.underMouse() != hovered:
@@ -241,17 +262,19 @@ class PreviewItem(QFrame):
             self.close_button.setVisible(hovered)
             self.update_elided_title()
         # A list row is all header and has no thumbnail to hover, so there peek is the only preview
-        if peek or self._popup._list_mode:
-            manager = getattr(self._popup, "_thumbnail_manager", None)
+        if peek or self._popup.list_mode:
+            manager = self._popup.thumbnail_manager
             if manager:
                 manager.set_peek(self.hwnd, hovered)
 
-    def enterEvent(self, event):
+    @override
+    def enterEvent(self, event: QEnterEvent | None) -> None:
         """Hovering the header counts as hovering the item, same as hovering its thumbnail."""
         self.set_hovered(True)
         super().enterEvent(event)
 
-    def leaveEvent(self, event):
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         """Leaving means not hovered.
 
         Whatever the pointer moved onto sets the hover itself: crossing to the thumbnail raises
@@ -260,12 +283,13 @@ class PreviewItem(QFrame):
         by a later event, and the pointer may never send this widget another one.
         """
         self.set_hovered(False)
-        super().leaveEvent(event)
+        super().leaveEvent(a0)
 
-    def mousePressEvent(self, event):
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
         """Clicking anywhere on the item focuses its window."""
         self._popup.activate_window(self.hwnd)
-        super().mousePressEvent(event)
+        super().mousePressEvent(a0)
 
 
 class PreviewPopup(QFrame):
@@ -282,7 +306,7 @@ class PreviewPopup(QFrame):
 
     def __init__(
         self,
-        parent=None,
+        parent: QWidget | None = None,
         width: int = 240,
         padding: int = 8,
         margin: int = 8,
@@ -308,16 +332,18 @@ class PreviewPopup(QFrame):
         self._peek = peek
 
         # Main content frame
-        self._content = QFrame(self)
-        self._content.setProperty("class", "taskbar-preview")
+        self.content = QFrame(self)
+        self.content.setProperty("class", "taskbar-preview")
 
         if self._blur:
             enable_blur(self.winId(), DarkMode=False, RoundCorners=True, BorderColor="None")
 
         self._fade_anim = PreviewAnimation(self, self._animation_duration)
-        self._items: list[PreviewItem] = []
-        self._thumbnail_manager = None
-        self._radius = None
+        self.items: list[PreviewItem] = []
+        self.thumbnail_manager: TaskbarThumbnailManager | None = None
+        self._radius: int | None = None
+        self.src_hwnd: int | None = None
+        self.final_pos: QPoint | None = None
 
         self._hide_timer = QTimer(self)
         self._hide_timer.setSingleShot(True)
@@ -328,8 +354,8 @@ class PreviewPopup(QFrame):
         # where the blur shows a stale background from the window or wallpaper.
         self._backdrop = QTimer(self)
         self._backdrop.setInterval(self.BACKDROP_REFRESH)
-        self._backdrop.timeout.connect(lambda: self._content.update(QRect(0, 0, 1, 1)))
-        self._list_mode = False
+        self._backdrop.timeout.connect(lambda: self.content.update(QRect(0, 0, 1, 1)))
+        self.list_mode = False
 
     def _corner_radius(self) -> int:
         """Measure the styled corner radius: first column of the top row reaching the inside opacity."""
@@ -341,7 +367,7 @@ class PreviewPopup(QFrame):
         if probe > 0:
             image = QImage(probe, probe, QImage.Format.Format_ARGB32_Premultiplied)
             image.fill(Qt.GlobalColor.transparent)
-            self._content.render(image, QPoint(), QRegion(0, 0, probe, probe), QWidget.RenderFlag(0))
+            self.content.render(image, QPoint(), QRegion(0, 0, probe, probe), QWidget.RenderFlag(0))
             # A transparent inside means no background is painted, keep the plain rectangle
             opaque = image.pixelColor(probe - 1, probe - 1).alpha()
             if opaque > 0:
@@ -363,17 +389,19 @@ class PreviewPopup(QFrame):
         except Exception:
             return 1.0
 
-    def showEvent(self, event):
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
         # Only peek moves what is behind the preview, so without it the backdrop cannot go stale
         if self._blur and self._peek:
             self._backdrop.start()
-        super().showEvent(event)
+        super().showEvent(a0)
 
-    def hideEvent(self, event):
+    @override
+    def hideEvent(self, a0: QHideEvent | None) -> None:
         self._backdrop.stop()
         self._fade_anim.stop()
-        self._cancel_hide()
-        super().hideEvent(event)
+        self.cancel_hide()
+        super().hideEvent(a0)
 
     def show_for(self, entries: list[tuple[int, str | None, QPixmap | None, bool]], anchor_widget: QWidget) -> bool:
         """Build preview item per (hwnd, title, icon) entry and lay the popup out."""
@@ -382,29 +410,24 @@ class PreviewPopup(QFrame):
             return False
 
         # The window the anchor button currently stands for, used to match an already open preview
-        self._src_hwnd = getattr(anchor_widget, "_hwnd", entries[0][0])
+        self.src_hwnd = getattr(anchor_widget, "hwnd", entries[0][0])
         self._anchor_widget = anchor_widget
 
         # Capture device pixel ratio from the anchor's screen so previews on multi-monitor
         # setups use the correct per-screen scaling.
+        screen = None
         try:
-            # prefer the screen DPR if available
             screen = anchor_widget.screen()
-            try:
-                self._dpr = float(screen.devicePixelRatio())
-            except Exception:
-                # fallback to floating DPR if available on the screen; else default to 1.0
-                try:
-                    self._dpr = float(screen.devicePixelRatioF())
-                except Exception:
-                    self._dpr = 1.0
+            self._dpr = float(screen.devicePixelRatio()) if screen is not None else 1.0
         except Exception:
             self._dpr = 1.0
+        if screen is None:
+            return False
 
-        self._items = [PreviewItem(self, hwnd, title, icon, flashing) for hwnd, title, icon, flashing in entries]
+        self.items = [PreviewItem(self, hwnd, title, icon, flashing) for hwnd, title, icon, flashing in entries]
 
         anchor_center = anchor_widget.mapToGlobal(anchor_widget.rect().center())
-        screen_geom = anchor_widget.screen().geometry()
+        screen_geom = screen.geometry()
         self._anchor_center_x = anchor_center.x()
         self._anchor_top = anchor_widget.mapToGlobal(anchor_widget.rect().topLeft()).y()
         self._anchor_bottom = anchor_widget.mapToGlobal(anchor_widget.rect().bottomLeft()).y()
@@ -412,9 +435,9 @@ class PreviewPopup(QFrame):
 
         # A second row of thumbnails would both span the screen and register that many more live
         # DWM thumbnails at once, so the windows are listed by title from there on instead
-        self._list_mode = len(self._items) > self._grid_columns(len(self._items))
+        self.list_mode = len(self.items) > self._grid_columns(len(self.items))
 
-        self._calculate_and_position_popup()
+        self.calculate_and_position_popup()
         return True
 
     def _popup_space(self) -> int:
@@ -445,12 +468,12 @@ class PreviewPopup(QFrame):
         x = max(self._screen_geom.left() + self._margin, min(self._screen_geom.right() - popup_w - self._margin, x))
         y = max(self._screen_geom.top() + self._margin, min(self._screen_geom.bottom() - popup_h - self._margin, y))
 
-        self._final_pos = QPoint(x, y)
+        self.final_pos = QPoint(x, y)
         self.setGeometry(x, y, popup_w, popup_h)
-        self._content.setGeometry(0, 0, popup_w, popup_h)
+        self.content.setGeometry(0, 0, popup_w, popup_h)
         return popup_w
 
-    def _calculate_and_position_popup(self):
+    def calculate_and_position_popup(self):
         """
         Size and position the popup from the thumbnail dimensions reported by DWM.
         Every thumbnail is fitted into the same box, the configured width at 16:9, keeping its own
@@ -459,15 +482,15 @@ class PreviewPopup(QFrame):
         The box gives way as the row fills, so more windows means smaller thumbnails until they
         would pass MIN_WIDTH, which is where the list takes over.
         """
-        count = len(self._items)
+        count = len(self.items)
         if not count:
             return
 
-        if self._list_mode:
+        if self.list_mode:
             self._layout_as_list()
             return
 
-        header_h = self._items[0].header_height
+        header_h = self.items[0].header_height
 
         # Cells are spaced by two paddings so every item keeps the same padding around its own cell
         gap = 2 * self._padding
@@ -477,8 +500,8 @@ class PreviewPopup(QFrame):
         box_w = max(self.MIN_WIDTH, min(self._width, (available_w - (count - 1) * gap) // count))
         box_h = max(1, min(int(box_w * 9 / 16), self._popup_space() - header_h - (2 * self._padding)))
 
-        sizes = []
-        for item in self._items:
+        sizes: list[tuple[int, int]] = []
+        for item in self.items:
             src_w, src_h = self._source_size(item)
             scale = min(box_w / src_w, box_h / src_h)
             sizes.append((max(1, int(src_w * scale)), max(1, int(src_h * scale))))
@@ -493,7 +516,7 @@ class PreviewPopup(QFrame):
         popup_w = self._place(row_w + (2 * self._padding), total_h)
 
         cell_x = (popup_w - row_w) // 2
-        for position, (item, (thumb_w, thumb_h), cell) in enumerate(zip(self._items, sizes, cells)):
+        for position, (item, (thumb_w, thumb_h), cell) in enumerate(zip(self.items, sizes, cells)):
             # Items tile the popup, each one padded evenly around its cell, and the outer ones
             # reach the popup edge so hovering a window never leaves a background strip showing
             left = 0 if position == 0 else cell_x - self._padding
@@ -516,8 +539,8 @@ class PreviewPopup(QFrame):
         Rows tile the popup and carry their own padding, so it doubles as the padding around the
         whole list, the same way the grid cells reach its edges.
         """
-        count = len(self._items)
-        header_h = self._items[0].header_height
+        count = len(self.items)
+        header_h = self.items[0].header_height
         row_h = header_h + (2 * self._padding)
 
         available_w = self._screen_geom.width() - (2 * self._margin)
@@ -529,7 +552,7 @@ class PreviewPopup(QFrame):
         rows = ceil(count, columns)
 
         # Columns are as wide as the longest title needs, between one and two thumbnail widths
-        wanted_w = max(item.natural_width() for item in self._items) + (2 * self._padding)
+        wanted_w = max(item.natural_width() for item in self.items) + (2 * self._padding)
         col_w = min(max(wanted_w, self._width), 2 * self._width)
         col_w = max(self.MIN_WIDTH, min(col_w, available_w // columns))
 
@@ -537,7 +560,7 @@ class PreviewPopup(QFrame):
         popup_w = self._place(col_w * columns, total_h)
         col_w = popup_w // columns
 
-        for index, item in enumerate(self._items):
+        for index, item in enumerate(self.items):
             column, row = divmod(index, rows)
             # The last column takes the width left over, so every row reaches the popup edge
             left = column * col_w
@@ -581,41 +604,44 @@ class PreviewPopup(QFrame):
         try:
             if win32gui.IsWindow(hwnd):
                 close_application(hwnd)
-            if not self._thumbnail_manager:
+            if not self.thumbnail_manager:
                 return
-            remaining = [item.hwnd for item in self._items if item.hwnd != hwnd]
+            remaining = [item.hwnd for item in self.items if item.hwnd != hwnd]
             if remaining and getattr(self, "_anchor_widget", None):
-                manager, anchor = self._thumbnail_manager, self._anchor_widget
+                manager, anchor = self.thumbnail_manager, self._anchor_widget
                 QTimer.singleShot(0, lambda: manager.show_preview_for_hwnds(remaining, anchor))
             else:
-                self._thumbnail_manager.hide_preview()
+                self.thumbnail_manager.hide_preview()
         except Exception:
             logger.exception("Failed to close window")
 
     def activate_window(self, hwnd: int):
         """Bring one previewed window to the foreground using the taskbar's method."""
         try:
-            if win32gui.IsWindow(hwnd) and self._thumbnail_manager:
-                self._thumbnail_manager._taskbar.bring_to_foreground(hwnd)
-                self._thumbnail_manager.hide_preview()
+            if win32gui.IsWindow(hwnd) and self.thumbnail_manager:
+                self.thumbnail_manager.taskbar.bring_to_foreground(hwnd)
+                self.thumbnail_manager.hide_preview()
         except Exception:
             logger.exception("Failed to bring window to foreground")
 
-    def mousePressEvent(self, event):
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
         """Handle click on the popup background - activate the window it was opened from."""
-        if hasattr(self, "_src_hwnd"):
-            self.activate_window(self._src_hwnd)
-        super().mousePressEvent(event)
+        if self.src_hwnd is not None:
+            self.activate_window(self.src_hwnd)
+        super().mousePressEvent(a0)
 
-    def enterEvent(self, event):
-        self._cancel_hide()
+    @override
+    def enterEvent(self, event: QEnterEvent | None) -> None:
+        self.cancel_hide()
         super().enterEvent(event)
 
-    def leaveEvent(self, event):
-        self._schedule_hide()
-        super().leaveEvent(event)
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
+        self.schedule_hide()
+        super().leaveEvent(a0)
 
-    def _cancel_hide(self):
+    def cancel_hide(self):
         """The pointer is on the preview, or on a thumbnail hosted over it."""
         try:
             self._hide_timer.stop()
@@ -623,7 +649,7 @@ class PreviewPopup(QFrame):
             # The timer went with the widget, which is being destroyed
             pass
 
-    def _schedule_hide(self):
+    def schedule_hide(self):
         """The pointer left. Hide unless it comes back, or is only crossing to the button."""
         try:
             self._hide_timer.start()
@@ -663,15 +689,15 @@ class PreviewPopup(QFrame):
         if self.keeps_hover(QCursor.pos()):
             self._hide_timer.start()
             return
-        if self._thumbnail_manager:
-            self._thumbnail_manager.hide_preview()
+        if self.thumbnail_manager:
+            self.thumbnail_manager.hide_preview()
 
     def start_animation(self):
         """Fade the popup in, unless it is already fading or was never placed.
 
         PreviewAnimation falls back to a plain show of its own if the animation cannot run.
         """
-        if self._fade_anim.running or not hasattr(self, "_final_pos"):
+        if self._fade_anim.running or self.final_pos is None:
             return
         self._fade_anim.start()
 
@@ -682,8 +708,16 @@ class TaskbarThumbnailManager:
     # How long the pointer rests on a window before the desktop is faded for it
     PEEK_DELAY = 400
 
-    def __init__(self, taskbar_widget, width: int, padding: int, margin: int, blur: bool = False, peek: bool = False):
-        self._taskbar = taskbar_widget
+    def __init__(
+        self,
+        taskbar_widget: TaskbarWidget,
+        width: int,
+        padding: int,
+        margin: int,
+        blur: bool = False,
+        peek: bool = False,
+    ):
+        self.taskbar = taskbar_widget
         self.width = width
         self.padding = padding
         self.margin = margin
@@ -703,19 +737,19 @@ class TaskbarThumbnailManager:
         self._peek_off.setInterval(60)
         self._peek_off.timeout.connect(lambda: self._apply_peek(0))
         self.animation_duration = 200
-        self._preview_popup = None
-        self._thumb_hosts = []
-        self._host_fade_anims = []
+        self.preview_popup: PreviewPopup | None = None
+        self._thumb_hosts: list[ThumbnailHost] = []
+        self._host_fade_anims: list[PreviewAnimation] = []
 
     def stop(self):
         self._release_thumbnails()
         try:
-            if self._preview_popup:
-                self._preview_popup.close()
-                self._preview_popup.deleteLater()
+            if self.preview_popup:
+                self.preview_popup.close()
+                self.preview_popup.deleteLater()
         except Exception:
             pass
-        self._preview_popup = None
+        self.preview_popup = None
 
     def set_peek(self, hwnd: int, hovered: bool = True):
         """Peek at one window, or release the desktop once no thumbnail has taken over."""
@@ -745,14 +779,14 @@ class TaskbarThumbnailManager:
             self._apply_peek(hwnd)
 
     def _pointer_on_preview(self) -> bool:
-        popup = self._preview_popup
+        popup = self.preview_popup
         return popup is not None and popup.isVisible() and popup.global_area().contains(QCursor.pos())
 
     def _apply_peek(self, hwnd: int):
         """Fade every other window on the desktop to show this one, or restore them when hwnd is 0."""
         if hwnd == self._peeking:
             return
-        bar = self._taskbar.window() if self._taskbar else None
+        bar = self.taskbar.window() if self.taskbar else None
         activate_live_preview(bool(hwnd), hwnd, int(bar.winId()) if bar else 0)
         self._peeking = hwnd
 
@@ -760,10 +794,10 @@ class TaskbarThumbnailManager:
         """Mark our own windows so peek never fades them, once per preview rather than per hover."""
         if not self.peek:
             return
-        bar = self._taskbar.window() if self._taskbar else None
-        for widget in (bar, self._preview_popup, *self._thumb_hosts):
+        bar = self.taskbar.window() if self.taskbar else None
+        for widget in (bar, self.preview_popup, *self._thumb_hosts):
             if widget is not None:
-                exclude_from_peek(widget.winId())
+                exclude_from_peek(int(widget.winId()))
 
     def _release_thumbnails(self):
         """Unregister every DWM thumbnail and destroy the windows hosting them."""
@@ -778,7 +812,8 @@ class TaskbarThumbnailManager:
             except Exception:
                 pass
         self._host_fade_anims = []
-        for item in getattr(self._preview_popup, "_items", []):
+        items = self.preview_popup.items if self.preview_popup is not None else []
+        for item in items:
             if item.thumb and item.thumb.value:
                 try:
                     DwmUnregisterThumbnail(item.thumb)
@@ -798,88 +833,88 @@ class TaskbarThumbnailManager:
         try:
             # Ensure any previous preview is properly closed/deleted to avoid accumulating hidden widgets
             self._release_thumbnails()
-            if self._preview_popup:
+            if self.preview_popup:
                 try:
-                    self._preview_popup.close()
-                    self._preview_popup.deleteLater()
+                    self.preview_popup.close()
+                    self.preview_popup.deleteLater()
                 except Exception:
                     pass
-                self._preview_popup = None
+                self.preview_popup = None
 
-            self._preview_popup = PreviewPopup(
-                self._taskbar, self.width, self.padding, self.margin, self.animation_duration, self.blur, self.peek
+            self.preview_popup = PreviewPopup(
+                self.taskbar, self.width, self.padding, self.margin, self.animation_duration, self.blur, self.peek
             )
-            self._preview_popup._thumbnail_manager = self
+            self.preview_popup.thumbnail_manager = self
 
-            entries = []
-            buttons = getattr(self._taskbar, "_window_buttons", {})
-            windows = getattr(getattr(self._taskbar, "_task_manager", None), "_windows", {})
+            entries: list[tuple[int, str | None, QPixmap | None, bool]] = []
+            task_manager = self.taskbar.task_manager
             for hwnd in hwnds:
-                data = buttons.get(hwnd)
-                flashing = bool(getattr(windows.get(hwnd), "is_flashing", False))
+                data = self.taskbar.window_buttons.get(hwnd)
+                window = task_manager.get_window(hwnd) if task_manager else None
+                flashing = bool(window is not None and window.is_flashing)
                 entries.append((hwnd, data[0], data[1], flashing) if data else (hwnd, None, None, flashing))
 
             # Check if any window is flashing using existing taskbar logic
-            is_flashing = any("flashing" in self._taskbar._get_container_class(hwnd) for hwnd in hwnds)
+            is_flashing = any("flashing" in self.taskbar.get_container_class(hwnd) for hwnd in hwnds)
 
             # Show popup with initial size calculation
-            if not self._preview_popup.show_for(entries, anchor_widget):
-                self._preview_popup.deleteLater()
-                self._preview_popup = None
+            if not self.preview_popup.show_for(entries, anchor_widget):
+                self.preview_popup.deleteLater()
+                self.preview_popup = None
                 return
 
             # Add flashing class to preview content if a window is flashing
             if is_flashing:
                 try:
-                    self._preview_popup._content.setProperty("class", "taskbar-preview flashing")
-                    refresh_widget_style(self._preview_popup._content)
+                    self.preview_popup.content.setProperty("class", "taskbar-preview flashing")
+                    refresh_widget_style(self.preview_popup.content)
                 except Exception:
                     pass
 
-            if self._preview_popup._list_mode:
+            if self.preview_popup.list_mode:
                 # Nothing to register, the list is laid out and masking would only cut holes in it
                 self._keep_out_of_peek()
             else:
                 # Set up external thumbnails which recalculate the layout with accurate DWM data
-                self._show_external_thumbnails(self._preview_popup)
+                self._show_external_thumbnails(self.preview_popup)
 
             # Start animation after everything is positioned
-            if self._preview_popup:
-                self._preview_popup.start_animation()
+            if self.preview_popup:
+                self.preview_popup.start_animation()
                 # Showing the popup puts it on top, lift the thumbnails back above it. Their holes
                 # in the popup mask are not enough once a blur backdrop covers the whole window.
                 for host in self._thumb_hosts:
                     host.raise_()
         except Exception:
             logger.exception("Failed to show preview for hwnds %s", hwnds)
-            if self._preview_popup:
-                self._preview_popup.close()
-                self._preview_popup.deleteLater()
-                self._preview_popup = None
+            if self.preview_popup:
+                self.preview_popup.close()
+                self.preview_popup.deleteLater()
+                self.preview_popup = None
 
     def hide_preview(self):
         try:
             self._release_thumbnails()
-            if self._preview_popup:
+            if self.preview_popup:
                 try:
-                    if self._preview_popup.isVisible():
-                        self._preview_popup.clearMask()
+                    if self.preview_popup.isVisible():
+                        self.preview_popup.clearMask()
                 except Exception:
                     pass
                 try:
-                    self._preview_popup.hide()
-                    self._preview_popup.close()
-                    self._preview_popup.deleteLater()
+                    self.preview_popup.hide()
+                    self.preview_popup.close()
+                    self.preview_popup.deleteLater()
                 except Exception:
                     pass
-                self._preview_popup = None
+                self.preview_popup = None
         except Exception:
             logger.exception("Error while hiding preview")
 
     def _show_external_thumbnails(self, preview_popup: PreviewPopup):
         """Register a DWM thumbnail per item, then place one host window over each of them."""
-        registered = []
-        for item in preview_popup._items:
+        registered: list[PreviewItem] = []
+        for item in preview_popup.items:
             host = ThumbnailHost(preview_popup, item)
             host.setWindowFlags(
                 Qt.WindowType.FramelessWindowHint
@@ -893,7 +928,7 @@ class TaskbarThumbnailManager:
             host.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, False)
 
             hthumb = wintypes.HANDLE(0)
-            if DwmRegisterThumbnail(int(host.winId()), wintypes.HWND(item.hwnd), byref(hthumb)) != 0:
+            if DwmRegisterThumbnail(int(host.winId()), item.hwnd, byref(hthumb)) != 0:
                 # Window died between the layout pass and now, drop its slot
                 host.deleteLater()
                 item.deleteLater()
@@ -902,14 +937,16 @@ class TaskbarThumbnailManager:
             registered.append(item)
             self._thumb_hosts.append(host)
 
-        preview_popup._items = registered
+        preview_popup.items = registered
         if not registered:
             self.hide_preview()
             return
 
         # Recalculate with accurate dimensions now that DWM can report the source sizes
-        preview_popup._calculate_and_position_popup()
-        base = preview_popup._final_pos
+        preview_popup.calculate_and_position_popup()
+        base = preview_popup.final_pos
+        if base is None:
+            return
         dpr = preview_popup.get_dpr()
         holes = QRegion()
 

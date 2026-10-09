@@ -1,3 +1,6 @@
+from collections.abc import Iterable
+from typing import cast
+
 import pytest
 
 from tests.win32 import abi, discovery, known_issues, specs
@@ -16,7 +19,7 @@ def _params():
         yield pytest.param(binding, id=binding.id, marks=xfail_if_known(known_issues.SIGNATURES, binding.id))
 
 
-def _evaluate(binding: Binding, attr: str):
+def _evaluate(binding: Binding, attr: str) -> object:
     try:
         return discovery.evaluate(binding, getattr(binding, attr))
     except Exception as exc:
@@ -37,7 +40,7 @@ def test_signature_matches_sdk(binding: Binding, sdk: ProbeResult):
 
     native = sdk.functions[name]
     sites = ", ".join(str(site) for site in binding.sites)
-    problems = []
+    problems: list[str] = []
 
     if binding.restype is not None:
         restype = _evaluate(binding, "restype")
@@ -50,7 +53,7 @@ def test_signature_matches_sdk(binding: Binding, sdk: ProbeResult):
                 )
 
     if binding.argtypes is not None:
-        argtypes = list(_evaluate(binding, "argtypes"))
+        argtypes = list(cast(Iterable[object], _evaluate(binding, "argtypes")))
         native_args = [abi.Abi.from_json(arg) for arg in native["args"]]
         if len(argtypes) != len(native_args) and not (native["variadic"] and len(argtypes) > len(native_args)):
             problems.append(f"argtypes has {len(argtypes)} entries, the SDK takes {len(native_args)} parameters")

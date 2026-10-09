@@ -1,12 +1,13 @@
 import logging
 import os
 import tempfile
+from typing import Any
 
 from PyQt6.QtCore import QFileSystemWatcher, QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
-from core.utils.win32.app_loader import AppListLoader
-from core.widgets.services.quick_launch.base_provider import BaseProvider
+from core.utils.win32.app_loader import AppEntry, AppListLoader
+from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.icon_resolver import IconResolverWorker, compute_extraction_size
 from core.widgets.services.quick_launch.providers import (
     AppsProvider,
@@ -86,11 +87,11 @@ class QuickLaunchService(QObject):
     def __init__(self):
         super().__init__()
 
-        self._apps: list[tuple[str, str, object]] = []
+        self._apps: list[AppEntry] = []
         self._apps_loaded = False
         self._icon_paths: dict[str, str] = {}
         self._providers: list[BaseProvider] = []
-        self._providers_config: dict = {}
+        self._providers_config: dict[str, Any] = {}
         self._show_icons: bool = True
 
         self._app_loader: AppListLoader | None = None
@@ -119,7 +120,7 @@ class QuickLaunchService(QObject):
         return self._providers
 
     @property
-    def apps(self) -> list[tuple[str, str, object]]:
+    def apps(self) -> list[AppEntry]:
         return self._apps
 
     @property
@@ -131,7 +132,7 @@ class QuickLaunchService(QObject):
         return self._icon_paths
 
     def configure_providers(
-        self, providers_config: dict, max_results: int = 50, show_icons: bool = True, icon_size: int = 32
+        self, providers_config: dict[str, Any], max_results: int = 50, show_icons: bool = True, icon_size: int = 32
     ):
         self._icon_size = icon_size
         if self._providers and self._providers_config == providers_config:
@@ -164,7 +165,7 @@ class QuickLaunchService(QObject):
         self._query_worker.submit(query_id, text, max_results, list(self._providers))
         return query_id
 
-    def _on_query_finished(self, query_id: str, results: list):
+    def _on_query_finished(self, query_id: str, results: list[ProviderResult]):
         self.query_finished.emit(query_id, results)
 
     def _start_app_loading(self):
@@ -174,7 +175,7 @@ class QuickLaunchService(QObject):
         self._app_loader.apps_loaded.connect(self._on_apps_loaded)
         self._app_loader.start()
 
-    def _on_apps_loaded(self, apps: list):
+    def _on_apps_loaded(self, apps: list[AppEntry]):
         self._apps = apps
         self._apps_loaded = True
         if self._show_icons:
@@ -210,14 +211,21 @@ class QuickLaunchService(QObject):
 
     def _setup_fs_watcher(self):
         self._fs_watcher = QFileSystemWatcher(self)
-        self._fs_watcher.directoryChanged.connect(lambda _: self._fs_debounce.start())
+        self._fs_watcher.directoryChanged.connect(self._on_directory_changed)
         self._fs_debounce = QTimer(self)
         self._fs_debounce.setSingleShot(True)
         self._fs_debounce.setInterval(5000)
         self._fs_debounce.timeout.connect(self._on_fs_change)
         self._watcher_thread = StartMenuWatcherThread()
-        self._watcher_thread.dirs_ready.connect(lambda dirs: self._fs_watcher.addPaths(dirs) if dirs else None)
+        self._watcher_thread.dirs_ready.connect(self._on_watch_dirs_ready)
         self._watcher_thread.start()
+
+    def _on_directory_changed(self, path: str) -> None:
+        self._fs_debounce.start()
+
+    def _on_watch_dirs_ready(self, dirs: list[str]) -> None:
+        if dirs:
+            self._fs_watcher.addPaths(dirs)
 
     def _on_fs_change(self):
         logging.info("Quick Launch rebuilding app list after install/uninstall detected")

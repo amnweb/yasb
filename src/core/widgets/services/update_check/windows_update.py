@@ -8,6 +8,7 @@ threads (QThread workers).
 """
 
 import logging
+from typing import Any
 
 import pywintypes
 import win32com.client
@@ -34,7 +35,7 @@ def check_updates() -> list[dict[str, str]]:
 
         results: list[dict[str, str]] = []
         for update in search_result.Updates:
-            kb_ids = []
+            kb_ids: list[Any] = []
             for i in range(update.KBArticleIDs.Count):
                 kb_ids.append(update.KBArticleIDs.Item(i))
             kb_str = ", ".join(f"KB{kb}" for kb in kb_ids) if kb_ids else ""

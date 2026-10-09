@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from typing import Any, ClassVar
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -175,7 +175,7 @@ class BluetoothManager(QObject):
     def disconnect_device(self, address: str) -> None:
         self._schedule(self._connect_async(address, False))
 
-    def _schedule(self, coro) -> None:
+    def _schedule(self, coro: Coroutine[Any, Any, Any]) -> None:
         loop = self._ensure_loop()
         if loop is None:
             return
@@ -184,7 +184,7 @@ class BluetoothManager(QObject):
         except RuntimeError:
             pass
 
-    def _safe_create_task(self, callback: Callable, *args: Any) -> None:
+    def _safe_create_task(self, callback: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None:
         if not self._started:
             return
         loop = self._ensure_loop()
@@ -195,7 +195,7 @@ class BluetoothManager(QObject):
         except RuntimeError:
             pass
 
-    def _bridge(self, callback: Callable):
+    def _bridge(self, callback: Callable[..., Coroutine[Any, Any, Any]]) -> Callable[[Any, Any], None]:
         def wrapper(sender: Any, _args: Any) -> None:
             if not self._started:
                 return
@@ -209,7 +209,7 @@ class BluetoothManager(QObject):
 
         return wrapper
 
-    def _bridge_plain(self, callback: Callable):
+    def _bridge_plain(self, callback: Callable[..., Coroutine[Any, Any, Any]]) -> Callable[..., None]:
         def wrapper(*args: Any) -> None:
             if not self._started:
                 return

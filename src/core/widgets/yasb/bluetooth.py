@@ -168,13 +168,13 @@ class BluetoothWidget(BaseWidget):
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
                 if "<span" in part and "</span>" in part:
-                    if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                    if widget_index < len(active_widgets):
                         active_widgets[widget_index].setText(formatted_text)
                         self._set_bt_state_class(active_widgets[widget_index])
                 else:
                     if self.config.max_length and len(formatted_text) > self.config.max_length:
                         formatted_text = formatted_text[: self.config.max_length] + self.config.max_length_ellipsis
-                    if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                    if widget_index < len(active_widgets):
                         active_widgets[widget_index].setText(formatted_text)
                         self._set_bt_state_class(active_widgets[widget_index])
                 widget_index += 1

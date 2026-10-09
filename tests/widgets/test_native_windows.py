@@ -1,10 +1,15 @@
 import ast
 import inspect
 import textwrap
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
 
+from core.utils.win32.utils import get_monitor_hwnd, get_widget_monitor_hwnd
+from core.widgets.base import BaseWidget
 from tests.support.source import REPO_ROOT, all_subclasses, core_modules, defined_in_core, import_core_modules
 
 _WHY = (
@@ -16,8 +21,6 @@ _WHY = (
 
 def _bar_widget_classes() -> list[type]:
     import_core_modules()
-    from core.widgets.base import BaseWidget
-
     return sorted(
         (cls for cls in all_subclasses(BaseWidget) if defined_in_core(cls)),
         key=lambda cls: f"{cls.__module__}.{cls.__qualname__}",
@@ -34,11 +37,13 @@ def _is_winid_on_self(node: ast.Call) -> bool:
 
 
 def test_bar_widgets_never_call_winid_on_themselves():
-    offenders = []
+    offenders: list[str] = []
     for cls in _bar_widget_classes():
         lines, start = inspect.getsourcelines(cls)
         tree = ast.parse(textwrap.dedent("".join(lines)))
-        path = Path(inspect.getsourcefile(cls)).relative_to(REPO_ROOT).as_posix()
+        source = inspect.getsourcefile(cls)
+        assert source is not None
+        path = Path(source).relative_to(REPO_ROOT).as_posix()
         for node in ast.walk(tree):
             if isinstance(node, ast.Call) and _is_winid_on_self(node):
                 offenders.append(f"{path}:{start + node.lineno - 1}: {ast.unparse(node)} in {cls.__qualname__}")
@@ -47,7 +52,7 @@ def test_bar_widgets_never_call_winid_on_themselves():
 
 
 def test_winid_is_never_called_unbound():
-    offenders = []
+    offenders: list[str] = []
     for module in core_modules():
         for node in ast.walk(module.tree()):
             if (
@@ -63,9 +68,7 @@ def test_winid_is_never_called_unbound():
 
 
 @pytest.fixture
-def bar(qapp):
-    from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
-
+def bar(qapp: QApplication) -> Iterator[QWidget]:
     window = QWidget()
     layout = QHBoxLayout(window)
     for name in ("child", "sibling"):
@@ -80,10 +83,7 @@ def bar(qapp):
     qapp.processEvents()
 
 
-def _native_children(window) -> list[str]:
-    from PyQt6.QtCore import Qt
-    from PyQt6.QtWidgets import QWidget
-
+def _native_children(window: QWidget) -> list[str]:
     return [
         child.objectName()
         for child in window.findChildren(QWidget)
@@ -91,21 +91,18 @@ def _native_children(window) -> list[str]:
     ]
 
 
-def test_get_widget_monitor_hwnd_keeps_the_bar_children_alien(bar):
-    from PyQt6.QtWidgets import QLabel
-
-    from core.utils.win32.utils import get_monitor_hwnd, get_widget_monitor_hwnd
-
+def test_get_widget_monitor_hwnd_keeps_the_bar_children_alien(bar: QWidget):
     child = bar.findChild(QLabel, "child")
+    assert child is not None
     monitor = get_widget_monitor_hwnd(child)
 
     assert _native_children(bar) == [], _WHY
     assert monitor == get_monitor_hwnd(int(bar.winId()))
 
 
-def test_winid_on_a_child_still_makes_it_native(bar):
-    from PyQt6.QtWidgets import QLabel
-
-    bar.findChild(QLabel, "child").winId()
+def test_winid_on_a_child_still_makes_it_native(bar: QWidget):
+    child = bar.findChild(QLabel, "child")
+    assert child is not None
+    child.winId()
 
     assert "child" in _native_children(bar), "Qt no longer nativises on winId(); the rules above may be obsolete"

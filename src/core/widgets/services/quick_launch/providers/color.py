@@ -1,6 +1,7 @@
 import math
 import random
 import re
+from typing import Any, override
 
 from PyQt6.QtCore import QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
@@ -9,8 +10,11 @@ from PyQt6.QtGui import (
     QFont,
     QFontMetrics,
     QImage,
+    QKeyEvent,
+    QMouseEvent,
     QPainter,
     QPainterPath,
+    QPaintEvent,
     QPen,
     QPixmap,
 )
@@ -578,33 +582,33 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
 
     m = _LAB_RE.match(text)
     if m:
-        L, a, b = float(m.group(1)), float(m.group(2)), float(m.group(3))
-        if 0 <= L <= 100:
-            r, g, b = _lab_to_rgb(L, a, b)
+        lightness, a, b = float(m.group(1)), float(m.group(2)), float(m.group(3))
+        if 0 <= lightness <= 100:
+            r, g, b = _lab_to_rgb(lightness, a, b)
             return r, g, b, 255
         return None
 
     m = _LCH_RE.match(text)
     if m:
-        L, C, H = float(m.group(1)), float(m.group(2)), float(m.group(3))
-        if 0 <= L <= 100 and 0 <= H <= 360:
-            r, g, b = _lch_to_rgb(L, C, H)
+        lightness, chroma, hue = float(m.group(1)), float(m.group(2)), float(m.group(3))
+        if 0 <= lightness <= 100 and 0 <= hue <= 360:
+            r, g, b = _lch_to_rgb(lightness, chroma, hue)
             return r, g, b, 255
         return None
 
     m = _OKLAB_RE.match(text)
     if m:
-        L, a, b = float(m.group(1)), float(m.group(2)), float(m.group(3))
-        if 0 <= L <= 1:
-            r, g, b = _oklab_to_rgb(L, a, b)
+        lightness, a, b = float(m.group(1)), float(m.group(2)), float(m.group(3))
+        if 0 <= lightness <= 1:
+            r, g, b = _oklab_to_rgb(lightness, a, b)
             return r, g, b, 255
         return None
 
     m = _OKLCH_RE.match(text)
     if m:
-        L, C, H = float(m.group(1)), float(m.group(2)), float(m.group(3))
-        if 0 <= L <= 1 and 0 <= H <= 360:
-            r, g, b = _oklch_to_rgb(L, C, H)
+        lightness, chroma, hue = float(m.group(1)), float(m.group(2)), float(m.group(3))
+        if 0 <= lightness <= 1 and 0 <= hue <= 360:
+            r, g, b = _oklch_to_rgb(lightness, chroma, hue)
             return r, g, b, 255
         return None
 
@@ -622,7 +626,7 @@ class _ColorPickerOverlay(QWidget):
     GRID_SIZE = 11
     CELL_SIZE = 12
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
@@ -694,7 +698,7 @@ class _ColorPickerOverlay(QWidget):
         painter = QPainter(img)
         for s in screens:
             geo = s.geometry()
-            grab = s.grabWindow(0, 0, 0, geo.width(), geo.height())
+            grab = s.grabWindow(x=0, y=0, width=geo.width(), height=geo.height())
             painter.drawPixmap(geo.x() - combined.x(), geo.y() - combined.y(), grab)
         painter.end()
         self._src_img = img.copy()
@@ -708,7 +712,8 @@ class _ColorPickerOverlay(QWidget):
         self._reposition()
         self.update()
 
-    def paintEvent(self, event):
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         if not self._src_img:
             return
         painter = QPainter(self)
@@ -788,17 +793,23 @@ class _ColorPickerOverlay(QWidget):
         )
         painter.end()
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is None:
+            return
+        if a0.button() == Qt.MouseButton.LeftButton:
             self._timer.stop()
             self.color_picked.emit(self._current_color.name().upper())
             self.close()
-        elif event.button() == Qt.MouseButton.RightButton:
+        elif a0.button() == Qt.MouseButton.RightButton:
             self._timer.stop()
             self.close()
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Escape:
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is None:
+            return
+        if a0.key() == Qt.Key.Key_Escape:
             self._timer.stop()
             self.close()
 
@@ -822,7 +833,7 @@ class ColorProvider(BaseProvider):
             return True
         return False
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).strip()
         if not query:
             return [
@@ -1042,14 +1053,14 @@ class ColorProvider(BaseProvider):
         """Replace the current search input text to show conversions for a palette color."""
         from core.widgets.yasb.quick_launch import QuickLaunchWidget
 
-        widget = QuickLaunchWidget._active_instance
+        widget = QuickLaunchWidget.active_instance()
         if widget is None:
             for w in QApplication.allWidgets():
                 if isinstance(w, QuickLaunchWidget):
                     widget = w
                     break
-        if widget and widget._popup:
-            widget._popup.search_input.setText(text)
+        if widget:
+            widget.set_search_text(text)
 
     def _parse_error(self, text: str, hint: str) -> list[ProviderResult]:
         """Return a single-item error list for an unparseable color string."""
@@ -1243,7 +1254,7 @@ class ColorProvider(BaseProvider):
         """Open the floating color picker loupe."""
         overlay = _ColorPickerOverlay()
         ColorProvider._picker_overlay = overlay
-        overlay.color_picked.connect(lambda hex_val: self._on_color_picked(hex_val))
+        overlay.color_picked.connect(self._on_color_picked)
         overlay.destroyed.connect(lambda: setattr(ColorProvider, "_picker_overlay", None))
         QTimer.singleShot(100, overlay.start)
         return True
@@ -1255,7 +1266,7 @@ class ColorProvider(BaseProvider):
         ColorProvider._picker_overlay = None
 
         def _reopen():
-            widget = QuickLaunchWidget._active_instance
+            widget = QuickLaunchWidget.active_instance()
             if widget is None:
                 for w in QApplication.topLevelWidgets():
                     ql = w.findChild(QuickLaunchWidget)
@@ -1268,8 +1279,8 @@ class ColorProvider(BaseProvider):
                         widget = w
                         break
             if widget:
-                widget._show_popup()
+                widget.show_popup()
                 if self.prefix:
-                    widget._set_prefix_chip(self.prefix, hex_color)
+                    widget.set_prefix_chip(self.prefix, hex_color)
 
         QTimer.singleShot(100, _reopen)

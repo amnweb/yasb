@@ -1,6 +1,11 @@
 import logging
+from collections.abc import Callable
+from functools import partial
+from typing import override
 
-from PyQt6.QtCore import QEvent, QPoint, Qt
+from pycaw.api.endpointvolume import IAudioEndpointVolume
+from PyQt6.QtCore import QEvent, QObject, QPoint, Qt
+from PyQt6.QtGui import QAction, QWheelEvent
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -17,7 +22,10 @@ from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
 from core.utils.win32.bindings import user32
 from core.utils.win32.utils import apply_qmenu_style
+from core.validation.widgets.yasb.control_center import ControlCenterSliderConfig, SlidersSectionConfig
 from core.widgets.services.brightness.service import BrightnessService
+from core.widgets.services.microphone.service import AudioInputService
+from core.widgets.services.volume.service import AudioOutputService
 
 
 class SlidersSectionWidget(QFrame):
@@ -26,9 +34,10 @@ class SlidersSectionWidget(QFrame):
     def __init__(
         self,
         parent: QWidget,
-        config: object,
-        refresh_popup: object,
-        audio_services: dict[str, object],
+        config: SlidersSectionConfig,
+        refresh_popup: Callable[[], None],
+        output_service: AudioOutputService | None,
+        input_service: AudioInputService | None,
         brightness_service: BrightnessService | None,
         hmonitor: int | None,
         tooltip: bool = False,
@@ -36,7 +45,8 @@ class SlidersSectionWidget(QFrame):
         super().__init__(parent)
         self.config = config
         self.refresh_popup = refresh_popup
-        self._audio_services = audio_services
+        self._output_service = output_service
+        self._input_service = input_service
         self._brightness_service = brightness_service
         self._hmonitor = hmonitor
         self._tooltip = tooltip
@@ -112,15 +122,15 @@ class SlidersSectionWidget(QFrame):
             return
         self._brightness_service.set_brightness(target, value)
 
-    def _get_volume_interface(self):
-        service = self._audio_services.get("output")
-        return service.get_volume_interface() if service else None
+    def _get_volume_interface(self) -> IAudioEndpointVolume | None:
+        return self._output_service.get_volume_interface() if self._output_service else None
 
-    def _get_microphone_interface(self):
-        service = self._audio_services.get("input")
-        return service.get_microphone_interface() if service else None
+    def _get_microphone_interface(self) -> IAudioEndpointVolume | None:
+        return self._input_service.get_microphone_interface() if self._input_service else None
 
-    def _create_slider_row(self, key: str, slider_config, callback) -> QWidget | None:
+    def _create_slider_row(
+        self, key: str, slider_config: ControlCenterSliderConfig, callback: Callable[[int], None]
+    ) -> QWidget | None:
         row = QFrame(self)
         row.setProperty("class", f"slider {key}")
         layout = QHBoxLayout(row)
@@ -249,7 +259,7 @@ class SlidersSectionWidget(QFrame):
             self._volume_source_menu.close()
             return
 
-        service = self._audio_services.get("output")
+        service = self._output_service
         if not service:
             return
 
@@ -261,10 +271,11 @@ class SlidersSectionWidget(QFrame):
         current_default = service.get_default_device_id()
 
         for device_id, device_name in devices:
-            action = menu.addAction(device_name)
+            action = QAction(device_name, menu)
+            menu.addAction(action)
             action.setCheckable(True)
             action.setChecked(device_id == current_default)
-            action.triggered.connect(lambda checked=False, did=device_id: self._set_volume_source(did))
+            action.triggered.connect(partial(self._set_volume_source, device_id))
 
         self._volume_source_menu = menu
         btn = self._volume_source_btn
@@ -274,8 +285,8 @@ class SlidersSectionWidget(QFrame):
             btn.update()
             menu.popup(pos)
 
-    def _set_volume_source(self, device_id: str):
-        service = self._audio_services.get("output")
+    def _set_volume_source(self, device_id: str, checked: bool = False) -> None:
+        service = self._output_service
         if not service:
             return
         if service.set_default_device(device_id):
@@ -290,7 +301,7 @@ class SlidersSectionWidget(QFrame):
             self._microphone_source_menu.close()
             return
 
-        service = self._audio_services.get("input")
+        service = self._input_service
         if not service:
             return
 
@@ -302,10 +313,11 @@ class SlidersSectionWidget(QFrame):
         current_default = service.get_default_device_id()
 
         for device_id, device_name in devices:
-            action = menu.addAction(device_name)
+            action = QAction(device_name, menu)
+            menu.addAction(action)
             action.setCheckable(True)
             action.setChecked(device_id == current_default)
-            action.triggered.connect(lambda checked=False, did=device_id: self._set_microphone_source(did))
+            action.triggered.connect(partial(self._set_microphone_source, device_id))
 
         self._microphone_source_menu = menu
         btn = self._microphone_source_btn
@@ -315,8 +327,8 @@ class SlidersSectionWidget(QFrame):
             btn.update()
             menu.popup(pos)
 
-    def _set_microphone_source(self, device_id: str):
-        service = self._audio_services.get("input")
+    def _set_microphone_source(self, device_id: str, checked: bool = False) -> None:
+        service = self._input_service
         if not service:
             return
         if service.set_default_device(device_id):
@@ -344,12 +356,13 @@ class SlidersSectionWidget(QFrame):
 
         menu = self._create_context_menu()
 
-        for index, (hmonitor, name) in enumerate(monitors):
+        for index, (hmonitor, _name) in enumerate(monitors):
             label = self._brightness_service.get_monitor_subtitle(hmonitor, index)
-            action = menu.addAction(label)
+            action = QAction(label, menu)
+            menu.addAction(action)
             action.setCheckable(True)
             action.setChecked(hmonitor == current)
-            action.triggered.connect(lambda checked=False, hmon=hmonitor: self._set_brightness_source(hmon))
+            action.triggered.connect(partial(self._set_brightness_source, hmonitor))
 
         self._brightness_source_menu = menu
         btn = self._brightness_source_btn
@@ -359,32 +372,33 @@ class SlidersSectionWidget(QFrame):
             btn.update()
             menu.popup(pos)
 
-    def _set_brightness_source(self, hmonitor: int):
+    def _set_brightness_source(self, hmonitor: int, checked: bool = False) -> None:
         if self._selected_brightness_hmonitor == hmonitor:
             return
         self._selected_brightness_hmonitor = hmonitor
         self.refresh_popup()
 
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.Type.Wheel and obj in (
-            self._volume_slider,
-            self._microphone_slider,
-            self._brightness_slider,
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        if (
+            isinstance(a1, QWheelEvent)
+            and isinstance(a0, QSlider)
+            and a0 in (self._volume_slider, self._microphone_slider, self._brightness_slider)
         ):
-            slider: QSlider = obj
-            step = 1 if event.angleDelta().y() > 0 else -1
-            slider.setValue(slider.value() + step)
+            step = 1 if a1.angleDelta().y() > 0 else -1
+            a0.setValue(a0.value() + step)
             return True
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
     def refresh_state(self) -> None:
         if self._volume_slider is not None:
             interface = self._get_volume_interface()
             disabled = interface is None
             row = self._volume_slider.parent()
-            row.setProperty("class", "slider volume disabled" if disabled else "slider volume")
+            if row is not None:
+                row.setProperty("class", "slider volume disabled" if disabled else "slider volume")
             self._volume_slider.setEnabled(not disabled)
-            if not disabled:
+            if interface is not None:
                 try:
                     val = round(interface.GetMasterVolumeLevelScalar() * 100)
                     self._volume_slider.blockSignals(True)
@@ -399,9 +413,10 @@ class SlidersSectionWidget(QFrame):
             interface = self._get_microphone_interface()
             disabled = interface is None
             row = self._microphone_slider.parent()
-            row.setProperty("class", "slider microphone disabled" if disabled else "slider microphone")
+            if row is not None:
+                row.setProperty("class", "slider microphone disabled" if disabled else "slider microphone")
             self._microphone_slider.setEnabled(not disabled)
-            if not disabled:
+            if interface is not None:
                 try:
                     val = round(interface.GetMasterVolumeLevelScalar() * 100)
                     self._microphone_slider.blockSignals(True)
@@ -416,7 +431,8 @@ class SlidersSectionWidget(QFrame):
             brightness = self._get_brightness_value()
             disabled = brightness is None
             row = self._brightness_slider.parent()
-            row.setProperty("class", "slider brightness disabled" if disabled else "slider brightness")
+            if row is not None:
+                row.setProperty("class", "slider brightness disabled" if disabled else "slider brightness")
             self._brightness_slider.setEnabled(not disabled)
             val = brightness if brightness is not None else 0
             self._brightness_slider.blockSignals(True)
@@ -433,7 +449,8 @@ class SlidersSectionWidget(QFrame):
         if self._get_brightness_target() != hmonitor:
             return
         row = self._brightness_slider.parent()
-        row.setProperty("class", "slider brightness")
+        if row is not None:
+            row.setProperty("class", "slider brightness")
         self._brightness_slider.setEnabled(True)
         self._brightness_slider.blockSignals(True)
         self._brightness_slider.setValue(brightness)

@@ -6,16 +6,28 @@ Displays AI credits billing usage data with a popup showing detailed statistics.
 import os
 import re
 from datetime import UTC, datetime
+from typing import override
 
-from PyQt6.QtCore import QPointF, Qt, QTimer
-from PyQt6.QtGui import QBrush, QColor, QGuiApplication, QLinearGradient, QPainter, QPainterPath, QPen
+from PyQt6.QtCore import QEvent, QPointF, Qt, QTimer
+from PyQt6.QtGui import (
+    QBrush,
+    QColor,
+    QGuiApplication,
+    QLinearGradient,
+    QMouseEvent,
+    QPainter,
+    QPainterPath,
+    QPaintEvent,
+    QPen,
+    QResizeEvent,
+)
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.yasb.copilot import CopilotConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.copilot.api import CopilotDataManager, CopilotUsageData
+from core.widgets.services.copilot.api import CopilotDataManager, CopilotUsageData, DailyUsage
 from core.widgets.services.github.auth import get_saved_token, save_token
 from core.widgets.services.github.auth_dialog import GitHubAuthDialog
 
@@ -64,8 +76,10 @@ class ProgressBar(QFrame):
         if self._state:
             parts.append(self._state)
         self.setProperty("class", " ".join(parts))
-        self.style().unpolish(self)
-        self.style().polish(self)
+        style = self.style()
+        if style is not None:
+            style.unpolish(self)
+            style.polish(self)
 
     def _update_state(self) -> None:
         pct = (self._value / self._max_value * 100) if self._max_value > 0 else 0
@@ -88,8 +102,9 @@ class ProgressBar(QFrame):
             fill_width = max(fill_width, self.height())
         self._fill.setGeometry(0, 0, fill_width, self.height())
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         self._update_fill()
 
 
@@ -98,7 +113,7 @@ class UsageChartWidget(QFrame):
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-        self._data: list[dict] = []
+        self._data: list[DailyUsage] = []
         self._points: list[QPointF] = []
         self._tooltip: CustomToolTip | None = None
         self._hovered_index = -1
@@ -109,7 +124,7 @@ class UsageChartWidget(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setMouseTracking(True)
 
-    def set_data(self, data: list[dict]) -> None:
+    def set_data(self, data: list[DailyUsage]) -> None:
         self._data = data
         self._calculate_points()
         self.update()
@@ -132,12 +147,14 @@ class UsageChartWidget(QFrame):
             y = pad_top + chart_h - (item.get("credits", 0.0) / max_val * chart_h)
             self._points.append(QPointF(x, y))
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         self._calculate_points()
 
-    def paintEvent(self, event):
-        super().paintEvent(event)
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
+        super().paintEvent(a0)
         if not self._points:
             return
 
@@ -188,10 +205,11 @@ class UsageChartWidget(QFrame):
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawEllipse(self._points[self._hovered_index], 4, 4)
 
-    def mouseMoveEvent(self, event):
-        if not self._points:
+    @override
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is None or not self._points:
             return
-        mouse_x = event.pos().x()
+        mouse_x = a0.pos().x()
         closest_idx = min(range(len(self._points)), key=lambda i: abs(self._points[i].x() - mouse_x))
         min_dist = abs(self._points[closest_idx].x() - mouse_x)
 
@@ -204,7 +222,8 @@ class UsageChartWidget(QFrame):
             self.update()
             self._hide_tooltip()
 
-    def leaveEvent(self, event):
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         self._hovered_index = -1
         self.update()
         self._hide_tooltip()
@@ -223,7 +242,7 @@ class UsageChartWidget(QFrame):
 
         if not self._tooltip:
             self._tooltip = CustomToolTip()
-            self._tooltip._position = "top"
+            self._tooltip.position = "top"
 
         self._tooltip.label.setText(f"{formatted}\n{item.get('credits', 0.0):.2f} credits")
         self._tooltip.adjustSize()
@@ -351,7 +370,7 @@ class CopilotWidget(BaseWidget):
                 cls._instances.remove(inst)
 
     def _toggle_popup(self):
-        if not CopilotDataManager._token:
+        if not CopilotDataManager.has_token():
             self._start_oauth_flow()
             return
         self._show_popup()

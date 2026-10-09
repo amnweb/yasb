@@ -6,10 +6,16 @@ frame costs no more than the fills it actually needs.
 """
 
 import logging
+from collections.abc import Callable
+from typing import Any, override
 
-from PyQt6.QtCore import QRect, Qt, pyqtProperty
-from PyQt6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPixmap
-from PyQt6.QtWidgets import QFrame
+import PyQt6.QtCore as QtCore
+from PyQt6.QtCore import QRect, Qt
+from PyQt6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent, QPixmap
+from PyQt6.QtWidgets import QFrame, QWidget
+
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 
 class AudioVizCanvas(QFrame):
@@ -28,7 +34,7 @@ class AudioVizCanvas(QFrame):
         stereo: bool,
         edge_fade_left: int,
         edge_fade_right: int,
-        parent=None,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.setProperty("class", "audio-visualizer-canvas")
@@ -54,15 +60,15 @@ class AudioVizCanvas(QFrame):
         self.setContentsMargins(0, 0, 0, 0)
         self.setFixedSize(max(8, canvas_width), max(4, height))
 
-    @pyqtProperty(QBrush)
-    def fillbrush(self) -> QBrush:
+    def _get_fillbrush(self) -> QBrush:
         return self._fill
 
-    @fillbrush.setter
-    def fillbrush(self, brush: QBrush) -> None:
+    def _set_fillbrush(self, brush: QBrush) -> None:
         self._fill = QBrush(brush)
         self._surface_brush_cache = None
         self.update()
+
+    fillbrush: QBrush = pyqtProperty(QBrush, _get_fillbrush, _set_fillbrush)
 
     def set_samples(self, samples: list[float]) -> None:
         if samples == self.samples:
@@ -74,7 +80,8 @@ class AudioVizCanvas(QFrame):
         """Blank the surface immediately, without waiting for a fade-out."""
         self.set_samples([0.0] * len(self.samples))
 
-    def paintEvent(self, _event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         if not self.samples:
             return
         try:

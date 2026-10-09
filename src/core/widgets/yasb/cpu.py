@@ -1,9 +1,9 @@
 import re
 from collections import deque
 
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel, QVBoxLayout
 
-from core.utils.stat_popup import build_stat_popup
+from core.utils.stat_popup import PinnablePopup, StatRow, build_stat_popup
 from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
@@ -23,11 +23,11 @@ class CpuWidget(BaseWidget):
     def __init__(self, config: CpuConfig):
         super().__init__(class_name=f"cpu-widget {config.class_name}")
         self.config = config
-        self._cpu_freq_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
-        self._cpu_perc_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
+        self._cpu_freq_history = deque([0.0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
+        self._cpu_perc_history = deque([0.0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._show_alt_label = False
         self._last_data: CpuData | None = None
-        self._history: deque = deque(maxlen=config.menu.graph_history_size)
+        self._history: deque[float] = deque(maxlen=config.menu.graph_history_size)
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
@@ -80,13 +80,13 @@ class CpuWidget(BaseWidget):
 
     def _update_popup(self, data: CpuData):
         """Push fresh data into the open popup if visible."""
-        popup = PopupWidget._open_popups.get(id(self))
-        if popup is None or not popup.isVisible():
+        popup = PopupWidget.open_popup_for(self)
+        if not isinstance(popup, PinnablePopup) or not popup.isVisible():
             return
         try:
-            if popup._graph is not None:
-                popup._graph.set_data(list(self._history))
-            labels = popup._stat_labels
+            if popup.graph is not None:
+                popup.graph.set_data(list(self._history))
+            labels = popup.stat_labels
             labels["usage"].setText(f"{data.percent:.0f}%")
             labels["freq"].setText(f"{data.freq.current:.0f} MHz")
             labels["cores"].setText(f"{data.cores_physical} / {data.cores_logical}")
@@ -101,7 +101,7 @@ class CpuWidget(BaseWidget):
         menu = self.config.menu
         data = self._last_data
 
-        stat_rows = [
+        stat_rows: list[StatRow] = [
             (
                 "Usage",
                 "usage",
@@ -130,13 +130,14 @@ class CpuWidget(BaseWidget):
             graph_class="cpu-graph",
         )
 
-        if menu.show_graph and popup._graph is not None:
+        if menu.show_graph and popup.graph is not None:
             main_layout = popup.layout()
-            graph_container = popup._graph.parentWidget()
-            graph_idx = main_layout.indexOf(graph_container)
-            util_label = QLabel("Utilization")
-            util_label.setProperty("class", "graph-title")
-            main_layout.insertWidget(graph_idx, util_label)
+            graph_container = popup.graph.parentWidget()
+            if isinstance(main_layout, QVBoxLayout) and graph_container is not None:
+                graph_idx = main_layout.indexOf(graph_container)
+                util_label = QLabel("Utilization")
+                util_label.setProperty("class", "graph-title")
+                main_layout.insertWidget(graph_idx, util_label)
 
         popup.show()
 
@@ -145,8 +146,10 @@ class CpuWidget(BaseWidget):
         self._cpu_freq_history.append(data.freq.current)
         self._cpu_perc_history.append(data.percent)
 
-        _round = lambda value: round(value) if self.config.hide_decimal else value
-        cpu_info = {
+        def _round(value: float) -> float:
+            return round(value) if self.config.hide_decimal else value
+
+        cpu_info: dict[str, dict[str, object]] = {
             "cores": {"physical": data.cores_physical, "total": data.cores_logical},
             "freq": {"min": _round(data.freq.min), "max": _round(data.freq.max), "current": _round(data.freq.current)},
             "percent": {"core": [_round(core) for core in data.percent_per_core], "total": _round(data.percent)},
@@ -177,7 +180,7 @@ class CpuWidget(BaseWidget):
 
         for part in label_parts:
             part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 if "<span" in part and "</span>" in part:
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(icon)
@@ -215,5 +218,4 @@ class CpuWidget(BaseWidget):
             return "medium"
         elif self.config.cpu_thresholds.medium < percent <= self.config.cpu_thresholds.high:
             return "high"
-        elif self.config.cpu_thresholds.high < percent:
-            return "critical"
+        return "critical"

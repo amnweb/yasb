@@ -51,6 +51,7 @@ Thank you for your interest in contributing to YASB! This guide will help you ge
 YASB uses several tools to maintain code quality:
 
 - **Ruff**: Fast Python linter and formatter
+- **Pyright**: Static type checker, run in strict mode
 - **Pre-commit**: Git hooks for automated code quality checks
 - **GitHub Actions**: Automated CI/CD workflows
 
@@ -74,11 +75,21 @@ ruff check .
 ruff check --fix .
 ```
 
+### Type Checking
+
+```bash
+pyright
+```
+
+Pyright reads its settings from `[tool.pyright]` in `pyproject.toml` and checks the whole project in strict mode. Its version is pinned in the `dev` extras, so your local run reports the same errors as CI. Every pull request runs this check, and the installers aren't built until it passes. Pylance in VS Code reads the same settings, so most of these errors also show up in the editor.
+
 ### Running Tests
 
 ```bash
 python -m pytest
 ```
+
+In VS Code, the **Testing** panel lists every test, and the icon next to each one runs or debugs it on its own. It uses the Python interpreter selected in VS Code, so install the `dev` extras there.
 
 The tests also run on every pull request, and the bot comments with any failures. The checks that compare ctypes code with the Windows SDK need Visual Studio or the Build Tools with the **Desktop development with C++** workload; without it they are skipped locally and still run in CI. See [tests/README.md](https://github.com/amnweb/yasb/blob/main/tests/README.md) for what each test guards against and what to do when one fails.
 

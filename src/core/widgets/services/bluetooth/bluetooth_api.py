@@ -2,6 +2,7 @@ import asyncio
 import ctypes
 import logging
 import os
+from collections.abc import Callable
 from ctypes import wintypes
 from typing import Any
 
@@ -11,7 +12,12 @@ from winrt.windows.devices.bluetooth import (
     BluetoothDevice,
     BluetoothLEDevice,
 )
-from winrt.windows.devices.enumeration import DeviceInformation, DeviceWatcherStatus
+from winrt.windows.devices.enumeration import (
+    DeviceInformation,
+    DeviceInformationUpdate,
+    DeviceWatcher,
+    DeviceWatcherStatus,
+)
 from winrt.windows.devices.radios import Radio, RadioAccessStatus, RadioKind, RadioState
 
 from core.widgets.services.bluetooth.bluetooth_types import (
@@ -190,7 +196,7 @@ async def set_radio_power(on: bool) -> bool:
     return False
 
 
-async def bind_radio(on_changed) -> tuple[Any, Any] | None:
+async def bind_radio(on_changed: Callable[[Any, Any], None]) -> tuple[Any, Any] | None:
     try:
         for radio in await Radio.get_radios_async():
             if radio.kind == RadioKind.BLUETOOTH:
@@ -219,7 +225,7 @@ def _is_bluetooth_paired_device_id(device_id: str) -> bool:
     )
 
 
-def open_adapter_watch(on_changed) -> Any | None:
+def open_adapter_watch(on_changed: Callable[[str], None]) -> dict[str, Any] | None:
     """Unfiltered DeviceWatcher: adapter Added/Removed/Updated, pair DeviceAdded/Removed."""
     try:
         _ = BluetoothAdapter.get_device_selector()
@@ -228,7 +234,7 @@ def open_adapter_watch(on_changed) -> Any | None:
         logger.warning("Bluetooth open_adapter_watch failed: %s", e)
         return None
 
-    state = {"ready": False, "watcher": watcher, "tokens": [], "handlers": []}
+    state: dict[str, Any] = {"ready": False, "watcher": watcher, "tokens": [], "handlers": []}
 
     def _fire(kind: str) -> None:
         try:
@@ -236,7 +242,7 @@ def open_adapter_watch(on_changed) -> Any | None:
         except Exception as e:
             logger.debug("Bluetooth adapter watch callback failed: %s", e)
 
-    def on_added(_sender, info) -> None:
+    def on_added(_sender: DeviceWatcher, info: DeviceInformation) -> None:
         if not state["ready"]:
             return
         device_id = getattr(info, "id", "") or ""
@@ -245,7 +251,7 @@ def open_adapter_watch(on_changed) -> Any | None:
         elif _is_bluetooth_paired_device_id(device_id):
             _fire("DeviceAdded")
 
-    def on_removed(_sender, update) -> None:
+    def on_removed(_sender: DeviceWatcher, update: DeviceInformationUpdate) -> None:
         if not state["ready"]:
             return
         device_id = getattr(update, "id", "") or ""
@@ -254,13 +260,13 @@ def open_adapter_watch(on_changed) -> Any | None:
         elif _is_bluetooth_paired_device_id(device_id):
             _fire("DeviceRemoved")
 
-    def on_updated(_sender, update) -> None:
+    def on_updated(_sender: DeviceWatcher, update: DeviceInformationUpdate) -> None:
         if not state["ready"]:
             return
         if _is_bluetooth_adapter_id(getattr(update, "id", "") or ""):
             _fire("Updated")
 
-    def on_enum_completed(_sender, _args) -> None:
+    def on_enum_completed(_sender: DeviceWatcher, _args: Any) -> None:
         state["ready"] = True
 
     # Keep handler refs alive on the state object (WinRT only holds weak-ish tokens).
@@ -283,7 +289,7 @@ def close_adapter_watch(state: Any | None) -> None:
     if not state:
         return
     watcher = state.get("watcher")
-    tokens = state.get("tokens") or []
+    tokens: list[Any] = state.get("tokens") or []
     if watcher is None:
         return
     try:
@@ -312,7 +318,7 @@ def close_adapter_watch(state: Any | None) -> None:
         state["handlers"] = []
 
 
-async def open_device_watch(device: DeviceInfo, on_changed) -> tuple[Any, Any] | None:
+async def open_device_watch(device: DeviceInfo, on_changed: Callable[[Any, Any], None]) -> tuple[Any, Any] | None:
     """Open one WinRT device and subscribe ConnectionStatusChanged."""
     if not device.address_int:
         return None
@@ -464,7 +470,7 @@ async def enrich_device(device: DeviceInfo) -> DeviceInfo:
                 device.device_id = le.device_id or device.device_id
                 device.name = le.name or device.name
                 appearance = le.appearance
-                if appearance is not None:
+                if appearance is not None:  # pyright: ignore[reportUnnecessaryComparison]
                     category = int(appearance.category)
                     subcategory = int(getattr(appearance, "sub_category", 0) or 0)
                     device.device_type = device_type_from_le_appearance(category, subcategory)
@@ -481,7 +487,7 @@ async def enrich_device(device: DeviceInfo) -> DeviceInfo:
                 device.device_id = bt.device_id or device.device_id
                 device.name = bt.name or device.name
                 device.connected = int(bt.connection_status) == int(BluetoothConnectionStatus.CONNECTED)
-                if bt.class_of_device is not None:
+                if bt.class_of_device is not None:  # pyright: ignore[reportUnnecessaryComparison]
                     major = int(bt.class_of_device.major_class)
                     minor = int(bt.class_of_device.minor_class)
                     device.major_class = major
@@ -512,7 +518,7 @@ async def list_le_devices() -> list[DeviceInfo] | None:
                 le = await BluetoothLEDevice.from_id_async(device_id)
             except Exception:
                 continue
-            if le is None:
+            if le is None:  # pyright: ignore[reportUnnecessaryComparison]
                 continue
             address_int = int(le.bluetooth_address)
             if not address_int:

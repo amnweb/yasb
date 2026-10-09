@@ -1,11 +1,13 @@
 import logging
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from core.widgets.services.server_monitor.worker import ServerCheckWorker
 
 logger = logging.getLogger("server_monitor")
+
+type ServiceKey = tuple[tuple[str, ...], bool, bool, int, int]
 
 
 class ServerCheckService(QObject):
@@ -14,18 +16,18 @@ class ServerCheckService(QObject):
     status_updated = pyqtSignal(int, list)
     refresh_started = pyqtSignal()
 
-    _instances: ClassVar[dict[tuple, ServerCheckService]] = {}
+    _instances: ClassVar[dict[ServiceKey, ServerCheckService]] = {}
 
     @classmethod
     def get_instance(
         cls,
-        servers: list[dict],
+        servers: list[dict[str, Any]],
         ssl_verify: bool,
         ssl_check: bool,
         timeout: int,
         update_interval_s: int,
     ) -> ServerCheckService:
-        key = (tuple(s["url"] for s in servers), ssl_verify, ssl_check, timeout, int(update_interval_s))
+        key: ServiceKey = (tuple(s["url"] for s in servers), ssl_verify, ssl_check, timeout, int(update_interval_s))
         inst = cls._instances.get(key)
         if inst is None:
             inst = cls(
@@ -42,12 +44,12 @@ class ServerCheckService(QObject):
 
     def __init__(
         self,
-        servers: list[dict],
+        servers: list[dict[str, Any]],
         ssl_verify: bool,
         ssl_check: bool,
         timeout: int,
         update_interval_s: int,
-        _key: tuple,
+        _key: ServiceKey,
     ):
         super().__init__()
         self._key = _key
@@ -101,5 +103,5 @@ class ServerCheckService(QObject):
         except RuntimeError:
             return
 
-    def _on_worker_status_updated(self, status_list: list) -> None:
+    def _on_worker_status_updated(self, status_list: list[dict[str, Any]]) -> None:
         self.status_updated.emit(self._run_id, status_list)

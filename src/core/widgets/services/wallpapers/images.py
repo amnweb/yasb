@@ -4,7 +4,7 @@ import math
 import os
 from functools import cmp_to_key, partial
 
-import comtypes.client
+import comtypes.client  # pyright: ignore[reportMissingTypeStubs]
 import pythoncom
 import win32api
 from PyQt6.QtCore import QObject, QRect, QRunnable, QSize, Qt, QThreadPool, pyqtSignal
@@ -112,7 +112,7 @@ class ImageSignals(QObject):
 
 
 class ImageLoader(QRunnable):
-    def __init__(self, image_path, width, height, index, dpr: float = 1.0):
+    def __init__(self, image_path: str, width: float, height: float, index: int, dpr: float = 1.0):
         super().__init__()
         self.image_path = image_path
         self.target_width = width
@@ -186,4 +186,6 @@ class ImageLoader(QRunnable):
 
         self.signals.loaded.emit(self.image_path, pixmap, self.index)
         if cache_key and not image.isNull():
-            QThreadPool.globalInstance().start(partial(thumbnails.save, cache_key, thumbnail))
+            pool = QThreadPool.globalInstance()
+            if pool is not None:
+                pool.start(partial(thumbnails.save, cache_key, thumbnail))

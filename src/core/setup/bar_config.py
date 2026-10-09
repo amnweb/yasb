@@ -2,6 +2,8 @@
 Default root and bar configuration and stylesheet for the YASB Setup Wizard.
 """
 
+from typing import Any
+
 CONFIG_HEADER = (
     "# yaml-language-server: $schema=https://raw.githubusercontent.com/amnweb/yasb/main/schema.json\n"
     "\n"
@@ -9,14 +11,14 @@ CONFIG_HEADER = (
     "# For more information, visit https://github.com/amnweb/yasb/wiki\n"
 )
 
-ROOT_CONFIG: dict = {
+ROOT_CONFIG: dict[str, Any] = {
     "watch_stylesheet": True,
     "watch_config": True,
     "debug": False,
     "update_check": True,
 }
 
-ROOT_BAR: dict = {
+ROOT_BAR: dict[str, Any] = {
     "enabled": True,
     "screens": ["*"],
     "class_name": "yasb-bar",

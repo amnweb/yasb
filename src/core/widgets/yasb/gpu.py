@@ -4,7 +4,7 @@ from collections import deque
 from humanize import naturalsize
 from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout
 
-from core.utils.stat_popup import GraphWidget, build_stat_popup
+from core.utils.stat_popup import GraphWidget, PinnablePopup, StatRow, build_stat_popup
 from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
@@ -25,12 +25,13 @@ class GpuWidget(BaseWidget):
     def __init__(self, config: GpuConfig):
         super().__init__(class_name=f"gpu-widget {config.class_name}")
         self.config = config
-        self._gpu_util_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
-        self._gpu_mem_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
+        self._gpu_util_history = deque([0.0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
+        self._gpu_mem_history = deque([0.0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._show_alt_label = False
         self._last_gpu_data: GpuData | None = None
-        self._history: deque = deque(maxlen=config.menu.graph_history_size)
-        self._temp_history: deque = deque(maxlen=config.menu.graph_history_size)
+        self._history: deque[float] = deque(maxlen=config.menu.graph_history_size)
+        self._temp_history: deque[float] = deque(maxlen=config.menu.graph_history_size)
+        self._popup_temp_graph: GraphWidget | None = None
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
@@ -63,7 +64,7 @@ class GpuWidget(BaseWidget):
     def _show_placeholder(self):
         """Display placeholder (zero/default) GPU data."""
         data = GpuData(
-            index=self.config.gpu_index,
+            gpu_index=self.config.gpu_index,
             name="Unknown",
             utilization=0.0,
             mem_total=0,
@@ -71,7 +72,7 @@ class GpuWidget(BaseWidget):
             mem_free=0,
             mem_shared_total=0,
             mem_shared_used=0,
-            temp=0.0,
+            temp=0,
             fan_speed=0,
             power_draw=0.0,
         )
@@ -82,7 +83,7 @@ class GpuWidget(BaseWidget):
         """Slot called on main thread when GPU worker emits data."""
         for inst in cls._instances[:]:
             try:
-                gpu_data = next((g for g in gpu_data_list if g.index == inst.config.gpu_index), None)
+                gpu_data = next((g for g in gpu_data_list if g.gpu_index == inst.config.gpu_index), None)
                 if gpu_data:
                     if inst.isHidden():
                         inst.show()
@@ -104,10 +105,15 @@ class GpuWidget(BaseWidget):
         _temp = gpu_data.temp if self.config.units == "metric" else (gpu_data.temp * (9 / 5) + 32)
         _temp = round(_temp) if self.config.hide_decimal else _temp
         _fmt = "%.0f" if self.config.hide_decimal else "%.1f"
-        _naturalsize = lambda value: naturalsize(value, True, True, _fmt)
-        _round = round if self.config.hide_decimal else lambda v: round(v, 1)
-        gpu_info = {
-            "index": gpu_data.index,
+
+        def _naturalsize(value: float) -> str:
+            return naturalsize(value, True, True, _fmt)
+
+        def _round(value: float) -> float:
+            return round(value) if self.config.hide_decimal else round(value, 1)
+
+        gpu_info: dict[str, object] = {
+            "index": gpu_data.gpu_index,
             "name": gpu_data.name,
             "utilization": _round(gpu_data.utilization),
             "mem_total": _naturalsize(gpu_data.mem_total),
@@ -143,7 +149,7 @@ class GpuWidget(BaseWidget):
 
         for part in label_parts:
             part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 if "<span" in part and "</span>" in part:
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(icon)
@@ -164,8 +170,7 @@ class GpuWidget(BaseWidget):
             return "medium"
         elif self.config.gpu_thresholds.medium < utilization <= self.config.gpu_thresholds.high:
             return "high"
-        elif self.config.gpu_thresholds.high < utilization:
-            return "critical"
+        return "critical"
 
     def _get_histogram_bar(self, num: float, num_min: float, num_max: float) -> str:
         if num_max == num_min:
@@ -176,16 +181,16 @@ class GpuWidget(BaseWidget):
 
     def _update_popup(self, gpu_data: GpuData):
         """Push fresh data into the open popup if visible."""
-        popup = PopupWidget._open_popups.get(id(self))
-        if popup is None or not popup.isVisible():
+        popup = PopupWidget.open_popup_for(self)
+        if not isinstance(popup, PinnablePopup) or not popup.isVisible():
             return
         try:
-            if popup._graph is not None:
-                popup._graph.set_data(list(self._history))
-            if popup._temp_graph is not None:
-                popup._temp_graph.set_data(list(self._temp_history))
-            format_size = popup._format_size
-            labels = popup._stat_labels
+            if popup.graph is not None:
+                popup.graph.set_data(list(self._history))
+            if self._popup_temp_graph is not None:
+                self._popup_temp_graph.set_data(list(self._temp_history))
+            format_size = self._format_popup_size
+            labels = popup.stat_labels
             labels["usage"].setText(f"{gpu_data.utilization:.0f}%")
             labels["mem"].setText(f"{format_size(gpu_data.mem_used)} / {format_size(gpu_data.mem_total)}")
             if "temp" in labels:
@@ -207,14 +212,14 @@ class GpuWidget(BaseWidget):
             return
         menu = self.config.menu
         data = self._last_gpu_data
-        format_size = lambda v: naturalsize(v, True, False, "%.1f").replace("i", "")
+        format_size = self._format_popup_size
 
-        has_temp = data and data.temp > 0
-        has_power = data and data.power_draw > 0
-        has_fan = data and (data.fan_speed > 0 or has_temp)
-        has_shared = data and data.mem_shared_total > 0
+        has_temp = data is not None and data.temp > 0
+        has_power = data is not None and data.power_draw > 0
+        has_fan = data is not None and (data.fan_speed > 0 or has_temp)
+        has_shared = data is not None and data.mem_shared_total > 0
 
-        stat_rows = [
+        stat_rows: list[StatRow] = [
             (
                 "Usage",
                 "usage",
@@ -225,7 +230,7 @@ class GpuWidget(BaseWidget):
             ),
         ]
 
-        if has_temp or has_power:
+        if data is not None and (has_temp or has_power):
             stat_rows.append(
                 (
                     "Temperature" if has_temp else None,
@@ -237,7 +242,7 @@ class GpuWidget(BaseWidget):
                 )
             )
 
-        if has_fan or has_shared:
+        if data is not None and (has_fan or has_shared):
             stat_rows.append(
                 (
                     "Fan speed" if has_fan else None,
@@ -258,21 +263,20 @@ class GpuWidget(BaseWidget):
             stat_rows=stat_rows,
             graph_class="gpu-graph",
         )
-        popup._format_size = format_size
 
         # Add title label above the utilization graph container
-        if menu.show_graph and popup._graph is not None:
-            main_layout = popup.layout()
-            graph_container = popup._graph.parentWidget()
-            graph_idx = main_layout.indexOf(graph_container)
-            util_label = QLabel("Utilization")
-            util_label.setProperty("class", "graph-title first")
-            main_layout.insertWidget(graph_idx, util_label)
+        main_layout = popup.layout()
+        if menu.show_graph and popup.graph is not None:
+            graph_container = popup.graph.parentWidget()
+            if isinstance(main_layout, QVBoxLayout) and graph_container is not None:
+                graph_idx = main_layout.indexOf(graph_container)
+                util_label = QLabel("Utilization")
+                util_label.setProperty("class", "graph-title first")
+                main_layout.insertWidget(graph_idx, util_label)
 
         # Add temperature graph if temp data is available
-        has_temp = data and data.temp > 0
-        if menu.show_graph and has_temp:
-            main_layout = popup.layout()
+        self._popup_temp_graph = None
+        if menu.show_graph and has_temp and isinstance(main_layout, QVBoxLayout):
             stats_index = main_layout.count() - 1
 
             temp_label = QLabel("Temperature")
@@ -291,11 +295,13 @@ class GpuWidget(BaseWidget):
                 temp_graph.set_data(list(self._temp_history))
             main_layout.insertWidget(stats_index, temp_graph_container)
 
-            popup._temp_graph = temp_graph
-        else:
-            popup._temp_graph = None
+            self._popup_temp_graph = temp_graph
 
         popup.show()
+
+    @staticmethod
+    def _format_popup_size(value: float) -> str:
+        return naturalsize(value, True, False, "%.1f").replace("i", "")
 
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
@@ -305,6 +311,7 @@ class GpuWidget(BaseWidget):
             widget.setVisible(self._show_alt_label)
         for inst in GpuWidget._instances[:]:
             try:
-                inst._update_label(inst._last_gpu_data)
+                if inst._last_gpu_data is not None:
+                    inst._update_label(inst._last_gpu_data)
             except RuntimeError:
                 GpuWidget._instances.remove(inst)

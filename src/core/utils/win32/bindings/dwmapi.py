@@ -5,6 +5,7 @@ from ctypes import POINTER, windll
 from ctypes.wintypes import DWORD, HANDLE, HWND, LPVOID
 
 from core.utils.win32.structs import DWM_THUMBNAIL_PROPERTIES, MARGINS, SIZE
+from core.utils.win32.typecheck import CArgObject
 
 # Load dwmapi
 _dwmapi = windll.dwmapi
@@ -34,12 +35,12 @@ _dwmapi.DwmQueryThumbnailSourceSize.argtypes = [HANDLE, POINTER(SIZE)]
 _dwmapi.DwmQueryThumbnailSourceSize.restype = ctypes.c_long
 
 
-def DwmGetWindowAttribute(hwnd: int, attribute: int, out_ptr: LPVOID, size: int) -> int:
+def DwmGetWindowAttribute(hwnd: int, attribute: int, out_ptr: CArgObject, size: int) -> int:
     """Get the value of a specified attribute for a given window."""
     return _dwmapi.DwmGetWindowAttribute(hwnd, attribute, out_ptr, size)
 
 
-def DwmSetWindowAttribute(hwnd: int, attribute: int, in_ptr: LPVOID, size: int) -> int:
+def DwmSetWindowAttribute(hwnd: int, attribute: int, in_ptr: CArgObject, size: int) -> int:
     """Set the value of a specified attribute for a given window."""
     return _dwmapi.DwmSetWindowAttribute(hwnd, attribute, in_ptr, size)
 
@@ -49,7 +50,7 @@ def DwmExtendFrameIntoClientArea(hwnd: int, margins: MARGINS) -> int:
     return _dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
 
 
-def DwmRegisterThumbnail(hwnd_destination: int, hwnd_source: int, thumbnail_handle_ptr) -> int:
+def DwmRegisterThumbnail(hwnd_destination: int, hwnd_source: int, thumbnail_handle_ptr: CArgObject) -> int:
     """Register a thumbnail relationship between two windows."""
     return _dwmapi.DwmRegisterThumbnail(hwnd_destination, hwnd_source, thumbnail_handle_ptr)
 
@@ -59,11 +60,11 @@ def DwmUnregisterThumbnail(thumbnail_handle: HANDLE) -> int:
     return _dwmapi.DwmUnregisterThumbnail(thumbnail_handle)
 
 
-def DwmUpdateThumbnailProperties(thumbnail_handle: HANDLE, properties_ptr) -> int:
+def DwmUpdateThumbnailProperties(thumbnail_handle: HANDLE, properties_ptr: CArgObject) -> int:
     """Update thumbnail properties such as size, opacity, and visibility."""
     return _dwmapi.DwmUpdateThumbnailProperties(thumbnail_handle, properties_ptr)
 
 
-def DwmQueryThumbnailSourceSize(thumbnail_handle: HANDLE, size_ptr) -> int:
+def DwmQueryThumbnailSourceSize(thumbnail_handle: HANDLE, size_ptr: CArgObject) -> int:
     """Query the source size of a thumbnail."""
     return _dwmapi.DwmQueryThumbnailSourceSize(thumbnail_handle, size_ptr)

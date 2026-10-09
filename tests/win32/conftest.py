@@ -18,7 +18,7 @@ def _sdk_required() -> bool:
     return os.environ.get("YASB_REQUIRE_SDK", "") not in ("", "0")
 
 
-def _fingerprint(toolchain_description: str, requests: dict) -> str:
+def _fingerprint(toolchain_description: str, requests: discovery.ProbeRequests) -> str:
     digest = hashlib.sha256(toolchain_description.encode())
     for name in _PROBE_SOURCES:
         digest.update((Path(__file__).parent / name).read_bytes())

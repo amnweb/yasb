@@ -2,6 +2,7 @@ import ctypes
 import logging
 import struct
 from ctypes import byref, c_ulong, create_string_buffer, create_unicode_buffer, sizeof
+from typing import cast
 
 import win32api
 import win32con
@@ -33,7 +34,7 @@ pil_logger = logging.getLogger("PIL")
 pil_logger.setLevel(logging.INFO)
 
 
-def get_window_icon(hwnd: int):
+def get_window_icon(hwnd: int) -> Image.Image | None:
     """Get the icon for a window handle (HWND).
 
     - WM_GETICON: ICON_BIG, ICON_SMALL, ICON_SMALL2
@@ -51,7 +52,7 @@ def get_window_icon(hwnd: int):
                 return img
 
             # Fallback draw the icon into a compatible bitmap
-            hdc_handle = win32gui.GetDC(0)
+            hdc_handle = cast(int, win32gui.GetDC(0))  # pyright: ignore[reportUnknownMemberType]
             if not hdc_handle:
                 return None
             memdc = None
@@ -70,10 +71,10 @@ def get_window_icon(hwnd: int):
                 except Exception:
                     return None
 
-                bmpinfo = hbmp.GetInfo()
+                bmpinfo = cast(dict[str, int], hbmp.GetInfo())  # pyright: ignore[reportUnknownMemberType]
                 bmpstr = hbmp.GetBitmapBits(True)
                 raw_data = bytes(bmpstr)
-                return Image.frombuffer(
+                return Image.frombuffer(  # pyright: ignore[reportUnknownMemberType]
                     "RGBA",
                     (bmpinfo["bmWidth"], bmpinfo["bmHeight"]),
                     raw_data,
@@ -122,7 +123,7 @@ def get_window_icon(hwnd: int):
                 img = _image_from_hicon(hicon)
                 # WM_GETICON returns an icon handle we should destroy
                 try:
-                    win32gui.DestroyIcon(hicon)
+                    win32gui.DestroyIcon(hicon)  # pyright: ignore[reportUnknownMemberType]
                 except Exception:
                     pass
                 if img is not None and not _is_fully_transparent(img):
@@ -138,15 +139,16 @@ def get_window_icon(hwnd: int):
         # Fall back to class icons
         class_hicon = 0
         try:
-            if hasattr(win32gui, "GetClassLongPtr"):
-                # Try small icon first, then big
-                class_hicon = win32gui.GetClassLongPtr(hwnd, getattr(win32con, "GCLP_HICONSM", 0)) or 0
-                if not class_hicon:
-                    class_hicon = win32gui.GetClassLongPtr(hwnd, win32con.GCLP_HICON) or 0
-            else:
-                class_hicon = win32gui.GetClassLong(hwnd, getattr(win32con, "GCL_HICONSM", -34)) or 0
-                if not class_hicon:
-                    class_hicon = win32gui.GetClassLong(hwnd, win32con.GCL_HICON) or 0
+            # Try small icon first, then big
+            class_hicon = (
+                cast(int, win32gui.GetClassLong(hwnd, win32con.GCL_HICONSM))  # pyright: ignore[reportUnknownMemberType]
+                or 0
+            )
+            if not class_hicon:
+                class_hicon = (
+                    cast(int, win32gui.GetClassLong(hwnd, win32con.GCL_HICON))  # pyright: ignore[reportUnknownMemberType]
+                    or 0
+                )
         except Exception:
             class_hicon = 0
 
@@ -158,13 +160,16 @@ def get_window_icon(hwnd: int):
         # OS default application icon
         try:
             size = win32api.GetSystemMetrics(win32con.SM_CXICON)
-            default_hicon = win32gui.LoadImage(
-                0,
-                win32con.IDI_APPLICATION,
-                win32con.IMAGE_ICON,
-                size,
-                size,
-                win32con.LR_SHARED,
+            default_hicon = cast(
+                int,
+                win32gui.LoadImage(
+                    0,
+                    win32con.IDI_APPLICATION,  # pyright: ignore[reportArgumentType]
+                    win32con.IMAGE_ICON,
+                    size,
+                    size,
+                    win32con.LR_SHARED,
+                ),
             )
         except Exception:
             default_hicon = 0
@@ -233,7 +238,7 @@ def get_process_icon(pid: int) -> Image.Image | None:
                 CloseHandle(h_process)
 
         # Try to find window and get icon from it (fallback)
-        def enum_windows_callback(hwnd, results):
+        def enum_windows_callback(hwnd: int, results: list[int]) -> None:
             try:
                 _, window_pid = win32process.GetWindowThreadProcessId(hwnd)
                 if window_pid == pid:
@@ -242,7 +247,7 @@ def get_process_icon(pid: int) -> Image.Image | None:
             except:
                 pass
 
-        windows = []
+        windows: list[int] = []
         win32gui.EnumWindows(enum_windows_callback, windows)
 
         if windows:
@@ -254,13 +259,16 @@ def get_process_icon(pid: int) -> Image.Image | None:
         # Fallback OS default application icon
         try:
             size = win32api.GetSystemMetrics(win32con.SM_CXICON)
-            default_hicon = win32gui.LoadImage(
-                0,
-                win32con.IDI_APPLICATION,
-                win32con.IMAGE_ICON,
-                size,
-                size,
-                win32con.LR_SHARED,
+            default_hicon = cast(
+                int,
+                win32gui.LoadImage(
+                    0,
+                    win32con.IDI_APPLICATION,  # pyright: ignore[reportArgumentType]
+                    win32con.IMAGE_ICON,
+                    size,
+                    size,
+                    win32con.LR_SHARED,
+                ),
             )
             if default_hicon:
                 return hicon_to_image(default_hicon)
@@ -374,7 +382,9 @@ def hicon_to_image(hicon: int) -> Image.Image | None:
         img_data[i : i + 4] = bytes((r, g, b, a))
 
     # Create PIL Image
-    return Image.frombuffer("RGBA", (width, height), bytes(img_data), "raw", "RGBA", 0, 1)
+    return Image.frombuffer(  # pyright: ignore[reportUnknownMemberType]
+        "RGBA", (width, height), bytes(img_data), "raw", "RGBA", 0, 1
+    )
 
 
 def get_stock_icon(icon_id: int) -> Image.Image | None:
@@ -407,7 +417,7 @@ def get_stock_icon(icon_id: int) -> Image.Image | None:
             return icon_img
         finally:
             try:
-                win32gui.DestroyIcon(sii.hIcon)
+                win32gui.DestroyIcon(sii.hIcon)  # pyright: ignore[reportUnknownMemberType]
             except Exception:
                 pass
 

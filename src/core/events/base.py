@@ -2,7 +2,7 @@ from enum import Enum, EnumMeta
 
 
 class MetaEvent(EnumMeta):
-    def __contains__(cls, item):
+    def __contains__(cls, item: object) -> bool:
         try:
             cls(item)
         except ValueError:

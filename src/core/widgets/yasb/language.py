@@ -2,6 +2,7 @@ import ctypes
 import logging
 import re
 import winreg
+from typing import TypedDict
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QMouseEvent
@@ -27,6 +28,14 @@ from core.utils.win32.constants import (
 )
 from core.validation.widgets.yasb.language import LanguageConfig
 from core.widgets.base import BaseWidget
+
+
+class _LanguageInfo(TypedDict):
+    id: int
+    handle: int
+    name: str
+    code: str
+    layouts: str
 
 
 class LanguageWidget(BaseWidget):
@@ -55,7 +64,7 @@ class LanguageWidget(BaseWidget):
         self.callback_timer = "update_label"
 
         # Cache for available languages
-        self._available_languages = None
+        self._available_languages: list[_LanguageInfo] | None = None
 
         # Focused window info for activating the layout from the menu
         self._focused_window_hwnd: int | None = None
@@ -97,7 +106,7 @@ class LanguageWidget(BaseWidget):
 
         for part in label_parts:
             part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 if "<span" in part and "</span>" in part:
                     # Ensure the icon is correctly set
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
@@ -163,7 +172,7 @@ class LanguageWidget(BaseWidget):
 
         self._menu.show()
 
-    def _create_language_item(self, layout, lang_info, is_current=False):
+    def _create_language_item(self, layout: QVBoxLayout, lang_info: _LanguageInfo, is_current: bool = False) -> None:
         """Create a language menu item"""
         container = QFrame()
         container.setProperty("class", f"language-item{' active' if is_current else ''}")
@@ -209,12 +218,12 @@ class LanguageWidget(BaseWidget):
 
         layout.addWidget(container)
 
-    def _get_available_languages(self):
+    def _get_available_languages(self) -> list[_LanguageInfo]:
         """Get list of all installed input languages"""
         if self._available_languages is not None:
             return self._available_languages
 
-        languages = []
+        languages: list[_LanguageInfo] = []
 
         # Get number of keyboard layouts
         num_layouts = user32.GetKeyboardLayoutList(0, None)
@@ -227,7 +236,7 @@ class LanguageWidget(BaseWidget):
 
         # Save current layout to restore later
         current_layout = user32.ActivateKeyboardLayout(0, 0)
-        seen_handles = set()
+        seen_handles: set[int] = set()
 
         for i in range(num_layouts):
             layout_handle = layout_array[i]
@@ -345,7 +354,7 @@ class LanguageWidget(BaseWidget):
             result = user32.ActivateKeyboardLayout(ctypes.c_void_p(target_layout), 0)
         return result
 
-    def _switch_to_language(self, target_lang_id):
+    def _switch_to_language(self, target_lang_id: int) -> bool:
         """Switch to the specified language"""
         try:
             # Get all available layouts
