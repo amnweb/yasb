@@ -78,15 +78,15 @@ class GlazewmClient(QObject):
 
         self._uri = QUrl(uri)
         self._websocket = QWebSocket()
-        self._websocket.connected.connect(self._on_connected)  # type: ignore
-        self._websocket.textMessageReceived.connect(self._handle_message)  # type: ignore
-        self._websocket.stateChanged.connect(self._on_state_changed)  # type: ignore
-        self._websocket.errorOccurred.connect(self._on_error)  # type: ignore
+        self._websocket.connected.connect(self._on_connected)
+        self._websocket.textMessageReceived.connect(self._handle_message)
+        self._websocket.stateChanged.connect(self._on_state_changed)
+        self._websocket.errorOccurred.connect(self._on_error)
 
         self._reconnect_timer = QTimer()
         self._reconnect_timer.setInterval(reconnect_interval)
-        self._reconnect_timer.timeout.connect(self.connect)  # type: ignore
-        self._websocket.disconnected.connect(self._reconnect_timer.start)  # type: ignore
+        self._reconnect_timer.timeout.connect(self.connect)
+        self._websocket.disconnected.connect(self._reconnect_timer.start)
 
     def activate_workspace(self, workspace_name: str):
         self._websocket.sendTextMessage(f"command focus --workspace {workspace_name}")
