@@ -86,6 +86,7 @@ class GlazewmClient(QObject):
         self._reconnect_timer = QTimer()
         self._reconnect_timer.setInterval(reconnect_interval)
         self._reconnect_timer.timeout.connect(self.connect)  # type: ignore
+        self._websocket.disconnected.connect(self._reconnect_timer.start)  # type: ignore
 
     def activate_workspace(self, workspace_name: str):
         self._websocket.sendTextMessage(f"command focus --workspace {workspace_name}")
