@@ -27,10 +27,9 @@ class WifiWidget(BaseWidget):
         self._ethernet_active = False
         self._wifi_menu = WifiMenu(self, self.config.menu_config)
 
-        self._cached_wifi_info = WiFiInfo(0, "Disconnected", -1)
-
         # Worker thread that will fetch wifi info on an interval
         self._wifi_worker = WiFiWorker(self.config.get_exact_wifi_strength, self.config.update_interval)
+        self._cached_wifi_info = self._wifi_worker.last_result or WiFiInfo(0, "Disconnected", -1)
         self._wifi_worker.result.connect(self._on_wifi_info_result)
         self._wifi_worker.start()
 
@@ -50,6 +49,8 @@ class WifiWidget(BaseWidget):
         self.callback_left = self.config.callbacks.on_left
         self.callback_right = self.config.callbacks.on_right
         self.callback_middle = self.config.callbacks.on_middle
+
+        self._update_label()
 
     def _display_correct_label(self):
         active_widget_group = "ethernet" if self._ethernet_active else "wifi"

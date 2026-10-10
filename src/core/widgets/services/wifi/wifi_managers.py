@@ -129,6 +129,7 @@ class WiFiWorker(QThread):
         self._initialized = True
         self._wifi_manager = WiFiManager()
         self._stop_event = threading.Event()
+        self.last_result: WiFiInfo | None = None
 
         app_inst = QApplication.instance()
         if app_inst is not None:
@@ -151,7 +152,8 @@ class WiFiWorker(QThread):
                 name = self._get_wifi_name()
                 exact_quality = self._get_exact_quality()
                 if not self._stop_event.is_set():
-                    self.result.emit(WiFiInfo(bars, name, exact_quality))
+                    self.last_result = WiFiInfo(bars, name, exact_quality)
+                    self.result.emit(self.last_result)
             except Exception as e:
                 logger.error("WiFiWorker error: %s", e)
                 if not self._stop_event.is_set():
