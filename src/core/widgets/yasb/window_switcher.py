@@ -6,7 +6,7 @@ import win32con
 import win32gui
 from PIL import Image
 from PyQt6.QtCore import QEvent, QObject, Qt, QTimer
-from PyQt6.QtGui import QImage, QKeyEvent, QMouseEvent, QPixmap, QScreen, QWheelEvent
+from PyQt6.QtGui import QImage, QKeyEvent, QMouseEvent, QPixmap, QScreen, QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -33,7 +33,7 @@ from core.utils.win32.window_actions import (
 from core.validation.widgets.yasb.window_switcher import WindowSwitcherConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.taskbar.application_window import ApplicationWindow
-from core.widgets.services.taskbar.window_manager import connect_taskbar
+from core.widgets.services.taskbar.window_manager import TaskbarWindowManager, connect_taskbar
 
 logger = logging.getLogger("window_switcher")
 
@@ -74,7 +74,18 @@ class WindowSwitcherWidget(BaseWidget):
         # Tell TaskbarWindowManager to track cloaked apps globally so we can see them
         self._show_only_visible = False
 
-        self._task_manager = connect_taskbar(self)
+        self._task_manager: TaskbarWindowManager | None = None
+
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
+        super().showEvent(a0)
+        # connect_taskbar() calls winId() on self.window(). Before the widget is in the bar,
+        # that is the widget itself, and Qt would make it and its siblings native windows.
+        if self._task_manager is None:
+            try:
+                self._task_manager = connect_taskbar(self)
+            except Exception as e:
+                logger.error("Failed to connect to the task manager: %s", e)
 
     def _toggle_window_switcher(self):
         if self._popup and is_valid_qobject(self._popup) and self._popup.isVisible():
@@ -133,6 +144,8 @@ class WindowSwitcherWidget(BaseWidget):
         return self.screen() or QApplication.primaryScreen() or QApplication.screens()[0]
 
     def _get_sorted_windows(self) -> list[ApplicationWindow]:
+        if self._task_manager is None:
+            return []
         windows = list(self._task_manager.get_windows().values())
         taskbar_windows = [w for w in windows if w.is_taskbar_window()]
         z_order: list[int] = []
