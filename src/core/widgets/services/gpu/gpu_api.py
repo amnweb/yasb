@@ -414,16 +414,16 @@ class GpuApi:
 
         pdh.PdhCollectQueryData(self._query)
 
-        eng_max: dict[tuple[str, str], float] = {}
+        # Match Task Manager: sum each engine across processes, then take the busiest engine.
+        eng_sum: dict[str, float] = {}
         for name, val in self._pdh_read_array(self._h_util):
-            luid = _luid_str(name)
-            etype = name.split("engtype_")[-1] if "engtype_" in name else "other"
-            key = (luid, etype)
-            eng_max[key] = max(eng_max.get(key, 0.0), val)
+            eng = name[name.lower().find("luid_") :].lower()
+            eng_sum[eng] = eng_sum.get(eng, 0.0) + val
 
         util: dict[str, float] = {}
-        for (luid, _), val in eng_max.items():
-            util[luid] = min(100.0, util.get(luid, 0.0) + val)
+        for eng, val in eng_sum.items():
+            luid = _luid_str(eng)
+            util[luid] = min(100.0, max(util.get(luid, 0.0), val))
 
         mem_ded: dict[str, int] = {_luid_str(n): int(v) for n, v in self._pdh_read_array(self._h_mem_ded)}
         mem_shr: dict[str, int] = {_luid_str(n): int(v) for n, v in self._pdh_read_array(self._h_mem_shr)}
