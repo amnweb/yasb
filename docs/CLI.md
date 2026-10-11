@@ -23,6 +23,7 @@ The YASB CLI is a command line interface that allows you to interact with the YA
 - `log` - Stream the status bar logs in real-time.
 - `reset` - Restore default config files and clear cache.
 - `config-dir` - Open the configuration directory in Windows File Explorer.
+- `cloud` - Back up and restore your configuration with YASB Cloud. See [YASB Cloud](./Cloud).
 - `help` - Show the help message.
 
 ## Options
@@ -30,6 +31,8 @@ The YASB CLI is a command line interface that allows you to interact with the YA
 - `-v`, `--version` - Show the YASB and YASB-CLI versions.
 - `-c`, `--config` - Print the absolute path to your configuration folder.
 - `-s`, `--silent` - Disable normal print status messages for `start`, `stop`, and `reload`.
+- `-f`, `--force` - Force stop the application. Used with the `stop` command.
+- `-s`, `--screen` - Name of the screen to target. Used with `show-bar`, `hide-bar` and `toggle-bar`.
 
 > **Note:**
 > You can use the `--silent` option with the `start`, `stop` and `reload` commands to prevent non-error messages from being displayed.

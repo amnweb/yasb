@@ -5,17 +5,91 @@ Helps you keep an eye on your battery's charge level, remaining life, health, an
 | Option                  | Type    | Default                                      | Description                                                                 |
 |-------------------------|---------|----------------------------------------------|-----------------------------------------------------------------------------|
 | `label`                 | string  | `{icon}`                                     | The primary label format.                                                   |
-| `label_alt`             | string  | `{percent}%` | Battery percent           | The alternative label format.                                               |
+| `label_alt`             | string  | `{percent}% \| remaining: {time_remaining}` | The alternative label format.                                               |
 | `class_name`            | string  | `""`                                         | Additional CSS class name for the widget.                                    |
-| `update_interval`       | integer | `5000`                                       | The interval in milliseconds to update the widget.                          |
+| `update_interval`       | integer | `5000`                                       | The interval in milliseconds to update the widget (0–60000).                |
 | `time_remaining_natural`| boolean | `False`                                      | Whether to display the remaining time in a natural format.                  |
 | `time_remaining_unlimited_icon`| string | `unlimited`                                      | Which string to use to display unlimited time remaining.                  |
 | `hide_unsupported`| boolean | `True`                                      | Whether to hide the widget if the current system does not have battery info.                  |
-| `charging_options`      | dict    | `{icon_format: '{charging_icon}', blink_charging_icon: True, blink_interval: 500}` | Options for charging state display.                                         |
-| `status_thresholds`     | dict    | `{critical: 10, low: 25, medium: 75, high: 95, full: 100}` | Thresholds for different battery statuses.                                  |
-| `status_icons`          | dict    | `{icon_charging: '\uf0e7', icon_critical: '\uf244', icon_low: '\uf243', icon_medium: '\uf242', icon_high: '\uf241', icon_full: '\uf240'}` | Icons for different battery statuses.                                       |
-| `callbacks`             | dict    | `{on_left: 'toggle_label', on_middle: 'do_nothing', on_right: 'do_nothing'}` | Callback functions for different mouse button actions.                      |
-| `progress_bar`          | dict    | `{'enabled': false, 'progress_type': 'circular', 'position': 'left', 'size': 18, 'thickness': 3, 'radius': 0, 'color': '#00C800', 'background_color': '#3C3C3C', 'animation': true}` | Progress bar settings.                                      |
+| `charging_options`      | dict    | [See below](#charging-options) | Options for charging state display.                                         |
+| `status_thresholds`     | dict    | [See below](#status-thresholds-options) | Thresholds for different battery statuses.                                  |
+| `status_icons`          | dict    | [See below](#status-icons-options) | Icons for different battery statuses.                                       |
+| `keybindings`           | list    | `[]`                                         | Optional hotkeys. See [Keybindings](./Keybindings).                         |
+| `callbacks`             | dict    | [See below](#callbacks) | Callback functions for different mouse button actions.                      |
+| `progress_bar`          | dict    | [See below](#progress-bar-options) | Progress bar settings.                                      |
+
+## Charging Options
+
+The `charging_options` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+charging_options:
+  icon_format: "{charging_icon} {icon}"
+  blink_charging_icon: true
+  blink_interval: 500
+```
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `update_label` - Refresh the label now.
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Status Thresholds Options
+
+The `status_thresholds` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+status_thresholds:
+  critical: 10
+  low: 25
+  medium: 75
+  high: 95
+  full: 100
+```
+
+## Status Icons Options
+
+The `status_icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+status_icons:
+  icon_charging: "\uf0e7"
+  icon_critical: "\uf244"
+  icon_low: "\uf243"
+  icon_medium: "\uf242"
+  icon_high: "\uf241"
+  icon_full: "\uf240"
+```
+
+## Progress Bar Options
+
+The `progress_bar` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+progress_bar:
+  enabled: false
+  progress_type: "circular"
+  size: 18
+  thickness: 3
+  radius: 0
+  color: "#00C800"
+  background_color: "#3C3C3C"
+  position: "left"
+  animation: true
+```
 
 ## Label Placeholders
 
@@ -48,7 +122,7 @@ battery:
     time_remaining_natural: False
     hide_unsupported: True
     charging_options:
-      icon_format: "{charging_icon}"
+      icon_format: "{charging_icon} {icon}"
       blink_charging_icon: true
       blink_interval: 500
     status_thresholds:
@@ -79,7 +153,7 @@ battery:
 - **charging_options**: A dictionary specifying options for displaying the charging state. It contains:
   - **icon_format**: The format string for the charging icon. You can use placeholders like `{charging_icon}` and `{icon}`.
   - **blink_charging_icon**: A boolean indicating whether to blink the charging icon when the battery is charging. (to create a blinking effect use class `blink` in CSS)
-  - **blink_interval**: The interval in milliseconds for the blinking effect.
+  - **blink_interval**: The interval in milliseconds for the blinking effect (100–5000).
 - **status_thresholds**: A dictionary specifying the thresholds for different battery statuses. It contains:
   - **critical**: The battery percentage threshold for critical status.
   - **low**: The battery percentage threshold for low status.
@@ -93,10 +167,8 @@ battery:
   - **icon_medium**: The icon for medium status.
   - **icon_high**: The icon for high status.
   - **icon_full**: The icon for full status.
-- **callbacks**: A dictionary specifying the callbacks for mouse events. It contains:
-  - **on_left**: The name of the callback function for left mouse button click.
-  - **on_middle**: The name of the callback function for middle mouse button click.
-  - **on_right**: The name of the callback function for right mouse button click.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **progress_bar**: A dictionary containing settings for the progress bar. It includes:
   - **enabled**: Whether the progress bar is enabled.
   - **progress_type**: The type of progress bar. Options are `"circular"`, `"linear_horizontal"`, or `"linear_vertical"`.

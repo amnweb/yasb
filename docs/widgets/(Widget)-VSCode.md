@@ -4,18 +4,53 @@ Shows a list of your recently opened projects in Visual Studio Code. It opens a 
 
 | Option           | Type     | Default                        | Description                                                                 |
 |------------------|----------|--------------------------------|-----------------------------------------------------------------------------|
-| `label`             | string  | `'<span>\ue943</span>'` | The format string for the widget. |
-| `label_alt`         | string  | `'<span>\ue943</span> recents'` | The alternative format string for the widget. |
-| `menu_title`         | string  | `<span style='font-weight:bold'>VS</span>Code recents` | The title of the menu. |
-| `icons` | dict | `{'folder': '\ue8b7', 'file': '\ue8e5', 'remote': '\ue8af'}` | The icons for folders, files, and remote sessions. Setting any icon to `""` will hide it. |
+| `label`             | string  | `'<span>\udb82\ude1e</span>'` | The format string for the widget. |
+| `label_alt`         | string  | `'<span>\udb82\ude1e</span> recents'` | The alternative format string for the widget. |
+| `menu_title`         | string  | `<span style='font-weight:bold'>VS code</span> recents` | The title of the menu. |
+| `icons` | dict | `{'folder': '\uf114', 'file': '\uf016', 'remote': ''}` | The icons for folders, files, and remote sessions. Setting any icon to `""` will hide it. |
 | `truncate_to_root_dir` | bool    | `false`                        | Whether to truncate the path to the projects root directory. |
 | `max_number_of_folders` | int | `30` | The maximum number of folders to display in the menu. |
 | `max_number_of_files` | int | `30` | The maximum number of files to display in the menu. |
 | `state_storage_path` | string | `''` | Absolute path to the folder containing editor data, examples are shown below. |
 | `modified_date_format` | string | `'Date modified: %Y-%m-%d %H:%M'` | The format for the modified date of the files and folders. |
 | `cli_command` | string | `'code'` | The CLI command to execute when a workspace is clicked, doesn't need to contain folder name. For example, `code`, `windsurf`. |
-| `menu`              | dict    | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
-| `callbacks` | dict | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Callbacks for mouse events on the widget. |
+| `menu`              | dict    | [See below](#menu-options) | Menu settings for the widget. |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks` | dict | [See below](#callbacks) | Callbacks for mouse events on the widget. |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_menu"
+  on_middle: "do_nothing"
+  on_right: "toggle_label"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_menu` - Open or close the popup menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Menu Options
+
+The `menu` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+menu:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "System"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+```
 
 ## Example Configuration
 
@@ -56,10 +91,8 @@ vscode:
 - **state_storage_path:** Absolute path to the folder containing editor data. For example, `C:\Users\user\.vscode-shared\sharedStorage\state.vscdb` for Visual Studio Code, `C:\Users\user\AppData\Roaming\Windsurf\User\globalStorage\state.vscdb` for Windsurf, etc. If left empty, it will use the default VSCode path.
 - **modified_date_format:** The date format for the modified date of the files and folders. It uses Python's `strftime` format. For example, '%Y-%m-%d %H:%M' for `2025-06-01 12:00`.
 - **cli_command:** The cli command to execute when a workspace is clicked, doesn't need to contain folder name. For example, `code`, `windsurf`.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
-  - **callback functions**:
-    - `toggle_menu`: Toggles the menu of the widget.
-    - `toggle_label`: Toggles the label of the widget.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ## Widget Style
 ```css
@@ -175,4 +208,4 @@ vscode:
 ```
 
 ## Preview of the Widget
-![VSCode YASB Widget](assets/ee9942e2-56694a11-2a9c-0b46-0b1f1f5401b0.png)
+![Visual Studio Code YASB Widget](assets/ee9942e2-56694a11-2a9c-0b46-0b1f1f5401b0.png)

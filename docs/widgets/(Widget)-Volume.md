@@ -4,19 +4,70 @@ Displays your speaker volume and mute status. You can adjust the volume by scrol
 
 | Option       | Type   | Default                                                                 | Description                                                                 |
 |--------------|--------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `label`      | string | `'{level}'`                                                             | The format string for the volume label. You can use `{icon}` for the volume icon and `{level}` for the volume percentage. |
-| `label_alt`  | string | `'{level}'`                                                             | The alternative format string for the volume label. Useful for displaying additional volume details. |
+| `label`      | string | `'{icon} {level}'`                                                         | The format string for the volume label. You can use `{icon}` for the volume icon and `{level}` for the volume percentage. |
+| `label_alt`  | string | `'{icon} {level}'`                                                         | The alternative format string for the volume label. Useful for displaying additional volume details. |
 | `class_name`      | string | `""`                                                                                  | Additional CSS class name for the widget.                                    |
-| `scroll_step`     | int     | `2`                  | The step size for volume adjustment when scrolling. The value is in percentage points (0-100). |
+| `scroll_step`     | int     | `2`                  | The step size for volume adjustment when scrolling. The value is in percentage points (1-100). |
 | `invert_wheel`     | boolean     | `false`                  | Whether to invert wheel scroll direction (useful on laptop trackpads) |
 | `slider_beep`   | boolean | `true`              | Whether to play a sound when the volume slider is released. |
 | `mute_text` | string  | `'mute'` | Text used by `{level}` to indicate muted volume |
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
-| `icons` | dict  | `{'muted': '\ueee8', '10': '\uf026', '30': '\uf027', '60': '\uf027', '100': '\uf028'}`                    | A dictionary of icons representing different volume levels. The icons are used based on the current volume percentage. |
-| `callbacks`  | dict   | `{'on_left': 'toggle_volume_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_mute'}`                  | Callbacks for mouse events on the volume widget. |
+| `icons` | dict  | [See below](#icons-options) | A dictionary of icons representing different volume levels. The icons are used based on the current volume percentage. |
+| `callbacks`  | dict   | [See below](#callbacks) | Callbacks for mouse events on the volume widget. |
 | `audio_menu` | dict | [See below](#audio-menu-options)  | Menu settings for the widget. |
-| `progress_bar`       | dict    | `{'enabled': false, 'progress_type': 'circular', 'position': 'left', 'size': 18, 'thickness': 3, 'radius': 0, 'color': '#00C800', 'background_color': '#3C3C3C', 'animation': true}` | Progress bar settings.    |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `progress_bar`       | dict    | [See below](#progress-bar-options) | Progress bar settings.    |
 
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_volume_menu"
+  on_middle: "do_nothing"
+  on_right: "toggle_mute"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `update_label` - Refresh the label now.
+- `toggle_mute` - Mute or unmute the speakers.
+- `toggle_volume_menu` - Open or close the audio menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Icons Options
+
+The `icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+icons:
+  muted: "\ueee8"
+  10: "\uf026"
+  30: "\uf027"
+  60: "\uf027"
+  100: "\uf028"
+```
+
+## Progress Bar Options
+
+The `progress_bar` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+progress_bar:
+  enabled: false
+  progress_type: "circular"
+  size: 18
+  thickness: 3
+  radius: 0
+  color: "#00C800"
+  background_color: "#3C3C3C"
+  position: "left"
+  animation: true
+```
 
 ## Example Configuration
 
@@ -54,7 +105,7 @@ volume:
       direction: "down" # Set the direction of the menu (up, down)
       offset_top: 6 # Set the top offset of the menu
       offset_left: 0 # Set the left offset of the menu
-      show_apps: true # Whether to show the list of applications with audio sessions
+      show_apps: true # Whether to show the list of applications with audio sessions (default: false)
       show_app_labels: false # Whether to show application labels in the audio menu
       show_app_icons: true # Whether to show application icons in the audio menu
       show_apps_expanded: false # Whether application volumes are expanded by default when opening the menu
@@ -69,7 +120,8 @@ volume:
 - **class_name**: Additional CSS class name for the widget. This allows for custom styling.
 - **mute_text**: The text for `{level}` to display when the volume is muted. Default: "mute".
 - **tooltip**: Whether to show the tooltip on hover.
-- **scroll_step**: The step size for volume adjustment when scrolling. The value is in percentage points (0-100).
+- **scroll_step**: The step size for volume adjustment when scrolling. The value is in percentage points (1-100).
+- **invert_wheel**: Whether to invert wheel scroll direction (useful on laptop trackpads).
 - **slider_beep**: Whether to play a sound when the volume slider is released.
 - **icons**: A dictionary of icons representing different volume levels. The dictionary keys must be strings representing the upper bound volume limit (e.g. `"10"`, `"30"`). You can map `"muted"` to a specific icon. Example: `{"muted": "...", "10": "...", "100": "..."}`. The icons are used based on the current volume percentage. For example, if the volume is at 25%, the widget will use the icon mapped to `"30"` since 25% is less than or equal to 30.
 - **audio_menu**: A dictionary specifying the menu settings for the widget. It contains the following keys:
@@ -88,7 +140,8 @@ volume:
   - **app_icons**: A dictionary specifying icons for the toggle button to expand/collapse application volumes. It contains the following keys:
     - **toggle_down**: Icon for the button in the collapsed state.
     - **toggle_up**: Icon for the button in the expanded state.
-- **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **progress_bar**: A dictionary containing settings for the progress bar. It includes:
   - **enabled**: Whether the progress bar is enabled.
   - **progress_type**: The type of progress bar. Options are `"circular"`, `"linear_horizontal"`, or `"linear_vertical"`.
@@ -205,4 +258,4 @@ volume:
 ```
 
 ## Preview of the Widget
-![Volume Widget](assets/119849t2-ty6f89d1-as5e-9982-t6d7ddbdda70.png)
+![Volume YASB Widget](assets/119849t2-ty6f89d1-as5e-9982-t6d7ddbdda70.png)

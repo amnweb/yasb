@@ -38,63 +38,29 @@ or without alt label:
 self.build_widget_label(self.config.label, None)
 ```
 
--   Or use a custom function if needed - the **build_widget_label()** method:
+-   Full signature:
 
 ```py
- """
- This method creates dynamic QLabel widgets from text content that may include HTML span elements.
-
- # Parameters
- - `content` (str): The primary content string to display, which may contain HTML spans with class attributes.
- - `content_alt` (str): An alternative content string to create hidden labels for later use.
-
- # Behavior
- 1. The method parses both content strings, splitting them at span tags.
- 2. For each part:
-     - If it's a span element, it extracts the class name and text content.
-     - If it's plain text, it creates a standard label with class "label".
- 3. All labels are:
-     - Center-aligned
-     - Given a pointing hand cursor
-     - Added to the widget container layout
- 4. Labels from `content` are visible by default.
- 5. Labels from `content_alt` are hidden by default.
-
- # Returns
- The method stores two lists as instance variables:
- - `self._widgets`: Visible labels created from the primary content
- - `self._widgets_alt`: Hidden labels created from the alternative content
- """
-
- def build_widget_label(self, content: str, content_alt: str):
-     def process_content(content, is_alt=False):
-         label_parts = re.split('(<span.*?>.*?</span>)', content)
-         label_parts = [part for part in label_parts if part]
-         widgets = []
-         for part in label_parts:
-             part = part.strip()
-             if not part:
-                 continue
-             if '<span' in part and '</span>' in part:
-                 class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                 class_result = class_name.group(2) if class_name else 'icon'
-                 icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                 label = QLabel(icon)
-                 label.setProperty("class", class_result)
-             else:
-                 label = QLabel(part)
-                 label.setProperty("class", "label")
-             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-             self._widget_container_layout.addWidget(label)
-             widgets.append(label)
-             if is_alt:
-                 label.hide()
-             else:
-                 label.show()
-         return widgets
-     self._widgets = process_content(content)
-     self._widgets_alt = process_content(content_alt, is_alt=True)
+self.build_widget_label(
+    content,
+    content_alt=None,
+    label_placeholder=None,
+    hide_icons=False,
+)
 ```
+
+-   `content`: the primary label string. It can contain `<span>` elements, usually for icons.
+-   `content_alt`: the optional alternative label string, hidden until you toggle it.
+-   `label_placeholder`: text shown in the text labels until real data arrives.
+-   `hide_icons`: hide the icon labels.
+
+How the string is turned into labels:
+
+1. The string is split at `<span>...</span>` elements.
+2. A span becomes a `QLabel` with the text inside it. Its CSS class comes from the span's `class` attribute and defaults to `icon`.
+3. Any other text becomes a `QLabel` with the class `label` (`label alt` for `content_alt`).
+4. All labels are center-aligned and added to the widget container layout. Cursors and other visuals are styled with CSS, not set in code.
+5. Labels from `content` are stored in `self._widgets` and shown. Labels from `content_alt` are stored in `self._widgets_alt` and hidden.
 
 ## 5. Create validation schema for your widget options:
 
@@ -164,10 +130,6 @@ my_widget:
     type: "yasb.my_widget.MyWidget"
     options:
         label: "<span>\ue71a</span>"
-        animation:
-            enabled: true
-            type: "fadeInOut"
-            duration: 200
 ```
 
 ## 9. Using `PopupWidget` for dropdown menus
@@ -306,7 +268,10 @@ def show_menu(self):
     def on_pin_toggled(checked: bool):
         pin_btn.setText("\ueb8b" if checked else "\ueb8a")
         pin_btn.setProperty("class", "pin-btn pinned" if checked else "pin-btn")
-        set_tooltip(pin_btn, "Unpin this window" if checked else "Pin this window")
+        set_tooltip(
+            pin_btn,
+            "Unpin this window" if checked else "Pin this window",
+        )
         refresh_widget_style(pin_btn)
         self._menu.set_pinned(checked)
 
@@ -335,14 +300,11 @@ When `pinnable=True`:
 
 `set_pinned()` does nothing when `pinnable=False`, so it is safe to call it from a generic callback without checking first.
 
-### 10. Python Code Style
+## 10. Python Code Style
 
--  Follow PEP 8 guidelines
--  Use type hints where applicable
--  Write docstrings for classes and methods
--  Keep methods focused and concise
--  Comment complex logic
--  Include TODOs for future improvements
+-  Format and lint with Ruff, see [Contributing](./Contributing) for the commands.
+-  Add type hints. Pyright runs in strict mode.
+-  Keep methods focused and concise.
 
 ## 11. Test your widget:
 

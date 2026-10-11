@@ -7,19 +7,20 @@ A handy container widget that groups multiple other widgets together in the bar.
 | `class_name`        | string  | `'grouper'`                                               | The name identifier for the grouper widget instance.                 |
 | `widgets`           | list    | `[]`                                                      | List of widget names to group together inside this container.        |
 | `hide_empty`        | boolean | `False`                                                   | If true, the grouper widget will be hidden if all its child widgets are hidden. |
-| `collapse_options`  | dict    | See below                                                 | Options for collapsible grouper functionality.                        |
+| `collapse_options`  | dict    | [See below](#collapse-options) | Options for collapsible grouper functionality.                        |
+| `keybindings`       | list    | `[]`                                                      | Optional hotkeys. See [Keybindings](./Keybindings) and the actions below. |
 
-### Collapse Options
+## Collapse Options
 
 | Option              | Type    | Default   | Description                                                           |
 |---------------------|---------|-----------|-----------------------------------------------------------------------|
-| `enabled`           | boolean | `True`    | Enable/disable collapse functionality.                                |
+| `enabled`           | boolean | `False`   | Enable/disable collapse functionality.                                |
 | `exclude_widgets`   | list    | `[]`      | List of widget names (from `widgets`) to exclude from collapsing. These widgets remain visible when collapsed. |
-| `expanded_label`    | string  | `"\uf054"`| Icon/label shown when grouper is expande. |
+| `expanded_label`    | string  | `"\uf054"`| Icon/label shown when grouper is expanded. |
 | `collapsed_label`   | string  | `"\uf053"`| Icon/label shown when grouper is collapsed. |
 | `label_position`    | string  | `"right"` | Position of collapse button: `"left"` or `"right"`.                   |
 
-### Keybindings
+## Keybinding Actions
 | Action            | Description                                      |
 |-------------------|--------------------------------------------------|
 | `toggle_collapse` | Toggle the collapsed/expanded state of the grouper. |

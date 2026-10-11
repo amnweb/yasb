@@ -9,9 +9,43 @@
 | `run_whkd`        | boolean | `false`                                                                  | Whether to run WHKD.                                                |
 | `run_masir`       | boolean | `false`                                                                  | Whether to run Masir.                                                |
 | `config_path`     | string  | `None`                                                                   | Path to the Komorebi configuration file. If not set, uses default location. |
-| `show_version`    | boolean | `false`                                                                  | Whether to show the komorebi version.                                          |
-| `komorebi_menu`   | dict | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Settings for the Komorebi menu. |
-| `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events. |
+| `show_version`    | boolean | `true`                                                                   | Whether to show the komorebi version.                                          |
+| `komorebi_menu`   | dict | [See below](#komorebi-menu-options) | Settings for the Komorebi menu. |
+| `keybindings`     | list    | `[]`                                                                     | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks`       | dict    | [See below](#callbacks) | Callbacks for mouse events. |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_menu"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_menu` - Open or close the popup menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Komorebi Menu Options
+
+The `komorebi_menu` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+komorebi_menu:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "System"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+```
 
 ## Example Configuration
 
@@ -54,13 +88,14 @@
 - **komorebi_menu:** Settings for the Komorebi menu.
   - **blur:** Whether to enable blur effect.
   - **round_corners:** Whether to round corners.
-  - **round_corners_type:** Type of rounding ("Normal", "Small").
+  - **round_corners_type:** Type of rounding (`normal`, `small`).
   - **border_color:** Border color ("System", None, "Hex Color").
   - **alignment:** Alignment of the menu (left, right, center).
   - **direction:** Direction of the menu (up, down).
   - **offset_top:** Top offset for the menu.
   - **offset_left:** Left offset for the menu.
-- **callbacks:** Callbacks for mouse events.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ## Widget Style
 ```css
@@ -113,5 +148,5 @@
 }
 ```
 
-## Preview
-![Komorebi Control Widget](assets/768254j6-dx9t65f3-gm2v-3045-u5l8eabcfd19.png)
+## Preview of the Widget
+![Komorebi Control YASB Widget](assets/768254j6-dx9t65f3-gm2v-3045-u5l8eabcfd19.png)

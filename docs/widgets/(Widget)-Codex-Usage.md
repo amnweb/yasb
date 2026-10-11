@@ -14,7 +14,7 @@ The widget reuses the login managed by Codex itself. No additional login is need
 where the CLI already works. API-key-only authentication may not expose ChatGPT subscription
 rate limits.
 
-![Codex Usage widget in the YASB bar](../assets/5c5e8e22-f3da-4de7-b811-dbf41e87f5ba.png)
+![Codex Usage widget in the YASB bar](assets/5c5e8e22-f3da-4de7-b811-dbf41e87f5ba.png)
 
 ## Example Configuration
 
@@ -75,13 +75,33 @@ codex_usage:
 | `tooltip` | boolean | `true` | Show remaining/used details on hover. |
 | `show_token_usage` | boolean | `true` | Aggregate local session token metadata for the model chart and monthly heatmap. |
 | `stale_icon` | string | `⚠` | Warning icon used by the `{stale}` placeholder. |
-| `progress_bar` | dictionary | See example | Native bar indicator showing the active window's remaining percentage. |
-| `callbacks` | dictionary | See example | Mouse actions. |
-| `menu` | dictionary | See example | Popup position, appearance, section visibility, and Fluent navigation icons. |
+| `progress_bar` | dictionary | [See below](#example-configuration) | Native bar indicator showing the active window's remaining percentage. |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks` | dictionary | [See below](#callbacks) | Mouse actions. |
+| `menu` | dictionary | [See below](#example-configuration) | Popup position, appearance, section visibility, and Fluent navigation icons. |
 
 The progress bar supports `circular`, `linear_horizontal`, and `linear_vertical`. `color` may be
 a single color or a list of gradient colors. Right-click toggles the active label/window, and
 the progress bar follows it.
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_menu"
+  on_middle: "refresh"
+  on_right: "toggle_label"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_menu` - Open or close the details popup.
+- `refresh` - Refresh the usage now, without opening the popup.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
 
 ## Details Popup
 
@@ -113,7 +133,7 @@ totals, Models, and Activity without affecting rate limits or the optional accou
 Left-click again to close it. The middle-click `refresh` callback also refreshes without opening
 the window. Accounts without a secondary limit simply omit that section.
 
-![Codex Usage details popup](../assets/8edf52ee-eec2-4e8f-9fec-3b84accb5f81.png)
+![Codex Usage details popup](assets/8edf52ee-eec2-4e8f-9fec-3b84accb5f81.png)
 
 ## Refresh Feedback
 

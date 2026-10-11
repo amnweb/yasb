@@ -16,10 +16,60 @@ This widget implements a Pomodoro timer, which is a time management method that 
 | `show_notification` | boolean | `true` | Show Windows notification when a timer finishes. |
 | `session_target` | integer | `0` | Target number of sessions (0 means unlimited). |
 | `hide_on_break` | boolean | `false` | Hide the widget during break sessions. |
-| `icons` | dict | See below | Icons used for different timer states. |
-| `callbacks` | dict | See below | Configure widget interaction callbacks. |
-| `menu` | dict | See below | Configure the appearance and behavior of the timer menu. |
-| `progress_bar`       | dict    | `{'enabled': false, 'progress_type': 'circular', 'position': 'left', 'size': 18, 'thickness': 3, 'radius': 0, 'color': '#00C800', 'background_color': '#3C3C3C', 'animation': true}` | Progress bar settings.    |
+| `icons` | dict | [See below](#icons-options) | Icons used for different timer states. |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks` | dict | [See below](#available-callbacks) | Configure widget interaction callbacks. |
+| `menu` | dict | [See below](#menu-options) | Configure the appearance and behavior of the timer menu. |
+| `progress_bar`       | dict    | [See below](#progress-bar-options) | Progress bar settings.    |
+
+## Icons Options
+
+The `icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+icons:
+  work: "\uf252"
+  break_: "\uf253"
+  paused: "\uf254"
+```
+
+## Menu Options
+
+The `menu` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+menu:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "System"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+  circle_background_color: "#09ffffff"
+  circle_work_progress_color: "#a6e3a1"
+  circle_break_progress_color: "#89b4fa"
+  circle_thickness: 8
+  circle_size: 160
+```
+
+## Progress Bar Options
+
+The `progress_bar` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+progress_bar:
+  enabled: false
+  progress_type: "circular"
+  size: 18
+  thickness: 3
+  radius: 0
+  color: "#00C800"
+  background_color: "#3C3C3C"
+  position: "left"
+  animation: true
+```
 
 ## Example Configuration
 
@@ -74,10 +124,10 @@ pomodoro:
   - `{icon}` - Icon for the current state, as configured in the `icons` option.
 - **label_alt**: Alternative label format that can be toggled with right-click (or configured callback). Supports the same variables as `label`.
 - **class_name**: Additional CSS class name for the widget. This allows for custom styling.
-- **work_duration**: The duration of work sessions in minutes.
-- **break_duration**: The duration of regular breaks in minutes.
-- **long_break_duration**: The duration of long breaks in minutes.
-- **long_break_interval**: Number of work sessions before taking a long break.
+- **work_duration**: The duration of work sessions in minutes (minimum 1).
+- **break_duration**: The duration of regular breaks in minutes (minimum 1).
+- **long_break_duration**: The duration of long breaks in minutes (minimum 1).
+- **long_break_interval**: Number of work sessions before taking a long break (minimum 1).
 - **auto_start_breaks**: Automatically start break timer when work session ends.
 - **auto_start_work**: Automatically start work timer when break ends.
 - **sound_notification**: Play a sound notification when timer finishes.
@@ -88,7 +138,8 @@ pomodoro:
     - **work**: Icon for work sessions.
     - **break**: Icon for break sessions.
     - **paused**: Icon for paused timer.
-- **callbacks**: Configure what happens when clicking the widget.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#available-callbacks).
 - **menu**: Configure the appearance and behavior of the timer menu including the circular progress indicator.
     - **blur:** Whether to enable blur effect.
     - **round_corners:** Whether to round corners.
@@ -102,6 +153,7 @@ pomodoro:
     - **circle_work_progress_color:** Color of the work progress in the circular indicator.
     - **circle_break_progress_color:** Color of the break progress in the circular indicator.
     - **circle_thickness:** Thickness of the circular progress indicator.
+    - **circle_size:** Size of the circular progress indicator.
 - **progress_bar**: A dictionary containing settings for the progress bar. It includes:
   - **enabled**: Whether the progress bar is enabled.
   - **progress_type**: The type of progress bar. Options are `"circular"`, `"linear_horizontal"`, or `"linear_vertical"`.
@@ -114,6 +166,17 @@ pomodoro:
   - **animation**: Whether to enable smooth change of the progress bar value.
 
 ## Available Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_timer"
+  on_middle: "reset_timer"
+  on_right: "toggle_label"
+```
+
+Available actions:
 
 - **toggle_timer**: Start or pause the timer.
 - **reset_timer**: Reset the current timer.
@@ -219,4 +282,4 @@ pomodoro:
 ```
 
 ## Preview of the Widget
-![Pomodoro Timer YASB Widget](assets/864209753-d1e2f3a4-b5c6-7890-1234-5678defabc90.png)
+![Pomodoro YASB Widget](assets/864209753-d1e2f3a4-b5c6-7890-1234-5678defabc90.png)

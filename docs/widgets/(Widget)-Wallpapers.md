@@ -8,12 +8,30 @@ Change your desktop wallpaper from the bar. Click the widget to open a gallery o
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
 | `update_interval`  | integer  | 60        | The interval in seconds to update the wallpaper. Must be between 60 and 86400. |
 | `change_automatically` | boolean | `false`       | Whether to automatically change the wallpaper. |
-| `image_path`      | string/list   | `""`        | The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. This field is required. |
+| `image_path`      | string/list   | Required    | The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. This field is required. |
 | `engine`          | object   | `{}`        | The wallpaper transition engine options. |
 | `gallery`         | object   | `{}`        | The gallery options for the wallpaper widget. |
 | `run_after`       | list     | `[]`        | A list of commands to run after the wallpaper is changed. |
 | `keybindings`     | list     | `[]`        | Hotkeys that open the gallery without clicking the widget. |
-| `callbacks`         | dict   | `{'on_left': 'toggle_gallery', 'on_middle': 'do_nothing', 'on_right': 'change_wallpaper'}`                  | Dictionary of callbacks to run when the widget is clicked.                 |
+| `callbacks`         | dict   | [See below](#callbacks) | Dictionary of callbacks to run when the widget is clicked.                 |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_gallery"
+  on_middle: "do_nothing"
+  on_right: "change_wallpaper"
+```
+
+Available actions:
+
+- `toggle_gallery` - Open or close the wallpaper gallery.
+- `change_wallpaper` - Change the wallpaper to another image from `image_path`.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
 
 ## Minimal Configuration
 ```yaml
@@ -56,8 +74,7 @@ wallpapers:
         screen: "cursor" # active/cursor/primary
     # Note: do not use run_after: command if you don't know what it does
     run_after: # List of commands to run after wallpaper is changed
-      - "wal -s -t -e -q -n -i {image}" # {image} is replaced with the new wallpaper path
-      - "cmd.exe /c start /min pwsh ./yasb.ps1"
+      - "wal -s -t -e -q -n -i {image}" # {image} is auto replaced with the new wallpaper path
     callbacks:
       on_left: "toggle_gallery"
       on_middle: "do_nothing"
@@ -74,14 +91,14 @@ wallpapers:
   - **enabled:** Whether to enable the transition engine animations when changing wallpapers.
   - **animation:** The animation style used when transitioning between wallpapers. Supported values: `circle`, `slide_top`, `diamond`, `split`. Default is `circle`.
 - **gallery:** The gallery options for the wallpaper widget.
-  - **type:** How the wallpapers are shown. `default`, `magnified`, `strip` or `slide`. See [Gallery types](#gallery-types).
-  - **image_width:** The width of each thumbnail, in pixels.
-  - **orientation:** The shape of the thumbnails, `landscape` or `portrait`.
-  - **image_corner_radius:** The corner radius of the thumbnails. (Note: This is not the same as the css border-radius property.)
+  - **type:** (default `default`) How the wallpapers are shown. `default`, `magnified`, `strip` or `slide`. See [Gallery types](#gallery-types).
+  - **image_width:** The width of each thumbnail, in pixels (32-640). Default `100`.
+  - **orientation:** The shape of the thumbnails, `landscape` (default) or `portrait`.
+  - **image_corner_radius:** The corner radius of the thumbnails (0-50). Default `0`. (Note: This is not the same as the css border-radius property.)
   - **accent_color:** The colour of the selection border. `auto` (default) follows the Windows accent colour, or give a hex value such as `"#89b4fa"`. `slide` ignores this.
 - **run_after:** A list of commands to run after the wallpaper is changed. `{image}` is replaced with the path of the new wallpaper.
 - **keybindings:** Hotkeys that open the gallery. Each entry takes `keys`, `action` (`toggle_gallery`) and `screen`. `screen` can be `active` (default), `cursor` or `primary`.
-- **callbacks:** A dictionary of callbacks to run when the widget is clicked. The keys are `on_left`, `on_middle`, and `on_right`. The values are the names of the callbacks to run. Default callbacks are `toggle_gallery`, `do_nothing`, and `change_wallpaper`.
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 
 ## Transition engine
@@ -164,10 +181,10 @@ The gallery is not styled with CSS. Use `image_width`, `image_corner_radius` and
 
 If your stylesheet has `.wallpapers-gallery-window`, `.wallpapers-gallery-image` or `.wallpapers-gallery-buttons`, they no longer do anything and can be removed.
 
-# Using Pywal with Wallpapers
+## Using Pywal with Wallpapers
 You can use [pywal](https://github.com/eylles/pywal16) to change the colors of `YASB` by generating them from your wallpaper. You can also switch wallpapers directly with pywal.
 
-## Installation
+### Installation
 1. Install [ImageMagick](https://imagemagick.org/) either through their website or winget if you want to use the default `wal` backend:
 ```powershell
 winget install ImageMagick.ImageMagick
@@ -178,7 +195,7 @@ pip install pywal16
 ```
 After this, you should be ready to use Pywal.
 
-## Usage
+### Usage
 Run `wal` and point it to either a directory `wal -i "path/to/dir"` or an image `wal -i "/path/to/img.jpg"` and that's all. `wal` will change your wallpaper for you.
 
 - For more information, please visit pywal's [getting started page](https://github.com/eylles/pywal16/wiki/Getting-Started)
@@ -187,343 +204,30 @@ wal stores the color schemes in `C:\Users\YOURUSERNAME\.cache\wal\` and your wal
 
 - Check the official documentation for creating a template file [here](https://github.com/eylles/pywal16/wiki/User-Template-Files)
 
-For usage in `YASB` there are several methods you can try:
-
-1. Using a Powershell script to append the colors generated on top of `style.css`
-
-```powershell
-# Load the generated colors from wal, typically located at $HOME\.cache\wal\colors.json
-$colorsPath = "$HOME\.cache\wal\colors.json"
-# Convert the JSON colors to a PowerShell object
-$colors = Get-Content -Raw -Path $colorsPath | ConvertFrom-Json
-# Generate the @variables{} section
-$variablesSection = @"
-:root{
-    --backgroundcol: $($colors.special.background);
-    --foregroundcol: $($colors.special.foreground);
-    --cursorcol: $($colors.special.cursor);
-    --colors0: $($colors.colors.color0);
-    --colors1: $($colors.colors.color1);
-    --colors2: $($colors.colors.color2);
-    --colors3: $($colors.colors.color3);
-    --colors4: $($colors.colors.color4);
-    --colors5: $($colors.colors.color5);
-    --colors6: $($colors.colors.color6);
-    --colors7: $($colors.colors.color7);
-    --colors8: $($colors.colors.color8);
-    --colors9: $($colors.colors.color9);
-    --colors10: $($colors.colors.color10);
-    --colors11: $($colors.colors.color11);
-    --colors12: $($colors.colors.color12);
-    --colors13: $($colors.colors.color13);
-    --colors14: $($colors.colors.color14);
-    --colors15: $($colors.colors.color15);
-}
-"@
-# Read the existing styles.css file, typically located at $HOME\.config\yasb\styles.css
-$stylesPath = "$HOME\.config\yasb\styles.css"
-$stylesContent = Get-Content -Raw -Path $stylesPath
-# Check if :root{} section exists, if so replace it, otherwise prepend it
-if ($stylesContent -match ":root\{[\s\S]*?\}") {
-    # Replace the existing :root{} section
-    $newStylesContent = $stylesContent -replace ":root\{[\s\S]*?\}", $variablesSection
-} else {
-    # Prepend the new :root{} section
-    $newStylesContent = "$variablesSection`n$stylesContent"
-}
-# Trim trailing whitespace from the content
-$newStylesContent = $newStylesContent.TrimEnd()
-# Write the updated content back to styles.css
-$newStylesContent | Set-Content -Path $stylesPath   
-```
-
-2. Using the `@import` function in `style.css` to import colors generated from pywal. **REQUIRES RESTART OF YASB EVERY TIME COLOR IS CHANGED!**
+### Using the colors in YASB
+wal generates `colors.css` in `C:\Users\YOURUSERNAME\.cache\wal\`. Import it at the top of your `styles.css` and use the colors as CSS variables:
 
 ```css
-/* Colors for YASB */
-:root{
+@import "../../.cache/wal/colors.css";
 
-    /* Special */
-    --backgroundcol: #0d0c13;
-    --foregroundcol: #c2c2c4;
-    --cursorcol: #c2c2c4;
-
-    /* Colors */
-    --colors0: #0d0c13;
-    --colors1: #544e7f;
-    --colors2: #69567f;
-    --colors3: #7c607c;
-    --colors4: #80516e;
-    --colors5: #834457;
-    --colors6: #937d82;
-    --colors7: #908d97;
-    --colors8: #59596c;
-    --colors9: #7069aa;
-    --colors10: #8c73aa;
-    --colors11: #a680a6;
-    --colors12: #ab6c93;
-    --colors13: #af5b75;
-    --colors14: #c5a7ae;
-    --colors15: #c2c2c4;
+.yasb-bar {
+    background-color: var(--background);
 }
-```
-
- Which you can then import and use the colors as variables like this:
- ```css
-@import url('../../.cache/wal/colors.css');
 * {
-    color: var(--foregroundcol);
-    font-weight: 500;
+    color: var(--foreground);
+}
+.widget {
+    background-color: var(--color1);
 }
 ```
 
-3. Making the entire style.css a template:
+The path is relative to the folder that contains `styles.css` (by default `C:\Users\YOURUSERNAME\.config\yasb\`), so `../../.cache/wal/colors.css` points to `.cache\wal\colors.css` in your user folder. An absolute path works too.
 
-```css
-* {{
-    font-size: 12px;
-    color: {foreground};
-    font-weight: 500;
-    font-family: "Cascadia Mono";
-    margin: 0;
-    padding: 0;
-}}
-.yasb-bar {{
-    padding: 0;
-    margin: 0;
-}}
-.widget {{
-    background-color: {color1};
-    padding: 0 8px;
-    margin: 0;
-}}
-.widget .label {{
-    padding: 1px 2px 1px 2px;
-}}
-.widget .label.alt {{
-    padding: 1px 8px 1px 8px;
-}}
-.active-window-widget {{
-    border-radius: 18px;
-    margin-left: 8px
-}}
-.container-left,
-.container-center,
-.container-right {{
-    margin: 0;
-    padding: 0;
-}}
+wal's default `colors.css` defines `--background`, `--foreground`, `--cursor` and `--color0` to `--color15`. Open the generated file to see the exact variable names, they differ if you use your own template.
 
-.clock-widget {{
-    border-top-left-radius: 18px;
-    border-bottom-left-radius: 18px;
-}}
+When `watch_stylesheet` is enabled (the default), YASB also watches imported files. When `wal` writes a new `colors.css` the bar reloads its styles automatically, no restart is needed.
 
-
-.komorebi-active-layout {{
-    border-top-right-radius: 18px;
-    border-bottom-right-radius: 18px;
-    padding: 0 4px 0 0;
-}}
-
-.komorebi-active-layout .label {{
-    font-weight: 600;
-    padding: 2px 0 0 0;
-}}
-.wifi-widget {{
-    padding: 0 4px 0 4px;
-    border-top-left-radius: 18px;
-    border-bottom-left-radius: 18px;
-}}
-
-.apps-widget .widget-container,
-.komorebi-workspaces .widget-container,
-.wifi-widget .widget-container,
-.komorebi-active-layout .widget-container {{
-    background-color: {color9};
-    margin: 4px 0px 4px 0;
-    border-radius: 14px;
-}}
-.apps-widget {{
-    padding: 0 4px 0 2px;
-    border-top-right-radius: 18px;
-    border-bottom-right-radius: 18px;
-}}
-.komorebi-workspaces .ws-btn {{
-    font-size: 16px;
-    background-color: transparent;
-    margin: 0 4px 0 4px;
-    color: {color14};
-    border: none;
-}}
-.komorebi-workspaces .ws-btn.populated {{
-    color: #a0c3ee;
-}}
-.komorebi-workspaces .ws-btn:hover,
-.komorebi-workspaces .ws-btn.populated:hover,
-.komorebi-workspaces .ws-btn.active {{
-    color: #c2daf7;
-}}
-
-.apps-widget .label {{
-    font-size: 14px;
-    padding: 0 2px;
-}}
-.apps-widget .label:hover {{
-    color: #fff;
-}}
-
-/*POWER MENU WIDGET*/
-.uptime {{
-    font-size: 14px;
-    margin-bottom: 10px;
-    color: #ffffff;
-    font-weight: 600;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-}}
-.power-menu-widget .label {{
-    color: #f38ba8;
-    font-size: 13px;
-}}
-.power-menu-popup {{
-    background-color: rgba(24, 24, 37, 0.9);
-    border-radius: 12px;
-    border: 4px solid rgb(41, 42, 58);
-}}
-.power-menu-popup .button {{
-    padding: 0;
-    width: 240px;
-    height: 120px;
-    border-radius: 8px;
-    background-color: rgb(41, 42, 58);
-    font-family: "SegoeUI";
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin: 8px;
-}}
-.power-menu-popup .button.hover {{
-    background-color: rgb(55, 56, 75);
-    border: 1px solid rgb(55, 56, 75);
-}}
-.power-menu-popup .button .label {{
-    margin-bottom: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.95);
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-}}
-.power-menu-popup .button .icon {{
-    font-size: 48px;
-    padding-top: 8px;
-    color: rgba(255, 255, 255, 0.25);
-}}
-.power-menu-popup .button.cancel .icon {{
-    color: rgba(243, 139, 168, 0.55);
-}}
-.power-menu-popup .button.cancel .label {{
-    color: rgba(243, 139, 168, 0.95);
-}}
-.power-menu-popup .button.shutdown .icon {{
-    color: rgba(137, 180, 250, 0.55);
-}}
-.power-menu-popup .button.shutdown .label {{
-    color: rgba(137, 180, 250, 0.95);
-}}
-
-/* ICONS */
-.icon {{
-    font-size: 16px;
-}}
-.volume-widget .icon {{
-    color: #89b4fa;
-    margin: 1px 2px 0 0;
-}}
-.cpu-widget .icon,
-.memory-widget .icon {{
-    font-size: 14px;
-    color: #cba6f7;
-    margin: 0 2px 1px 0;
-}}
-.memory-widget .icon {{
-    color: #a6c9f7;
-}}
-.wifi-widget .icon {{
-    color: #43d8d8;
-    padding: 0 7px;
-    margin: 0;
-}}
-
-/* WEATHER WIDGET */
-.weather-widget .icon {{
-    font-size: 16px;
-    margin: 0 2px 1px 0;
-}}
-.weather-widget .icon.sunnyDay {{
-    color: rgb(221, 210, 107);
-}}
-.weather-widget .icon.clearNight {{
-    color: rgb(107, 189, 221);
-    font-size: 22px;
-    margin: 1px 2px 0px 0;
-}}
-
-/* MEDIA WIDGET */
-.media-widget {{
-    padding: 0;
-    padding-left: 6px;
-    margin: 0;
-    border-radius: 18px;
-    margin-right: 8px;
-}}
-.media-widget .label {{
-    background-color: rgba(0, 0, 0, 0.0);
-}}
-.media-widget .btn {{
-    color: #acb2c9;
-    padding: 0;
-    font-size: 18px;
-}}
-.media-widget .btn:hover {{
-    color: #89b4fa;
-}}
-.media-widget .btn.play {{
-    font-size: 24px;
-}}
-.media-widget .btn.prev {{
-    padding: 0 4px 0 4px;
-}}
-.media-widget .btn.next {{
-    padding: 0 4px 0 4px;
-}}
-.media-widget .btn.disabled:hover,
-.media-widget .btn.disabled {{
-    color: #4e525c;
-}}
-
-/* GITHUB WIDGET */
-.github-widget {{
-    padding: 0 4px;
-}}
-.github-widget .icon {{
-    font-size: 14px;
-    color: #cdd6f4
-}}
-.github-widget .icon.new-notification {{
-    color: #f38ba8;
-}}
-/* TASBAR WIDGET */
-.taskbar-widget {{
-    padding: 0;
-    margin: 0;
-}}
-.taskbar-widget .app-icon {{
-    padding: 0 6px;
-}}
-```
-
-This solution requires that you copy/paste the file generated in `.cache/wal/` to `.config/yasb/`. Another thing to note is that if you want to change something in your style.css you have to make a template again.
-
-## Backends
+### Backends
 
 `pywal` supports several color backends from which you can choose from:
 

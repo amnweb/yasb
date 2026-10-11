@@ -4,21 +4,96 @@ Keeps track of your graphics card's usage, memory, and temperature. You can disp
 
 | Option                | Type    | Default                                                                 | Description                                                                 |
 |-----------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `label`               | string  | `"<span>\uf4bc</span> {info[utilization]}%"`                              | The primary label format.                                                   |
-| `label_alt`           | string  | `"<span>\uf4bc</span> {info[temp]}°C | {info[mem_used]} / {info[mem_total]}"` | The alternative label format.                                               |
+| `label`               | string  | `"{info[utilization]}%"`                                                | The primary label format.                                                   |
+| `label_alt`           | string  | `"{info[mem_used]}/{info[mem_total]}"`                                    | The alternative label format.                                               |
 | `class_name`          | string  | `""`                                                                    | Additional CSS class name for the widget.                                   |
 | `gpu_index`           | integer | `0`                                                                     | The index of the GPU to monitor (0 for the first GPU, 1 for the second, etc.). |
-| `update_interval`     | integer | `1000`                                                                  | The interval in milliseconds to update the widget.                          |
-| `histogram_icons`     | list    | `["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"]` | Icons representing GPU utilization histograms.                              |
-| `histogram_num_columns` | integer | `10`                                                                  | The number of columns in the histogram.                                     |
-| `callbacks`           | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callback functions for different mouse button actions.                      |
-| `gpu_thresholds`      | dict    | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for GPU utilization levels.                                      |
-| `progress_bar`       | dict    | `{'enabled': false, 'progress_type': 'circular', 'position': 'left', 'size': 18, 'thickness': 3, 'radius': 0, 'color': '#00C800', 'background_color': '#3C3C3C', 'animation': true}` | Progress bar settings.    |
+| `update_interval`     | integer | `2000`                                                                  | The interval in milliseconds to update the widget (2000–60000).             |
+| `histogram_icons`     | list    | [See below](#histogram-icons) | Exactly 9 icons representing GPU utilization histograms.                    |
+| `histogram_num_columns` | integer | `10`                                                                  | The number of columns in the histogram (1–128).                             |
+| `callbacks`           | dict    | [See below](#callbacks) | Callback functions for different mouse button actions.                      |
+| `gpu_thresholds`      | dict    | `{'low': 30, 'medium': 60, 'high': 90}`                                 | Thresholds for GPU utilization levels.                                      |
+| `progress_bar`       | dict    | [See below](#progress-bar-options) | Progress bar settings.    |
 | `hide_decimal`        | bool    | `false`                                                                 | Hide decimal places for utilization, temperature, and power draw values.    |
 | `units`               | string  | `"metric"`                                                              | Temperature unit: `"metric"` for Celsius, `"imperial"` for Fahrenheit.     |
-| `menu`                | dict    | See below                                                               | Configuration for the popup menu with graph and stats. |
+| `menu`                | dict    | [See below](#menu-options) | Configuration for the popup menu with graph and stats. |
+| `keybindings`         | list    | `[]`                                                                    | Optional hotkeys. See [Keybindings](./Keybindings).                         |
 
 > **About `gpu_index`:** If you have multiple GPUs, set `gpu_index` to select which one to monitor. Create multiple GPU widgets with different `gpu_index` values (e.g., 0, 1, 2, ...) to display stats for each card separately.
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_menu` - Open or close the popup menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Menu Options
+
+The `menu` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+menu:
+  enabled: false
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "System"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+  graph_history_size: 60
+  show_graph: true
+  show_graph_grid: false
+  pin_icon: "\ue718"
+  unpin_icon: "\ue77a"
+```
+
+## Histogram Icons
+
+The default value of `histogram_icons` is:
+
+```yaml
+histogram_icons:
+  - "\u2581"
+  - "\u2581"
+  - "\u2582"
+  - "\u2583"
+  - "\u2584"
+  - "\u2585"
+  - "\u2586"
+  - "\u2587"
+  - "\u2588"
+```
+
+## Progress Bar Options
+
+The `progress_bar` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+progress_bar:
+  enabled: false
+  progress_type: "circular"
+  size: 18
+  thickness: 3
+  radius: 0
+  color: "#00C800"
+  background_color: "#3C3C3C"
+  position: "left"
+  animation: true
+```
 
 ## Example Configuration
 
@@ -59,12 +134,15 @@ gpu:
 - **label**: The format string for the GPU usage label. You can use placeholders like `{info[utilization]}` and `{info[temp]}` to dynamically insert GPU information.
 - **label_alt**: The alternative format string for the GPU usage label. Useful for displaying additional GPU details, such as a histogram.
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
-- **update_interval**: The interval in milliseconds at which the widget updates its information. Minimum is 1000 ms (1 second).
+- **gpu_index**: The index of the GPU to monitor (`0` for the first GPU). Default `0`.
+- **units**: Temperature unit, `metric` for Celsius or `imperial` for Fahrenheit. Default `metric`.
+- **update_interval**: The interval in milliseconds at which the widget updates its information. Must be between 2000 and 60000 ms.
 - **gpu_thresholds:** A dictionary specifying the thresholds for GPU utilization levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
 - **hide_decimal**: Whether to hide decimal places in the GPU widget.
-- **histogram_icons**: A list of icons representing different levels of GPU utilization in the histogram. 8 or 9 icons are typically used, representing usage from 0% to 80%+.
-- **histogram_num_columns**: The number of columns to display in the GPU utilization histogram.
-- **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **histogram_icons**: A list of icons representing different levels of GPU utilization in the histogram. Exactly 9 icons are required, representing usage from 0% to 80%+.
+- **histogram_num_columns**: The number of columns to display in the GPU utilization histogram (1–128).
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **progress_bar**: A dictionary containing settings for the progress bar. It includes:
   - **enabled**: Whether the progress bar is enabled.
   - **progress_type**: The type of progress bar. Options are `"circular"`, `"linear_horizontal"`, or `"linear_vertical"`.

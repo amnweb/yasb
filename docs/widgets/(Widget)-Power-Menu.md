@@ -6,18 +6,36 @@ Gives you quick buttons to shut down, restart, sleep, lock, or log out of your P
 |---------------------|---------|-------------|-----------------------------------------------------------------------------|
 | `label`             | string  | `"power"`   | The label for the power menu widget.                                        |
 | `uptime`            | boolean | `true`      | Whether to display the system uptime.                                       |
-| `show_user`         | boolean | `true`      | Whether to display the user profile info.                                   |
+| `show_user`         | boolean | `false`     | Whether to display the user profile info.                                   |
 | `blur`              | boolean | `false`     | Whether to blur the button background. (fullscreen mode only)               |
 | `blur_background`   | boolean | `true`      | Whether to blur the overlay background. (fullscreen mode only)              |
 | `animation_duration`| integer | `200`       | The duration of the animation in milliseconds. Must be between 0 and 2000. (fullscreen mode only) |
 | `button_row`        | integer | `3`         | The number of buttons in a row. Must be between 1 and 6. (fullscreen mode only) |
 | `menu_style`        | string  | `"fullscreen"` | The menu display style: `"fullscreen"` for full-screen overlay or `"popup"` for compact popup anchored to the bar button. |
-| `popup`             | dict    | see below   | Popup appearance/position options. Only used when `menu_style` is `"popup"`. |
+| `popup`             | dict    | [See below](#popup-options-when-menu_style-popup) | Popup appearance/position options. Only used when `menu_style` is `"popup"`. |
 | `profile_image_size`| integer | `64`        | Profile avatar size in pixels. Must be between 16 and 256.                    |
-| `buttons`           | dict    | `{}`        | A dictionary defining the buttons and their properties.                     |
-| `callbacks`         | dict    | `{'on_left': 'toggle_power_menu', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the widget. |
+| `buttons`           | dict    | Required    | A dictionary defining the buttons and their properties. `restart`, `shutdown` and `cancel` are required. |
+| `keybindings`       | list    | `[]`        | Optional hotkeys. See [Keybindings](./Keybindings).                         |
+| `callbacks`         | dict    | [See below](#callbacks) | Callbacks for mouse events on the widget. |
 
-### Popup Options (when `menu_style: "popup"`)
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_power_menu"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_power_menu` - Toggle the power menu overlay or popup window.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Popup Options (when `menu_style: "popup"`)
 
 | Option              | Type    | Default     | Description                                                                 |
 |---------------------|---------|-------------|-----------------------------------------------------------------------------|
@@ -26,7 +44,7 @@ Gives you quick buttons to shut down, restart, sleep, lock, or log out of your P
 | `round_corners_type`| string  | `"normal"`  | Type of round corners (`"normal"` or `"small"`).                            |
 | `border_color`      | string  | `"System"`  | Border color of the popup.                                                  |
 | `alignment`         | string  | `"right"`   | Popup alignment relative to the widget: `"left"`, `"right"`, or `"center"`. |
-| `direction`         | string  | `"up"`      | Popup direction: `"up"` or `"down"`.                                        |
+| `direction`         | string  | `"down"`    | Popup direction: `"up"` or `"down"`.                                        |
 | `offset_top`        | integer | `6`         | Vertical offset in pixels.                                                  |
 | `offset_left`       | integer | `0`         | Horizontal offset in pixels.                                                |
 
@@ -111,27 +129,8 @@ power_menu:
 - **popup:** Popup configuration (blur, round_corners, alignment, direction, offsets). Only used when `menu_style` is `"popup"`.
 - **profile_image_size:** Profile avatar size in pixels. Must be between 16 and 256.
 - **buttons:** A dictionary defining the buttons and their properties. Possible properties are: `lock`, `signout`, `sleep`, `shutdown`, `restart`, `hibernate`, `cancel`, `force_shutdown`, `force_restart`. Note: `cancel` button is not shown in popup mode since the popup auto-closes on outside click.
-- **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
-  - Available callbacks: `"toggle_power_menu"`, `"do_nothing"`, or generic program launches using `"exec <command>"`.
-
-## Callbacks & Keybindings
-
-This widget supports both mouse callbacks (configured via the `callbacks` option) and keyboard shortcuts:
-
-| Callback / Action | Description |
-|-------------------|-------------|
-| `toggle_power_menu` | Toggle the power menu overlay or popup window. |
-
-## Example keybinding:
-
-```yaml
-power_menu:
-    type: "yasb.power_menu.PowerMenuWidget"
-    options:
-        keybindings:
-            - keys: "win+p"
-                action: "toggle_power_menu"
-```
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ## Available Styles
 

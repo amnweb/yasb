@@ -5,18 +5,34 @@ Displays your GlazeWM workspaces so you can see which ones are active or have wi
 | Option                   | Type    | Default                                          | Description                                                                 |
 |--------------------------|---------|--------------------------------------------------|-----------------------------------------------------------------------------|
 | `offline_label`          | string  | `'GlazeWM Offline'`                              | The label to display when GlazeWM is offline.                               |
-| `populated_label`        | string  | `'{name}'`                                       | Optional label for populated workspaces.                                    |
-| `empty_label`            | string  | `'{name}'`                                       | Optional label for empty workspaces.                                        |
-| `active_populated_label` | string  | `'{name}'`                                       | Optional label for the currently active workspace (has opened windows).    |
-| `active_empty_label`     | string  | `'{name}'`                                       | Optional label for the currently active workspace (has no windows opened). |
-| `focused_populated_label`| string  | `'{name}'`                                       | Optional label for the currently focused workspace (has opened windows). Falls back to `active_populated_label` if not set.  |
-| `focused_empty_label`    | string  | `'{name}'`                                       | Optional label for the currently focused workspace (has no windows opened). Falls back to `active_empty_label` if not set. |
+| `populated_label`        | string  | `None`                                       | Optional label for populated workspaces.                                    |
+| `empty_label`            | string  | `None`                                       | Optional label for empty workspaces.                                        |
+| `active_populated_label` | string  | `None`                                       | Optional label for the currently active workspace (has opened windows).    |
+| `active_empty_label`     | string  | `None`                                       | Optional label for the currently active workspace (has no windows opened). |
+| `focused_populated_label`| string  | `None`                                       | Optional label for the currently focused workspace (has opened windows). Falls back to `active_populated_label` if not set.  |
+| `focused_empty_label`    | string  | `None`                                       | Optional label for the currently focused workspace (has no windows opened). Falls back to `active_empty_label` if not set. |
 | `hide_if_offline`        | boolean | `false`                                          | Whether to hide workspaces widget if GlazeWM is offline.                    |
 | `monitor_exclusive`      | boolean | `true`                                           | If `true`, show monitor-local workspaces (default). If `false`, aggregate active workspaces from GlazeWM IPC and show them on every bar. |
 | `glazewm_server_uri`     | string  | `'ws://localhost:6123'`                          | Optional GlazeWM server uri.                                                |
 | `enable_scroll_switching` | boolean | `true`      | Enable scroll switching between workspaces.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
-| `app_icons`    | dict    | `{'enabled_populated': False, 'enabled_active': False, 'enabled_focused': None, 'size': 16, 'max_icons': 0, 'hide_label': False, 'hide_duplicates': False, 'hide_floating': False}` | Controls the display of opened app icons per workspace. `enabled_focused` falls back to `enabled_active` if not explicitly set to a non-None bool value.  |
+| `app_icons`    | dict    | [See below](#app-icons-options) | Controls the display of opened app icons per workspace. `enabled_focused` falls back to `enabled_active` if not explicitly set to a non-None bool value.  |
+
+## App Icons Options
+
+The `app_icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+app_icons:
+  enabled_populated: false
+  enabled_active: false
+  enabled_focused: null
+  size: 16
+  max_icons: 0
+  hide_label: false
+  hide_duplicates: false
+  hide_floating: false
+```
 
 ## Example Configuration
 

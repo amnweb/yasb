@@ -20,14 +20,47 @@ through [Nightscout CGM remote monitor](https://github.com/nightscout/cgm-remote
 | `label`                 | string  | `<span>\ud83e\ude78</span><span class='sgv'>{sgv}</span><span>{direction}</span>`                                                                                                                                                              | The format string for the widget.                                                                                                                    |
 | `error_label`           | string  | `<span>\ud83e\ude78</span>{error_message}`                                                                                                                                                                                                     | The format string for the error widget.                                                                                                              |
 | `tooltip`               | string  | `({sgv_delta}) {delta_time_in_minutes} min`                                                                                                                                                                                                    | The format string for the tooltip.                                                                                                                   |
-| `host`                  | string  | `...`                                                                                                                                                                                                                                          | The URL for your [Nightscout CGM remote monitor](https://github.com/nightscout/cgm-remote-monitor).                                                  |
-| `secret`                | string  | `...`                                                                                                                                                                                                                                          | The secret key for the CGM API.                                                                                                                      |
-| `secret_env_name`       | string  | `...`                                                                                                                                                                                                                                          | If the secret variable is equals to `env` then widget will try to get secret from the environment variable with a name of the `secret_env_name` value. |
-| `direction_icons`       | dict    | `{"double_up": "\u2b06\ufe0f\u2b06\ufe0f", "single_up": "\u2b06\ufe0f", "forty_five_up": "\u2197\ufe0f", "flat": "\u27a1\ufe0f", "forty_five_down": "\u2198\ufe0f", "single_down": "\u2b07\ufe0f", "double_down": "\u2b07\ufe0f\u2b07\ufe0f"}` | Direction icon settings.                                                                                                                             |
+| `host`                  | string  | `""`                                                                                                                                                                                                                                          | The URL for your [Nightscout CGM remote monitor](https://github.com/nightscout/cgm-remote-monitor).                                                  |
+| `secret`                | string  | `""`                                                                                                                                                                                                                                          | The secret key for the CGM API.                                                                                                                      |
+| `secret_env_name`       | string  | `""`                                                                                                                                                                                                                                          | If the secret variable is equals to `env` then widget will try to get secret from the environment variable with a name of the `secret_env_name` value. |
+| `direction_icons`       | dict    | [See below](#direction-icons-options) | Direction icon settings.                                                                                                                             |
 | `sgv_measurement_units` | string  | `mmol/l`                                                                                                                                                                                                                                       | SGV measurement units can be `mg/dl` or `mmol/l`.                                                                                                    |
-| `callbacks`             | dict    | `{"on_left": "open_cgm", "on_middle": "do_nothing", "on_right": "do_nothing"}`                                                                                                                                                                 | Callbacks for mouse events on the glucose monitor widget.                                                                                            |
+| `callbacks`             | dict    | [See below](#callbacks) | Callbacks for mouse events on the glucose monitor widget.                                                                                            |
 | `notify_on_error`       | boolean | `True`                                                                                                                                                                                                                                         | Send a notification on error.                                                                                                                        |
 | `sgv_range`             | dict    | `{"min": 4, "max": 9}`                                                                                                                                                                                                                         | Normal SGV range to append `in-range` or `out-range` CSS class for span with `.sgv` CSS class.                                                      |
+| `keybindings`            | list    | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "open_cgm"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `open_cgm` - Open the Nightscout site (`host`) in your browser.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Direction Icons Options
+
+The `direction_icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+direction_icons:
+  double_up: "\u2b06\ufe0f\u2b06\ufe0f"
+  single_up: "\u2b06\ufe0f"
+  forty_five_up: "\u2197\ufe0f"
+  flat: "\u27a1\ufe0f"
+  forty_five_down: "\u2198\ufe0f"
+  single_down: "\u2b07\ufe0f"
+  double_down: "\u2b07\ufe0f\u2b07\ufe0f"
+```
 
 ## Example Configuration
 
@@ -57,7 +90,8 @@ through [Nightscout CGM remote monitor](https://github.com/nightscout/cgm-remote
 - **secret_env_name:** If the secret variable is equals to `env` then widget will try to get secret from the environment variable with a name of the `secret_env_name` value.
 - **direction_icons:** Direction icon settings.
 - **sgv_measurement_units:** SGV measurement units can be `mg/dl` or `mmol/l`.
-- **callbacks:** Callbacks for mouse events on the glucose monitor widget.
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
 - **notify_on_error:** Send a notification on error.
 - **sgv_range:** Normal SGV range to append `in-range` or `out-range` CSS class for span with `.sgv` CSS class.
 

@@ -10,14 +10,15 @@ Displays your unread GitHub notifications count in the status bar. It features a
 | `update_interval`   | integer | `600` | The interval in seconds to update the notifications. Must be between 60 and 3600.                               |
 | `token`             | string  | `""` | GitHub personal access token. Leave empty to use OAuth sign-in, or set to `"env"` to read from `YASB_GITHUB_TOKEN`.   |
 | `max_notification`  | integer | `30` | The maximum number of notifications to display in the menu.                                                     |
-| `notification_dot`  | dict    | `{'enabled': true, 'corner': 'bottom_left', 'color': 'red', 'margin': [1, 1]}` | A dictionary specifying the notification dot settings for the widget. |
+| `notification_dot`  | dict    | [See below](#notification-dot-options) | A dictionary specifying the notification dot settings for the widget. |
 | `hide_empty`        | boolean | `false` | Whether to hide the widget when there are no unread notifications.                                              |
 | `only_unread`       | boolean | `false` | Whether to show only unread notifications.                                                                      |
 | `show_comment_count`| boolean | `false` | Whether to request and display aggregated comment counts for supported notifications.                           |
 | `reason_filters`    | list    | `[]` | Optional list of notification reasons to include (e.g. `['mention', 'assign']`). Empty list returns all reasons. |
 | `max_field_size`    | integer | `100` | The maximum number of characters in the title before truncation.                                                |
-| `menu`              | dict    | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'show_categories': true, 'categories_order': []}` | Menu settings for the widget.                                                                                   |
-| `icons`             | dict    | `{'issue': '\uf41b', 'issue_closed': '\uf41d', 'pull_request': '\uea64', 'pull_request_closed': '\uebda', 'pull_request_merged': '\uf17f', 'pull_request_draft': '\uebdb', 'release': '\uea84', 'discussion': '\uf442', 'discussion_answered': '\uf4c0', 'checksuite': '\uf418', 'default': '\uea84', 'github_logo': '\uea84', 'comment': '\uf41f'}` | Icons for different types of notifications in the menu.                                                         |
+| `menu`              | dict    | [See below](#menu-options) | Menu settings for the widget.                                                                                   |
+| `keybindings`       | list    | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `icons`             | dict    | [See below](#icons-options) | Icons for different types of notifications in the menu.                                                         |
 
 ```yaml
 github:
@@ -47,6 +48,64 @@ github:
       show_categories: false
       categories_order: ["PullRequest", "Issue", "CheckSuite", "Release", "Discussion"]
 ```
+## Notification Dot Options
+
+The `notification_dot` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+notification_dot:
+  enabled: true
+  corner: "bottom_left"
+  color: "red"
+  margin:
+    - 1
+    - 1
+```
+
+## Menu Options
+
+The `menu` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+menu:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "System"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+  show_categories: false
+  categories_order:
+    - "PullRequest"
+    - "Issue"
+    - "CheckSuite"
+    - "Release"
+    - "Discussion"
+```
+
+## Icons Options
+
+The `icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+icons:
+  issue: "\uf41b"
+  issue_closed: "\uf41d"
+  pull_request: "\uea64"
+  pull_request_closed: "\uebda"
+  pull_request_merged: "\uf17f"
+  pull_request_draft: "\uebdb"
+  release: "\uea84"
+  discussion: "\uf442"
+  discussion_answered: "\uf4c0"
+  checksuite: "\uf418"
+  default: "\uea84"
+  github_logo: "\uea84"
+  comment: "\uf41f"
+```
+
 ## Description of Options
 
 - **label:** The format string for the label. You can use placeholders like `{icon}` to dynamically insert icon information.
@@ -65,6 +124,7 @@ github:
   - **default:** The default icon for notification types not explicitly handled.
   - **github_logo:** The icon for the GitHub logo (used in empty state).
   - **comment:** The icon that prefixes the comment count badge when `show_comment_count` is enabled.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
 - **tooltip:** Whether to show the tooltip on hover.
 - **update_interval:** The interval in seconds to update the notifications. Must be between 60 and 3600.
 - **token:** The GitHub personal access token. You can set `token: env` to read from the `YASB_GITHUB_TOKEN` environment variable, paste a [Personal Access Token (classic)](https://github.com/settings/tokens) directly, or leave it empty to sign in via OAuth when you click the widget.
@@ -89,7 +149,7 @@ github:
   - **offset_top:** Set the offset from the top of the screen.
   - **offset_left:** Set the offset from the left of the screen.
   - **show_categories:** Toggle grouping notifications by their GitHub type. When enabled, each group renders inside a `.section` container with a `.section-header` label.
-  - **categories_order:** Optional list that defines the preferred order of categories when `show_categories` is enabled. Values are case-insensitive and must match GitHub notification types (for example `PullRequest`, `Issue`). Any categories not listed appear after the configured ones. Available categories include `PullRequest`, `Issue`, `CheckSuite`, `Release`, and `Discussion`.
+  - **categories_order:** Optional list that defines the preferred order of categories when `show_categories` is enabled. Default `["PullRequest", "Issue", "CheckSuite", "Release", "Discussion"]`. Values are case-insensitive and must match GitHub notification types (for example `PullRequest`, `Issue`). Any categories not listed appear after the configured ones. Available categories include `PullRequest`, `Issue`, `CheckSuite`, `Release`, and `Discussion`.
   
   When `show_categories` is enabled, the first and last notification card within each section gains the `.first` and `.last` classes. If categories are hidden, those classes are applied to the first and last items in the flat list instead. Use them to fine-tune spacing or borders.
 

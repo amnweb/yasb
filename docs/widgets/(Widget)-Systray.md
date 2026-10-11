@@ -13,8 +13,8 @@ Puts your system tray icons directly in the status bar. You can pin important ic
 | `show_unpinned`             | boolean   | `true`        | Whether to show unpinned container on startup.                                                                                |
 | `show_unpinned_button`      | boolean   | `true`        | Whether to show the collapse unpinned icons button.                                                                           |
 | `show_in_popup`             | boolean   | `false`       | Show unpinned icons in a popup grid instead of inline in the bar.                                                             |
-| `icons_per_row`             | integer   | `4`           | Number of icon columns in the popup grid (only used when `show_in_popup` is true).                                            |
-| `popup`                     | dict      | see below     | Popup appearance settings (only used when `show_in_popup` is true).                                                           |
+| `icons_per_row`             | integer   | `5`           | Number of icon columns in the popup grid, 1-12 (only used when `show_in_popup` is true).                                      |
+| `popup`                     | dict      | [See below](#popup-options) | Popup appearance settings (only used when `show_in_popup` is true).                                                           |
 | `show_battery`              | boolean   | `false`       | Whether to show battery icon (from the original systray).                                                                     |
 | `show_volume`               | boolean   | `false`       | Whether to show volume icon (from the original systray).                                                                      |
 | `show_network`              | boolean   | `false`       | Whether to show network icon (from the original systray).                                                                     |
@@ -23,7 +23,7 @@ Puts your system tray icons directly in the status bar. You can pin important ic
 | `use_hook`                  | boolean   | `false`       | Whether to use the systray hook. Default is false. False will use legacy systray monitor, true will use the new systray hook. |
 
 
-### Popup Options
+## Popup Options
 | Option                 | Type      | Default      | Description                                                                  |
 | ---------------------- | --------- | ------------ | ---------------------------------------------------------------------------- |
 | `blur`                 | boolean   | `true`       | Apply blur/acrylic effect to the popup background.                           |

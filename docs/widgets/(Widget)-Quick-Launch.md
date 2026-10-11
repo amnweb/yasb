@@ -12,13 +12,30 @@ The Quick Launch widget provides a Spotlight style search launcher accessible fr
 | `max_results`        | int    | `50`                                                                                | Maximum number of results displayed (1-500).                                                                            |
 | `show_icons`         | bool   | `true`                                                                              | Show icons next to search results.                                                                                      |
 | `icon_size`          | int    | `32`                                                                                | Size of result icons in pixels.                                                                                         |
-| `home_page`          | bool   | `true`                                                                              | Show provider shortcut tiles when search is empty.                                                                      |
+| `home_page`          | bool   | `false`                                                                             | Show provider shortcut tiles when search is empty.                                                                      |
 | `compact_mode`       | bool   | `false`                                                                             | When enabled, the popup starts collapsed to just the search bar and only expands to show results when you start typing. |
 | `compact_text`       | bool   | `false`                                                                             | When enabled, each result row is single-line: the description is shown inline on the right side instead of on a second line below the title. |
-| `providers`          | dict   | See below                                                                           | Configuration for each search provider.                                                                                 |
-| `popup`              | dict   | See below                                                                           | Popup window appearance settings.                                                                                       |
+| `providers`          | dict   | [See below](#providers) | Configuration for each search provider.                                                                                 |
+| `popup`              | dict   | [See below](#popup-options) | Popup window appearance settings.                                                                                       |
 | `keybindings`        | list   | `[]`                                                                                | Global keybindings for toggling the popup.                                                                              |
-| `callbacks`          | dict   | `{on_left: "toggle_quick_launch", on_right: "do_nothing", on_middle: "do_nothing"}` | Mouse event callbacks.                                                                                                  |
+| `callbacks`          | dict   | [See below](#callbacks) | Mouse event callbacks.                                                                                                  |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_quick_launch"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_quick_launch` - Open or close the quick launch popup.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
 
 ## Popup Options
 
@@ -32,11 +49,13 @@ The Quick Launch widget provides a Spotlight style search launcher accessible fr
 | `border_color`       | string | `"System"` | Border color of the popup (`"System"`, HEX value, or `"None"`).           |
 | `dark_mode`          | bool   | `true`     | Force dark mode colors for the popup (Windows 11).                        |
 
-#### Screen Modes
+### Screen Modes
+
+The `screen` option of a keybinding selects the screen where the popup opens:
 
 | Mode        | Description                                                     |
 | ----------- | --------------------------------------------------------------- |
-| `"focus"`   | Show popup on the screen where the currently focused window is. |
+| `"active"`  | Show popup on the screen where the currently focused window is. |
 | `"cursor"`  | Show popup on the screen where the mouse cursor is.             |
 | `"primary"` | Always show popup on the primary monitor.                       |
 
@@ -61,7 +80,7 @@ Quick Launch uses a plugin-based provider system. Each provider handles a specif
 - [File Search](#file-search-provider)
 - [GitHub Notifications](#github-notifications-provider)
 - [Hacker News](#hacker-news-provider)
-- [IP / Network Info](#ip--network-info-provider)
+- [IP and Network Info](#ip-and-network-info-provider)
 - [Kill Process](#kill-process-provider)
 - [Port Viewer](#port-viewer-provider)
 - [Settings](#settings-provider)
@@ -87,7 +106,7 @@ Searches installed applications (Start Menu shortcuts). This is the default prov
 | `priority`         | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 | `show_recent`      | bool   | `true`  | Show recently launched apps at the top.                                              |
 | `max_recent`       | int    | `10`    | Maximum number of recent apps to display.                                            |
-| `show_description` | bool   | `false` | Show a short description of the application.                                         |
+| `show_description` | bool   | `true`  | Show a short description of the application.                                         |
 
 ### Binance Provider
 
@@ -95,7 +114,7 @@ Fetches live cryptocurrency prices from Binance and supports quick conversions b
 
 | Option     | Type   | Default               | Description                                                               |
 | ---------- | ------ | --------------------- | ------------------------------------------------------------------------- |
-| `enabled`  | bool   | `true`                | Enable/disable the Binance provider.                                      |
+| `enabled`  | bool   | `false`               | Enable/disable the Binance provider.                                      |
 | `prefix`   | string | `crypto`              | Trigger prefix. Use `"*"` to include in default results.                  |
 | `priority` | int    | `0`                   | Sort order when multiple providers share the same prefix. Lower values appear first. |
 | `pairs`    | list   | `["BTC/USDT"]`        | Default trading pairs to query when no specific pair is provided.(e.g. `["BTC/USDT", "ETH/USDT"]`)         |
@@ -166,7 +185,7 @@ Pick colors from the screen and convert between HEX, RGB, HSL, HSV, HWB, LAB, LC
 
 | Option     | Type   | Default | Description                                                                          |
 | ---------- | ------ | ------- | ------------------------------------------------------------------------------------ |
-| `enabled`  | bool   | `false` | Enable/disable the color provider.                                                   |
+| `enabled`  | bool   | `true`  | Enable/disable the color provider.                                                   |
 | `prefix`   | string | `"c:"`  | Trigger prefix. Use `"*"` to include in default results.                             |
 | `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 
@@ -359,7 +378,7 @@ Each story result displays:
 > [!NOTE]
 > Hacker News provider uses [hnrss.org](https://hnrss.org) RSS feeds. Results are cached in memory and on disk to minimize network requests. No API key is required.
 
-### IP / Network Info Provider
+### IP and Network Info Provider
 
 Provides local network interface details, public IP lookup, subnet calculator, IP analysis, DNS lookup, and MAC address listing. All operations except public IP are fully offline.
 
@@ -459,7 +478,7 @@ Right-click a snippet for options like Copy to clipboard, Edit, or Delete.
 
 | Option       | Type   | Default | Description                                                                                                                       |
 | ------------ | ------ | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`    | bool   | `false` | Enable/disable the snippets provider.                                                                                             |
+| `enabled`    | bool   | `true`  | Enable/disable the snippets provider.                                                                                             |
 | `prefix`     | string | `";"`   | Trigger prefix. Use `"*"` to include in default results.                                                                          |
 | `priority`   | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first.                                              |
 | `type_delay` | int    | `200`   | Delay in milliseconds before typing starts after the popup closes. Increase if the target window needs more time to regain focus. |
@@ -473,7 +492,7 @@ Browse and launch SSH connections from your `~/.ssh/config` file. Type `ssh` to 
 | `enabled`         | bool   | `false`            | Enable/disable the SSH provider.                                                     |
 | `prefix`          | string | `"ssh"`            | Trigger prefix. Use `"*"` to include in default results.                             |
 | `priority`        | int    | `0`                | Sort order when multiple providers share the same prefix. Lower values appear first. |
-| `ssh_config_path` | string | `"~/.ssh/config"` | Path to the SSH config file to read hosts from.                                      |
+| `ssh_config_path` | string | `""`              | Path to the SSH config file to read hosts from. Empty uses `~/.ssh/config`.          |
 
 **Usage examples:**
 
@@ -870,6 +889,7 @@ quick_launch:
 - **home_page:** When true, show provider shortcut tiles (home page) when the search input is empty.
 - **providers:** Configuration for each search provider. Each provider can be individually enabled/disabled and configured.
     - **_apps:_** Application search with frecency-ranked results. See Apps Provider table above.
+    - **_binance:_** Live cryptocurrency prices from Binance and quick conversions between trading pairs with prefix `crypto`. Configurable `pairs`, `round`, `open_url` and `domain` options.
     - **_bookmarks:_** Search and open browser bookmarks (Chrome, Edge, Brave, Vivaldi, Chromium, Firefox). Configurable `browser` and `profile` options.
     - **_calculator:_** Inline math evaluation with prefix `=`.
     - **_clipboard_history:_** Browse and restore Windows Clipboard History entries (text, rich text, images). Use `max_items` to limit how many entries are shown.
@@ -901,8 +921,9 @@ quick_launch:
     - **_round_corners:_** Enable rounded corners on the popup.
     - **_round_corners_type:_** Type of corner rounding (`"normal"` or `"small"`).
     - **_border_color:_** Border color of the popup window (`"System"` for system accent color, HEX value, or `"None"`).
-- **keybindings:** A list of global keybindings. Each entry must specify `keys` (a list of key combinations) and `action` (the callback to invoke, e.g., `"toggle_quick_launch"`).
-- **callbacks:** Mouse event callbacks (`on_left`, `on_middle`, `on_right`). Valid actions: `"toggle_quick_launch"`, `"do_nothing"`.
+    - **_dark_mode:_** Force dark mode colors for the popup (Windows 11).
+- **keybindings:** A list of global keybindings. Each entry must specify `keys` (a key combination string, e.g., `"win+space"`) and `action` (the callback to invoke, e.g., `"toggle_quick_launch"`). An optional `screen` (`"active"`, `"cursor"` or `"primary"`, default `"active"`) selects the screen where the popup is shown. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ## Example Style
 
@@ -971,7 +992,7 @@ quick_launch:
 	background: transparent;
 	padding: 8px;
 }
-/* Individual result item here you can set font szie for title */
+/* Individual result item here you can set font size for title */
 .quick-launch-popup .results-list-view {
 	font-size: 16px;
 	font-family: "Segoe UI";
@@ -1111,6 +1132,6 @@ quick_launch:
 > [!IMPORTANT]  
 > Quick Launch widget uses the `QMenu`, which supports various styles. You can customize the appearance of the menu using CSS styles. For more information on styling, refer to the [Styling](https://github.com/amnweb/yasb/wiki/Styling#context-menu-styling).
 
-## Preview
+## Preview of the Widget
 
-![QL Widget Preview](assets/3c5a8b2f-e7d1f4a9-6c8b-4d2e-9f1a3e5c7b2d.png)
+![Quick Launch YASB Widget](assets/3c5a8b2f-e7d1f4a9-6c8b-4d2e-9f1a3e5c7b2d.png)

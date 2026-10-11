@@ -91,6 +91,7 @@ choco install yasb
 | [Brightness](https://github.com/amnweb/yasb/wiki/(Widget)-Brightness) | Displays and change the current brightness level. |
 | [Cava](https://github.com/amnweb/yasb/wiki/(Widget)-Cava) | Displays audio visualizer using Cava. |
 | [Claude Usage](https://github.com/amnweb/yasb/wiki/(Widget)-Claude-Usage) | Shows your Claude subscription usage. |
+| [Codex Usage](https://github.com/amnweb/yasb/wiki/(Widget)-Codex-Usage) | Shows your Codex rate-limit usage. |
 | [Copilot](https://github.com/amnweb/yasb/wiki/(Widget)-Copilot) | GitHub Copilot usage with a detailed menu showing statistics |
 | [CPU](https://github.com/amnweb/yasb/wiki/(Widget)-CPU) | Shows the current CPU usage and information. |
 | [Clock](https://github.com/amnweb/yasb/wiki/(Widget)-Clock) | Displays the current time and date, with customizable formats. |
@@ -127,7 +128,7 @@ choco install yasb
 | [Power Menu](https://github.com/amnweb/yasb/wiki/(Widget)-Power-Menu) | A menu for power options. |
 | [Quick Launch](https://github.com/amnweb/yasb/wiki/(Widget)-Quick-Launch) | A powerful and customizable quick launcher widget, supporting many different plugins. |
 | [Recycle Bin](https://github.com/amnweb/yasb/wiki/(Widget)-Recycle-Bin) | Shows the status of the recycle bin. |
-| [Update Checker](https://github.com/amnweb/yasb/wiki/(Widget)-Update-Check) | Checks for available updates using Windows Update and Winget. |
+| [Update Checker](https://github.com/amnweb/yasb/wiki/(Widget)-Update-Check) | Checks for available updates using Windows Update, Winget and Scoop. |
 | [Visual Studio Code](https://github.com/amnweb/yasb/wiki/(Widget)-VSCode) | Shows recently opened folders in Visual Studio Code. |
 | [Volume](https://github.com/amnweb/yasb/wiki/(Widget)-Volume) | Shows and controls the system volume. |
 | [Wallpapers](https://github.com/amnweb/yasb/wiki/(Widget)-Wallpapers) | Wallpapers manager widget. |

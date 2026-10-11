@@ -12,9 +12,67 @@ Shows the current time in whatever format you like. You can cycle through differ
 | `update_interval`   | integer | `1000`                                                                                | The interval in milliseconds to update the clock. Must be between 0 and 60000.                                      |
 | `timezones`         | list    | `[]`                                                                                  | A list of timezones to cycle through. Each timezone should be a valid timezone string.                              |
 | `icons`         | dict    | `{}`                                                                                      | A dictionary of icons for the different times of day. Keys should be in format `clock_HH` where HH is 00-23. |
-| `alarm_icons`       | dict    | `{'enabled': '\uf0f3', 'disabled': '\uf0a2', 'snooze': '\uf1f6'}`                      | Icons for alarm states (enabled, disabled, snooze).                                                                  |
-| `calendar` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'country_code': None, 'subdivision': None, 'show_holidays': False, 'holiday_color': "#FF6464", 'show_week_numbers': False, 'show_years': True, 'extended': False}` | Calendar settings for the widget. |
-| `callbacks`         | dict    | `{'on_left': 'toggle_calendar', 'on_middle': 'next_timezone', 'on_right': 'toggle_label'}` | Callbacks for mouse events on the clock widget.                                                                     |
+| `alarm_icons`       | dict    | [See below](#alarm-icons-options) | Icons for alarm states (enabled, disabled, snooze).                                                                  |
+| `calendar` | dict | [See below](#calendar-options) | Calendar settings for the widget. |
+| `keybindings`       | list    | `[]`                                                                                  | Optional hotkeys. See [Keybindings](./Keybindings).                                                                 |
+| `callbacks`         | dict    | [See below](#callbacks) | Callbacks for mouse events on the clock widget.                                                                     |
+
+## Alarm Icons Options
+
+The `alarm_icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+alarm_icons:
+  enabled: "\uf0f3"
+  disabled: "\uf0a2"
+  snooze: "\uf1f6"
+```
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_calendar"
+  on_middle: "next_timezone"
+  on_right: "toggle_label"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `update_label` - Refresh the label now.
+- `next_timezone` - Switch to the next timezone in `timezones`.
+- `toggle_calendar` - Open or close the calendar popup.
+- `context_menu` - Show the context menu.
+- `toggle_timer` - Open the timer dialog.
+- `toggle_alarm` - Open the alarm dialog.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Calendar Options
+
+The `calendar` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+calendar:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "System"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+  country_code: null
+  subdivision: null
+  show_holidays: false
+  holiday_color: "#FF6464"
+  show_week_numbers: false
+  show_years: false
+  extended: false
+```
 
 ## Example Configuration
 
@@ -99,7 +157,8 @@ clock:
   - **show_week_numbers:** Whether to show week numbers in the calendar.
   - **show_years:** Whether to show the year label in the calendar popup.
   - **extended:** Show extended calendar with alarm/timer controls and upcoming holidays.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions. Available callbacks: `toggle_calendar`, `next_timezone`, `toggle_label`, `context_menu`, `toggle_timer`, `toggle_alarm`.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 Clock format https://docs.python.org/3/library/time.html#time.strftime
 
@@ -434,4 +493,4 @@ Clock format https://docs.python.org/3/library/time.html#time.strftime
 ```
 
 ## Preview of the Widget
-![GitHub YASB Widget](assets/792254956-fr651bd1-gtdc-8966-e89a5edca704.png)
+![Clock YASB Widget](assets/792254956-fr651bd1-gtdc-8966-e89a5edca704.png)

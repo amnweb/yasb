@@ -5,13 +5,46 @@ A customizable quick-settings control center. It sits in your status bar as a si
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `label` | string | `"<span>\ue90a</span>"` | Main widget launcher icon. |
+| `label_alt` | string | `"<span>\ue90a</span>"` | Alternative launcher label. |
+| `class_name` | string | `""` | Additional CSS class name for the widget. |
 | `tooltip` | boolean | `False` | Enable launcher tooltip. When enabled, buttons inside the popup will also display tooltips. |
-| `sections` | dict | all enabled | Control visibility and settings of each popup section (`system_controls`, `quick_actions`, `sliders`, `power`, `media`). |
-| `sections_order` | list | `["system_controls", "quick_actions", "sliders", "power", "media"]` | Defines visibility and render order of sections from top to bottom. |
-| `popup` | dict | standard popup options | Popup positioning and backdrop effect settings. |
-| `callbacks` | dict | `{'on_left': 'toggle_menu'}` | Mouse callbacks for the launcher widget. |
+| `sections` | dict | [See below](#sections-configuration) | Control visibility and settings of each popup section (`system_controls`, `quick_actions`, `sliders`, `power`, `media`). |
+| `sections_order` | list | [See below](#sections-order) | Defines visibility and render order of sections from top to bottom. |
+| `popup` | dict | [See below](#popup-settings-popup) | Popup positioning and backdrop effect settings. |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks` | dict | [See below](#callbacks) | Mouse callbacks for the launcher widget. |
 
 ---
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_menu"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_menu` - Open or close the control center popup.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Sections Order
+
+The default value of `sections_order` is:
+
+```yaml
+sections_order:
+  - "system_controls"
+  - "quick_actions"
+  - "sliders"
+  - "power"
+  - "media"
+```
 
 ## Example Configuration
 
@@ -107,9 +140,11 @@ control_center:
 
 ### Launcher Options
 - **label**: The icon or label displayed on the status bar.
+- **label_alt**: The alternative label for the launcher.
+- **class_name**: Additional CSS class name for the widget.
 - **tooltip**: If `true`, hovering over the bar launcher will show a tooltip. Also enables tooltips for buttons inside the popup.
-- **callbacks**: Maps mouse click events (e.g. `on_left`, `on_right`) to callbacks.
-  - `toggle_menu` - Toggles the visibility of the control center popup.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ### Popup Settings (`popup`)
 - **blur**: Enable background blur backdrop effect.
@@ -132,7 +167,7 @@ control_center:
 ### System Controls (`system_controls`)
 Top bar showing profile photo and system shortcuts.
 - **show**: Toggle section visibility.
-- **profile_image_size**: Profile photo circle size in pixels.
+- **profile_image_size**: Profile photo circle size in pixels. Default `28`.
 - **settings_icon**: Opens the Windows Settings app.
 - **lock_icon**: Immediately locks the Windows user session.
 - **power_icon**: Opens a dropdown menu to Sleep, Hibernate, Restart, or Shut Down.
@@ -140,17 +175,17 @@ Top bar showing profile photo and system shortcuts.
 ### Quick Actions (`quick_actions`)
 A grid of action buttons.
 - **show**: Toggle section visibility.
-- **columns**: Number of columns in the button grid.
+- **columns**: Number of columns in the button grid. Default `3`.
 - **label_position**: `"default"` (icon above text) or `"inline"` (icon next to text).
 - **actions**: List of buttons. Built-in `id` triggers include: `toggle_theme`, `toggle_dnd`, `cycle_dnd`, `toggle_mute`, `toggle_mic_mute`, `screenshot`, `touch_keyboard`.
 - **Custom Commands**: To execute arbitrary commands, specify a `command` parameter.
-  ```yaml
-  - id: "terminal"
-    label: "Terminal"
-    icon: "\uE765"
-    command: "wt"
-  ```
-  *Supports executables, URLs, files, folders, and explorer shortcuts.*
+```yaml
+- id: "terminal"
+  label: "Terminal"
+  icon: "\uE765"
+  command: "wt"
+```
+*Supports executables, URLs, files, folders, and explorer shortcuts.*
 
 #### Screenshot Action
 The `screenshot` action opens an interactive fullscreen region selector:
@@ -165,16 +200,16 @@ The `screenshot` action opens an interactive fullscreen region selector:
 ### Sliders (`sliders`)
 Systems sliders for volume, microphone, and display brightness.
 - **show**: Toggle section visibility.
-- **show_slider**: Toggle visibility of the specific slider.
+- **show_slider**: Toggle visibility of the specific slider. Default `true`.
 - **icon**: Glyph for the slider icon.
-- **show_source_selector**: Toggle visibility of device selection dropdowns (e.g. switch active audio output, input, or target monitor).
+- **show_source_selector**: (default `false`) Toggle visibility of device selection dropdowns (e.g. switch active audio output, input, or target monitor).
 - **source_selector_icon**: Dropdown arrow icon glyph.
 
 ### Power Plan (`power`)
 Manage system power profiles.
 - **show**: Toggle section visibility.
-- **power_plan_title**: Header text for the power plan selector dropdown.
-- **power_mode_title**: Header text for the power mode selector dropdown.
+- **power_plan_title**: Header text for the power plan selector dropdown. Default `"Power Plan"`.
+- **power_mode_title**: Header text for the power mode selector dropdown. Default `"Power Mode"`.
 - **button_menu_icon**: Dropdown arrow icon glyph.
 
 > [!NOTE]
@@ -183,9 +218,9 @@ Manage system power profiles.
 ### Media Player (`media`)
 Compact media player controls.
 - **show**: Toggle section visibility.
-- **thumbnail_size**: Media artwork cover image size in pixels.
-- **thumbnail_radius**: Corner radius for the media artwork.
-- **icons**: Glyph definitions for previous track, next track, play, and pause.
+- **thumbnail_size**: Media artwork cover image size in pixels. Default `64`.
+- **thumbnail_radius**: Corner radius for the media artwork. Default `8`.
+- **icons**: Glyph definitions for `prev_track` (`\ue892`), `next_track` (`\ue893`), `play` (`\ue768`), and `pause` (`\ue769`).
 
 ---
 

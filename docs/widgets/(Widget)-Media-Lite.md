@@ -15,7 +15,7 @@ A vertical and minimal album-style media widget. Cover art and track info on the
 | `tooltip` | boolean | `true` | Show tooltips on the bar (title + artist) and popup controls. |
 | `media_menu` | dict | [See below](#media-menu-options) | Popup menu options. |
 | `callbacks` | dict | [See below](#available-callbacks) | Mouse callbacks. |
-| `keybindings` | list | `[]` | Optional hotkeys. |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
 
 ## Example Configuration
 
@@ -98,6 +98,17 @@ On the **bar**, a missing artist is hidden and the title is vertically centered 
 Source is a **16px app icon** (tooltip shows the app name). The volume icon **always stays in the layout**. When no app audio session is bound it gets class `unavailable` (dim via CSS). When bound: **hover** = vertical slider, **click** = mute/unmute, **wheel** = adjust level.
 
 ## Available Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_media_menu"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
 
 | Callback | Description |
 | --- | --- |
@@ -316,5 +327,5 @@ Source is a **16px app icon** (tooltip shows the app name). The volume icon **al
 }
 ```
 
-## Preview of the Media Lite Widget
-![GitHub YASB Widget](assets/c69d10a8-5a41-4b0a-8ea1-797c8c0b70c1.png)
+## Preview of the Widget
+![Media Lite YASB Widget](assets/c69d10a8-5a41-4b0a-8ea1-797c8c0b70c1.png)

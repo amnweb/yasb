@@ -10,7 +10,8 @@ Displays the number of unread Windows notifications in your status bar. Clicking
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
 | `icons`          | dict    | `{'new': '\udb80\udc9e', 'default': '\udb80\udc9a'}`               | Icons for different notification states.                                    |
 | `hide_empty`       | boolean  | `false`  | Whether to hide the widget when there are no notifications. |
-| `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the notifications widget. |
+| `keybindings`     | list    | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks`       | dict    | [See below](#available-callbacks) | Callbacks for mouse events on the notifications widget. |
 
 ## Example Configuration
 
@@ -36,12 +37,21 @@ Displays the number of unread Windows notifications in your status bar. Clicking
 - **tooltip:** Whether to show the tooltip on hover.
 - **icons:** A dictionary specifying the icons for different notification states. It contains two keys: `new` and `default`. The values are the icons to be used for new notifications and the default state, respectively.
 - **hide_empty:** Whether to hide the widget when there are no notifications.
-- **callbacks:** Callbacks for mouse events on the notifications widget. The following callbacks are available:
-  - `on_left`: Callback for left-click event.
-  - `on_middle`: Callback for middle-click event.
-  - `on_right`: Callback for right-click event.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#available-callbacks).
 
 ## Available Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
 
 - **toggle_notification:** Toggles the notification panel.
 - **toggle_label:** Toggles the label between the default and alternative format.

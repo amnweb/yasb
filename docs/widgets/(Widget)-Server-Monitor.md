@@ -9,14 +9,61 @@ Monitors a list of remote servers to make sure they are online and their SSL cer
 | `update_interval` | integer | `300`                                                                  | The interval in seconds to update the widget. Must be between 10 and 36000.   |
 | `tooltip`         | boolean | `true`                                                                 | Whether to show the tooltip. |
 | `ssl_check`       | boolean | `true`                                                                 | Whether to check SSL certificates. |
-| `ssl_warning`     | integer | `30`                                                                   | The number of days before expiration to show SSL warnings.|
+| `ssl_warning`     | integer | `30`                                                                   | The number of days before expiration to show SSL warnings (1-365). |
 | `ssl_verify`     | boolean | `true`                                                                 | Whether to verify SSL certificates. |
 | `desktop_notifications`  | dict | `{'ssl': false, 'offline': false}` | Desktop notification settings. Show desktop notifications for SSL warnings and offline servers. |
 | `timeout`         | integer | `5`                                                                 | The timeout in seconds for server checks. Must be between 1 and 30. |
 | `servers`         | list    | `[]`                                                                   | A list of server entries, each with `name` and `url`. |
-| `menu` | dict | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
-| `icons`          | dict     | `{'online': '\uf444', 'offline': '\uf4c3', 'warning': '\uf4c3', 'reload': '\udb81\udc50'}` | Icons for different server states and actions. |
-| `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the server monitor widget. |
+| `menu` | dict | [See below](#menu-options) | Menu settings for the widget. |
+| `icons`          | dict     | [See below](#icons-options) | Icons for different server states and actions. |
+| `keybindings`     | list    | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks`       | dict    | [See below](#callbacks) | Callbacks for mouse events on the server monitor widget. |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_menu` - Open or close the popup menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Menu Options
+
+The `menu` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+menu:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "System"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+```
+
+## Icons Options
+
+The `icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+icons:
+  online: "\uf444"
+  offline: "\uf4c3"
+  warning: "\uf4c3"
+  reload: "\udb81\udc50"
+```
 
 ## Example Configuration
 
@@ -60,9 +107,11 @@ Monitors a list of remote servers to make sure they are online and their SSL cer
 - **update_interval:** The interval in seconds to update the widget. Must be between 10 and 36000.
 - **tooltip:** Whether to show the tooltip.
 - **ssl_check:** Whether to check SSL certificates.
-- **ssl_warning:** The number of days before expiration to show SSL warnings.
+- **ssl_warning:** The number of days before expiration to show SSL warnings (1-365).
 - **ssl_verify:** Whether to verify SSL certificates. If you have self-signed certificates, you may need to set this to `false`.
 - **desktop_notifications:** Desktop notification settings. Show desktop notifications for SSL warnings and offline servers.
+  - **ssl:** Show a notification for SSL certificate warnings.
+  - **offline:** Show a notification when a server goes offline.
 - **timeout:** The timeout in seconds for server checks. Must be between 1 and 30.
 - **servers:** A list of server entries. Each entry has:
   - **name:** The display name shown in the menu.
@@ -77,7 +126,8 @@ Monitors a list of remote servers to make sure they are online and their SSL cer
   - **offset_top:** Set the offset from the top of the widget.
   - **offset_left:** Set the offset from the left of the widget.
 - **icons:** Icons for different server states and actions.
-- **callbacks:** Callbacks for mouse events on the memory widget.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ## Example Style
 ```css

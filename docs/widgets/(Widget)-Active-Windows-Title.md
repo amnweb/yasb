@@ -14,8 +14,26 @@ Shows the title of the window you are currently using right in your status bar. 
 | `max_length_ellipsis` | string | `"..."`                                                                | The ellipsis to use when the label text exceeds the maximum length.         |
 | `monitor_exclusive` | boolean | `true`                                                                  | Whether the widget should be exclusive to the monitor.                      |
 | `ignore_window`    | dict    | `{'classes': [], 'processes': [], 'titles': []}`                        | Windows to ignore based on class names, process names, and titles.          |
-| `callbacks`         | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the widget.                        |
-| `rewrite`           | dict | [See below](#rewrite-options)                                                                  | Rewrite options for the widget. |
+| `callbacks`         | dict    | [See below](#callbacks) | Callbacks for mouse events on the widget.                        |
+| `rewrite`           | list    | `[]`                                                                    | List of rewrite rules for the widget. [See below](#rewrite-options)         |
+| `keybindings`       | list    | `[]`                                                                    | Optional hotkeys. See [Keybindings](./Keybindings).                         |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
 
 ## Example Configuration
 
@@ -40,13 +58,14 @@ active_window:
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **label_no_window:** The text to display when no window is active. If not specified, it defaults to an empty string.
 - **label_icon:** A boolean indicating whether to display the window icon.
-- **label_icon_size:** The size of the window icon in pixels. Must be between 12px and 24px.
-- **max_length:** The maximum number of characters to display for the window title. If the title exceeds this length, it will be truncated.
+- **label_icon_size:** The size of the window icon in pixels.
+- **max_length:** The maximum number of characters to display for the window title. Must be greater than 0. If the title exceeds this length, it will be truncated.
 - **max_length_ellipsis:** The string to append to truncated window titles.
 - **monitor_exclusive:** A boolean indicating whether the widget should be exclusive to a single monitor.
 - **ignore_window:** A dictionary specifying which windows to ignore. It contains three lists: classes, processes, and titles.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
-- **rewrite:** A dictionary containing rewrite options for the widget. Rewrite rules are applied to `title`, `process.name`, and `app_name`. See [Rewrite Options](#rewrite-options) below.
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
+- **rewrite:** A list of rewrite rules for the widget. Rewrite rules are applied to `title`, `process.name`, and `app_name`. See [Rewrite Options](#rewrite-options) below.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
 
 ## Label Format Placeholders
 

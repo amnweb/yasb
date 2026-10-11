@@ -4,11 +4,86 @@ Shows the active window arrangement layout in Komorebi (like BSP, columns, rows,
 
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `hide_if_offline` | boolean | `true`                                                                  | Whether to hide the widget if offline.                                      |
+| `hide_if_offline` | boolean | `false`                                                                 | Whether to hide the widget if offline.                                      |
 | `label`         | string  | `"{icon}"`                                                              | The label format string for the widget.                                     |
-| `layouts`       | list    | `['bsp', 'columns', 'rows', 'grid', 'scrolling', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack', 'right_main_vertical_stack']` | The list of layouts available for the widget.                              |
-| `layout_icons`  | dict    | `{ 'bsp': 'BSP', 'columns': 'COLS', 'rows': 'ROWS', 'grid': 'GRID', 'scrolling': 'SC', 'vertical_stack': 'V-STACK', 'horizontal_stack': 'H-STACK', 'ultrawide_vertical_stack': 'W-STACK', 'right_main_vertical_stack': 'RMV-STACK', 'monocle': 'MONOCLE', 'maximized': 'MAX', 'floating': 'FLOATING', 'paused': 'PAUSED' }` | The icons for each layout.                                                 |
-| `callbacks`     | dict    | `{ 'on_left': 'next_layout', 'on_middle': 'toggle_monocle', 'on_right': 'prev_layout' }` | Callbacks for mouse events on the widget.                                   |
+| `layouts`       | list    | [See below](#layouts) | The list of layouts available for the widget.                              |
+| `layout_icons`  | dict    | [See below](#layout-icons-options) | The icons for each layout.                                                 |
+| `layout_menu`   | dict    | [See below](#menu-configuration-layout_menu) | Popup menu for layout selection.                                            |
+| `keybindings`   | list    | `[]`                                                                    | Optional hotkeys. See [Keybindings](./Keybindings).                         |
+| `callbacks`     | dict    | [See below](#callbacks) | Callbacks for mouse events on the widget.                                   |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "next_layout"
+  on_middle: "toggle_monocle"
+  on_right: "prev_layout"
+```
+
+Available actions:
+
+- `next_layout` - Switch to the next layout.
+- `prev_layout` - Switch to the previous layout.
+- `flip_layout` - Flip the layout horizontally.
+- `flip_layout_horizontal` - Flip the layout horizontally.
+- `flip_layout_vertical` - Flip the layout vertically.
+- `flip_layout_horizontal_and_vertical` - Flip the layout both horizontally and vertically.
+- `first_layout` - Switch to the first layout in `layouts`.
+- `toggle_tiling` - Toggle tiling.
+- `toggle_float` - Toggle floating for the focused window.
+- `toggle_monocle` - Toggle monocle mode.
+- `toggle_maximize` - Toggle maximize for the focused window.
+- `toggle_pause` - Pause or resume tiling.
+- `toggle_layout_menu` - Open or close the layout menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Layouts
+
+The default value of `layouts` is:
+
+```yaml
+layouts:
+  - "bsp"
+  - "columns"
+  - "rows"
+  - "grid"
+  - "scrolling"
+  - "vertical_stack"
+  - "horizontal_stack"
+  - "ultrawide_vertical_stack"
+  - "right_main_vertical_stack"
+  - "monocle"
+  - "maximized"
+  - "floating"
+  - "paused"
+  - "tiling"
+```
+
+## Layout Icons Options
+
+The `layout_icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+layout_icons:
+  bsp: "[\\]"
+  columns: "[||]"
+  rows: "[==]"
+  grid: "[G]"
+  scrolling: "[SC]"
+  vertical_stack: "[V]="
+  horizontal_stack: "[H]="
+  ultrawide_vertical_stack: "||="
+  right_main_vertical_stack: "=||"
+  monocle: "[M]"
+  maximized: "[X]"
+  floating: "><>"
+  paused: "[P]"
+  tiling: "[T]"
+```
 
 ## Menu Configuration (`layout_menu`)
 
@@ -72,34 +147,19 @@ komorebi_active_layout:
 - **label**: The label format string for the widget.
 - **layouts**: The list of layouts available for the widget.
 - **layout_icons**: The icons for each layout.
-- **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **layout_menu**: A dictionary specifying the menu settings for the widget. It contains the following keys:
   - **blur**: Enable blur effect for the menu.
   - **round_corners**: Enable round corners for the menu (this option is not supported on Windows 10).
   - **round_corners_type**: Set the type of round corners for the menu (normal, small) (this option is not supported on Windows 10).
   - **border_color**: Set the border color for the menu (this option is not supported on Windows 10).
-  - **alignment**: Set the alignment of the menu (left, right).
+  - **alignment**: Set the alignment of the menu (left, right, center).
   - **direction**: Set the direction of the menu (up, down).
   - **offset_top**: Set the offset from the top of the screen.
   - **offset_left**: Set the offset from the left of the screen.
   - **show_layout_icons**: Whether to show icons for each layout in the menu.
 
-### Allowed Callbacks:
-```
-"next_layout"
-"prev_layout"
-"flip_layout"
-"flip_layout_horizontal"
-"flip_layout_vertical"
-"flip_layout_horizontal_and_vertical"
-"first_layout"
-"toggle_tiling"
-"toggle_float"
-"toggle_monocle"
-"toggle_maximize"
-"toggle_pause"
-"toggle_layout_menu"
-```
 ## Example Style
 ```css
 .komorebi-active-layout {}

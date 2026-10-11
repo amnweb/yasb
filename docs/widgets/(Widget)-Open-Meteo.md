@@ -12,11 +12,31 @@ Displays your local weather, temperature, and wind speed. It features a built-in
 | `hide_decimal`     | boolean | `false`                                                                            | Whether to hide the decimal part of the temperature.                                            |
 | `units`            | string  | `'metric'`                                                                         | The units for the weather data. Can be `'metric'` or `'imperial'`.                              |
 | `forecast_days`    | integer | `7`                                                                                | Number of days to fetch and display in the forecast popup. Must be between 1 and 14.            |
-| `icons`            | dict    | See [icons section](#icons)                                                        | A dictionary of icons for different weather conditions.                                         |
-| `callbacks`        | dict    | `{ 'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | Callbacks for mouse events on the weather widget.                                               |
+| `icons`            | dict    | [See below](#icons)                                                        | A dictionary of icons for different weather conditions.                                         |
+| `keybindings`      | list    | `[]`                                                                               | Optional hotkeys. See [Keybindings](./Keybindings).                                             |
+| `callbacks`        | dict    | [See below](#callbacks) | Callbacks for mouse events on the weather widget.                                               |
 | `weather_card`     | dict    | [See below](#advanced-configuration)                                               | Configuration for the weather card popup display.                                               |
 
 > **Note**: This widget uses the free [Open-Meteo API](https://open-meteo.com/) - **no API key required**. Location is set through the built-in geocoding search when you first open the weather card.
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "do_nothing"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_card` - Open or close the weather card.
+- `update_label` - Refresh the label now.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
 
 ## Label Placeholders
 
@@ -195,11 +215,11 @@ open_meteo:
   - **show_hourly_forecast:** Whether to show the hourly forecast in the weather card. Set to `false` to disable.
   - **time_format:** Time format for the weather card. Possible values are `12h` and `24h`.
   - **hourly_point_spacing:** Spacing between hourly points on the curve.
-  - **hourly_icon_size:** Size of the hourly icon.Better to set 16, 32 or 64 for better quality.
+  - **hourly_icon_size:** Size of the hourly icon (8-64). Better to set 16, 32 or 64 for better quality.
   - **icon_smoothing:** Whether to smooth the icon on hourly view.
-  - **temp_line_width:** Width of the temperature line. Setting this to `0` will hide the temperature line.
+  - **temp_line_width:** Width of the temperature line (0-10). Setting this to `0` will hide the temperature line.
   - **current_line_color:** Color of the current hour line.
-  - **current_line_width:** Width of the current hour line. Setting this to `0` will hide it.
+  - **current_line_width:** Width of the current hour line (0-10). Setting this to `0` will hide it.
   - **current_line_style:** Style of the current hour line. Possible values are `solid`, `dash`, `dot`, `dashDot`, `dashDotDot`.
   - **hourly_gradient:** Configuration for the gradient effect under the hourly line.
     - **enabled:** Whether to enable the gradient effect under the hourly line.
@@ -218,7 +238,8 @@ open_meteo:
     - **rain_effect_intensity:** Intensity of the rain animation. (0.01 - 10.0, Default: 1.0)
     - **snow_effect_intensity:** Intensity of the snow animation. (0.01 - 10.0, Default: 1.0)
     - **scale_with_chance:** Whether to scale the animation intensity with the chance of rain/snow.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. Available callback functions are `toggle_card`, `toggle_label`, `do_nothing`.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ## Location Setup
 
@@ -439,5 +460,5 @@ The weather card shows:
 }
 ```
 
-## Preview of the Weather Card
-![Popup Menu Demo](assets/28a7c57d-7641-41dc-80f8-6fb0147aea62.png)
+## Preview of the Widget
+![Open Meteo YASB Widget](assets/28a7c57d-7641-41dc-80f8-6fb0147aea62.png)

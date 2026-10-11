@@ -9,9 +9,8 @@ Displays your screen's brightness level and lets you adjust it on the fly. You c
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `scroll_step`   | integer | `1`                                                                       | The step size for scrolling the brightness level. This value must be between 1 and 100. |
 | `invert_wheel`     | boolean     | `false`                  | Whether to invert wheel scroll direction (useful on laptop trackpads) |
-| `brightness_icons` | list  | `['\udb80\udcde', '\udb80\udcdd', '\udb80\udcdf', '\udb80\udce0']`                    | A list of icons representing different brightness levels. The icons are used based on the current brightness percentage. |
-| `hide_unsupported` | boolean | `True` | Whether to hide the widget if the current system does not support brightness control. |
-| `brightness_toggle_level` | list | `[0, 50, 100]` | The brightness levels to cycle through when the widget is clicked. |
+| `brightness_icons` | list  | [See below](#brightness-icons) | A list of icons representing different brightness levels. The icons are used based on the current brightness percentage. |
+| `brightness_toggle_level` | list | `[]` | The brightness levels to cycle through when the widget is clicked. |
 | `ddc_poll_interval` | integer | `60` | Seconds between background DDC/CI brightness polls for external monitors (`0`–`600`). `0` disables polling (popup still refreshes on open). Laptop panels use power events and do not use this. |
 | `auto_light` | boolean | `False` | Whether to automatically adjust the brightness icon based on the current brightness level. |
 | `auto_light_icon` | string | `"\udb80\udce1"` | The icon to use when the auto_light option is enabled. |
@@ -19,9 +18,78 @@ Displays your screen's brightness level and lets you adjust it on the fly. You c
 | `auto_light_day_level` | int | `100` | The brightness level at which the widget switches to the day. |
 | `auto_light_night_start_time` | string | `"20:00"` | The time at which the night starts. |
 | `auto_light_night_end_time` | string | `"06:30"` | The time at which the night ends. |
-| `brightness_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'brightness_icon': '\ue706', 'contrast_icon': '\ue7a1'}` | Menu settings for the widget. |
-| `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the brightness widget. |
-| `progress_bar`       | dict    | `{'enabled': false, 'progress_type': 'circular', 'position': 'left', 'size': 18, 'thickness': 3, 'color': '#00C800', 'background_color': '#3C3C3C', 'animation': true}` | Progress bar settings.    |
+| `brightness_menu` | dict | [See below](#brightness-menu-options) | Menu settings for the widget. |
+| `callbacks`     | dict    | [See below](#callbacks) | Callbacks for mouse events on the brightness widget. |
+| `progress_bar`       | dict    | [See below](#progress-bar-options) | Progress bar settings.    |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_level_next` - Set the next brightness level from `brightness_toggle_level`.
+- `toggle_level_prev` - Set the previous brightness level from `brightness_toggle_level`.
+- `toggle_brightness_menu` - Open or close the brightness menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Brightness Icons
+
+The default value of `brightness_icons` is:
+
+```yaml
+brightness_icons:
+  - "\udb80\udcde"  # Icon for 0-25% brightness
+  - "\udb80\udcdd"  # Icon for 26-50% brightness
+  - "\udb80\udcdf"  # Icon for 51-75% brightness
+  - "\udb80\udce0"  # Icon for 76-100% brightness
+```
+
+## Brightness Menu Options
+
+The `brightness_menu` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+brightness_menu:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "System"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+  contrast_icon: "\ue7a1"
+  brightness_icon: "\ue706"
+```
+
+## Progress Bar Options
+
+The `progress_bar` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+progress_bar:
+  enabled: false
+  progress_type: "circular"
+  size: 18
+  thickness: 3
+  radius: 0
+  color: "#00C800"
+  background_color: "#3C3C3C"
+  position: "left"
+  animation: true
+```
+
 ## Example Configuration
 
 ```yaml
@@ -31,7 +99,6 @@ Displays your screen's brightness level and lets you adjust it on the fly. You c
       label: "<span>{icon}</span>"
       label_alt: "Brightness {percent}%"
       tooltip: true
-      hide_unsupported: true
       brightness_toggle_level: [0, 50, 100]
       auto_light: false
       auto_light_icon: "\udb80\udce1"
@@ -65,8 +132,7 @@ Displays your screen's brightness level and lets you adjust it on the fly. You c
 - **tooltip:** Whether to show the tooltip on hover.
 - **scroll_step:** The step size for scrolling the brightness level. This value must be between 1 and 100.
 - **brightness_icons:** A list of icons representing different brightness levels. The icons are used based on the current brightness percentage.
-- **hide_unsupported:** Whether to hide the widget if the current system does not support brightness control.
-- **brightness_toggle_level:** The brightness level to set when the widget is clicked.
+- **brightness_toggle_level:** A list of brightness levels (percent) to cycle through with the `toggle_level_next` and `toggle_level_prev` callbacks. Empty by default, which disables cycling.
 - **ddc_poll_interval:** How often (seconds) to poll external DDC/CI monitors in the background. Range `0`–`600`, default `60`. Set `0` to disable background polling, opening the brightness menu still refreshes. Internal laptop brightness does not use this poll.
 - **brightness_menu**: A dictionary specifying the menu settings for the widget. It contains the following keys:
   - **blur**: Enable blur effect for the menu.
@@ -85,7 +151,8 @@ Displays your screen's brightness level and lets you adjust it on the fly. You c
 - **auto_light_day_level:** The brightness level at which the widget switches to the day.
 - **auto_light_night_start_time:** The time at which the night starts.
 - **auto_light_night_end_time:** The time at which the night ends.
-- **callbacks:** Callbacks for mouse events on the brightness widget. can be `toggle_brightness_menu`, `toggle_label`, `toggle_level_next`, `toggle_level_prev`, `do_nothing`.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **progress_bar**: A dictionary containing settings for the progress bar. It includes:
   - **enabled**: Whether the progress bar is enabled.
   - **progress_type**: The type of progress bar. Options are `"circular"`, `"linear_horizontal"`, or `"linear_vertical"`.

@@ -13,20 +13,20 @@ Thank you for your interest in contributing to YASB! This guide will help you ge
 ### Setting up Development Environment
 
 1. **Fork and Clone the Repository**
-   ```bash
-   git clone https://github.com/amnweb/yasb.git
-   cd yasb
-   ```
+```bash
+git clone https://github.com/amnweb/yasb.git
+cd yasb
+```
 
 2. **Install Development Dependencies**
-   ```bash
-   pip install -e .[dev]
-   ```
+```bash
+pip install -e .[dev]
+```
 
 3. **Install Pre-commit Hooks**
-   ```bash
-   pre-commit install
-   ```
+```bash
+pre-commit install
+```
 4. **VS Code Setup (Recommended)**
    The project includes VS Code workspace configuration in [.vscode/](https://github.com/amnweb/yasb/blob/main/.vscode/):
    

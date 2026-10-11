@@ -12,7 +12,28 @@ Displays the active shortcut binding mode in GlazeWM (like resize or pause modes
 | `default_icon` | string | `'\uf071'` | Default icon for the binding modes where no other icon is specified. |
 | `icons` | dict | `{'none': '', 'resize': '\uf071', 'pause': '\uf28c'}` | Specified icons for each Binding Mode; if a binding mode is not specified then the `default_icon` will be used. |
 | `binding_modes_to_cycle_through` | list | `['none', 'resize', 'pause']` | Binding Mode names to cycle through with callbacks `next_binding_mode` and `prev_binding_mode` |
-| `callbacks` | dict | `{'on_left': 'next_binding_mode', 'on_middle': 'toggle_label', 'on_right': 'disable_binding_mode'}` | Callbacks for mouse events on the widget. |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks` | dict | [See below](#callbacks) | Callbacks for mouse events on the widget. |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "next_binding_mode"
+  on_middle: "toggle_label"
+  on_right: "disable_binding_mode"
+```
+
+Available actions:
+
+- `toggle_label` - Toggles the label of the widget.
+- `disable_binding_mode` - Disables the binding mode.
+- `next_binding_mode` - Switches to the next binding mode.
+- `prev_binding_mode` - Switches to the previous binding mode.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
 
 ## Example Configuration
 
@@ -49,13 +70,8 @@ glazewm_binding_mode:
 - **default_icon:** Default icon for the binding modes where no other icon is defined.
 - **icons:** A dictionary mapping binding mode names to their respective icons. The keys are the binding mode names, and the values are the icon strings. If no icon is defined for a binding mode, the `default_icon` will be used. `'none'` represents no binding mode active.
 - **binding_modes_to_cycle_through:** Binding Mode names to cycle through with callbacks `next_binding_mode` and `prev_binding_mode`. Use `'none'` to handle no binding mode active.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
-  - **callback functions**:
-    - `toggle_label`: Toggles the label of the widget.
-    - `do_nothing`: Does nothing when clicked.
-    - `disable_binding_mode`: Disables the binding mode when clicked.
-    - `next_binding_mode`: Switches to the next binding mode.
-    - `prev_binding_mode`: Switches to the previous binding mode.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ## Note on Binding Mode Names
 If you need a custom name for each binding mode - use "display_name".

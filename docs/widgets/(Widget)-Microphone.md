@@ -5,17 +5,70 @@ Shows your microphone volume and mute status. You can adjust the recording level
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`           | string  | `'{icon}'`                        | The format string for the microphone widget. Displays icon or level. |
-| `label_alt`       | string  | `'{icon} {level}'`        | The alternative format string for the microphone widget. Displays icon or level. |
+| `label_alt`       | string  | `'{icon} {level}%'`       | The alternative format string for the microphone widget. Displays icon or level. |
 | `class_name`      | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
 | `mute_text` | string  | `'mute'` | Text used by `{level}` to indicate muted volume |
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
-| `scroll_step`     | int     | `2`                  | The step size for volume adjustment when scrolling. The value is in percentage points (0-100). |
+| `scroll_step`     | int     | `2`                  | The step size for volume adjustment when scrolling. The value is in percentage points (1-100). |
 | `invert_wheel`     | boolean     | `false`                  | Whether to invert wheel scroll direction (useful on laptop trackpads) |
 | `icons`       | dict    | `{'normal': '\uf130', 'muted': '\uf131'}` | Icons for microphone widget |
-| `callbacks`       | dict    | `{'on_left': 'toggle_mute', 'on_middle': 'toggle_label', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
-| `mic_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'system', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
-| `progress_bar`       | dict    | `{'enabled': false, 'progress_type': 'circular', 'position': 'left', 'size': 18, 'thickness': 3, 'radius': 0, 'color': '#00C800', 'background_color': '#3C3C3C', 'animation': true}` | Progress bar settings.    |
+| `callbacks`       | dict    | [See below](#callbacks) | Callbacks for mouse events on the microphone widget. |
+| `keybindings`     | list    | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `mic_menu` | dict | [See below](#mic-menu-options) | Menu settings for the widget. |
+| `progress_bar`       | dict    | [See below](#progress-bar-options) | Progress bar settings.    |
 
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_mic_menu"
+  on_middle: "toggle_label"
+  on_right: "toggle_mute"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_mute` - Mute or unmute the microphone.
+- `toggle_mic_menu` - Open or close the microphone menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Mic Menu Options
+
+The `mic_menu` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+mic_menu:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "system"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+```
+
+## Progress Bar Options
+
+The `progress_bar` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+progress_bar:
+  enabled: false
+  progress_type: "circular"
+  size: 18
+  thickness: 3
+  radius: 0
+  color: "#00C800"
+  background_color: "#3C3C3C"
+  position: "left"
+  animation: true
+```
 
 ## Example Configuration
 
@@ -48,9 +101,12 @@ microphone:
 - **label_alt:** The alternative format string for the microphone widget. Displays the microphone icon or level.
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **tooltip:** Whether to show the tooltip on hover.
-- **scroll_step:** The step size for volume adjustment when scrolling. The value is in percentage points (0-100).
+- **mute_text:** Text used by `{level}` to indicate muted volume.
+- **scroll_step:** The step size for volume adjustment when scrolling. The value is in percentage points (1-100).
+- **invert_wheel:** Whether to invert wheel scroll direction (useful on laptop trackpads).
 - **icons:** A dictionary specifying the icons for the microphone widget. The keys are `normal` and `muted`, and the values are the unicode characters for the icons.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **mic_menu:** A dictionary specifying the menu settings for the widget. It contains the following keys:
   - **blur:** Enable blur effect for the menu.
   - **round_corners:** Enable round corners for the menu (this option is not supported on Windows 10).

@@ -4,15 +4,49 @@ A blank canvas for whatever data you want to put on your bar. You give it a comm
 
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `label`         | string  | `"{data}"`                                | The format string for data |
-| `label_alt`     | string  | `"{data}"`    | Example of label alt. |
+| `label`         | string  | Required                                | The format string for data, for example `"{data}"` |
+| `label_alt`     | string  | `""`    | The alternative format string. |
 | `label_max_length`          | int     | `None`                                                                     | The maximum length of the label. |
 | `label_placeholder` | string  | `"Loading..."`                                                          | Placeholder text when data is not available. |
 | `tooltip`       | boolean | `false`                                                                | Whether to show the tooltip on hover. |
 | `tooltip_label` | string  | `None`                                                                 | Custom format string for the tooltip. If not specified, shows raw data. |
-| `class_name`    | string  | `"custom-widget"`                                                      | The CSS class name for the widget. |
-| `exec_options`  | dict    | `{'run_cmd': None, 'run_once': false, 'run_interval': 120000, 'return_format': 'json', 'hide_empty': false, 'use_shell': true, 'encoding': None}` | Execution options for custom widget. |
-| `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events. |
+| `class_name`    | string  | Required                                                      | The CSS class name for the widget. |
+| `exec_options`  | dict    | [See below](#exec-options) | Execution options for custom widget. |
+| `keybindings`   | list    | `[]`                                                                   | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks`     | dict    | [See below](#callbacks) | Callbacks for mouse events. |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `exec_custom` - Run the command from `exec_options` now.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Exec Options
+
+The `exec_options` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+exec_options:
+  run_cmd: null
+  run_once: false
+  run_interval: 120000
+  return_format: "json"
+  hide_empty: false
+  use_shell: true
+  encoding: null
+```
 
 ## Example Configuration to get IP Address
 
@@ -27,7 +61,7 @@ ip_info:
     tooltip_label: "IP: {data[ip]}\nCity: {data[city]}\nRegion: {data[region]}\nCountry: {data[country]}"
     exec_options:
       run_cmd: "curl.exe https://ipinfo.io"
-      run_interval: 120000  # every 5 minutes
+      run_interval: 120000  # every 2 minutes
       return_format: "json"
       hide_empty: false
     callbacks:
@@ -70,22 +104,23 @@ weather:
 
 ## Description of Options
 
-- **label**: The format string.
-- **label_alt**: The alternative format string.
+- **label**: (Required) The format string.
+- **label_alt**: The alternative format string. Default is `""`.
 - **label_placeholder**: Placeholder text when data is not available. Default is `"Loading..."`.
 - **label_max_length**: The maximum length of the label. Minimum value is 1. Default is `None`.
 - **tooltip**: Whether to show the tooltip on hover. Default is `false`.
 - **tooltip_label**: Custom format string for the tooltip. Use `{data}` to reference the command output data. If not specified, shows the raw data representation (JSON for dict, string for other types).
-- **class_name**: The CSS class name for the widget.
+- **class_name**: (Required) The CSS class name for the widget.
 - **exec_options**: A dictionary specifying the execution options. The keys are:
   - **run_cmd**: The command or executable path to run. Put double quotes around a path or argument that contains spaces, for example `run_cmd: '"C:\Program Files\Tool\tool.exe" --json'`. Default is `None`.
   - **run_once**: (boolean) If set to `true`, the command runs only once on startup and the repeat interval timer is disabled. Default is `false`.
-  - **run_interval**: The repeat execution interval in milliseconds. Default is `120000` (2 minutes).
+  - **run_interval**: The repeat execution interval in milliseconds. Must be `0` or greater. Default is `120000` (2 minutes).
   - **return_format**: The format expected from the command output, either `"json"` or `"string"`. Default is `"json"`.
   - **hide_empty**: (boolean) If true, the widget hides itself when the output is empty or parsing fails. Default is `false`.
   - **use_shell**: (boolean) Whether to run the command inside a system shell. Default is `true`.
   - **encoding**: (string) Custom character encoding to decode the output (e.g., `utf-8`, `cp1252`). Default is `None`.
-- **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ## Example Style
 ```css

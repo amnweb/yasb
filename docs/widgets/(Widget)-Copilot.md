@@ -74,14 +74,31 @@ copilot:
 | `token` | string | `""` | GitHub token. Leave empty to use OAuth sign-in, or set to `"env"` to read from `YASB_COPILOT_TOKEN` env var |
 | `plan` | string | `"pro"` | Your Copilot plan: `"pro"` (1,500 credits), `"pro_plus"` (7,000 credits) or `"max"` (20,000 credits) |
 | `tooltip` | boolean | `true` | Show tooltip on hover |
-| `update_interval` | integer | `3600` | Refresh interval in seconds (min: 300, max: 86400) |
-| `icons.copilot` | string | `"\uf113"` | Icon for Copilot (main widget and empty state) |
-| `icons.error` | string | `"\uf071"` | Icon for error display |
+| `update_interval` | integer | `3600` | Refresh interval in seconds |
+| `icons.copilot` | string | `"\uf4b8"` | Icon for Copilot (main widget and empty state) |
+| `icons.error` | string | `"\uf4b9"` | Icon for error display |
 | `thresholds.warning` | integer | `75` | Percentage threshold for warning state |
 | `thresholds.critical` | integer | `90` | Percentage threshold for critical state |
-| `menu.blur` | boolean | `true` | Enable blur effect on menu |
-| `menu.round_corners` | boolean | `true` | Enable rounded corners |
-| `menu.chart` | boolean | `true` | Enable daily usage chart (set to `false` to skip daily API calls) |
+| `menu` | dict | see [Menu](#menu) | Popup menu options. `chart` enables the daily usage chart (set to `false` to skip daily API calls) |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings) |
+| `callbacks` | dict | [See below](#callbacks) | Mouse callbacks, see [Callbacks](#callbacks) |
+
+### Menu
+
+The `menu` option controls the popup. All keys are optional, the values below are the defaults.
+
+```yaml
+menu:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal" # "normal" or "small"
+  border_color: "System"
+  alignment: "right"           # "left", "center" or "right"
+  direction: "down"            # "up" or "down"
+  offset_top: 6
+  offset_left: 0
+  chart: true
+```
 
 ## Callbacks
 
@@ -398,4 +415,4 @@ The following placeholders can be used in `label` and `label_alt`:
 ```
 
 ## Preview of the Widget
-![GitHub YASB Widget](assets/a3f72e91-8dc4b5a0-e6f1-9c82-7d0e45f8a1b693c2.png)
+![Copilot YASB Widget](assets/a3f72e91-8dc4b5a0-e6f1-9c82-7d0e45f8a1b693c2.png)

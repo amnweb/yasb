@@ -4,9 +4,308 @@ YASB includes a built-in UI component system based on [WinUI3 design tokens](htt
 
 All components live in `src/core/ui/components/` and share the same token-based theming from `src/core/ui/tokens.py`.
 
+## Components
+
+| Component | Import | Description |
+|-----------|--------|-------------|
+| [Button](#button) | `core.ui.components.button` | Button with `default`, `accent` and `subtle` variants. |
+| [DropDownButton](#dropdownbutton) | `core.ui.components.drop_down_button` | Button that opens a menu of actions. |
+| [Link](#link) | `core.ui.components.link` | Hyperlink-style button. |
+| [TextBlock](#textblock) | `core.ui.components.text_block` | Label with preset typography variants. |
+| [TextBox](#textbox) | `core.ui.components.text_box` | Single-line text input with optional icon. |
+| [ToggleSwitch](#toggleswitch) | `core.ui.components.toggle_switch` | On/off switch, with or without a text label. |
+| [Slider](#slider) | `core.ui.components.slider` | Horizontal slider with a value label. |
+| [DropDown](#dropdown) | `core.ui.components.dropdown` | Selector with a popup list. |
+| [Card](#card) | `core.ui.components.card` | Container with hover and selection states. |
+| [InfoBar](#infobar) | `core.ui.components.info_bar` | Inline notification with a severity icon. |
+| [ContentDialog](#contentdialog) | `core.ui.components.content_dialog` | Modal dialog with up to three buttons. |
+| [InputDialog](#inputdialog) | `core.ui.components.input_dialog` | Modal dialog with a text field. |
+| [StepIndicator](#stepindicator) | `core.ui.components.indicator` | Dash-style step indicator. |
+| [Loader](#loader) | `core.ui.components.loader` | `Spinner` and `LoaderLine` loading indicators. |
+
+Every constructor takes an optional `parent` argument. Signatures below list the arguments in order, with their defaults.
+
+### Button
+
+```python
+Button(
+    text="",
+    variant="default",
+    padding=None,
+    font_family=None,
+    font_size=None,
+    font_weight=None,
+    parent=None,
+)
+```
+
+- `variant`: `"default"`, `"accent"` or `"subtle"`.
+- `padding`: `"l,t,r,b"`, `"h,v"` or `"all"`. Default `"11,5,11,6"`.
+- `font_family`: comma-separated family names.
+- `font_size`: pixel size. Default `14`.
+- `font_weight`: `"thin"`, `"light"`, `"normal"`, `"medium"`, `"demibold"` or `"bold"`.
+- Methods: `set_variant(variant)`, plus the usual `setIcon()` and `setIconSize()`.
+
+```python
+save_btn = Button("Save", variant="accent", parent=self)
+save_btn.clicked.connect(self._on_save)
+```
+
+### DropDownButton
+
+A `Button` that opens a menu of actions.
+
+```python
+DropDownButton(
+    text="",
+    icon_svg=None,
+    items=None,
+    variant="default",
+    chevron=True,
+    parent=None,
+)
+```
+
+- `icon_svg`: SVG markup drawn in the button's text color.
+- `items`: a list of `(key, label)` or `(key, label, icon_svg)` tuples. Use `None` for a separator.
+- `chevron`: draw the down arrow that marks the button as a menu.
+- Signal: `triggered(str)` with the `key` of the chosen item.
+
+```python
+menu = DropDownButton(
+    "Actions",
+    items=[("copy", "Copy"), ("paste", "Paste"), None, ("clear", "Clear")],
+    parent=self,
+)
+menu.triggered.connect(lambda key: print(key))
+```
+
+### Link
+
+```python
+Link(
+    text="",
+    padding=None,
+    font_family=None,
+    font_size=None,
+    font_weight=None,
+    parent=None,
+)
+```
+
+- `padding`: same format as `Button`. Default `"8,4,8,4"`.
+- `font_size` defaults to `14` and `font_weight` to `"normal"`.
+- It is a `QPushButton`, so connect to `clicked`.
+
+### TextBlock
+
+```python
+TextBlock(text="", variant="body", parent=None)
+```
+
+| Variant | Size | Weight |
+|---------|------|--------|
+| `"title-large"` | 40px | DemiBold |
+| `"title"` | 28px | DemiBold |
+| `"subtitle"` | 20px | DemiBold |
+| `"body"` | 14px | Normal |
+| `"body-strong"` | 14px | DemiBold |
+| `"body-secondary"` | 14px | Normal, secondary color |
+| `"caption"` | 12px | DemiBold, secondary color |
+| `"caption-strong"` | 12px | DemiBold |
+
+Methods: `set_color_override(color)` and `reset_color()`.
+
+### TextBox
+
+```python
+TextBox(
+    text="",
+    placeholder="",
+    icon_svg=None,
+    icon_position="left",
+    height=32,
+    parent=None,
+)
+```
+
+- `icon_position`: `"left"` or `"right"`.
+- It is a `QLineEdit`, so `text()`, `textChanged` and the other `QLineEdit` API work as usual.
+
+### ToggleSwitch
+
+```python
+ToggleSwitch(checked=False, label=None, parent=None)
+ToggleSwitchWithLabel(
+    text="",
+    checked=False,
+    on_text=None,
+    off_text=None,
+    parent=None,
+)
+```
+
+- `ToggleSwitch` is a `QAbstractButton`: use `isChecked()` and the `toggled(bool)` signal.
+- `ToggleSwitchWithLabel` shows a text next to the switch. `on_text` and `off_text` replace `text` depending on the state. It has `isChecked()`, `setChecked(value)` and the `toggled` signal.
+
+```python
+toggle = ToggleSwitchWithLabel(
+    text="Dark Mode",
+    on_text="Enabled",
+    off_text="Disabled",
+    checked=True,
+    parent=self,
+)
+toggle.toggled.connect(lambda on: print(on))
+```
+
+### Slider
+
+```python
+Slider(minimum=0, maximum=100, value=50, suffix="%", step=1, parent=None)
+```
+
+- Signals: `valueChanged(int)`, and `labelClicked()` when the value label is clicked.
+- Methods: `value()` and `set_value(v)`.
+
+### DropDown
+
+```python
+DropDown(items=None, parent=None, *, align_selected=True)
+```
+
+- `items`: a list of `(key, label)` tuples.
+- `align_selected`: align the popup so the selected item sits over the button.
+- Signal: `currentChanged(str)` with the `key` of the new selection.
+- Methods: `set_current(key)` and `current()`.
+
+```python
+dd = DropDown(items=[("en", "English"), ("de", "German")], parent=self)
+dd.set_current("en")
+dd.currentChanged.connect(lambda key: print(key))
+```
+
+### Card
+
+```python
+Card(parent=None, hover=True)
+```
+
+- `hover`: light up under the cursor. Leave it on for a card the user can click, turn it off for a plain container.
+- Methods: `set_selected(selected)` and `is_selected()`.
+
+### InfoBar
+
+```python
+InfoBar(
+    title="",
+    message="",
+    severity=InfoBarSeverity.INFORMATIONAL,
+    parent=None,
+)
+```
+
+- `severity`: `InfoBarSeverity.INFORMATIONAL`, `SUCCESS`, `WARNING` or `ERROR`. Import `InfoBarSeverity` from `core.ui.components.info_bar`.
+- Methods: `set_severity(severity)`, `set_title(title)` and `set_message(message)`.
+
+### ContentDialog
+
+Modal dialog that centers on its parent behind a smoke layer.
+
+```python
+ContentDialog(
+    parent,
+    title="",
+    content="",
+    primary_button_text="",
+    secondary_button_text="",
+    close_button_text="",
+    default_button=ContentDialogButton.NONE,
+)
+```
+
+- A button with empty text is hidden.
+- `default_button`: `ContentDialogButton.NONE`, `PRIMARY`, `SECONDARY` or `CLOSE`.
+- Signals: `primary_button_click`, `secondary_button_click`, `close_button_click`, `opened` and `closed(ContentDialogResult)`. The result is `ContentDialogResult.NONE`, `PRIMARY` or `SECONDARY`.
+- Methods: `show_dialog()`, `hide_dialog()`, `set_title(text)`, `set_content(text)`, `set_content_widget(widget)`, `result()`, and `primary_button()`, `secondary_button()`, `close_button()` to reach the buttons.
+
+```python
+dlg = ContentDialog(
+    parent=self,
+    title="Delete Item?",
+    content="This action cannot be undone.",
+    primary_button_text="Delete",
+    close_button_text="Cancel",
+    default_button=ContentDialogButton.PRIMARY,
+)
+dlg.primary_button_click.connect(self._delete_item)
+dlg.show_dialog()
+```
+
+### InputDialog
+
+Modal dialog with a text field. It centers on its parent window behind a smoke layer and uses the same open and close animation as `ContentDialog`. A parent is required.
+
+```python
+InputDialog(
+    title="",
+    content="",
+    text="",
+    placeholder="",
+    primary_button_text="OK",
+    close_button_text="Cancel",
+    parent=None,
+)
+```
+
+- Signals: `accepted(str)` with the entered text, and `rejected()`.
+- Methods: `show_dialog()`, `hide_dialog()`, `text()` and `input_widget()`.
+
+```python
+dlg = InputDialog(
+    parent=self,
+    title="Rename",
+    content="Enter a new name.",
+    text="Desktop 1",
+    primary_button_text="Rename",
+)
+dlg.accepted.connect(lambda name: print(name))
+dlg.show_dialog()
+```
+
+### StepIndicator
+
+```python
+StepIndicator(count=1, parent=None)
+```
+
+Method: `set_current(index)`.
+
+### Loader
+
+```python
+Spinner(size=24, color="#FFFFFF", pen_width=None, parent=None)
+LoaderLine(parent=None, color=None)
+```
+
+- `Spinner` is a circular indeterminate spinner. Method: `set_color(color)`.
+- `LoaderLine` is a sliding line at the bottom edge of a widget:
+  - `attach_to_widget(widget)` and `detach_from_widget()`.
+  - `start()` and `stop()`.
+  - `set_color(color)`.
+  - `configure(class_name=None, duration_ms=None, easing=None, segment_ratio=None, height=None, color=None)`.
+
+```python
+loader = LoaderLine(parent=self)
+loader.attach_to_widget(target_widget)
+loader.start()
+# ...
+loader.stop()
+```
+
 ## Design Tokens
 
-The token system provides ~150 color tokens organized by theme (`dark` / `light`). Values are sourced from the WinUI3 `Common_themeresources_any.xaml`.
+The token system provides 89 color tokens per theme (`dark` and `light`). Values are sourced from the WinUI3 `Common_themeresources_any.xaml`.
 
 ```python
 from core.ui.theme import get_tokens, theme_key, is_dark, FONT_FAMILIES
@@ -15,8 +314,6 @@ tokens = get_tokens()          # Returns dict for current OS theme
 tokens["text_primary"]         # "#ffffff" (dark) or "#e3000000" (light)
 tokens["accent_fill_default"]  # "#4cc2ff" (dark) or "#0078d4" (light)
 ```
-
-### Token Categories
 
 | Category | Common Tokens | Usage |
 |----------|---------------|-------|
@@ -54,417 +351,6 @@ class MyWidget(QWidget):
     def _apply_styles(self):
         tokens = get_tokens()
         self.setStyleSheet(f"color: {tokens['text_primary']};")
-```
-
-## Components
-
-### Button
-
-Interactive button with three variants and animated state transitions.
-
-```python
-from core.ui.components.button import Button
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `text` | `str` | `""` | Button label |
-| `variant` | `str` | `"default"` | `"default"`, `"accent"`, or `"subtle"` |
-| `padding` | `str \| None` | `"11,5,11,6"` | Padding as `"l,t,r,b"`, `"h,v"`, or `"all"` |
-| `font_size` | `int \| None` | `14` | Font size in pixels |
-| `font_weight` | `str \| None` | `"normal"` | Font weight name |
-| `parent` | `QWidget \| None` | `None` | Parent widget |
-
-**Variants:**
-
-| Variant | Appearance |
-|---------|-----------|
-| `"default"` | Standard control fill background with text |
-| `"accent"` | Accent-colored background with on-accent text |
-| `"subtle"` | Transparent background, text only (hover shows fill) |
-
-**Example:**
-
-```python
-save_btn = Button("Save", variant="accent", parent=self)
-save_btn.setFixedHeight(32)
-save_btn.clicked.connect(self._on_save)
-
-cancel_btn = Button("Cancel", variant="default", parent=self)
-cancel_btn.clicked.connect(self._on_cancel)
-```
-
----
-
-### TextBlock
-
-Themed label with preset typography variants matching WinUI3 type ramp.
-
-```python
-from core.ui.components.text_block import TextBlock
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `text` | `str` | `""` | Text content |
-| `variant` | `str` | `"body"` | Typography variant |
-| `parent` | `QWidget \| None` | `None` | Parent widget |
-
-**Variants:**
-
-| Variant | Size | Weight |
-|---------|------|--------|
-| `"title-large"` | 40px | DemiBold |
-| `"title"` | 28px | DemiBold |
-| `"subtitle"` | 20px | DemiBold |
-| `"body"` | 14px | Normal |
-| `"body-strong"` | 14px | DemiBold |
-| `"body-secondary"` | 14px | Normal (secondary color) |
-| `"caption"` | 12px | DemiBold (secondary color) |
-| `"caption-strong"` | 12px | DemiBold |
-
-**Example:**
-
-```python
-title = TextBlock("Settings", variant="subtitle", parent=self)
-description = TextBlock("Configure your preferences.", variant="body-secondary", parent=self)
-```
-
----
-
-### ToggleSwitch
-
-Animated on/off switch matching the WinUI3 toggle.
-
-```python
-from core.ui.components.toggle_switch import ToggleSwitch, ToggleSwitchWithLabel
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `checked` | `bool` | `False` | Initial state |
-| `parent` | `QWidget \| None` | `None` | Parent widget |
-
-**Signals:**
-
-- `toggled(bool)` - Emitted when the switch state changes.
-
-**Example:**
-
-```python
-toggle = ToggleSwitch(checked=False, parent=self)
-toggle.toggled.connect(lambda on: print(f"Switch: {on}"))
-
-# With label:
-toggle = ToggleSwitchWithLabel(
-    text="Dark Mode",
-    on_text="Enabled",
-    off_text="Disabled",
-    checked=True,
-    parent=self,
-)
-```
-
----
-
-### Card
-
-Selectable card container with hover and selection states.
-
-```python
-from core.ui.components.card import Card
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `parent` | `QWidget \| None` | `None` | Parent widget |
-
-**Methods:**
-
-- `set_selected(selected: bool)` - Toggle the accent selection state.
-- `is_selected() -> bool` - Check if currently selected.
-
-**Example:**
-
-```python
-card = Card(parent=self)
-card_layout = QVBoxLayout(card)
-card_layout.addWidget(QLabel("Option A"))
-card.set_selected(True)
-```
-
----
-
-### ContentDialog
-
-Modal overlay dialog that centers on a parent widget with a smoke layer. Best suited for views and panels. For bar widgets, use `InputDialog` instead.
-
-```python
-from core.ui.components.content_dialog import ContentDialog, ContentDialogButton, ContentDialogResult
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `parent` | `QWidget` | - | Parent widget (dialog centers on this) |
-| `title` | `str` | `""` | Dialog title |
-| `content` | `str` | `""` | Body text |
-| `primary_button_text` | `str` | `""` | Primary action button (hidden if empty) |
-| `secondary_button_text` | `str` | `""` | Secondary action button (hidden if empty) |
-| `close_button_text` | `str` | `""` | Close/cancel button (hidden if empty) |
-| `default_button` | `ContentDialogButton` | `NONE` | Button focused by default |
-
-**Signals:**
-
-- `primary_button_click` - Primary button clicked.
-- `secondary_button_click` - Secondary button clicked.
-- `close_button_click` - Close button clicked.
-- `closed(ContentDialogResult)` - Dialog closed with result (`PRIMARY`, `SECONDARY`, or `NONE`).
-
-**Example:**
-
-```python
-dlg = ContentDialog(
-    parent=self,
-    title="Delete Item?",
-    content="This action cannot be undone.",
-    primary_button_text="Delete",
-    close_button_text="Cancel",
-    default_button=ContentDialogButton.PRIMARY,
-)
-dlg.primary_button_click.connect(self._delete_item)
-dlg.show_dialog()
-```
-
----
-
-### InputDialog
-
-Standalone input dialog that appears at the cursor position. Uses DWM blur and rounded corners. Does not require a parent widget - ideal for bar widgets and context menu actions.
-
-```python
-from core.ui.components.input_dialog import InputDialog
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `title` | `str` | `""` | Dialog title |
-| `content` | `str` | `""` | Descriptive text below the title |
-| `text` | `str` | `""` | Initial input value |
-| `placeholder` | `str` | `""` | Placeholder text |
-| `primary_button_text` | `str` | `"OK"` | Accept button label |
-| `close_button_text` | `str` | `"Cancel"` | Cancel button label |
-
-**Signals:**
-
-- `accepted(str)` - User pressed the primary button (emits trimmed text).
-- `rejected()` - User cancelled or pressed Escape.
-
-**Example:**
-
-```python
-dlg = InputDialog(
-    title="Rename Desktop",
-    content="Enter a new name for this desktop.",
-    text="Desktop 1",
-    primary_button_text="Rename",
-    close_button_text="Cancel",
-)
-dlg.accepted.connect(lambda name: print(f"Renamed to: {name}"))
-dlg.show_dialog()
-```
-
----
-
-### DropDown
-
-Styled dropdown selector with a blurred popup.
-
-```python
-from core.ui.components.dropdown import DropDown
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `items` | `list[tuple[str, str]] \| None` | `None` | List of `(key, label)` pairs |
-| `parent` | `QWidget \| None` | `None` | Parent widget |
-
-**Signals:**
-
-- `currentChanged(str)` - Emitted when selection changes (provides the key).
-
-**Example:**
-
-```python
-dd = DropDown(
-    items=[("en", "English"), ("de", "German"), ("ja", "Japanese")],
-    parent=self,
-)
-dd.set_current("en")
-dd.currentChanged.connect(lambda key: print(f"Language: {key}"))
-```
-
----
-
-### Slider
-
-Horizontal slider with a value label and accent-colored track.
-
-```python
-from core.ui.components.slider import Slider
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `minimum` | `int` | `0` | Minimum value |
-| `maximum` | `int` | `100` | Maximum value |
-| `value` | `int` | `50` | Initial value |
-| `suffix` | `str` | `"%"` | Suffix shown after value label |
-| `parent` | `QWidget \| None` | `None` | Parent widget |
-
-**Signals:**
-
-- `valueChanged(int)` - Emitted when the value changes.
-
-**Example:**
-
-```python
-slider = Slider(minimum=0, maximum=100, value=75, suffix="%", parent=self)
-slider.valueChanged.connect(lambda v: print(f"Volume: {v}%"))
-```
-
----
-
-### InfoBar
-
-Status notification bar with severity levels and corresponding icons.
-
-```python
-from core.ui.components.info_bar import InfoBar, InfoBarSeverity
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `title` | `str` | `""` | Bold title text |
-| `message` | `str` | `""` | Body message |
-| `severity` | `InfoBarSeverity` | `INFORMATIONAL` | Severity level |
-| `parent` | `QWidget \| None` | `None` | Parent widget |
-
-**Severity Levels:**
-
-| Level | Icon | Color Token |
-|-------|------|-------------|
-| `INFORMATIONAL` | ℹ Info | `accent_fill_default` |
-| `SUCCESS` | ✓ Checkmark | `system_success` |
-| `WARNING` | ! Exclamation | `system_caution` |
-| `ERROR` | ✕ Cross | `system_critical` |
-
-**Example:**
-
-```python
-bar = InfoBar(
-    title="Saved",
-    message="Your settings have been saved.",
-    severity=InfoBarSeverity.SUCCESS,
-    parent=self,
-)
-```
-
----
-
-### StepIndicator
-
-Animated horizontal step indicator (dot/dash style).
-
-```python
-from core.ui.components.indicator import StepIndicator
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `count` | `int` | `1` | Number of steps |
-| `parent` | `QWidget \| None` | `None` | Parent widget |
-
-**Methods:**
-
-- `set_current(index: int)` - Animate to a step (0-indexed).
-
-**Example:**
-
-```python
-indicator = StepIndicator(count=4, parent=self)
-indicator.set_current(0)  # First step active
-```
-
----
-
-### Link
-
-Hyperlink-styled button using accent text colors.
-
-```python
-from core.ui.components.link import Link
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `text` | `str` | `""` | Link text |
-| `padding` | `str \| None` | `"8,4,8,4"` | Padding as `"l,t,r,b"` |
-| `font_size` | `int \| None` | `14` | Font size in pixels |
-| `parent` | `QWidget \| None` | `None` | Parent widget |
-
-**Example:**
-
-```python
-link = Link("Learn more", parent=self)
-link.clicked.connect(self._open_docs)
-```
-
----
-
-### Loader
-
-Two loading indicator variants: circular spinner and horizontal progress line.
-
-```python
-from core.ui.components.loader import Spinner, LoaderLine
-```
-
-#### Spinner
-
-```python
-spinner = Spinner(size=24, color="#4cc2ff", parent=self)
-```
-
-#### LoaderLine
-
-```python
-loader = LoaderLine(parent=self)
-loader.attach_to_widget(target_widget)  # Auto-positions at bottom edge
-loader.start()
-# ...
-loader.stop()
 ```
 
 ## Tips for Contributors

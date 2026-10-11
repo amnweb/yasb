@@ -7,21 +7,22 @@ Displays the name of the current Windows power plan and lets you switch between 
 | Option              | Type   | Default                                                      | Description                                                                            |
 |---------------------|--------|--------------------------------------------------------------|----------------------------------------------------------------------------------------|
 | `label`             | string | `"\uf0e7 {active_plan}"`                       | Main label template. Use `{active_plan}` to insert the active plan name.               |
-| `label_alt`         | string | `"\uf0e7 Power plan"`                              | Alternate label (e.g. an icon) shown when toggled via `toggle_label`.                 |
+| `label_alt`         | string | `"\uf0e7 Power Plan"`                              | Alternate label (e.g. an icon) shown when toggled via `toggle_label`.                 |
 | `class_name`       | string | `""`                                                         | Additional CSS class name for the widget.                                              |
 | `class_map`         | dict   | `{}`                                                         | Optional dictionary mapping localized/custom plan names or GUIDs to pure-ASCII CSS class names. |
-| `menu`              | dict   | `{}`                                                         | Popup menu options (see **Menu Options** below).                                      |
-| `callbacks`         | dict   |  `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Click handlers: `on_left`, `on_middle`, `on_right`.                                    |
+| `menu`              | dict   | [See below](#menu-options) | Popup menu options.                                                                    |
+| `keybindings`       | list   | `[]`                                                         | Optional hotkeys. See [Keybindings](./Keybindings).                                    |
+| `callbacks`         | dict   | [See below](#available-callbacks) | Click handlers: `on_left`, `on_middle`, `on_right`.                                    |
 
 ## Menu Options
 
 | Option               | Type    | Default    | Description                                                  |
 |----------------------|---------|------------|--------------------------------------------------------------|
-| `blur`               | bool    | `false`    | Blur background behind the popup.                            |
+| `blur`               | bool    | `true`     | Blur background behind the popup.                            |
 | `round_corners`      | bool    | `true`     | Enable rounded corners on the popup.                         |
 | `round_corners_type` | string  | `"normal"` | Rounding style: `"small"`, `"normal"`.         |
 | `border_color`       | string  | `"system"` | Border color can be `None`, `system` or `Hex Color` `"#ff0000"`       |
-| `alignment`          | string  | `"left"`   | Horizontal alignment of the menu relative to the widget (e.g., left, right, center)                 |
+| `alignment`          | string  | `"right"`  | Horizontal alignment of the menu relative to the widget (e.g., left, right, center)                 |
 | `direction`          | string  | `"down"`   | Vertical opening direction: `"up"` or `"down"`.              |
 | `offset_top`         | int     | `6`        | Vertical offset in pixels.                                   |
 | `offset_left`        | int     | `0`        | Horizontal offset in pixels.                                 |
@@ -54,12 +55,24 @@ power_plan:
 - **label_alt**: Alternate label (e.g. an icon) shown when toggled via `toggle_label`.
 - **class_name**: Additional CSS class name for the widget. This allows for custom styling.
 - **class_map**: Optional dictionary mapping localized or custom power plan names (or GUIDs) to custom pure-ASCII CSS class names. This is extremely useful on localized Windows versions or when styling custom plans.
-- **update_interval**: Refresh interval in milliseconds. Set to `0` to disable periodic updates.
 - **menu**: Popup menu options.
-- **callbacks**: Click handlers for left, middle, and right mouse buttons.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#available-callbacks).
 
 
 ## Available Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_menu"
+  on_middle: "toggle_label"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
 - `toggle_label`: Toggles the visibility of the label.
 - `toggle_menu`: Toggles the visibility of the power plan menu popup.
 
@@ -156,4 +169,4 @@ power_plan:
 ```
 
 ## Preview of the Widget
-![Power Plan Widget](assets/da938a64-cbbb7f87-81d0-5e53-942dcd03cd53.png)
+![Power Plan YASB Widget](assets/da938a64-cbbb7f87-81d0-5e53-942dcd03cd53.png)

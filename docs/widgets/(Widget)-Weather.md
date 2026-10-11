@@ -4,21 +4,64 @@ Shows the current weather conditions and temperature outside. You can customize 
 
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `label`         | string  | `'<span>{icon}</span> {temp}'`                                        | The format string for the weather label. You can use placeholders like `{temp}`, `{icon}`, etc. |
-| `label_alt`     | string  | `'{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}'` | The alternative format string for the weather label. Useful for displaying additional weather details. |
+| `label`         | string  | `'{icon}'`                                                            | The format string for the weather label. You can use placeholders like `{temp}`, `{icon}`, etc. |
+| `label_alt`     | string  | `'{temp}'`                                                            | The alternative format string for the weather label. Useful for displaying additional weather details. |
 | `class_name`    | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
 | `tooltip`      | boolean | `true`                                                                  | Whether to show a tooltip with the min and max temperatures.                |
 | `update_interval` | integer | `3600`                                                                 | The interval in seconds to update the weather data. Must be between 60 and 36000000. |
 | `hide_decimal`  | boolean | `false`                                                                 | Whether to hide the decimal part of the temperature. |
-| `location`      | string  | `'London'`                                                              | The location for which to fetch the weather data. |
+| `location`      | string  | `'0'`                                                                   | The location for which to fetch the weather data. |
 | `show_alerts`   | boolean | `false`                                                                 | Whether to show weather alerts. |
 | `units`         | string  | `'metric'`                                                              | The units for the weather data. Can be `'metric'` or `'imperial'`. |
 | `api_key`       | string  | `'0'`                                                                   | The API key for accessing the weather service. |
-| `icons`         | dict    | `{ 'sunnyDay': '\ue30d', 'clearNight': '\ue32b', 'cloudyDay': '\ue312', 'cloudyNight': '\ue311', 'rainyDay': '\udb81\ude7e', 'rainyNight': '\udb81\ude7e', 'snowyDay': '\udb81\udd98', 'snowyNight': '\udb81\udd98', 'blizzardDay': '\uebaa', 'default': '\uebaa' }` | A dictionary of icons for different weather conditions. |
-| `callbacks`     | dict    | `{ 'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | Callbacks for mouse events on the weather widget. |
-| `weather_card`  | dict    | [See below](#example-configuration) | Configuration for the weather card popup display. |
+| `icons`         | dict    | [See below](#icons-options) | A dictionary of icons for different weather conditions. |
+| `callbacks`     | dict    | [See below](#callbacks) | Callbacks for mouse events on the weather widget. |
+| `keybindings`   | list    | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `weather_card`  | dict    | [See below](#advanced-configuration) | Configuration for the weather card popup display. |
 
 > **note**: To use the weather widget, you need to obtain a free API key from [weatherapi.com](https://www.weatherapi.com/) and set it in the `api_key` option.
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "do_nothing"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_card` - Open or close the weather card.
+- `update_label` - Refresh the label now.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Icons Options
+
+The `icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+icons:
+  sunnyDay: "\ue30d"
+  clearNight: "\ue32b"
+  cloudyDay: "\ue312"
+  cloudyNight: "\ue311"
+  rainyDay: "\udb81\ude7e"
+  rainyNight: "\udb81\ude7e"
+  snowyDay: "\udb81\udd98"
+  snowyNight: "\udb81\udd98"
+  blizzardDay: "\uebaa"
+  blizzardNight: "\uebaa"
+  foggyDay: "\ue303"
+  foggyNight: "\ue346"
+  thunderstormDay: "\ue30f"
+  thunderstormNight: "\ue338"
+  default: "\uebaa"
+```
 
 ## Minimal Configuration
 
@@ -125,7 +168,7 @@ weather:
 - **show_alerts:** Whether to show weather alerts.
 - **tooltip:** Whether to show a tooltip with the min and max temperatures, and precipitation chances (rain/snow are only shown when above 0%).
 - **units:** The units for the weather data. Can be `'metric'` or `'imperial'`.
-- **icons:** A dictionary of icons for different weather conditions `sunnyDay`, `sunnyNight`, `clearDay`, `clearNight`, `cloudyDay`, `cloudyNight`, `rainyDay`, `rainyNight`, `snowyDay`, `snowyNight`, `blizzard`, `default`.
+- **icons:** A dictionary of icons for different weather conditions `sunnyDay`, `clearNight`, `cloudyDay`, `cloudyNight`, `rainyDay`, `rainyNight`, `snowyDay`, `snowyNight`, `blizzardDay`, `blizzardNight`, `foggyDay`, `foggyNight`, `thunderstormDay`, `thunderstormNight`, `default`.
 - **weather_card:** Configuration for the weather card popup display. Controls visibility, appearance, and positioning.
   - **blur:** Enable blur effect for the weather card.
   - **round_corners:** Enable round corners for weather card.
@@ -136,7 +179,7 @@ weather:
   - **offset_top:** Offset from the top of the widget in pixels.
   - **offset_left:** Offset from the left of the widget in pixels.
   - **icon_size:** Size of the weather icon in pixels.
-  - **show_hourly_forecast:** Whether to show the hourly forecast in the weather card. Set to `False` to disable hourly forecast.
+  - **show_hourly_forecast:** Whether to show the hourly forecast in the weather card. Set to `false` to disable hourly forecast.
   - **time_format:** Time format for the weather card. Possible values are `12h` and `24h`.
   - **hourly_point_spacing:** Spacing between hourly points on a curve.
   - **hourly_icon_size:** Size of the hourly icon. Better to set 16, 32 or 64 for better quality. Icon smoothing should be enabled if using different scaling.
@@ -163,7 +206,8 @@ weather:
     - **snow_effect_intensity:** Intensity of the snow animation. (0.01 - 10.0, Default: 1.0)
     - **scale_with_chance:** Whether to scale the animation intensity with the chance of rain/snow.
     - **enable_debug:** Generate dummy hourly weather data for testing and styling.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions. Available callback functions are `toggle_card`, `toggle_label`, `do_nothing`.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ## Example Style
 ```css
@@ -292,5 +336,5 @@ weather:
 }
 ```
 
-## Preview of the weather card
+## Preview of the Widget
 ![Weather YASB Widget](assets/955689587-g4ejd6c7-22ab-6cde-9822-34789abcdef.png)

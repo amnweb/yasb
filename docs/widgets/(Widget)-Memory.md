@@ -7,13 +7,88 @@ Displays your system RAM and swap memory usage in real-time. It features custom 
 | `label`           | string  | `'\uf4bc {virtual_mem_free}/{virtual_mem_total}'`                        | The format string for the memory widget. Displays free and total virtual memory. |
 | `label_alt`       | string  | `'\uf4bc VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%'`        | The alternative format string for the memory widget. Displays virtual and swap memory percentages. |
 | `class_name`        | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
-| `update_interval` | integer | `5000`                                                                  | The interval in milliseconds to update the memory widget. Must be between 0 and 60000. |
-| `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
-| `histogram_icons`     | list    | `["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"]` | Icons representing RAM usage histograms.                                    |
+| `update_interval` | integer | `5000`                                                                  | The interval in milliseconds to update the memory widget. Must be between 1000 and 60000. |
+| `callbacks`       | dict    | [See below](#callbacks) | Callbacks for mouse events on the memory widget. |
+| `histogram_icons`     | list    | [See below](#histogram-icons) | Exactly 9 icons representing RAM usage histograms.                                    |
 | `memory_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for memory usage levels. |
-| `progress_bar`       | dict    | `{'enabled': false, 'progress_type': 'circular', 'position': 'left', 'size': 18, 'thickness': 3, 'radius': 0, 'color': '#00C800', 'background_color': '#3C3C3C', 'animation': true}` | Progress bar settings.    |
+| `progress_bar`       | dict    | [See below](#progress-bar-options) | Progress bar settings.    |
 | `hide_decimal`       | boolean    | `false`                                                                 | Whether to hide decimal places in the memory widget. |
-| `menu`               | dict    | See below                                                               | Configuration for the popup menu with graph and stats. |
+| `menu`               | dict    | [See below](#menu-options) | Configuration for the popup menu with graph and stats. |
+| `keybindings`        | list    | `[]`                                                                    | Optional hotkeys. See [Keybindings](./Keybindings). |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_menu` - Open or close the popup menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Menu Options
+
+The `menu` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+menu:
+  enabled: false
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "System"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+  graph_history_size: 60
+  show_graph: true
+  show_graph_grid: false
+  pin_icon: "\ue718"
+  unpin_icon: "\ue77a"
+```
+
+## Histogram Icons
+
+The default value of `histogram_icons` is:
+
+```yaml
+histogram_icons:
+  - "\u2581"
+  - "\u2581"
+  - "\u2582"
+  - "\u2583"
+  - "\u2584"
+  - "\u2585"
+  - "\u2586"
+  - "\u2587"
+  - "\u2588"
+```
+
+## Progress Bar Options
+
+The `progress_bar` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+progress_bar:
+  enabled: false
+  progress_type: "circular"
+  size: 18
+  thickness: 3
+  radius: 0
+  color: "#00C800"
+  background_color: "#3C3C3C"
+  position: "left"
+  animation: true
+```
 
 ## Example Configuration
 
@@ -53,11 +128,12 @@ memory:
 - **label:** The format string for the memory widget. Displays free and total virtual memory.
 - **label_alt:** The alternative format string for the memory widget. Displays virtual and swap memory percentages.
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
-- **update_interval:** The interval in milliseconds to update the memory widget. Must be between 0 and 60000.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **update_interval:** The interval in milliseconds to update the memory widget. Must be between 1000 and 60000.
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **memory_thresholds:** A dictionary specifying the thresholds for memory usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
 - **hide_decimal:** Whether to hide decimal places in the memory widget.
-- **histogram_icons**: A list of icons representing different levels of memory usage in the histogram. 9 icons are typically used, representing usage from 0% to 80%+. Can be used by putting `{histogram}` in the label.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **histogram_icons**: A list of icons representing different levels of memory usage in the histogram. Exactly 9 icons are required, representing usage from 0% to 80%+. Can be used by putting `{histogram}` in the label.
 - **menu**: Configuration for the popup menu that displays a usage graph and detailed memory statistics. It includes:
   - **enabled**: Whether the popup menu is enabled. Default: `false`.
   - **blur**: Whether to apply a blur effect to the popup background. Default: `true`.

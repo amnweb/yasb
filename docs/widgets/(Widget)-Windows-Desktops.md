@@ -6,8 +6,8 @@ Displays your Windows virtual desktops in the status bar so you can switch betwe
 |----------------------------|---------|--------------------------|-----------------------------------------------------------------------------|
 | `label_workspace_btn`    | string  | `'{index}'`              | The format string for workspace buttons.                                    |
 | `label_workspace_active_btn` | string | `'{index}'`              | The format string for the active workspace button.                          |
-| `switch_workspace_animation` | string | `'true'`                 | The OS animation to use when switching workspaces.                             |
-| `callbacks`             | dict    | `{'on_left': 'activate_workspace', 'on_middle': 'do_nothing', 'on_right': 'toggle_context_menu'}` | Callbacks for mouse events on workspace buttons. |
+| `keybindings`            | list    | `[]`                     | Optional hotkeys. See [Keybindings](./Keybindings).                         |
+| `callbacks`             | dict    | [See below](#available-callbacks) | Callbacks for mouse events on workspace buttons. |
 
 ## Example Configuration
 
@@ -26,10 +26,22 @@ windows_workspaces:
 ## Description of Options
 - **label_workspace_btn:** The format string for workspace buttons, can be icon, {index} or {name}.
 - **label_workspace_active_btn:** The format string for the active workspace button, can be icon, {index} or {name}.
-- **switch_workspace_animation:** The OS animation to use when switching workspaces. (currently unsupported)
-- **callbacks:** A dictionary specifying the callbacks for mouse events on workspace buttons. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#available-callbacks).
 
 ### Available Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "activate_workspace"
+  on_middle: "do_nothing"
+  on_right: "toggle_context_menu"
+```
+
+Available actions:
+
 | Callback               | Description                                                              |
 |------------------------|--------------------------------------------------------------------------|
 | `activate_workspace`   | Switch to the desktop associated with the clicked button.                |

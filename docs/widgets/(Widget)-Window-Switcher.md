@@ -6,14 +6,14 @@ The Window Switcher is a fast, lightweight popup widget designed to let you easi
 
 | Name | Type | Default | Description |
 | --- | --- | --- | --- |
-| label | string | `"\uf2d0"` | The icon or text displayed on the status bar. |
+| label | string | `"\uf2d2"` | The icon or text displayed on the status bar. |
 | label_alt | string | `""` | The alternate label. |
 | icon_size | int | `48` | The size of the application icons. |
 | max_visible_apps | int | `5` | The maximum number of apps to show before enabling scrolling. |
 | show_title | boolean | `true` | Whether to display the focused app's title below the icons. |
-| callbacks | object | See [Callbacks](#callbacks) | Defines widget interaction actions. |
-| popup | object | See [Popup](#popup) | Defines popup styling and positioning. |
-| keybindings | list | `[]` | Global hotkeys to trigger the popup. |
+| callbacks | object | [See below](#callbacks) | Defines widget interaction actions. |
+| popup | object | [See below](#popup) | Defines popup styling and positioning. |
+| keybindings | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
 
 ### Callbacks
 | Option | Type | Default | Action |
@@ -57,14 +57,6 @@ widgets:
           action: "toggle_window_switcher"
           screen: "cursor"
 ```
-
-### Keybindings Options
-
-| Option   | Type   | Description                                                                                                            |
-| -------- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `keys`   | string | A keyboard shortcut sequence (e.g. `"alt+w"`).                                                                         |
-| `action` | string | The widget action to trigger (`"toggle_window_switcher"`).                                                             |
-| `screen` | string | Screen mode to pop up on (`"active"`, `"cursor"`, `"primary"`). Default is `"active"`.                                 |
 
 > **Note:**
 > **Layout & Quality Notes:**

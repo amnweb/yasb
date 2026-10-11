@@ -8,18 +8,27 @@ Shows your current keyboard language or layout - like EN, DE, or RU - and lets y
 | `label_alt`      | string   | `"{lang[full_name]}"`               | The alternative format string for the label. Useful for displaying the full language name. |
 | `update_interval`| integer  | `5`                            | The interval in seconds to update the language information. Must be between 1 and 3600. |
 | `class_name`      | string   | `""`                           | Additional CSS class name for the widget.                                    |
-| `callbacks`      | dict     | `{ 'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | The dictionary of callback functions for different mouse actions. |
+| `callbacks`      | dict     | [See below](#callbacks) | The dictionary of callback functions for different mouse actions. |
 | `language_menu` | dict     | [See below](#language-menu-configuration) | Options for the language menu. |
+| `keybindings`   | list     | `[]`                           | Optional hotkeys. See [Keybindings](./Keybindings). |
 
 ## Callbacks
-The `callbacks` option allows you to define custom actions for mouse events on the widget. The keys are:
-- `on_left`: Action when the left mouse button is clicked.
-- `on_middle`: Action when the middle mouse button is clicked.
-- `on_right`: Action when the right mouse button is clicked.
-- The values are the names of the callback functions that will be executed when the respective mouse button is clicked.
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
 - `toggle_label`: A function to toggle the label between the main and alternative formats.
 - `toggle_menu`: A function to toggle the visibility of the language selection menu.
 - `do_nothing`: A placeholder function that does nothing when the mouse button is clicked.
+- `update_label`: A function to refresh the label now.
 
 ## Language Menu Configuration
 The `language_menu` option allows you to configure the popup menu for language selection. It accepts the following keys:
@@ -67,7 +76,8 @@ language:
 - **label_alt:** The alternative format string for the label. Useful for displaying the full language name.
 - **update_interval:** The interval in seconds to update the language information. Must be between 1 and 3600.
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
 - **language_menu:** A dictionary containing options for the language selection menu. It includes options like `blur`, `round_corners`, `round_corners_type`, `border_color`, `alignment`, `direction`, `offset_top`, `offset_left`, `layout_icon`, and `show_layout_icon`.
 
 ## Example Style
