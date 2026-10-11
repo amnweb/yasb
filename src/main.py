@@ -24,6 +24,40 @@ from core.watcher import create_observer
 from env import load_env, set_font_engine
 
 
+def wait_for_restart_parent() -> None:
+    """Wait for the reloading parent process to release its instance mutex."""
+    if "--restart-parent-pid" not in sys.argv:
+        return
+
+    parent_pid_index = sys.argv.index("--restart-parent-pid") + 1
+    if parent_pid_index >= len(sys.argv):
+        logging.warning("Restart parent PID was not provided.")
+        return
+
+    try:
+        parent_pid = int(sys.argv[parent_pid_index])
+    except ValueError:
+        logging.warning("Invalid restart parent PID: %s", sys.argv[parent_pid_index])
+        return
+
+    synchronize = 0x00100000
+    wait_object_0 = 0
+    wait_timeout = 258
+    process_handle = ctypes.windll.kernel32.OpenProcess(synchronize, False, parent_pid)
+    if not process_handle:
+        return
+
+    try:
+        result = ctypes.windll.kernel32.WaitForSingleObject(process_handle, 10000)
+        if result == wait_timeout:
+            logging.error("Timeout waiting for previous YASB instance to exit. Aborting start.")
+            sys.exit(1)
+        if result != wait_object_0:
+            logging.warning("Could not wait for previous YASB instance to exit (result: %s).", result)
+    finally:
+        ctypes.windll.kernel32.CloseHandle(process_handle)
+
+
 @contextlib.contextmanager
 def single_instance_lock(name: str = "yasb_reborn"):
     """Create a Windows mutex to ensure a single instance, with optional restart wait.
@@ -186,6 +220,7 @@ async def main_async(app: YASBApplication):
 
 if __name__ == "__main__":
     init_logger()
+    wait_for_restart_parent()
     start_cli_server()
     load_env()
     set_font_engine()

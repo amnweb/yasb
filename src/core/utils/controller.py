@@ -22,16 +22,17 @@ def reload_application(msg: str = "Reloading Application..."):
         if hasattr(sys, "_cli_pipe_handler") and sys._cli_pipe_handler is not None:
             sys._cli_pipe_handler.stop_cli_pipe_server()
 
+        args = list(sys.argv)
+        if "--restart-wait" not in args:
+            args.append("--restart-wait")
+        args.extend(["--restart-parent-pid", str(os.getpid())])
+
         app = QApplication.instance()
         if isinstance(app, YASBApplication):
             if app.loop and app.close_event:
                 app.loop.call_soon_threadsafe(app.close_event.set)
             else:  # Should never happen while we use qasync
                 QMetaObject.invokeMethod(app, "quit", Qt.ConnectionType.QueuedConnection)
-
-        args = list(sys.argv)
-        if "--restart-wait" not in args:
-            args.append("--restart-wait")
 
         QProcess.startDetached(sys.executable, args)
     except Exception as e:
