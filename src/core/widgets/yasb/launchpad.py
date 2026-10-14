@@ -63,7 +63,7 @@ from PyQt6.QtWidgets import (
 
 from core.config import HOME_CONFIGURATION_DIR
 from core.utils.icons.resolve import FileIcon, IconSource, load_icon
-from core.utils.icons.web_icon import UrlExtractorUtil
+from core.utils.icons.web_icon import get_web_icon
 from core.utils.shell_utils import shell_open
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_loader import AppEntry, AppListLoader, ShortcutResolver, app_icon_source
@@ -154,14 +154,13 @@ class IconLoadWorker(QThread):
 class UrlFetchWorker(QThread):
     finished = pyqtSignal(object, object)  # icon_path, title
 
-    def __init__(self, url: str, icons_dir: str | None):
+    def __init__(self, url: str):
         super().__init__()
         self.url = url
-        self.icons_dir = icons_dir
 
     def run(self):
         try:
-            icon, title = UrlExtractorUtil.extract_from_url(self.url, self.icons_dir)
+            icon, title = get_web_icon(self.url)
             self.finished.emit(icon, title)
         except Exception:
             self.finished.emit(None, None)
@@ -398,7 +397,7 @@ class AppDialog(QDialog):
                     else:
                         self._show_warning("Could not find an icon for this website.")
 
-                self._url_fetch_worker = UrlFetchWorker(path, self.icons_dir)
+                self._url_fetch_worker = UrlFetchWorker(path)
                 self._url_fetch_worker.finished.connect(on_icon_fetched)
                 self._url_fetch_worker.start()
 
