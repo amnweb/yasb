@@ -412,6 +412,11 @@ class PinManager:
         return metadata
 
     @staticmethod
+    def get_app_unique_id(hwnd: int, window_data: dict[str, Any]) -> str | None:
+        context = collect_window_context(hwnd, window_data)
+        return PinManager._unique_id(context) if context else None
+
+    @staticmethod
     def get_app_identifier(
         hwnd: int, window_data: dict[str, Any], *, resolve_shortcut: bool = False
     ) -> tuple[str | None, dict[str, str]]:
@@ -421,101 +426,95 @@ class PinManager:
         multiple pinned folders and special folders (e.g., Recycle Bin, This PC).
         Returns (unique_id, metadata_dict) or (None, {}) if unable to identify the app.
         """
-        from core.utils.win32.utils import get_app_name_from_pid
-
         context = collect_window_context(hwnd, window_data)
-        if not context:
+        unique_id = PinManager._unique_id(context) if context else None
+        if context is None or unique_id is None:
             return None, {}
 
-        exe_path = context.exe_path
-        exe_lower = exe_path.lower() if exe_path else ""
-        needs_args = exe_lower.endswith(("mmc.exe", "rundll32.exe"))
-        cmdline_args: str | None = None
-
-        if needs_args:
-            try:
-                cmd_text = ensure_command_line(context)
-                if cmd_text:
-                    if cmd_text.startswith('"'):
-                        end_quote = cmd_text.find('"', 1)
-                        if end_quote != -1:
-                            cmdline_args = cmd_text[end_quote + 1 :].strip()
-                    else:
-                        parts = cmd_text.split(None, 1)
-                        if len(parts) > 1:
-                            cmdline_args = parts[1]
-            except Exception as exc:
-                logging.debug("Could not get command line args: %s", exc)
-
-        app_name: str | None = None
-
-        if context.is_explorer:
-            app_name = context.window_title
-        elif not context.aumid:
-            app_name = context.window_title or context.process_name
-
-        if not app_name:
-            try:
-                pid_for_name = context.base_pid
-
-                if exe_path and "ApplicationFrameHost.exe" in exe_path and pid_for_name:
-                    try:
-                        child_hwnd = win32gui.FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
-                        if child_hwnd:
-                            _, child_pid = win32process.GetWindowThreadProcessId(child_hwnd)
-                            if child_pid:
-                                pid_for_name = child_pid
-                    except Exception:
-                        pass
-
-                # For UWP apps (including PWAs), try to get real app name from PackageManager first
-                if context.aumid:
-                    resolved_name = get_app_name_from_aumid(context.aumid)
-                    if resolved_name:
-                        app_name = resolved_name
-
-                # If AUMID lookup failed or no AUMID, use normal flow
-                if not app_name and pid_for_name:
-                    real_name = get_app_name_from_pid(pid_for_name)
-                    if real_name:
-                        app_name = real_name
-
-            except Exception as e:
-                logging.warning("Error resolving app name: %s", e)
-
-        if not app_name:
-            app_name = context.window_title or context.process_name
-
-        unique_id: str | None = None
-
-        if context.aumid:
-            unique_id = f"aumid:{context.aumid}"
-        elif context.explorer_path:
-            unique_id = f"explorer:{context.explorer_path}"
-        elif exe_path:
-            normalized_paths = normalized_targets(exe_path)
-            stable_path = normalized_paths[1] if len(normalized_paths) > 1 else exe_path
-            unique_id = f"path:{stable_path}"
-            if cmdline_args:
-                unique_id = f"{unique_id}|{cmdline_args}"
-        else:
-            logging.debug("Cannot create identifier for app - no AUMID, explorer path, or exe path found")
-            return None, {}
-
-        base_title = app_name or context.window_title or context.process_name or ""
-        metadata: dict[str, str] = {"title": base_title}
-
+        metadata: dict[str, str] = {"title": PinManager._app_display_name(hwnd, context)}
         if resolve_shortcut:
-            enriched = PinManager._resolve_pin_metadata(context, base_title)
+            enriched = PinManager._resolve_pin_metadata(context, metadata["title"])
             if "title" in enriched:
                 metadata["title"] = enriched["title"]
             if "shortcut_path" in enriched:
                 metadata["shortcut_path"] = enriched["shortcut_path"]
-
         if not metadata["title"]:
             metadata["title"] = context.window_title or context.process_name or metadata["title"]
-
         return unique_id, metadata
+
+    @staticmethod
+    def _unique_id(context: WindowContext) -> str | None:
+        if context.aumid:
+            return f"aumid:{context.aumid}"
+        if context.explorer_path:
+            return f"explorer:{context.explorer_path}"
+        if not context.exe_path:
+            logging.debug("Cannot create identifier for app - no AUMID, explorer path, or exe path found")
+            return None
+        normalized_paths = normalized_targets(context.exe_path)
+        stable_path = normalized_paths[1] if len(normalized_paths) > 1 else context.exe_path
+        host_args = PinManager._host_arguments(context)
+        return f"path:{stable_path}|{host_args}" if host_args else f"path:{stable_path}"
+
+    @staticmethod
+    def _host_arguments(context: WindowContext) -> str | None:
+        # mmc.exe and rundll32.exe host many different tools (Device Manager, Services, Control Panel
+        # applets), so only their arguments tell those apps apart
+        if not (context.exe_path or "").lower().endswith(("mmc.exe", "rundll32.exe")):
+            return None
+        try:
+            cmd_text = ensure_command_line(context)
+        except Exception as exc:
+            logging.debug("Could not get command line args: %s", exc)
+            return None
+        if not cmd_text:
+            return None
+        if cmd_text.startswith('"'):
+            end_quote = cmd_text.find('"', 1)
+            return cmd_text[end_quote + 1 :].strip() if end_quote != -1 else None
+        parts = cmd_text.split(None, 1)
+        return parts[1] if len(parts) > 1 else None
+
+    @staticmethod
+    def _app_display_name(hwnd: int, context: WindowContext) -> str:
+        name: str | None = None
+        if context.is_explorer:
+            name = context.window_title
+        elif not context.aumid:
+            name = context.window_title or context.process_name
+        if not name:
+            name = PinManager._lookup_app_name(hwnd, context)
+        return name or context.window_title or context.process_name or ""
+
+    @staticmethod
+    def _lookup_app_name(hwnd: int, context: WindowContext) -> str | None:
+        from core.utils.win32.utils import get_app_name_from_pid
+
+        try:
+            if context.aumid:
+                name = get_app_name_from_aumid(context.aumid)
+                if name:
+                    return name
+            pid = PinManager._name_source_pid(hwnd, context)
+            return get_app_name_from_pid(pid) if pid else None
+        except Exception as e:
+            logging.warning("Error resolving app name: %s", e)
+            return None
+
+    @staticmethod
+    def _name_source_pid(hwnd: int, context: WindowContext) -> int | None:
+        # Store apps run inside ApplicationFrameHost.exe; the app's own process owns the CoreWindow child
+        pid = context.base_pid
+        if pid and context.exe_path and "ApplicationFrameHost.exe" in context.exe_path:
+            try:
+                child = win32gui.FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
+                if child:
+                    _, child_pid = win32process.GetWindowThreadProcessId(child)
+                    if child_pid:
+                        return child_pid
+            except Exception:
+                pass
+        return pid
 
     def pin_app(self, hwnd: int, window_data: dict[str, Any], position: int = -1) -> str | None:
         """
@@ -566,7 +565,7 @@ class PinManager:
             # Get unique_id for this app
             unique_id = self.running_pinned.get(hwnd)
             if not unique_id and window_data:
-                unique_id, _ = self.get_app_identifier(hwnd, window_data)
+                unique_id = self.get_app_unique_id(hwnd, window_data)
 
             if unique_id and unique_id in self.pinned_apps:
                 del self.pinned_apps[unique_id]

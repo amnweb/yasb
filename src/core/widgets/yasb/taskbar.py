@@ -593,10 +593,6 @@ class TaskbarWidget(BaseWidget):
         """Load pinned apps from disk using PinManager."""
         self.pin_manager.load_pinned_apps()
 
-    def _get_app_identifier(self, hwnd: int, window_data: dict[str, Any]) -> tuple[str | None, dict[str, str]]:
-        """Get a unique identifier for an app and its metadata. Delegates to PinManager."""
-        return PinManager.get_app_identifier(hwnd, window_data)
-
     def pin_app(self, hwnd: int) -> None:
         """Pin an application to the taskbar (pinned apps are global across all monitors)."""
         try:
@@ -1139,7 +1135,7 @@ class TaskbarWidget(BaseWidget):
                             if app_window is not None:
                                 window_data = app_window.as_dict()
 
-                            window_unique_id, _ = self._get_app_identifier(hwnd, window_data)
+                            window_unique_id = PinManager.get_app_unique_id(hwnd, window_data)
                             if window_unique_id == unique_id:
                                 # This window matches the pinned app, as do the rest of its group
                                 self.pin_manager.running_pinned[hwnd] = unique_id
@@ -1421,7 +1417,7 @@ class TaskbarWidget(BaseWidget):
             self._minimized_hwnds.add(hwnd)
 
         # Check if this is a pinned app
-        unique_id, _ = self._get_app_identifier(hwnd, window_data)
+        unique_id = PinManager.get_app_unique_id(hwnd, window_data)
 
         # Pinned apps are global across all monitors
         is_pinned = unique_id in self.pin_manager.pinned_apps

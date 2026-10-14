@@ -279,7 +279,7 @@ def show_context_menu(taskbar_widget: TaskbarWidget, hwnd: int, pos: QPoint) -> 
                         "process_name": widget.property("process_name") or "",
                         "title": widget.property("title") or "",
                     }
-                unique_id, _ = PinManager.get_app_identifier(hwnd, window_data, resolve_shortcut=False)
+                unique_id = PinManager.get_app_unique_id(hwnd, window_data)
 
         menu = QMenu(taskbar_widget.window())
         apply_qmenu_style(menu)
