@@ -5,14 +5,13 @@ import tempfile
 import time
 from typing import Any
 
-import win32con
 import win32gui
 from PyQt6.QtCore import QTimer
 
 from core.utils.win32.window_actions import (
-    force_foreground_focus,
     resolve_base_and_focus,
     restore_window,
+    set_foreground,
     show_window,
 )
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
@@ -172,18 +171,15 @@ class WindowSwitcherProvider(BaseProvider):
                         else:
                             show_window(base)
 
-                        force_foreground_focus(focus_target or base)
+                        set_foreground(focus_target or base)
                     except Exception:
                         try:
-                            win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-                            win32gui.SetActiveWindow(hwnd)  # pyright: ignore[reportUnknownMemberType]
-                        except Exception:
-                            try:
-                                win32gui.ShowWindow(
-                                    hwnd, win32con.SW_RESTORE if win32gui.IsIconic(hwnd) else win32con.SW_SHOW
-                                )
-                            except Exception as final_e:
-                                logging.error("Failed to show window %s: %s", hwnd, final_e)
+                            if win32gui.IsIconic(hwnd):
+                                restore_window(hwnd)
+                            else:
+                                show_window(hwnd)
+                        except Exception as final_e:
+                            logging.error("Failed to show window %s: %s", hwnd, final_e)
 
                 # Defer the actual focus call so the Quick Launch widget has time to hide
                 QTimer.singleShot(0, _do_focus)

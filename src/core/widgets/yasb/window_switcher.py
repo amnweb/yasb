@@ -2,7 +2,6 @@ import logging
 from typing import Any, override
 
 import PyQt6.QtCore as QtCore
-import win32con
 import win32gui
 from PIL import Image
 from PyQt6.QtCore import QEvent, QObject, Qt, QTimer
@@ -24,7 +23,6 @@ from core.utils.win32.aumid import get_aumid_for_window
 from core.utils.win32.utils import find_focused_screen
 from core.utils.win32.window_actions import (
     close_application,
-    force_foreground_focus,
     resolve_base_and_focus,
     restore_window,
     set_foreground,
@@ -311,17 +309,16 @@ class WindowSwitcherWidget(BaseWidget):
 
                 set_foreground(base)
                 target = focus_target or base
-                QTimer.singleShot(0, lambda: force_foreground_focus(target))
+                QTimer.singleShot(0, lambda: set_foreground(target))
 
             except Exception:
                 try:
-                    win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-                    win32gui.SetActiveWindow(hwnd)  # pyright: ignore[reportUnknownMemberType]
-                except Exception:
-                    try:
-                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE if win32gui.IsIconic(hwnd) else win32con.SW_SHOW)
-                    except Exception as final_e:
-                        logger.error("Failed to switch to window %s: %s", hwnd, final_e)
+                    if win32gui.IsIconic(hwnd):
+                        restore_window(hwnd)
+                    else:
+                        show_window(hwnd)
+                except Exception as final_e:
+                    logger.error("Failed to switch to window %s: %s", hwnd, final_e)
 
         QTimer.singleShot(0, _do_focus)
 

@@ -3,7 +3,6 @@ import logging
 from functools import partial
 from typing import TYPE_CHECKING, Any, override
 
-import win32con
 import win32gui
 from PIL import Image
 from PyQt6.QtCore import QEasingCurve, QEvent, QMimeData, QObject, QPoint, QPropertyAnimation, Qt, QTimer, pyqtSignal
@@ -2207,15 +2206,14 @@ class TaskbarWidget(BaseWidget):
             set_foreground(base)
 
         except Exception as e:
+            logging.debug("Could not bring window %s to foreground: %s", hwnd, e)
             try:
-                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-                win32gui.SetActiveWindow(hwnd)  # pyright: ignore[reportUnknownMemberType]
-            except Exception:
-                try:
-                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE if win32gui.IsIconic(hwnd) else win32con.SW_SHOW)
-                    logging.debug("Could not bring window %s to foreground: %s", hwnd, e)
-                except Exception as final_e:
-                    logging.debug("Failed to show window %s: %s", hwnd, final_e)
+                if win32gui.IsIconic(hwnd):
+                    restore_window(hwnd)
+                else:
+                    show_window(hwnd)
+            except Exception as final_e:
+                logging.debug("Failed to show window %s: %s", hwnd, final_e)
 
     def launch_pinned_app(self, unique_id_or_hwnd: int | str, extra_arguments: str = "") -> None:
         """Launch a pinned application using PinManager with optional extra arguments."""
@@ -2244,7 +2242,7 @@ class TaskbarWidget(BaseWidget):
         try:
             base, focus_target = resolve_base_and_focus(hwnd)
             if win32gui.IsIconic(base):
-                win32gui.ShowWindow(base, win32con.SW_RESTORE)
+                restore_window(base)
             set_foreground(focus_target)
             # After successful raise, reflect expected focus immediately
             try:
@@ -2253,13 +2251,12 @@ class TaskbarWidget(BaseWidget):
                 pass
         except Exception:
             try:
-                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-                win32gui.SetActiveWindow(hwnd)  # pyright: ignore[reportUnknownMemberType]
+                if win32gui.IsIconic(hwnd):
+                    restore_window(hwnd)
+                else:
+                    show_window(hwnd)
             except Exception:
-                try:
-                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE if win32gui.IsIconic(hwnd) else win32con.SW_SHOW)
-                except Exception:
-                    pass
+                pass
 
     def _clear_others_set_foreground(self, target_hwnd: int | None) -> None:
         """Set a single 'foreground' entry; preserve flashing from manager; toggle focused-only titles."""

@@ -8,8 +8,6 @@ from core.utils.win32.bindings import kernel32 as k32
 from core.utils.win32.bindings import user32 as u32
 from core.utils.win32.bindings.user32 import GetWindowLong, IsHungAppWindow, IsWindowEnabled, PostMessage
 
-# --- Resolution helpers ---
-
 
 def resolve_base_and_focus(hwnd: int) -> tuple[int, int]:
     """Return (base_owner_root, focus_target). Focus target is the last active visible popup if any."""
@@ -50,92 +48,33 @@ def can_minimize(hwnd: int) -> bool:
     return bool(style & win32con.WS_MINIMIZEBOX) and bool(IsWindowEnabled(int(hwnd)))
 
 
-# --- Window commands ---
-
-
-def send_sys_command(hwnd: int, cmd: int) -> bool:
-    """Send WM_SYSCOMMAND to a window with a short timeout. Returns True on success."""
-    try:
-        SMTO_ABORTIFHUNG = 0x0002
-        result = ctypes.c_size_t()
-        ret = u32.SendMessageTimeoutW(
-            int(hwnd),
-            int(win32con.WM_SYSCOMMAND),
-            int(cmd),
-            0,
-            SMTO_ABORTIFHUNG,
-            200,
-            ctypes.byref(result),
-        )
-        return bool(ret)
-    except Exception:
-        return False
+def _post_sys_command(hwnd: int, cmd: int, fallback_show_cmd: int) -> None:
+    # elevated apps don't take posted messages (UIPI), ShowWindowAsync still works on them
+    if not PostMessage(int(hwnd), win32con.WM_SYSCOMMAND, cmd, 0):
+        u32.ShowWindowAsync(int(hwnd), fallback_show_cmd)
 
 
 def restore_window(hwnd: int) -> None:
-    if not send_sys_command(hwnd, win32con.SC_RESTORE):
-        try:
-            u32.ShowWindowAsync(int(hwnd), win32con.SW_RESTORE)
-        except Exception:
-            u32.ShowWindow(hwnd, win32con.SW_RESTORE)
-
-
-def maximize_window(hwnd: int) -> None:
-    if not send_sys_command(hwnd, win32con.SC_MAXIMIZE):
-        try:
-            u32.ShowWindowAsync(int(hwnd), win32con.SW_MAXIMIZE)
-        except Exception:
-            u32.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+    _post_sys_command(hwnd, win32con.SC_RESTORE, win32con.SW_RESTORE)
 
 
 def minimize_window(hwnd: int) -> None:
-    if not send_sys_command(hwnd, win32con.SC_MINIMIZE):
-        try:
-            u32.ShowWindowAsync(int(hwnd), win32con.SW_MINIMIZE)
-        except Exception:
-            u32.ShowWindow(hwnd, win32con.SW_FORCEMINIMIZE)
+    _post_sys_command(hwnd, win32con.SC_MINIMIZE, win32con.SW_MINIMIZE)
+
+
+def maximize_window(hwnd: int) -> None:
+    _post_sys_command(hwnd, win32con.SC_MAXIMIZE, win32con.SW_MAXIMIZE)
 
 
 def show_window(hwnd: int) -> None:
-    try:
-        u32.ShowWindowAsync(int(hwnd), win32con.SW_SHOW)
-    except Exception:
-        u32.ShowWindow(hwnd, win32con.SW_SHOW)
-
-
-# --- Foreground helper ---
+    u32.ShowWindowAsync(int(hwnd), win32con.SW_SHOW)
 
 
 def set_foreground(hwnd: int) -> None:
-    """Attempt to set foreground reliably by attaching input to the target thread."""
-    try:
-        tgt_tid, _ = win32process.GetWindowThreadProcessId(hwnd)
-    except Exception:
-        tgt_tid = 0
-    cur_tid = k32.GetCurrentThreadId()
-
-    attached = False
-    if tgt_tid and cur_tid and tgt_tid != cur_tid:
-        try:
-            attached = bool(u32.AttachThreadInput(cur_tid, tgt_tid, True))
-        except Exception:
-            attached = False
-    try:
-        try:
-            u32.BringWindowToTop(hwnd)
-        except Exception:
-            pass
-        u32.SetForegroundWindow(int(hwnd))
-        try:
-            u32.SetActiveWindow(int(hwnd))
-        except Exception:
-            pass
-    finally:
-        if attached:
-            try:
-                u32.AttachThreadInput(cur_tid, tgt_tid, False)
-            except Exception:
-                pass
+    """Bring the window to the front and focus it, without waiting for it."""
+    flags = win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE | win32con.SWP_ASYNCWINDOWPOS
+    u32.SetWindowPos(int(hwnd), win32con.HWND_TOP, 0, 0, 0, 0, flags)
+    u32.SetForegroundWindow(int(hwnd))
 
 
 def force_foreground_focus(hwnd: int) -> None:
@@ -168,9 +107,6 @@ def force_foreground_focus(hwnd: int) -> None:
             u32.SetFocus(hwnd)
     except Exception as e:
         logging.debug("Failed to force foreground focus: %s", e)
-
-
-# --- Close application helper ---
 
 
 def close_application(hwnd: int, force: bool = False):
