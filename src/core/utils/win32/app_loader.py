@@ -11,7 +11,7 @@ from PyQt6.QtCore import (
     pyqtSignal,
 )
 
-from core.utils.icons.resolve import AppIcon, FileIcon, IconSource
+from core.utils.icons.sources import AppIcon, FileIcon, IconSource
 
 # (name, path, description) - path is a file, "UWP::<appid>" or "CPL::<clsid>::<canonical name>".
 type AppEntry = tuple[str, str, str | None]

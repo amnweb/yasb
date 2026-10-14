@@ -344,7 +344,7 @@ class MyWidget(BaseWidget):
 -   `grayscale=True` returns a gray version, for example for a muted app.
 -   Call these from the UI thread.
 
-To save an icon to a file, for example when the user adds an app, use `load_icon(source, size).image` from `core.utils.icons.resolve`. It returns a PIL image and waits for Windows, so do not call it while painting or on a timer.
+To save an icon to a file, for example when the user adds an app, use `load_icon(source, size).image` from `core.utils.icons.sources`. It returns a PIL image and waits for Windows, so do not call it while painting or on a timer.
 
 ## 11. Python Code Style
 

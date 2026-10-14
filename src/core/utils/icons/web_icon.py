@@ -69,7 +69,6 @@ def get_web_icon(url: str) -> tuple[str | None, str | None]:
         if not manifest or "icons" not in manifest:
             return None, page_title
 
-        # first icon of 192 px or more, else the largest
         icons = manifest["icons"]
         best_icon: dict[str, Any] | None = None
         fallback_icon: dict[str, Any] | None = None

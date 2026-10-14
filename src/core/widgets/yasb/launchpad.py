@@ -62,7 +62,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
-from core.utils.icons.resolve import FileIcon, IconSource, load_icon
+from core.utils.icons.sources import FileIcon, IconSource, load_icon
 from core.utils.icons.web_icon import get_web_icon
 from core.utils.shell_utils import shell_open
 from core.utils.utilities import refresh_widget_style
@@ -78,7 +78,6 @@ type IconRequest = tuple[str, int, float]
 
 _ICON_CACHE: dict[str, QPixmap] = {}
 
-# Size of the icon file saved for an added app; the grid scales it to the configured icon size
 SAVED_ICON_SIZE = 256
 
 

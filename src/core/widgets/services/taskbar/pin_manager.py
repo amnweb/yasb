@@ -21,7 +21,7 @@ import win32gui
 import win32process
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from core.utils.icons.resolve import AppIcon, FileIcon, IconSource
+from core.utils.icons.sources import AppIcon, FileIcon, IconSource
 from core.utils.system import app_data_path
 from core.utils.win32.utils import get_app_name_from_aumid
 from core.widgets.services.taskbar.pin_context import (

@@ -689,7 +689,6 @@ class MediaWidget(BaseWidget):
             return None
 
     def _source_pid(self, aumid: str) -> int | None:
-        # cached until the source app changes
         if self._source_pid_cache is None or self._source_pid_cache[0] != aumid:
             self._source_pid_cache = (aumid, self._find_source_pid(aumid))
         return self._source_pid_cache[1]

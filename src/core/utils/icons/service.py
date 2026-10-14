@@ -4,10 +4,7 @@
     icons.icons_changed.connect(self._refresh_icons)
     pixmap = icons.get_icon(WindowIcon(hwnd), size, dpr)
 
-get_icon() returns the icon at once when it is in memory; otherwise a transparent pixmap of its size, and the icon is
-loaded on the icon thread. icons_changed is emitted when an icon asked for with get_icon() was loaded or changed;
-widgets then ask again for the icons they show. Icons are kept in memory only, for the running YASB. Which picture a
-request gets is decided in core.utils.icons.resolve.
+How it works: docs/Writing-Widget.md, section 10.
 """
 
 import itertools
@@ -27,7 +24,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import QApplication
 
-from core.utils.icons.resolve import AppIcon, FileIcon, IconSource, ProcessIcon, WindowIcon, load_icon
+from core.utils.icons.sources import AppIcon, FileIcon, IconSource, ProcessIcon, WindowIcon, load_icon
 from core.utils.win32.aumid import ensure_com_initialized
 from core.utils.win32.bindings.user32 import GetClassName, GetWindowThreadProcessId, InternalGetWindowText, IsWindow
 from core.utils.win32.utils import get_process_path
@@ -110,8 +107,7 @@ class IconService(QObject):
         return cls._instance
 
     def get_icon(self, source: IconSource, size: int, dpr: float, *, grayscale: bool = False) -> QPixmap | None:
-        """The icon of source, for size px on a screen with this dpr; a transparent pixmap of that size while it loads,
-        None when there is no icon to show."""
+        """Icon of source at size px. Blank while it loads, None if there is none."""
         physical = int(size * dpr)
         if physical <= 0 or _is_empty(source):
             return None
@@ -129,7 +125,6 @@ class IconService(QObject):
             elif not icon.complete:
                 self._enqueue(key, _Priority.LATER)
             if icon is None and grayscale:
-                # show the colored icon until the gray one is ready
                 colored = self._cache.get(_Key(source, physical, False))
                 icon = colored if colored is not None and colored.owner == owner else None
 
@@ -148,7 +143,6 @@ class IconService(QObject):
         pixmap = self._blank_pixmaps.get((physical, dpr))
         if pixmap is None:
             image = QImage(physical, physical, QImage.Format.Format_ARGB32_Premultiplied)
-            # fill(0): filling with a Qt color costs ~12 ms the first time
             image.fill(0)
             pixmap = QPixmap.fromImage(image)
             pixmap.setDevicePixelRatio(dpr)
@@ -156,7 +150,6 @@ class IconService(QObject):
         return pixmap
 
     def preload(self, sources: Iterable[IconSource], size: int, dpr: float) -> None:
-        """Load icons a widget will need soon, after the ones widgets show now."""
         physical = int(size * dpr)
         if physical <= 0:
             return
@@ -167,7 +160,6 @@ class IconService(QObject):
                     self._enqueue(key, _Priority.LATER)
 
     def _enqueue(self, key: _Key, priority: _Priority) -> None:
-        # bump a queued preload if a widget now needs it
         waiting = self._waiting.get(key)
         if waiting is None or priority < waiting:
             self._waiting[key] = priority
@@ -215,7 +207,6 @@ class IconService(QObject):
                 self._icon_loaded.emit()
 
     def _enforce_cache_limit(self) -> None:
-        # Dead windows and processes go first, then preloads. Icons on screen stay.
         # Owners are checked without the lock, only this thread adds or removes entries.
         with self._lock:
             owners = [

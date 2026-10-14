@@ -88,7 +88,7 @@ class LoadedIcon:
 
 
 def load_icon(source: IconSource, size: int) -> LoadedIcon:
-    """The icon of source for size px (real pixels). Waits for Windows; widgets use IconService instead."""
+    """Icon of source at size real pixels. Waits for Windows, so widgets use IconService."""
     match source:
         case WindowIcon(hwnd):
             return _window_icon(hwnd, size)
@@ -146,7 +146,7 @@ def _file_icon(path: str, size: int) -> Image.Image | None:
 
 
 def _icon_location(path: str) -> tuple[str, int]:
-    """The file and index of the icon a file shows. A negative index is a resource ID, as in Windows icon locations."""
+    # a negative index is a resource ID
     extension = os.path.splitext(path)[1].lower()
     if extension == ".lnk":
         return _shortcut_icon_location(path)
@@ -158,7 +158,6 @@ def _icon_location(path: str) -> tuple[str, int]:
 
 
 def _shortcut_icon_location(path: str) -> tuple[str, int]:
-    """The icon set in a shortcut, else its target's."""
     try:
         link = cast(
             _ShellLink,

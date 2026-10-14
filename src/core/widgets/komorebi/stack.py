@@ -527,7 +527,6 @@ class StackWidget(BaseWidget):
             return None
 
     def _refresh_icons(self) -> None:
-        # Buttons stay until the next update when the focused workspace has no windows
         for window_btn in self.window_buttons:
             if window_btn.window_index < len(self.komorebi_windows):
                 window_btn.update_icon()
