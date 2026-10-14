@@ -3,13 +3,13 @@ import re
 from functools import partial
 from typing import override
 
-from PIL import Image
 from pycaw.api.audioclient import ISimpleAudioVolume
 from pycaw.api.endpointvolume import IAudioEndpointVolume
 from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRect, Qt
-from PyQt6.QtGui import QImage, QMouseEvent, QPixmap, QWheelEvent
+from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
+from core.utils.icons.service import IconService, ProcessIcon
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import (
@@ -17,7 +17,6 @@ from core.utils.utilities import (
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.win32.app_icons import get_process_icon
 from core.utils.win32.bindings import user32
 from core.utils.win32.utils import get_app_name_from_pid
 from core.validation.widgets.yasb.volume import VolumeConfig
@@ -33,7 +32,9 @@ class VolumeWidget(BaseWidget):
         self.config = config
         self._show_alt_label = False
         self.volume: IAudioEndpointVolume | None = None
-        self._icon_cache: dict[tuple[int, int, float, bool], Image.Image] = {}
+        self._icons = IconService.instance()
+        self._icons.icons_changed.connect(self._refresh_app_icons)
+        self._app_icon_rows: dict[int, list[tuple[QLabel, QSlider]]] = {}
         self._dpi = 1.0
         self.dialog: PopupWidget | None = None
         self.volume_slider: QSlider | None = None
@@ -283,45 +284,24 @@ class VolumeWidget(BaseWidget):
         return super().event(a0)
 
     def _get_process_icon_pixmap(self, pid: int, icon_size: int = 16, force_grayscale: bool = False) -> QPixmap | None:
-        """Get icon for a process and convert to QPixmap with DPI-aware caching"""
+        """Process icon (gray when muted), blank while it loads (_refresh_app_icons sets it on icons_changed)."""
         try:
-            # Create cache key with PID, icon_size, DPI, and grayscale state
-            cache_key = (pid, icon_size, self._dpi, force_grayscale)
-
-            if cache_key in self._icon_cache:
-                icon_img = self._icon_cache[cache_key]
-            else:
-                # Get current DPI
-                screen = self.screen()
-                if screen is not None:
-                    self._dpi = screen.devicePixelRatio()
-                icon_img = get_process_icon(pid)
-                if icon_img:
-                    # Resize and convert to RGBA with DPI scaling
-                    scaled_size = int(icon_size * self._dpi)
-                    icon_img = icon_img.resize((scaled_size, scaled_size), Image.LANCZOS)
-                    icon_img = icon_img.convert("RGBA")
-
-                    # Apply grayscale if muted
-                    if force_grayscale:
-                        # Convert to grayscale while preserving alpha channel
-                        grayscale = icon_img.convert("L")
-                        icon_img.paste(grayscale, (0, 0), icon_img)
-
-                    # Cache the resized image
-                    self._icon_cache[cache_key] = icon_img
-
-            if not icon_img:
-                return None
-
-            # Convert to QPixmap
-            data = icon_img.tobytes("raw", "RGBA")  # pyright: ignore[reportUnknownMemberType]
-            qimage = QImage(data, icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
-            pixmap = QPixmap.fromImage(qimage)
-            pixmap.setDevicePixelRatio(self._dpi)
-            return pixmap
+            screen = self.screen()
+            if screen is not None:
+                self._dpi = screen.devicePixelRatio()
+            return self._icons.get_icon(ProcessIcon(pid), icon_size, self._dpi, grayscale=force_grayscale)
         except Exception as e:
             logging.debug("Failed to get icon pixmap for PID %s: %s", pid, e)
+
+    def _refresh_app_icons(self) -> None:
+        for pid, rows in self._app_icon_rows.items():
+            for icon_label, slider in rows:
+                if not is_valid_qobject(icon_label) or not is_valid_qobject(slider):
+                    continue
+                # A disabled slider means the app is muted
+                pixmap = self._get_process_icon_pixmap(pid, icon_size=16, force_grayscale=not slider.isEnabled())
+                if pixmap:
+                    icon_label.setPixmap(pixmap)
 
         return None
 
@@ -445,6 +425,7 @@ class VolumeWidget(BaseWidget):
         layout.addWidget(global_container)
 
         # Create per-application volume sliders section
+        self._app_icon_rows = {}
         if audio_sessions and self.config.audio_menu.show_apps:
             self.app_volumes_container = QFrame()
             self.app_volumes_container.setProperty("class", "apps-container")
@@ -526,6 +507,7 @@ class VolumeWidget(BaseWidget):
                 app_slider.sliderReleased.connect(self._on_slider_released)
 
                 if self.config.audio_menu.show_app_icons and icon_frame and icon_label:
+                    self._app_icon_rows.setdefault(session_info["pid"], []).append((icon_label, app_slider))
                     # Make icon frame clickable to toggle mute
                     icon_frame.mousePressEvent = self._make_app_mute_handler(
                         session_info["volume_interface"], icon_label, app_slider, session_info["pid"]

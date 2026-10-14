@@ -25,10 +25,10 @@ from PyQt6.QtWidgets import (
 )
 from qasync import asyncSlot  # type: ignore
 
+from core.utils.icons.service import AppIcon, IconService, ProcessIcon
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import ElidedLabel, PopupWidget, ScrollingLabel, refresh_widget_style
-from core.utils.win32.app_icons import get_icon_for_aumid, get_process_icon
 from core.utils.win32.aumid import (
     ERROR_INSUFFICIENT_BUFFER,
     PROCESS_QUERY_LIMITED_INFORMATION,
@@ -37,12 +37,13 @@ from core.utils.win32.aumid import (
     OpenProcess,
     activate_app_by_aumid,
 )
-from core.validation.widgets.yasb.media_lite import MediaLiteWidgetConfig
-from core.widgets.base import BaseWidget
-from core.widgets.services.media.aumid_process import (
+from core.utils.win32.aumid_process import (
     get_pid_for_window_aumid,
     get_process_name_for_aumid,
+    resolve_shell_app,
 )
+from core.validation.widgets.yasb.media_lite import MediaLiteWidgetConfig
+from core.widgets.base import BaseWidget
 from core.widgets.services.media.media import SessionState, WindowsMedia
 from core.widgets.services.media.source_apps import resolve_source_app_name
 from settings import SCRIPT_PATH
@@ -75,7 +76,9 @@ class MediaWidget(BaseWidget):
         self.dialog: PopupWidget | None = None
         self._seeking = False
         self._empty_thumb_cache: dict[tuple[int, float], QPixmap] = {}
-        self._source_icon_cache: dict[tuple[str, float], QPixmap] = {}
+        self._icons = IconService.instance()
+        self._icons.icons_changed.connect(self._refresh_source_icon)
+        self._source_pid_cache: tuple[str, int | None] | None = None
         self._default_source_icon: dict[float, QPixmap] = {}
         self._artwork_dpr: float | None = None
         self._app_volume_session: AudioSession | None = None
@@ -420,6 +423,7 @@ class MediaWidget(BaseWidget):
         if session is None or not is_valid_qobject(self.dialog):
             return
         self._bind_app_volume_session()
+        self._source_pid_cache = None
         self._apply_source_icon(session)
         self._apply_timeline(session)
         self._update_app_volume_slider()
@@ -670,39 +674,42 @@ class MediaWidget(BaseWidget):
         return pix
 
     def _get_source_app_icon(self, aumid: str) -> QPixmap | None:
+        """Source app icon, blank while it loads (_refresh_source_icon applies it on icons_changed)."""
         if not aumid:
             return None
         dpr = self._dpr()
-        cached = self._source_icon_cache.get((aumid, dpr))
-        if cached is not None:
-            return cached
         try:
-            phys = max(1, int(round(SOURCE_ICON_SIZE * dpr)))
-            img = get_icon_for_aumid(aumid, size=phys)
-            if img is None:
-                pid = get_pid_for_window_aumid(aumid)
-                if not pid and self._app_volume_session is not None:
-                    proc = getattr(self._app_volume_session, "Process", None)
-                    if proc is not None:
-                        pid = getattr(proc, "pid", None)
-                if not pid:
-                    exe = get_process_name_for_aumid(aumid)
-                    if exe:
-                        pid = self._find_pid_by_executable(exe)
-                if pid:
-                    img = get_process_icon(int(pid))
-            if img is None:
-                return None
-            if img.mode != "RGBA":
-                img = img.convert("RGBA")
-            if img.size != (phys, phys):
-                img = img.resize((phys, phys), Image.LANCZOS)
-            pixmap = self._pil_to_pixmap(img, dpr)
-            self._source_icon_cache[(aumid, dpr)] = pixmap
-            return pixmap
+            # Only an app ID Windows lists has an app icon; for an unpackaged player SMTC gives its exe name instead
+            if resolve_shell_app(aumid)[0] is not None:
+                return self._icons.get_icon(AppIcon(aumid), SOURCE_ICON_SIZE, dpr)
+            pid = self._source_pid(aumid)
+            return self._icons.get_icon(ProcessIcon(pid), SOURCE_ICON_SIZE, dpr) if pid else None
         except Exception:
             logger.exception("Error getting source app icon")
             return None
+
+    def _source_pid(self, aumid: str) -> int | None:
+        # cached until the source app changes
+        if self._source_pid_cache is None or self._source_pid_cache[0] != aumid:
+            self._source_pid_cache = (aumid, self._find_source_pid(aumid))
+        return self._source_pid_cache[1]
+
+    def _find_source_pid(self, aumid: str) -> int | None:
+        pid = get_pid_for_window_aumid(aumid)
+        if not pid and self._app_volume_session is not None:
+            proc = getattr(self._app_volume_session, "Process", None)
+            if proc is not None:
+                pid = getattr(proc, "pid", None)
+        if not pid:
+            exe = get_process_name_for_aumid(aumid)
+            if exe:
+                pid = self._find_pid_by_executable(exe)
+        return int(pid) if pid else None
+
+    def _refresh_source_icon(self) -> None:
+        session = self.current_session
+        if session is not None and is_valid_qobject(self.dialog):
+            self._apply_source_icon(session)
 
     @staticmethod
     def _pil_to_pixmap(img: Image.Image, dpr: float = 1.0) -> QPixmap:

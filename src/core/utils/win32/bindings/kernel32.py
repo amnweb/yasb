@@ -2,19 +2,25 @@
 
 from ctypes import (
     POINTER,
+    WINFUNCTYPE,
     Array,
     byref,
     c_char,
     c_size_t,
     c_ulonglong,
+    c_void_p,
     c_wchar,
+    cast,
     create_string_buffer,
+    string_at,
     windll,
+    wstring_at,
 )
 from ctypes.wintypes import (
     BOOL,
     DWORD,
     HANDLE,
+    HMODULE,
     LPCSTR,
     LPCVOID,
     LPCWSTR,
@@ -265,6 +271,11 @@ kernel32.LockResource.restype = LPVOID
 
 kernel32.FreeLibrary.argtypes = [HANDLE]
 kernel32.FreeLibrary.restype = BOOL
+
+# https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nc-libloaderapi-enumresnameprocw
+ENUMRESNAMEPROCW = WINFUNCTYPE(BOOL, HMODULE, c_void_p, c_void_p, c_void_p)
+kernel32.EnumResourceNamesW.argtypes = [HMODULE, c_void_p, ENUMRESNAMEPROCW, c_void_p]
+kernel32.EnumResourceNamesW.restype = BOOL
 
 kernel32.LoadLibraryW.argtypes = [LPCWSTR]
 kernel32.LoadLibraryW.restype = HANDLE
@@ -519,6 +530,38 @@ def LoadLibraryW(lpLibFileName: str) -> int:
 
 def FreeLibrary(hLibModule: int) -> bool:
     return bool(kernel32.FreeLibrary(hLibModule))
+
+
+def LoadLibraryEx(lpLibFileName: str, dwFlags: int) -> int:
+    return int(kernel32.LoadLibraryExW(lpLibFileName, None, dwFlags) or 0)
+
+
+def MAKEINTRESOURCE(name: int | str) -> LPCWSTR | str:
+    """A resource name or type for the resource functions: an ID number goes as a pointer value."""
+    return cast(c_void_p(name), LPCWSTR) if isinstance(name, int) else name
+
+
+def EnumResourceNames(hModule: int, resource_type: int) -> list[int | str]:
+    """The names of a module's resources of one type, in Windows' order: ID numbers or strings."""
+    names: list[int | str] = []
+
+    def collect(_module: int, _type: int, name: int | None, _param: int) -> bool:
+        # IDs are <= 0xFFFF and ctypes passes ID 0 as None, anything else is a string pointer
+        name = name or 0
+        names.append(name if name <= 0xFFFF else wstring_at(name))
+        return True
+
+    kernel32.EnumResourceNamesW(hModule, resource_type, ENUMRESNAMEPROCW(collect), None)
+    return names
+
+
+def LoadResourceData(hModule: int, name: int | str, resource_type: int) -> bytes | None:
+    """The bytes of one of a module's resources, or None."""
+    resource = kernel32.FindResourceW(hModule, MAKEINTRESOURCE(name), MAKEINTRESOURCE(resource_type))
+    if not resource:
+        return None
+    data = kernel32.LockResource(kernel32.LoadResource(hModule, resource))
+    return string_at(data, kernel32.SizeofResource(hModule, resource)) if data else None
 
 
 def IsWow64Process2(hProcess: int, lpProcessMachine: CArgObject, lpNativeMachine: CArgObject | None) -> bool:

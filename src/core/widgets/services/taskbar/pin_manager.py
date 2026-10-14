@@ -19,10 +19,9 @@ from typing import Any, TypedDict
 
 import win32gui
 import win32process
-from PIL import Image
-from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import QObject, pyqtSignal
 
+from core.utils.icons.resolve import AppIcon, FileIcon, IconSource
 from core.utils.system import app_data_path
 from core.utils.win32.utils import get_app_name_from_aumid
 from core.widgets.services.taskbar.pin_context import (
@@ -60,9 +59,6 @@ class PinManager:
     """
     Manages pinned applications for the taskbar widget.
     """
-
-    # Global cache for pinned app icons (shared across all PinManager instances)
-    _icon_cache: dict[tuple[str, int, float], QPixmap] = {}
 
     # Global cache for pinned apps data (shared across all PinManager instances)
     _apps_global_cache: _AppsCache = {
@@ -122,23 +118,43 @@ class PinManager:
             return os.path.join(windows_dir, "explorer.exe")
         return None
 
+    def icon_source(self, unique_id: str, metadata: dict[str, str] | None = None) -> IconSource | None:
+        """What a pinned app's icon is taken from: a Store app's ID, else the shortcut the pin launches (as Windows
+        does for its own pins), else its exe, tool file or folder. metadata defaults to the pin's stored data."""
+        id_type, value, args = self._parse_unique_id(unique_id)
+        if id_type == "aumid":
+            return AppIcon(value)
+        shortcut_path = (metadata if metadata is not None else self.pinned_apps.get(unique_id, {})).get("shortcut_path")
+        if shortcut_path and os.path.isfile(shortcut_path):
+            return FileIcon(shortcut_path)
+        if id_type == "explorer":
+            return FileIcon(value)
+        if id_type == "path":
+            return FileIcon(self._tool_file(args) or value)
+        return None
+
+    @staticmethod
+    def _tool_file(args: str) -> str | None:
+        """The .msc or .cpl file a pinned mmc.exe or rundll32.exe tool opens; it carries the tool's icon."""
+        if not args:
+            return None
+        system32 = os.path.join(os.environ.get("SystemRoot") or os.environ.get("WINDIR") or "C:\\Windows", "System32")
+        try:
+            tokens = shlex.split(args, posix=False)
+        except ValueError:
+            tokens = args.split()
+        for token in tokens:
+            for part in token.strip('"').split(","):
+                if part.lower().endswith((".msc", ".cpl")):
+                    path = part if os.path.isabs(part) else os.path.join(system32, part)
+                    if os.path.isfile(path):
+                        return path
+        return None
+
     @staticmethod
     def get_pinned_apps_file() -> Path:
         """Get the path to the pinned apps JSON file."""
         return app_data_path("taskbar_pinned.json")
-
-    @staticmethod
-    def get_pinned_icons_folder() -> Path:
-        """Get the folder path for storing pinned app icons."""
-        folder = app_data_path("taskbar_icons")
-        folder.mkdir(parents=True, exist_ok=True)
-        return folder
-
-    @staticmethod
-    def get_icon_cache_path(unique_id: str) -> Path:
-        """Get the file path for a cached icon."""
-        safe_name = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in unique_id)
-        return PinManager.get_pinned_icons_folder() / f"{safe_name}.png"
 
     def load_pinned_apps(self) -> None:
         """Load pinned apps from disk using global cache to avoid redundant file reads."""
@@ -501,9 +517,7 @@ class PinManager:
 
         return unique_id, metadata
 
-    def pin_app(
-        self, hwnd: int, window_data: dict[str, Any], icon_image: Image.Image | None = None, position: int = -1
-    ) -> str | None:
+    def pin_app(self, hwnd: int, window_data: dict[str, Any], position: int = -1) -> str | None:
         """
         Pin an application to the taskbar (pinned apps are global across all monitors).
         """
@@ -514,16 +528,6 @@ class PinManager:
             if not unique_id or not metadata:
                 logging.warning("Cannot pin app - unable to determine valid identifier")
                 return None
-
-            # Cache icon if provided
-            if icon_image:
-                # Save original sized icon as PNG
-                icon_image.convert("RGBA").save(
-                    str(self.get_icon_cache_path(unique_id)),
-                    "PNG",
-                    optimize=False,
-                    compress_level=1,
-                )
 
             self.pinned_apps[unique_id] = metadata
 
@@ -568,7 +572,6 @@ class PinManager:
                 del self.pinned_apps[unique_id]
                 self.pinned_order.remove(unique_id)
                 self.running_pinned.pop(hwnd, None)
-                self.delete_cached_icon(unique_id)
                 self.save_pinned_apps()
 
                 # Notify other taskbar instances
@@ -588,63 +591,6 @@ class PinManager:
 
             # Notify other taskbar instances about the reorder
             _taskbar_signal_bus.pinned_apps_changed.emit("reorder", "")
-
-    def load_cached_icon(self, unique_id: str, size: int, dpi: float = 1.0) -> QPixmap | None:
-        """
-        Load a cached icon from PNG file and scale to proper size with DPI awareness.
-        If cached icon is missing, extracts native Windows icon as fallback.
-        Uses a global cache to avoid reloading the same icon across multiple instances.
-        """
-        from core.utils.win32.app_icons import get_window_icon
-
-        # Check global cache first (include DPI in cache key)
-        cache_key = (unique_id, size, dpi)
-        if cache_key in PinManager._icon_cache:
-            return PinManager._icon_cache[cache_key]
-
-        try:
-            icon_path = self.get_icon_cache_path(unique_id)
-
-            # If cached icon doesn't exist, extract native icon using get_window_icon with fake hwnd
-            if not icon_path.exists():
-                icon_img = get_window_icon(0)  # Fake hwnd - will fallback to native icons
-                if icon_img:
-                    icon_img.convert("RGBA").save(str(icon_path), "PNG", optimize=False, compress_level=1)
-
-            if icon_path.exists():
-                pixmap = QPixmap(str(icon_path))
-                if not pixmap.isNull():
-                    physical_size = int(size * dpi)
-                    scaled = pixmap.scaled(
-                        physical_size,
-                        physical_size,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation,
-                    )
-                    scaled.setDevicePixelRatio(dpi)
-
-                    # Store in global cache for reuse
-                    PinManager._icon_cache[cache_key] = scaled
-                    return scaled
-        except Exception as e:
-            logging.error("Error loading cached icon for %s: %s", unique_id, e)
-        return None
-
-    def delete_cached_icon(self, unique_id: str) -> None:
-        """Delete a cached icon file and remove from global cache."""
-        try:
-            # Remove from global cache (all size variants)
-            keys_to_remove = [k for k in PinManager._icon_cache.keys() if k[0] == unique_id]
-            for key in keys_to_remove:
-                del PinManager._icon_cache[key]
-
-            # Delete the file
-            icon_path = self.get_icon_cache_path(unique_id)
-            if icon_path.exists():
-                icon_path.unlink()
-
-        except Exception as e:
-            logging.error("Error deleting cached icon: %s", e)
 
     @staticmethod
     def _launch_exe(exe_path: str, arguments: str = "", working_dir: str | None = None) -> None:

@@ -1,13 +1,12 @@
-import hashlib
 import logging
 import os
-import tempfile
 import time
 from typing import Any
 
 import win32gui
 from PyQt6.QtCore import QTimer
 
+from core.utils.icons.service import WindowIcon
 from core.utils.win32.window_actions import (
     resolve_base_and_focus,
     restore_window,
@@ -35,9 +34,6 @@ class WindowSwitcherProvider(BaseProvider):
         self._task_manager = get_shared_task_manager()
         self._task_manager.keep_cloaked_tasks = True
         self._last_enum_time: float | None = None
-
-        self._icons_dir = os.path.join(tempfile.gettempdir(), "yasb_quick_launch_icons")
-        os.makedirs(self._icons_dir, exist_ok=True)
 
     def match(self, text: str) -> bool:
         if self.prefix:
@@ -101,14 +97,11 @@ class WindowSwitcherProvider(BaseProvider):
         # Format output
         results: list[ProviderResult] = []
         for _, _, win, title, app_id in results_data[: self.max_results]:
-            icon_path = self._get_window_icon_path(win)
-
             results.append(
                 ProviderResult(
                     title=title,
                     description=f"Running - {os.path.splitext(app_id)[0]}",
-                    icon_path=icon_path,
-                    icon_char=self.icon if not icon_path else "",
+                    icon_source=WindowIcon(win.hwnd),
                     provider=self.name,
                     id=f"win_{win.hwnd}",
                     action_data={"hwnd": win.hwnd},
@@ -116,44 +109,6 @@ class WindowSwitcherProvider(BaseProvider):
             )
 
         return results
-
-    def _get_window_icon_path(self, win: ApplicationWindow) -> str:
-        from core.utils.win32.app_icons import get_window_icon
-
-        is_uwp = win.class_name == "ApplicationFrameWindow"
-
-        if win.process_path and os.path.isfile(win.process_path) and not is_uwp:
-            path_hash = hashlib.md5(win.process_path.lower().encode()).hexdigest()[:10]
-            base = os.path.splitext(os.path.basename(win.process_path))[0]
-            temp_png = os.path.join(self._icons_dir, f"{base}_{path_hash}_0.png")
-
-            if os.path.isfile(temp_png):
-                return temp_png
-
-            try:
-                img = get_window_icon(win.hwnd)
-                if img:
-                    img = img.convert("RGBA").resize((48, 48))
-                    img.save(temp_png, format="PNG")
-                    return temp_png
-            except Exception as e:
-                logging.debug("Failed to extract shared window icon for %s: %s", win.process_path, e)
-
-        icon_name = f"window_icon_{win.hwnd}.png"
-        icon_path = os.path.join(self._icons_dir, icon_name)
-        if os.path.isfile(icon_path):
-            return icon_path
-
-        try:
-            img = get_window_icon(win.hwnd)
-            if img:
-                img = img.convert("RGBA").resize((48, 48))
-                img.save(icon_path, format="PNG")
-                return icon_path
-        except Exception as e:
-            logging.debug("Failed to extract window icon for hwnd %s: %s", win.hwnd, e)
-
-        return ""
 
     def execute(self, result: ProviderResult) -> bool:
         hwnd = result.action_data.get("hwnd")

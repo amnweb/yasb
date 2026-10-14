@@ -3,9 +3,8 @@ from typing import Any, override
 
 import PyQt6.QtCore as QtCore
 import win32gui
-from PIL import Image
 from PyQt6.QtCore import QEvent, QObject, Qt, QTimer
-from PyQt6.QtGui import QImage, QKeyEvent, QMouseEvent, QPixmap, QScreen, QShowEvent, QWheelEvent
+from PyQt6.QtGui import QKeyEvent, QMouseEvent, QPixmap, QScreen, QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -16,10 +15,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from core.utils.icons.service import IconService, WindowIcon
 from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import PopupWidget, refresh_widget_style
-from core.utils.win32.app_icons import get_icon_for_aumid, get_process_icon, get_window_icon
-from core.utils.win32.aumid import get_aumid_for_window
 from core.utils.win32.utils import find_focused_screen
 from core.utils.win32.window_actions import (
     close_application,
@@ -41,6 +39,7 @@ class _SwitcherItem(QFrame):
         super().__init__(parent)
         self.hwnd = hwnd
         self.title = title
+        self.icon_label: QLabel | None = None
 
 
 class WindowSwitcherWidget(BaseWidget):
@@ -64,7 +63,8 @@ class WindowSwitcherWidget(BaseWidget):
         self._btn_h = 0
         self._popup_height = 0
         self._popup_extra_w = 0
-        self._icons_cache: dict[tuple[int, int, float], QPixmap] = {}
+        self._icons = IconService.instance()
+        self._icons.icons_changed.connect(self._refresh_icons)
         self.buttons_list: list[_SwitcherItem] = []
         self.active_title_label: QLabel | None = None
         self.current_focus_index = -1
@@ -203,10 +203,11 @@ class WindowSwitcherWidget(BaseWidget):
             icon_label = QLabel(btn)
             icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             icon_label.setFixedSize(icon_size, icon_size)
-            icon_pixmap = self._get_app_icon(win, icon_size, self._current_dpr)
+            icon_pixmap = self._get_app_icon(win.hwnd)
             if icon_pixmap:
                 icon_label.setPixmap(icon_pixmap)
             btn_layout.addWidget(icon_label)
+            btn.icon_label = icon_label
 
             btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
             btn.installEventFilter(self)
@@ -238,55 +239,18 @@ class WindowSwitcherWidget(BaseWidget):
 
         self._update_popup_geometry(initial=True)
 
-    def _get_app_icon(self, win: ApplicationWindow, icon_size: int, dpr: float = 1.0) -> QPixmap | None:
-        if icon_size <= 0:
+    def _get_app_icon(self, hwnd: int) -> QPixmap | None:
+        if self.config.icon_size <= 0:
             return None
+        return self._icons.get_icon(WindowIcon(hwnd), self.config.icon_size, self._current_dpr)
 
-        cache_key = (win.hwnd, icon_size, dpr)
-        if cache_key in self._icons_cache:
-            return self._icons_cache[cache_key]
-
-        physical = round(icon_size * dpr)
-
-        def pil_to_pixmap(img: Image.Image) -> QPixmap:
-            img = img.resize((physical, physical), Image.Resampling.LANCZOS).convert("RGBA")
-            pm = QPixmap.fromImage(
-                QImage(
-                    img.tobytes("raw", "RGBA"),  # pyright: ignore[reportUnknownMemberType]
-                    physical,
-                    physical,
-                    QImage.Format.Format_RGBA8888,
-                )
-            )
-            pm.setDevicePixelRatio(dpr)
-            return pm
-
-        pixmap: QPixmap | None = None
-
-        aumid = get_aumid_for_window(win.hwnd)
-        if aumid:
-            img = get_icon_for_aumid(aumid, size=physical)
-            if img:
-                pixmap = pil_to_pixmap(img)
-
-        if not pixmap and win.process_pid:
-            img = get_process_icon(win.process_pid)
-            if img:
-                pixmap = pil_to_pixmap(img)
-
-        if not pixmap:
-            img = get_window_icon(win.hwnd)
-            if img:
-                pixmap = pil_to_pixmap(img)
-
-        if pixmap:
-            self._icons_cache[cache_key] = pixmap
-            # Because some icons can be really big depending on user settings
-            # we will keep only 40 icons in cache to prevent unnecessary growing.
-            if len(self._icons_cache) > 40:
-                self._icons_cache.pop(next(iter(self._icons_cache)))
-
-        return pixmap
+    def _refresh_icons(self) -> None:
+        for btn in self.buttons_list:
+            if btn.icon_label is None or not is_valid_qobject(btn.icon_label):
+                continue
+            pixmap = self._get_app_icon(btn.hwnd)
+            if pixmap:
+                btn.icon_label.setPixmap(pixmap)
 
     def _switch_to_window(self, hwnd: int):
         if self._popup:

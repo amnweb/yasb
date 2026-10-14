@@ -1,14 +1,12 @@
 import logging
-import os
-import tempfile
 from typing import Any
 
 from PyQt6.QtCore import QFileSystemWatcher, QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
-from core.utils.win32.app_loader import AppEntry, AppListLoader
+from core.utils.icons.service import IconService
+from core.utils.win32.app_loader import AppEntry, AppListLoader, app_icon_source
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
-from core.widgets.services.quick_launch.icon_resolver import IconResolverWorker, compute_extraction_size
 from core.widgets.services.quick_launch.providers import (
     AppsProvider,
     BinanceProvider,
@@ -73,7 +71,6 @@ class QuickLaunchService(QObject):
     """Quick Launch service."""
 
     request_refresh = pyqtSignal()
-    icon_ready = pyqtSignal(str, str)
     query_finished = pyqtSignal(str, list)
 
     _instance: QuickLaunchService | None = None
@@ -89,29 +86,21 @@ class QuickLaunchService(QObject):
 
         self._apps: list[AppEntry] = []
         self._apps_loaded = False
-        self._icon_paths: dict[str, str] = {}
         self._providers: list[BaseProvider] = []
         self._providers_config: dict[str, Any] = {}
         self._show_icons: bool = True
 
         self._app_loader: AppListLoader | None = None
-        self._icon_worker: IconResolverWorker | None = None
         self._query_worker = QueryWorker()
         self._query_worker.finished.connect(self._on_query_finished)
         self._query_worker.start()
         self._query_counter = 0
-
-        self._icons_dir = os.path.join(tempfile.gettempdir(), "yasb_quick_launch_icons")
-        os.makedirs(self._icons_dir, exist_ok=True)
 
         app_inst = QApplication.instance()
         if app_inst:
             app_inst.aboutToQuit.connect(self._stop_workers)
 
     def _stop_workers(self):
-        if self._icon_worker and self._icon_worker.isRunning():
-            self._icon_worker.stop()
-            self._icon_worker.wait(2000)
         self._query_worker.shutdown()
         self._query_worker.wait(2000)
 
@@ -126,10 +115,6 @@ class QuickLaunchService(QObject):
     @property
     def apps_loaded(self) -> bool:
         return self._apps_loaded
-
-    @property
-    def icon_paths(self) -> dict[str, str]:
-        return self._icon_paths
 
     def configure_providers(
         self, providers_config: dict[str, Any], max_results: int = 50, show_icons: bool = True, icon_size: int = 32
@@ -179,7 +164,7 @@ class QuickLaunchService(QObject):
         self._apps = apps
         self._apps_loaded = True
         if self._show_icons:
-            self._start_icon_resolution()
+            self._preload_icons()
         self._start_description_resolution()
         self.request_refresh.emit()
 
@@ -190,24 +175,10 @@ class QuickLaunchService(QObject):
                     provider.start_description_resolution(self._apps)
                 break
 
-    def _start_icon_resolution(self):
-        if self._icon_worker and self._icon_worker.isRunning():
-            self._icon_worker.icon_ready.disconnect(self._on_icon_ready)
-            self._icon_worker.stop()
-            self._icon_worker.wait()
-
-        dpr = 1.0
+    def _preload_icons(self):
         screen = QApplication.primaryScreen()
-        if screen:
-            dpr = screen.devicePixelRatio()
-        size = compute_extraction_size(self._icon_size, dpr)
-        self._icon_worker = IconResolverWorker(self._apps, self._icons_dir, size=size)
-        self._icon_worker.icon_ready.connect(self._on_icon_ready)
-        self._icon_worker.start()
-
-    def _on_icon_ready(self, app_key: str, icon_path: str):
-        self._icon_paths[app_key] = icon_path
-        self.icon_ready.emit(app_key, icon_path)
+        dpr = screen.devicePixelRatio() if screen else 1.0
+        IconService.instance().preload((app_icon_source(path) for _, path, _ in self._apps), self._icon_size, dpr)
 
     def _setup_fs_watcher(self):
         self._fs_watcher = QFileSystemWatcher(self)

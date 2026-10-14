@@ -2,15 +2,14 @@ import logging
 from contextlib import suppress
 from typing import Any, Literal, override
 
-from PIL import Image
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QImage, QMouseEvent, QPixmap, QWheelEvent
+from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
+from core.utils.icons.service import IconService, WindowIcon
 from core.utils.utilities import refresh_widget_style
-from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utils import get_process_info, get_widget_monitor_hwnd
 from core.validation.widgets.komorebi.workspaces import KomorebiWorkspacesConfig
 from core.widgets.base import BaseWidget
@@ -190,7 +189,7 @@ class WorkspaceButtonWithIcons(QFrame):
 
     def update_icon_by_hwnd(self, hwnd: int):
         if hwnd in self.icons.keys():
-            pixmap = self.parent_widget.get_app_icon(hwnd, self.workspace_index, ignore_cache=True)
+            pixmap = self.parent_widget.get_app_icon(hwnd, self.workspace_index)
             if pixmap:
                 self.update_icons(icons={hwnd: pixmap})
 
@@ -282,7 +281,8 @@ class WorkspaceWidget(BaseWidget):
             self.workspace_layer_label.setProperty("class", "workspace-layer")
             self.widget_layout.addWidget(self.workspace_layer_label)
 
-        self._icon_cache: dict[tuple[int, float], Image.Image] = {}
+        self._icons = IconService.instance()
+        self._icons.icons_changed.connect(self._refresh_icons)
         self.dpi: float | None = None
         self._unique_pids: set[int] = set()
 
@@ -671,7 +671,7 @@ class WorkspaceWidget(BaseWidget):
             pass
         return pixmaps
 
-    def get_app_icon(self, hwnd: int, workspace_index: int, ignore_cache: bool = False) -> QPixmap | None:
+    def get_app_icon(self, hwnd: int, workspace_index: int) -> QPixmap | None:
         try:
             process = get_process_info(hwnd)
             pid = process["pid"]
@@ -686,33 +686,12 @@ class WorkspaceWidget(BaseWidget):
             if screen is None:
                 return None
             self.dpi = screen.devicePixelRatio()
-            cache_key = (hwnd, self.dpi)
-
-            if cache_key in self._icon_cache and not ignore_cache:
-                icon_img = self._icon_cache[cache_key]
-            else:
-                icon_img = get_window_icon(hwnd)
-
-            if icon_img:
-                icon_img = icon_img.resize(
-                    (
-                        int(self.config.app_icons.size * self.dpi),
-                        int(self.config.app_icons.size * self.dpi),
-                    ),
-                    Image.LANCZOS,
-                ).convert("RGBA")
-                self._icon_cache[cache_key] = icon_img
-                qimage = QImage(
-                    icon_img.tobytes(),  # pyright: ignore[reportUnknownMemberType]
-                    icon_img.width,
-                    icon_img.height,
-                    QImage.Format.Format_RGBA8888,
-                )
-                pixmap = QPixmap.fromImage(qimage)
-                pixmap.setDevicePixelRatio(self.dpi)
-                return pixmap
-            else:
-                return None
+            return self._icons.get_icon(WindowIcon(hwnd), self.config.app_icons.size, self.dpi)
         except Exception:
             logging.debug("Failed to get icons for window with HWND %s", hwnd, exc_info=True)
             return None
+
+    def _refresh_icons(self) -> None:
+        for button in self.workspace_buttons:
+            if isinstance(button, WorkspaceButtonWithIcons) and button.workspace_index < len(self._komorebi_workspaces):
+                button.update_icons()

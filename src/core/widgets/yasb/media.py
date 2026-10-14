@@ -38,9 +38,9 @@ from core.utils.win32.aumid import (
     OpenProcess,
     activate_app_by_aumid,
 )
+from core.utils.win32.aumid_process import get_process_name_for_aumid
 from core.validation.widgets.yasb.media import MediaWidgetConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.media.aumid_process import get_process_name_for_aumid
 from core.widgets.services.media.media import MediaSession, SessionState, WindowsMedia
 from core.widgets.services.media.source_apps import (
     get_source_app_class_name,

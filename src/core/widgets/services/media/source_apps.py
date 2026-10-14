@@ -6,13 +6,13 @@ import os
 
 from winrt.windows.applicationmodel import AppInfo
 
-from core.utils.win32.utils import get_app_name_from_aumid, get_app_name_from_pid
-from core.widgets.services.media.aumid_process import (
+from core.utils.win32.aumid_process import (
     enum_processes,
     get_pid_for_window_aumid,
     get_process_name_for_aumid,
     resolve_shell_app,
 )
+from core.utils.win32.utils import get_app_name_from_aumid, get_app_name_from_pid
 
 _name_cache: dict[str, str] = {}
 

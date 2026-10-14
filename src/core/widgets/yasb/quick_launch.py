@@ -57,6 +57,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.ui.components.loader import LoaderLine
+from core.utils.icons.service import IconService
 from core.utils.system import app_data_path
 from core.utils.utilities import PopupWidget
 from core.utils.win32.utils import apply_qmenu_style, find_focused_screen
@@ -86,7 +87,6 @@ class ResultListModel(QAbstractListModel):
         super().__init__(parent)
         self._results: list[ProviderResult] = []
         self._icons: dict[int, QPixmap | None] = {}
-        self._late_icons: dict[str, QPixmap] = {}
         self._icon_size: int = 0
         self._dpr: float = 1.0
 
@@ -114,8 +114,8 @@ class ResultListModel(QAbstractListModel):
         if role == self.RESULT_ROLE:
             return result
         if role == self.ICON_ROLE:
-            if result.id and result.id in self._late_icons:
-                return self._late_icons[result.id]
+            if result.icon_source is not None:
+                return IconService.instance().get_icon(result.icon_source, self._icon_size, self._dpr)
             if row not in self._icons:
                 pixmap = self._compute_icon(result, self._icon_size, self._dpr)
                 self._icons[row] = pixmap
@@ -129,7 +129,6 @@ class ResultListModel(QAbstractListModel):
         self.beginResetModel()
         self._results = list(results)
         self._icons.clear()
-        self._late_icons.clear()
         self._icon_size = icon_size
         self._dpr = dpr
         self.endResetModel()
@@ -227,17 +226,9 @@ class ResultListModel(QAbstractListModel):
         ResultListModel._emoji_cache[key] = pixmap
         return pixmap
 
-    def update_icon(self, result_id: str, icon_path: str, icon_size: int, dpr: float):
-        """Update an icon that was loaded asynchronously."""
-        pixmap = load_and_scale_icon(icon_path, icon_size, dpr)
-        if pixmap.isNull():
-            return
-        self._late_icons[result_id] = pixmap
-        for i, r in enumerate(self._results):
-            if r.id == result_id:
-                idx = self.index(i)
-                self.dataChanged.emit(idx, idx, [self.ICON_ROLE])
-                break
+    def refresh_icons(self) -> None:
+        if self._results:
+            self.dataChanged.emit(self.index(0), self.index(len(self._results) - 1), [self.ICON_ROLE])
 
     def result_at(self, row: int) -> ProviderResult | None:
         if 0 <= row < len(self._results):
@@ -515,7 +506,7 @@ class QuickLaunchWidget(BaseWidget):
 
         self._service = QuickLaunchService.instance()
         self._service.request_refresh.connect(self._on_request_refresh)
-        self._service.icon_ready.connect(self._on_icon_ready)
+        IconService.instance().icons_changed.connect(self._refresh_icons)
         self._service.query_finished.connect(self._on_query_finished)
         self._service.configure_providers(
             self.config.providers.model_dump(), self.config.max_results, self.config.show_icons, self.config.icon_size
@@ -1302,9 +1293,9 @@ class QuickLaunchWidget(BaseWidget):
         if self._popup and self._popup.isVisible():
             self._update_results(self._popup.search_input.text())
 
-    def _on_icon_ready(self, result_id: str, icon_path: str):
+    def _refresh_icons(self) -> None:
         if self._popup and self._popup.isVisible() and self._result_model:
-            self._result_model.update_icon(result_id, icon_path, self.config.icon_size, self._dpr)
+            self._result_model.refresh_icons()
 
     def _on_query_finished(self, query_id: str, results: list[ProviderResult]):
         if query_id != self._pending_query_id:

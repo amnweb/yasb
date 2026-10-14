@@ -211,27 +211,28 @@ def get_aumid_for_window(hwnd: int) -> str | None:
             except Exception:
                 pass
 
-    # Process-based fallback (if API available)
-    pid = wt.DWORD(0)
-    GetWindowThreadProcessId(wt.HWND(hwnd), byref(pid))
-    if pid.value != 0 and GetApplicationUserModelId is not None:
-        hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid.value)
-        if hProcess:
-            try:
-                length = ctypes.c_uint32(0)
-                res = GetApplicationUserModelId(hProcess, byref(length), None)
-                if res == ERROR_INSUFFICIENT_BUFFER and length.value:
-                    buf = ctypes.create_unicode_buffer(length.value)
-                    res = GetApplicationUserModelId(hProcess, byref(length), buf)
-                    if res == 0 and buf.value:
-                        return buf.value
-            finally:
-                try:
-                    CloseHandle(hProcess)
-                except Exception:
-                    pass
+    # 2) Process-based fallback
+    return get_aumid_for_process(_window_pid(hwnd))
 
-    return None
+
+def get_aumid_for_process(pid: int) -> str | None:
+    """The AUMID a process runs under (Store apps, and apps that set their own), or None."""
+    if not pid or GetApplicationUserModelId is None:
+        return None
+    hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not hProcess:
+        return None
+    try:
+        length = ctypes.c_uint32(0)
+        res = GetApplicationUserModelId(hProcess, byref(length), None)
+        if res == ERROR_INSUFFICIENT_BUFFER and length.value:
+            buf = ctypes.create_unicode_buffer(length.value)
+            res = GetApplicationUserModelId(hProcess, byref(length), buf)
+            if res == 0 and buf.value:
+                return buf.value
+        return None
+    finally:
+        CloseHandle(hProcess)
 
 
 def get_aumid_from_shortcut(shortcut_path: str) -> str | None:

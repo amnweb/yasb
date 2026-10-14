@@ -1,160 +1,18 @@
 import ctypes
 import logging
-import os
 import subprocess
-import tempfile
 from ctypes import wintypes
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 from PyQt6.QtWidgets import QApplication
 
+from core.utils.icons.service import ProcessIcon
 from core.utils.win32.bindings.kernel32 import kernel32
-from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_TERMINATE, TH32CS_SNAPPROCESS
+from core.utils.win32.constants import PROCESS_TERMINATE, TH32CS_SNAPPROCESS
 from core.utils.win32.structs import PROCESSENTRY32
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_PORT
-
-_default_app_icon_png: str | None = None
-
-
-def _get_quick_launch_icons_dir() -> str:
-    icons_dir = os.path.join(tempfile.gettempdir(), "yasb_quick_launch_icons")
-    try:
-        os.makedirs(icons_dir, exist_ok=True)
-    except Exception:
-        pass
-    return icons_dir
-
-
-def _get_default_app_icon_png() -> str:
-    """Return a cached default Windows application icon PNG path, or ""."""
-
-    global _default_app_icon_png
-    if _default_app_icon_png is not None:
-        return _default_app_icon_png
-
-    try:
-        import win32api
-        import win32con
-        import win32gui
-
-        from core.utils.win32.app_icons import hicon_to_image
-
-        icons_dir = _get_quick_launch_icons_dir()
-        default_png = os.path.join(icons_dir, "_default_app.png")
-        if os.path.isfile(default_png):
-            _default_app_icon_png = default_png
-            return default_png
-
-        size = win32api.GetSystemMetrics(win32con.SM_CXICON)
-        hicon = cast(
-            int,
-            win32gui.LoadImage(
-                0,
-                win32con.IDI_APPLICATION,  # pyright: ignore[reportArgumentType]
-                win32con.IMAGE_ICON,
-                size,
-                size,
-                win32con.LR_SHARED,
-            ),
-        )
-        if hicon:
-            img = hicon_to_image(hicon)
-            if img is not None:
-                img.save(default_png, format="PNG")
-                _default_app_icon_png = default_png
-                return default_png
-    except Exception:
-        pass
-
-    _default_app_icon_png = ""
-    return ""
-
-
-def _get_process_exe_path(pid: int) -> str:
-    """Return full exe path for PID using QueryFullProcessImageNameW, or ""."""
-
-    h = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
-    if not h:
-        return ""
-    try:
-        size = ctypes.c_ulong(1024)
-        buf = ctypes.create_unicode_buffer(size.value)
-        if kernel32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size)):
-            return str(buf.value)
-    except Exception:
-        return ""
-    finally:
-        kernel32.CloseHandle(h)
-    return ""
-
-
-def _safe_filename_stem(value: str) -> str:
-    stem = value.strip().strip(".")
-    if not stem:
-        return "icon"
-    # Windows-safe-ish: replace most common invalid characters.
-    for ch in '<>:"/\\|?*':
-        stem = stem.replace(ch, "_")
-    return stem
-
-
-def _get_cached_exe_icon_png(exe_path: str) -> str:
-    """Extract and cache an exe icon to PNG. Returns PNG path or ""."""
-
-    exe_path = (exe_path or "").strip()
-    if not exe_path or not os.path.isfile(exe_path):
-        return ""
-
-    try:
-        import hashlib
-
-        import win32gui
-
-        from core.utils.win32.app_icons import hicon_to_image
-
-        icons_dir = _get_quick_launch_icons_dir()
-        path_hash = hashlib.md5(exe_path.lower().encode("utf-8", errors="ignore")).hexdigest()[:10]
-        base = _safe_filename_stem(os.path.splitext(os.path.basename(exe_path))[0])
-        cached_png = os.path.join(icons_dir, f"{base}_{path_hash}_0.png")
-        if os.path.isfile(cached_png):
-            return cached_png
-
-        # ExtractIconEx returns ([large...], [small...])
-        large, small = cast(
-            tuple[list[int], list[int]],
-            win32gui.ExtractIconEx(exe_path, 0, 1),  # pyright: ignore[reportUnknownMemberType]
-        )
-        hicon = 0
-        if large:
-            hicon = large[0]
-        elif small:
-            hicon = small[0]
-        if not hicon:
-            return ""
-
-        try:
-            img = hicon_to_image(hicon)
-            if img is None:
-                return ""
-            try:
-                img.save(cached_png, format="PNG")
-            except Exception:
-                return ""
-            return cached_png
-        finally:
-            try:
-                if large:
-                    for hi in large:
-                        win32gui.DestroyIcon(hi)  # pyright: ignore[reportUnknownMemberType]
-                if small:
-                    for hi in small:
-                        win32gui.DestroyIcon(hi)  # pyright: ignore[reportUnknownMemberType]
-            except Exception:
-                pass
-    except Exception:
-        return ""
 
 
 @dataclass(frozen=True)
@@ -366,8 +224,6 @@ class PortViewerProvider(BaseProvider):
             logging.debug("Port Viewer: process enumeration failed: %s", e)
             pid_to_name = {}
 
-        pid_to_icon: dict[int, str] = {}
-
         entries = _read_netstat()
         if not entries:
             return [
@@ -380,8 +236,6 @@ class PortViewerProvider(BaseProvider):
             ]
 
         results: list[ProviderResult] = []
-
-        default_icon = _get_default_app_icon_png()
 
         for e in entries:
             if proto != "all" and e.protocol != proto:
@@ -434,19 +288,12 @@ class PortViewerProvider(BaseProvider):
                     desc_bits.append(f"PID {pid}")
                 description = ", ".join(desc_bits)
 
-                icon_path = default_icon
-                if pid is not None and pid > 0:
-                    if pid not in pid_to_icon:
-                        exe_path = _get_process_exe_path(pid)
-                        pid_to_icon[pid] = _get_cached_exe_icon_png(exe_path) if exe_path else ""
-                    icon_path = pid_to_icon.get(pid, "") or default_icon
-
                 results.append(
                     ProviderResult(
                         title=title,
                         description=description,
-                        icon_path=icon_path,
-                        icon_char="",
+                        icon_char="" if pid else ICON_PORT,
+                        icon_source=ProcessIcon(pid) if pid else None,
                         provider=self.name,
                         action_data={"mode": "kill", "pid": pid, "proc": proc_display},
                     )
@@ -465,19 +312,12 @@ class PortViewerProvider(BaseProvider):
                 description = ", ".join(desc_bits)
                 copy_text = f"{e.protocol.upper()} {e.local} {e.state} PID {pid} {proc}".strip()
 
-                icon_path = default_icon
-                if pid is not None and pid > 0:
-                    if pid not in pid_to_icon:
-                        exe_path = _get_process_exe_path(pid)
-                        pid_to_icon[pid] = _get_cached_exe_icon_png(exe_path) if exe_path else ""
-                    icon_path = pid_to_icon.get(pid, "") or default_icon
-
                 results.append(
                     ProviderResult(
                         title=title,
                         description=description,
-                        icon_path=icon_path,
-                        icon_char="",
+                        icon_char="" if pid else ICON_PORT,
+                        icon_source=ProcessIcon(pid) if pid else None,
                         provider=self.name,
                         action_data={"mode": "copy", "text": copy_text},
                     )
