@@ -29,7 +29,6 @@ class ServerMonitor(BaseWidget):
         self._last_refresh_time: datetime | None = None
         self._server_status_data: list[dict[str, Any]] | None = None
         self._first_run = True
-        self._animations: list[QPropertyAnimation] = []
         self._icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png")
 
         # Construct container
@@ -377,16 +376,15 @@ class ServerMonitor(BaseWidget):
                     server_data["status"] == "Offline"
                 ):
                     # Add opacity effect for animation
-                    opacity_effect = QGraphicsOpacityEffect()
+                    opacity_effect = QGraphicsOpacityEffect(server_status)
                     server_status.setGraphicsEffect(opacity_effect)
-                    animation = QPropertyAnimation(opacity_effect, b"opacity")
+                    animation = QPropertyAnimation(opacity_effect, b"opacity", opacity_effect)
                     animation.setDuration(1000)
                     animation.setStartValue(1.0)
                     animation.setEndValue(0.6)
                     animation.setLoopCount(-1)
                     animation.setEasingCurve(QEasingCurve.Type.SineCurve)
                     animation.start()
-                    self._animations.append(animation)  # Store animation reference
 
                 row_widget.setProperty("class", f"row {class_name}")
                 _server_url = (
