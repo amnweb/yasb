@@ -48,6 +48,9 @@ from core.utils.win32.backdrop import enable_blur
 if TYPE_CHECKING:
     from core.utils.progress_bar import ProgressWidget
 
+# PySide6 does not export Qt's QWIDGETSIZE_MAX macro; same value as Qt ((1 << 24) - 1).
+QWIDGETSIZE_MAX = (1 << 24) - 1
+
 
 def percent_to_float(percent: str) -> float:
     return float(percent.strip("%")) / 100.0
