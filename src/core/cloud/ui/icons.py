@@ -160,7 +160,7 @@ def svg_icon(svg: str, size: int, color: str) -> QIcon:
         return QIcon()
 
     screen = QGuiApplication.primaryScreen()
-    dpr = float(screen.devicePixelRatio()) if screen is not None else 1.0
+    dpr = float(screen.devicePixelRatio())
 
     # The theme hands out Qt's #AARRGGBB, which SVG reads as invalid and paints black, so
     # split it into #RRGGBB plus an opacity.

@@ -31,7 +31,7 @@ class BarFrame(QFrame):
         self._click_floor.setGeometry(self.click_rect())
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._resize_click_floor()
 
@@ -65,7 +65,7 @@ class AdaptiveBarFrame(BarFrame):
         self._rail_height = max(0, int(value))
         self._update_shape(force=True)
 
-    railheight: int = Property(int, _get_railheight, _set_railheight)
+    railheight = Property(int, _get_railheight, _set_railheight)
 
     def _get_islandradius(self) -> int:
         return self._island_radius
@@ -74,7 +74,7 @@ class AdaptiveBarFrame(BarFrame):
         self._island_radius = max(0, int(value))
         self._update_shape(force=True)
 
-    islandradius: int = Property(int, _get_islandradius, _set_islandradius)
+    islandradius = Property(int, _get_islandradius, _set_islandradius)
 
     def _get_grouppadding(self) -> int:
         return self._group_padding
@@ -83,7 +83,7 @@ class AdaptiveBarFrame(BarFrame):
         self._group_padding = max(0, int(value))
         self._update_shape(force=True)
 
-    grouppadding: int = Property(int, _get_grouppadding, _set_grouppadding)
+    grouppadding = Property(int, _get_grouppadding, _set_grouppadding)
 
     def _get_islands(self) -> bool:
         return self._islands_enabled
@@ -94,7 +94,7 @@ class AdaptiveBarFrame(BarFrame):
         self._islands_enabled = value
         self._update_shape(force=True)
 
-    islands: bool = Property(bool, _get_islands, _set_islands)
+    islands = Property(bool, _get_islands, _set_islands)
 
     def _get_edgeradius(self) -> int:
         return self._edge_radius
@@ -107,12 +107,12 @@ class AdaptiveBarFrame(BarFrame):
         # A translucent window shows its old picture at the new spot until it repaints, and during
         # a stylesheet reload that is only once every widget is restyled, so move it afterwards
         window = self.window()
-        if window is not None and window.isVisible():
+        if window.isVisible():
             QTimer.singleShot(0, self._apply_edge_radius)
         else:
             self._apply_edge_radius()
 
-    edgeradius: int = Property(int, _get_edgeradius, _set_edgeradius)
+    edgeradius = Property(int, _get_edgeradius, _set_edgeradius)
 
     def _apply_edge_radius(self) -> None:
         self._reserve_edge_space()
@@ -121,7 +121,7 @@ class AdaptiveBarFrame(BarFrame):
         if callable(position_bar):
             position_bar()
         self._update_shape(force=True)
-        if window is not None and window.isVisible():
+        if window.isVisible():
             window.repaint()
 
     def _get_borderwidth(self) -> int:
@@ -131,7 +131,7 @@ class AdaptiveBarFrame(BarFrame):
         self._border_width = max(0, int(value))
         self.update()
 
-    borderwidth: int = Property(int, _get_borderwidth, _set_borderwidth)
+    borderwidth = Property(int, _get_borderwidth, _set_borderwidth)
 
     def _get_bordercolor(self) -> QColor:
         return self._border_color
@@ -140,7 +140,7 @@ class AdaptiveBarFrame(BarFrame):
         self._border_color = QColor(value)
         self.update()
 
-    bordercolor: QColor = Property(QColor, _get_bordercolor, _set_bordercolor)
+    bordercolor = Property(QColor, _get_bordercolor, _set_bordercolor)
 
     @property
     def edge_overhang(self) -> int:
@@ -167,7 +167,7 @@ class AdaptiveBarFrame(BarFrame):
         return QRect(0, top, self.width(), self.height() - overhang)
 
     @override
-    def setLayout(self, a0: QLayout | None) -> None:
+    def setLayout(self, a0: QLayout) -> None:
         super().setLayout(a0)
         self._reserve_edge_space()
 
@@ -183,11 +183,9 @@ class AdaptiveBarFrame(BarFrame):
             layout.setContentsMargins(0, above, 0, below)
 
     @override
-    def event(self, e: QEvent | None) -> bool:
+    def event(self, e: QEvent) -> bool:
         # super() first, so the layout has run before we measure it
         handled = super().event(e)
-        if e is None:
-            return handled
         kind = e.type()
 
         if kind == QEvent.Type.LayoutRequest:
@@ -198,12 +196,12 @@ class AdaptiveBarFrame(BarFrame):
         return handled
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._update_shape(force=True)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         """Cut the gaps out of the background Qt has already painted across the frame."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)

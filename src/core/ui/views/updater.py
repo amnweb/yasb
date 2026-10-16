@@ -207,7 +207,7 @@ class _RemoteImageTextBrowser(QTextBrowser):
             QTimer.singleShot(0, self.images_loaded.emit)
             return
         viewport = self.viewport()
-        max_width = max((viewport.width() if viewport is not None else 0) - 20, 200)
+        max_width = max(viewport.width() - 20, 200)
         self._image_worker = _ImageLoaderWorker(urls, max_width, parent=self)
         self._image_worker.finished.connect(self._on_images_loaded)
         self._image_worker.start()
@@ -215,9 +215,8 @@ class _RemoteImageTextBrowser(QTextBrowser):
     def _on_images_loaded(self, images: dict[str, QImage]) -> None:
         self._image_cache.update(images)
         doc = self.document()
-        if doc is not None:
-            for url_str, img in images.items():
-                doc.addResource(2, QUrl(url_str), img)  # 2 = ImageResource
+        for url_str, img in images.items():
+            doc.addResource(2, QUrl(url_str), img)  # 2 = ImageResource
         self._apply_html()
         self._image_worker = None
         self.images_loaded.emit()
@@ -226,13 +225,12 @@ class _RemoteImageTextBrowser(QTextBrowser):
         """Set the pending HTML content into the document."""
         if self._pending_html is not None:
             doc = self.document()
-            if doc is not None:
-                doc.setHtml(self._pending_html)
+            doc.setHtml(self._pending_html)
             self._pending_html = None
 
     @override
-    def loadResource(self, type: int, name: QUrl) -> Any:  # noqa: N802
-        if type == 2 and name.scheme() in ("http", "https"):
+    def loadResource(self, type: int, name: QUrl | str) -> Any:  # noqa: N802
+        if type == 2 and isinstance(name, QUrl) and name.scheme() in ("http", "https"):
             cached = self._image_cache.get(name.toString())
             if cached is not None:
                 return cached
@@ -293,66 +291,64 @@ class UpdateDialog(ViewBase, QDialog):
             f" selection-background-color: {selection_bg}; }}"
         )
         changelog_doc = self.changelog_view.document()
-        if changelog_doc is not None:
-            changelog_doc.setDefaultStyleSheet(
-                f"""
-            body, p, li {{
-                font-size: 10pt;
-                font-family: 'Segoe UI';
-                font-weight: 600;
-                color: {text_color};
-            }}
-            h2 {{
-                margin-top: 32px;
-                margin-bottom: 8px;
-                color: {text_color};
-            }}
-            h3 {{
-                margin-top: 32px;
-                margin-bottom: 8px;
-                color: {text_color};
-            }}
-            a {{
-                color: {link_color};
-                text-decoration: none;
-            }}
-            ul, ol {{
-                margin-left: 0px;
-                padding-left: 0px;
-            }}
-            li {{
-                margin-left: 0px;
-                padding-left: 0px;
-                margin-bottom: 6px;
-                margin-top: 6px;
-            }}
-            li > p {{
-                margin-left: 0px;
-                padding-left: 0px;
-            }}
-            code {{
-                background-color: #000000;
-                color: #ffffff;
-                padding: 2px 4px;
-                font-family: 'Consolas', monospace;
-                font-weight: 600;
-            }}
-            pre {{
-                background-color: #000000;
-                color: #ffffff;
-                padding: 8px;
-                font-family: 'Consolas', monospace;
-                font-weight: 600;
-                white-space: pre-wrap;
-            }}
-            img {{
-                max-width: 100%;
-                height: auto;
-            }}
-            """
-            )
-        if changelog_doc is not None:
-            changelog_doc.setIndentWidth(20)
+        changelog_doc.setDefaultStyleSheet(
+            f"""
+        body, p, li {{
+            font-size: 10pt;
+            font-family: 'Segoe UI';
+            font-weight: 600;
+            color: {text_color};
+        }}
+        h2 {{
+            margin-top: 32px;
+            margin-bottom: 8px;
+            color: {text_color};
+        }}
+        h3 {{
+            margin-top: 32px;
+            margin-bottom: 8px;
+            color: {text_color};
+        }}
+        a {{
+            color: {link_color};
+            text-decoration: none;
+        }}
+        ul, ol {{
+            margin-left: 0px;
+            padding-left: 0px;
+        }}
+        li {{
+            margin-left: 0px;
+            padding-left: 0px;
+            margin-bottom: 6px;
+            margin-top: 6px;
+        }}
+        li > p {{
+            margin-left: 0px;
+            padding-left: 0px;
+        }}
+        code {{
+            background-color: #000000;
+            color: #ffffff;
+            padding: 2px 4px;
+            font-family: 'Consolas', monospace;
+            font-weight: 600;
+        }}
+        pre {{
+            background-color: #000000;
+            color: #ffffff;
+            padding: 8px;
+            font-family: 'Consolas', monospace;
+            font-weight: 600;
+            white-space: pre-wrap;
+        }}
+        img {{
+            max-width: 100%;
+            height: auto;
+        }}
+        """
+        )
+        changelog_doc.setIndentWidth(20)
         self.changelog_view.setOpenExternalLinks(True)
         self.changelog_view.setMinimumHeight(260)
         self.changelog_view.setContentsMargins(6, 6, 6, 6)
@@ -588,7 +584,7 @@ class UpdateDialog(ViewBase, QDialog):
         return worker
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         self._cancel_active_download()
         super().closeEvent(a0)
 

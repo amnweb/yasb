@@ -1008,9 +1008,7 @@ class MediaWidget(BaseWidget):
         except Exception as e:
             logger.error("Error executing code: %s", e)
 
-    def wheelEvent(self, a0: QWheelEvent | None):
-        if a0 is None:
-            return
+    def wheelEvent(self, a0: QWheelEvent):
         if a0.angleDelta().y() > 0:
             self.media.switch_current_session(+1)  # Next
         elif a0.angleDelta().y() < 0:
@@ -1234,13 +1232,10 @@ class ClickableLabel(QLabel):
         self.parent_widget: MediaWidget | None = parent
         self.data: Callable[..., Any] | None = None
 
-    def mousePressEvent(self, ev: QMouseEvent | None):
-        if ev is not None:
-            ev.accept()
+    def mousePressEvent(self, ev: QMouseEvent):
+        ev.accept()
 
-    def mouseReleaseEvent(self, ev: QMouseEvent | None):
-        if ev is None:
-            return
+    def mouseReleaseEvent(self, ev: QMouseEvent):
         classes = (self.property("class") or "").split()
         if "disabled" in classes:
             ev.accept()
@@ -1257,7 +1252,7 @@ class RoundedClickableLabel(ClickableLabel):
         super().__init__(parent)
         self._corner_radius = max(0, radius)
 
-    def paintEvent(self, a0: QPaintEvent | None):
+    def paintEvent(self, a0: QPaintEvent):
         pix = self.pixmap()
         if pix.isNull() or self._corner_radius <= 0:
             super().paintEvent(a0)

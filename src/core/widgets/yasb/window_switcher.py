@@ -75,7 +75,7 @@ class WindowSwitcherWidget(BaseWidget):
         self._task_manager: TaskbarWindowManager | None = None
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         super().showEvent(a0)
         # connect_taskbar() calls winId() on self.window(). Before the widget is in the bar,
         # that is the widget itself, and Qt would make it and its siblings native windows.
@@ -163,6 +163,7 @@ class WindowSwitcherWidget(BaseWidget):
     def _build_overlay_popup(self, taskbar_windows: list[ApplicationWindow]):
         icon_size = self.config.icon_size
 
+        assert self._popup is not None
         main_layout = QVBoxLayout(self._popup)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -182,8 +183,7 @@ class WindowSwitcherWidget(BaseWidget):
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll_area.setObjectName("ws_scroll")
         viewport = self._scroll_area.viewport()
-        if viewport is not None:
-            viewport.setObjectName("ws_viewport")
+        viewport.setObjectName("ws_viewport")
 
         container = QWidget()
         container.setObjectName("ws_container")
@@ -340,15 +340,12 @@ class WindowSwitcherWidget(BaseWidget):
             )
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if a1 is None:
-            return super().eventFilter(a0, a1)
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
         if isinstance(a1, QWheelEvent):
             if self._scroll_area and self.buttons_list:
                 step = self._btn_w * (-1 if a1.angleDelta().y() < 0 else 1)
                 bar = self._scroll_area.horizontalScrollBar()
-                if bar is not None:
-                    bar.setValue(bar.value() - step)
+                bar.setValue(bar.value() - step)
             return True
 
         if isinstance(a0, _SwitcherItem) and a0 in self.buttons_list:

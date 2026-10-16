@@ -24,11 +24,11 @@ except ImportError:
 
 class ExtPopupWidget(PopupWidget):
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
         parent = self.parent()
         # When menu is locked, block usually hiding events from komorebi
         if isinstance(parent, KomorebiControlWidget) and parent.lock_menu:
-            if a1 is not None and a1.type() == QEvent.Type.Close:
+            if a1.type() == QEvent.Type.Close:
                 return True
         return super().eventFilter(a0, a1)
 
@@ -101,7 +101,7 @@ class KomorebiControlWidget(BaseWidget):
             # Update the version label in the currently open dialog
             for child in self.dialog.findChildren(QLabel):
                 if child.property("class") == "text version":
-                    child.setText(self._version_text)
+                    child.setText(self._version_text or "")
                     break
         # Also update stored label if we created it on the dialog
         if hasattr(self, "_version_label") and self.config.show_version:

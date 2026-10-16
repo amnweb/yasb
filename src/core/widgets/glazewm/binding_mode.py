@@ -39,7 +39,7 @@ class GlazewmBindingModeWidget(BaseWidget):
         )
         self.glazewm_client.glazewm_connection_status.connect(self._update_connection_status)
         self.glazewm_client.binding_mode_changed.connect(self._update_binding_mode)
-        self.glazewm_client.connect()
+        self.glazewm_client.connect_websocket()
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("disable_binding_mode", self._disable_binding_mode)

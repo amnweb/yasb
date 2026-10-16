@@ -66,19 +66,19 @@ class _FocusLineEdit(QLineEdit):
         self.update()
 
     @override
-    def focusInEvent(self, a0: QFocusEvent | None) -> None:
+    def focusInEvent(self, a0: QFocusEvent) -> None:
         super().focusInEvent(a0)
         self._focused = True
         self.update()
 
     @override
-    def focusOutEvent(self, a0: QFocusEvent | None) -> None:
+    def focusOutEvent(self, a0: QFocusEvent) -> None:
         super().focusOutEvent(a0)
         self._focused = False
         self.update()
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         super().paintEvent(a0)
         if not self._focused:
             return
@@ -285,7 +285,7 @@ class InputDialog(QWidget):
         self._slide_offset_val = value
         self._position_center(value)
 
-    slide_offset: int = Property(int, _get_slide_offset, _set_slide_offset)
+    slide_offset = Property(int, _get_slide_offset, _set_slide_offset)
 
     def _position_center(self, y_offset: int = 0) -> None:
         if self._host is None:
@@ -294,9 +294,9 @@ class InputDialog(QWidget):
         self.move(centre.x() - self.width() // 2, centre.y() - self.height() // 2 + y_offset)
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
         host = self._host
-        if host is not None and a0 is host and a1 is not None and a1.type() in (QEvent.Type.Resize, QEvent.Type.Move):
+        if host is not None and a0 is host and a1.type() in (QEvent.Type.Resize, QEvent.Type.Move):
             if self._smoke and a1.type() == QEvent.Type.Resize:
                 self._smoke.setGeometry(host.rect())
             self._position_center(0)
@@ -319,11 +319,12 @@ class InputDialog(QWidget):
         slide.setEasingCurve(QEasingCurve.Type.OutCubic)
         group.addAnimation(slide)
 
-        smoke = QPropertyAnimation(self._smoke, b"smoke_opacity")
-        smoke.setDuration(_OPEN_MS)
-        smoke.setStartValue(0.0)
-        smoke.setEndValue(1.0)
-        group.addAnimation(smoke)
+        if self._smoke is not None:
+            smoke = QPropertyAnimation(self._smoke, b"smoke_opacity")
+            smoke.setDuration(_OPEN_MS)
+            smoke.setStartValue(0.0)
+            smoke.setEndValue(1.0)
+            group.addAnimation(smoke)
 
         self._anim = group
         group.start()
@@ -337,11 +338,12 @@ class InputDialog(QWidget):
         opacity.setEndValue(0.0)
         group.addAnimation(opacity)
 
-        smoke = QPropertyAnimation(self._smoke, b"smoke_opacity")
-        smoke.setDuration(_CLOSE_MS)
-        smoke.setStartValue(1.0)
-        smoke.setEndValue(0.0)
-        group.addAnimation(smoke)
+        if self._smoke is not None:
+            smoke = QPropertyAnimation(self._smoke, b"smoke_opacity")
+            smoke.setDuration(_CLOSE_MS)
+            smoke.setStartValue(1.0)
+            smoke.setEndValue(0.0)
+            group.addAnimation(smoke)
 
         group.finished.connect(self._on_close_finished)
         self._anim = group
@@ -366,9 +368,7 @@ class InputDialog(QWidget):
         self.hide_dialog()
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is None:
-            return
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
         if a0.key() == Qt.Key.Key_Escape:
             self._on_close()
         elif a0.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):

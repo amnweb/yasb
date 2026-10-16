@@ -374,8 +374,6 @@ def show_context_menu(taskbar_widget: TaskbarWidget, hwnd: int, pos: QPoint) -> 
         menu_size = menu.sizeHint()
 
         bar_widget = taskbar_widget.window()
-        if bar_widget is None:
-            return None
         bar_top_left = bar_widget.mapToGlobal(bar_widget.rect().topLeft())
         bar_height = bar_widget.height()
 

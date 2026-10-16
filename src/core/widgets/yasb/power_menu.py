@@ -79,17 +79,16 @@ class OverlayWidget(AnimatedWidget):
         self.setGeometry(screen_geometry)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         opt = QStyleOption()
         opt.initFrom(self)
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(0, 0, 0, 1))
         style = self.style()
-        if style is not None:
-            style.drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
+        style.drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         super().showEvent(a0)
         if self._blur_background_enabled:
             enable_blur(
@@ -128,7 +127,7 @@ class PopupActionFrame(QFrame):
         self._action = action
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         self._action()
 
 
@@ -323,8 +322,8 @@ class PowerMenuWidget(BaseWidget):
         os.startfile("ms-settings:accounts")
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if isinstance(a0, PopupActionFrame) and a1 is not None:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
+        if isinstance(a0, PopupActionFrame):
             if a1.type() == QtCore.QEvent.Type.Enter:
                 base = a0.property("class")
                 if "hover" not in base:
@@ -495,8 +494,6 @@ class MainWindow(AnimatedWidget):
         screen = QApplication.screenAt(parent.mapToGlobal(QtCore.QPoint(0, 0))) if parent is not None else None
         if screen is None:
             screen = QApplication.primaryScreen()
-        if screen is None:
-            return
         screen_geometry = screen.geometry()
         window_geometry = self.geometry()
         x = (screen_geometry.width() - window_geometry.width()) // 2 + screen_geometry.x()
@@ -505,13 +502,12 @@ class MainWindow(AnimatedWidget):
         self.overlay.update_geometry(screen_geometry)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         opt = QStyleOption()
         opt.initFrom(self)
         painter = QPainter(self)
         style = self.style()
-        if style is not None:
-            style.drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
+        style.drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
 
     def _get_base_class(self, source: QWidget) -> str:
         """Get button class without hover state."""
@@ -527,8 +523,8 @@ class MainWindow(AnimatedWidget):
             refresh_widget_style(child)
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if isinstance(a0, QPushButton) and a1 is not None:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
+        if isinstance(a0, QPushButton):
             if a1.type() == QtCore.QEvent.Type.Enter:
                 self._apply_hover(a0, True)
             elif a1.type() == QtCore.QEvent.Type.Leave:
@@ -536,9 +532,7 @@ class MainWindow(AnimatedWidget):
         return super().eventFilter(a0, a1)
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is None:
-            return
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
         key = a0.key()
         if key == Qt.Key.Key_Escape:
             self.cancel_action()
@@ -631,7 +625,7 @@ class MainWindow(AnimatedWidget):
         self.setFocus()
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         super().showEvent(a0)
         self.setFocus()
         self.current_focus_index = -1

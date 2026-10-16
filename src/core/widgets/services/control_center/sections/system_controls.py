@@ -71,9 +71,9 @@ class SystemControlsSectionWidget(QFrame):
         layout.addWidget(self._profile_image_btn)
 
     @override
-    def event(self, e: QEvent | None) -> bool:
+    def event(self, e: QEvent) -> bool:
         # Built before the popup has a screen, so the scale is only known once it is shown
-        if e is not None and e.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
+        if e.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
             self._update_profile_image()
         return super().event(e)
 

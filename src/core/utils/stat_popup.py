@@ -50,8 +50,8 @@ class PinnablePopup(PopupWidget):
         )
 
     @override
-    def event(self, a0: QEvent | None) -> bool:
-        if a0 is not None and a0.type() == QEvent.Type.WindowDeactivate:
+    def event(self, a0: QEvent) -> bool:
+        if a0.type() == QEvent.Type.WindowDeactivate:
             if self.is_pinned:
                 return True
             self.hide_animated()
@@ -59,45 +59,39 @@ class PinnablePopup(PopupWidget):
         return super().event(a0)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and self.is_pinned and a0.button() == Qt.MouseButton.LeftButton:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if self.is_pinned and a0.button() == Qt.MouseButton.LeftButton:
             self._drag_pos = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
             a0.accept()
         else:
             super().mousePressEvent(a0)
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        if (
-            a0 is not None
-            and self.is_pinned
-            and self._drag_pos is not None
-            and a0.buttons() & Qt.MouseButton.LeftButton
-        ):
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
+        if self.is_pinned and self._drag_pos is not None and a0.buttons() & Qt.MouseButton.LeftButton:
             self.move(a0.globalPosition().toPoint() - self._drag_pos)
             a0.accept()
         else:
             super().mouseMoveEvent(a0)
 
     @override
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and self.is_pinned and a0.button() == Qt.MouseButton.LeftButton:
+    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
+        if self.is_pinned and a0.button() == Qt.MouseButton.LeftButton:
             self._drag_pos = None
             a0.accept()
         else:
             super().mouseReleaseEvent(a0)
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
         if self.is_pinned:
             return False
         return super().eventFilter(a0, a1)
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         if self.is_pinned:
-            if a0 is not None:
-                a0.accept()
+            a0.accept()
             return
         super().closeEvent(a0)
 
@@ -131,7 +125,7 @@ class GraphWidget(QFrame):
         self.update()
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._rebuild_paths()
 
@@ -190,7 +184,7 @@ class GraphWidget(QFrame):
         return path
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         super().paintEvent(a0)
         if self._line_path is None or self._fill_path is None:
             return

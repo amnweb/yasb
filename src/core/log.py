@@ -65,17 +65,17 @@ def _suppress_third_party_warnings():
 
 # Suppress Qt internal messages (e.g. QObject::disconnect wildcard warnings from QWebSocket)
 _QT_SUPPRESSED_PREFIXES = ("QObject::disconnect", "Could not create pixmap from")
-_original_qt_handler: Callable[[QtMsgType, QMessageLogContext, str | None], None] | None = None
+_original_qt_handler: Callable[[QtMsgType, QMessageLogContext, str], object] | None = None
 
 
 def _qt_message_handler(msg_type: QtMsgType, context: QMessageLogContext, message: str | None) -> None:
     if message and message.startswith(_QT_SUPPRESSED_PREFIXES):
         return
     if _original_qt_handler:
-        _original_qt_handler(msg_type, context, message)
+        _original_qt_handler(msg_type, context, message or "")
     else:
         # qInstallMessageHandler returns None when replacing the default C++ handler.
-        formatted = qFormatLogMessage(msg_type, context, message)
+        formatted = qFormatLogMessage(msg_type, context, message or "")
         if sys.stderr is not None:
             sys.stderr.write(formatted + "\n")
 

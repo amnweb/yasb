@@ -48,7 +48,11 @@ class WeatherWidget(BaseWidget):
             self, QUrl(self._api_url), config.update_interval * 1000
         )
         self._weather_fetcher.finished.connect(self.process_weather_data)
-        self._weather_fetcher.finished.connect(lambda *_: self._update_label(True))
+
+        def _on_weather_finished() -> None:
+            self._update_label(True)
+
+        self._weather_fetcher.finished.connect(_on_weather_finished)
         self._icon_fetcher = IconFetcher.get_instance(self)
 
         # Retry timer

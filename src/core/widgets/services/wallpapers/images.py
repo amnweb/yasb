@@ -187,5 +187,4 @@ class ImageLoader(QRunnable):
         self.signals.loaded.emit(self.image_path, pixmap, self.index)
         if cache_key and not image.isNull():
             pool = QThreadPool.globalInstance()
-            if pool is not None:
-                pool.start(partial(thumbnails.save, cache_key, thumbnail))
+            pool.start(partial(thumbnails.save, cache_key, thumbnail))

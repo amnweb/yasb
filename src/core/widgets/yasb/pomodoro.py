@@ -557,7 +557,7 @@ class CircularProgressWidget(QWidget):
         self._value = value
         self.update()
 
-    animationValue: float = Property(float, getAnimationValue, setAnimationValue)
+    animationValue = Property(float, getAnimationValue, setAnimationValue)
 
     def setMaximum(self, maximum: int) -> None:
         self._maximum = maximum
@@ -586,7 +586,7 @@ class CircularProgressWidget(QWidget):
         self.update()
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 

@@ -409,8 +409,6 @@ class AppDialog(QDialog):
     def lineedit_context_menu(self, lineedit: QLineEdit):
         def show_custom_menu(point: QPoint) -> None:
             menu = lineedit.createStandardContextMenu()
-            if menu is None:
-                return
             apply_qmenu_style(menu)
             menu.setProperty("class", "context-menu")
             for action in menu.actions():
@@ -541,17 +539,15 @@ class SmoothScrollArea(QScrollArea):
         self.animation_duration = 400
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is not None and a0.key() in [Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Up, Qt.Key.Key_Down]:
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
+        if a0.key() in [Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Up, Qt.Key.Key_Down]:
             a0.ignore()
         else:
             super().keyPressEvent(a0)
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
+    def wheelEvent(self, a0: QWheelEvent) -> None:
         scrollbar = self.verticalScrollBar()
-        if a0 is None or scrollbar is None:
-            return
         delta = a0.angleDelta().y()
         scroll_amount = -delta // 8 * self.scroll_speed // 15
         current_value = scrollbar.value()
@@ -596,9 +592,7 @@ class TransparentOverlay(QWidget):
         self.move(x, y)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         if a0.type() == QEvent.Type.MouseButtonPress:
             self.overlay_clicked.emit()
         a0.accept()
@@ -631,7 +625,7 @@ class AppIconFrame(QFrame):
         self._on_drag_leave = on_drag_leave
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         super().paintEvent(a0)
         if self._drop_highlight:
             painter = QPainter(self)
@@ -651,17 +645,15 @@ class AppIconFrame(QFrame):
             painter.drawRoundedRect(rect, radius, radius)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         if a0.button() == Qt.MouseButton.LeftButton:
             self._drag_start_position = a0.pos()
         elif a0.button() == Qt.MouseButton.RightButton:
             self._on_context_menu(a0.pos(), self.app_data, self, a0)
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None or self._drag_start_position is None:
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
+        if self._drag_start_position is None:
             return
         if a0.buttons() & Qt.MouseButton.LeftButton:
             if (a0.pos() - self._drag_start_position).manhattanLength() >= QApplication.startDragDistance():
@@ -676,23 +668,21 @@ class AppIconFrame(QFrame):
                 drag.exec(Qt.DropAction.MoveAction)
 
     @override
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None or self._drag_start_position is None:
+    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
+        if self._drag_start_position is None:
             return
         if a0.button() == Qt.MouseButton.LeftButton:
             if (a0.pos() - self._drag_start_position).manhattanLength() < QApplication.startDragDistance():
                 self._on_launch(self.app_data)
 
     @override
-    def dragEnterEvent(self, a0: QDragEnterEvent | None) -> None:
-        if a0 is None:
-            return
+    def dragEnterEvent(self, a0: QDragEnterEvent) -> None:
         mime_data = a0.mimeData()
-        if mime_data is not None and mime_data.hasUrls():
+        if mime_data.hasUrls():
             self._on_files_drag_enter()
             a0.acceptProposedAction()
 
-        elif mime_data is not None and mime_data.hasText():
+        elif mime_data.hasText():
             a0.acceptProposedAction()
             self._drop_highlight = True
             self.setProperty("isDropTarget", True)
@@ -707,7 +697,7 @@ class AppIconFrame(QFrame):
             a0.ignore()
 
     @override
-    def dragLeaveEvent(self, a0: QDragLeaveEvent | None) -> None:
+    def dragLeaveEvent(self, a0: QDragLeaveEvent) -> None:
         self._on_drag_leave()
         self._drop_highlight = False
         self.setProperty("isDropTarget", False)
@@ -715,15 +705,13 @@ class AppIconFrame(QFrame):
         self.update()
 
     @override
-    def dropEvent(self, a0: QDropEvent | None) -> None:
+    def dropEvent(self, a0: QDropEvent) -> None:
         self._drop_highlight = False
         self.setProperty("isDropTarget", False)
         refresh_widget_style(self)
         self.update()
-        if a0 is None:
-            return
         mime_data = a0.mimeData()
-        source_id = mime_data.text() if mime_data is not None else ""
+        source_id = mime_data.text()
         target_id = str(self.app_data.get("id", ""))
         if source_id != target_id:
             self._on_reorder(source_id, target_id)
@@ -747,13 +735,13 @@ class GroupIconFrame(QFrame):
         self._on_context_menu = on_context_menu
 
     @override
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton:
             self._on_open(self.group_name, self.apps_in_group)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and a0.button() == Qt.MouseButton.RightButton:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.RightButton:
             self._on_context_menu(a0.pos(), self.group_name, self, a0)
 
 
@@ -796,39 +784,32 @@ class LaunchpadPopup(QWidget):
         return False
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None:
-            self._on_mouse_press(self, a0)
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        self._on_mouse_press(self, a0)
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is not None:
-            self._on_key_press(a0)
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
+        self._on_key_press(a0)
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
-        if a0 is not None:
-            self._on_show(a0)
+    def showEvent(self, a0: QShowEvent) -> None:
+        self._on_show(a0)
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
-        if a0 is not None:
-            self._on_close(a0)
+    def closeEvent(self, a0: QCloseEvent) -> None:
+        self._on_close(a0)
 
     @override
-    def dropEvent(self, a0: QDropEvent | None) -> None:
-        if a0 is not None:
-            self._on_drop(a0)
+    def dropEvent(self, a0: QDropEvent) -> None:
+        self._on_drop(a0)
 
     @override
-    def dragEnterEvent(self, a0: QDragEnterEvent | None) -> None:
-        if a0 is not None:
-            self._on_drag_enter(a0)
+    def dragEnterEvent(self, a0: QDragEnterEvent) -> None:
+        self._on_drag_enter(a0)
 
     @override
-    def dragLeaveEvent(self, a0: QDragLeaveEvent | None) -> None:
-        if a0 is not None:
-            self._on_drag_leave(a0)
+    def dragLeaveEvent(self, a0: QDragLeaveEvent) -> None:
+        self._on_drag_leave(a0)
 
 
 class LaunchpadWidget(BaseWidget):
@@ -880,8 +861,7 @@ class LaunchpadWidget(BaseWidget):
 
     def _show_launchpad(self):
         screen = self.screen()
-        if screen is not None:
-            self._dpr = screen.devicePixelRatio()
+        self._dpr = screen.devicePixelRatio()
 
         # Save current foreground window before showing popup
         self._previous_hwnd = get_foreground_hwnd()
@@ -1412,7 +1392,7 @@ class LaunchpadWidget(BaseWidget):
 
     def _popup_drag_enter_event(self, event: QDragEnterEvent):
         mime_data = event.mimeData()
-        if mime_data is not None and mime_data.hasUrls():
+        if mime_data.hasUrls():
             urls = mime_data.urls()
             self._num_drag_items = len(urls)
             self._show_drop_overlay()
@@ -1427,7 +1407,7 @@ class LaunchpadWidget(BaseWidget):
     def _popup_drop_event(self, event: QDropEvent):
         self._hide_drop_overlay()
         mime_data = event.mimeData()
-        if mime_data is not None and mime_data.hasUrls():
+        if mime_data.hasUrls():
             file_paths = [url.toLocalFile() for url in mime_data.urls()]
             for file_path in file_paths:
                 self._handle_file_drop(file_path, refresh_grid=False)
@@ -1522,8 +1502,6 @@ class LaunchpadWidget(BaseWidget):
         icon_rect = icon.geometry()
         viewport = scroll_area.viewport()
         scrollbar = scroll_area.verticalScrollBar()
-        if viewport is None or scrollbar is None:
-            return
         scroll_rect = viewport.rect()
         current_scroll = scrollbar.value()
         icon_top = icon_rect.top()
@@ -2007,7 +1985,7 @@ class LaunchpadWidget(BaseWidget):
         if popup is None:
             return
         scrollbar = popup.scroll_area.verticalScrollBar()
-        if scrollbar is not None and scrollbar.isVisible():
+        if scrollbar.isVisible():
             scrollbar_width = 4
         if not self._app_icons:
             self._grid_columns = 1

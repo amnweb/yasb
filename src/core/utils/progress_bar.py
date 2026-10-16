@@ -55,7 +55,7 @@ class ProgressBar(QFrame):
             self._update_angles()
         self.update()
 
-    animatedValue: float = Property(float, _get_animated_value, _set_animated_value)
+    animatedValue = Property(float, _get_animated_value, _set_animated_value)
 
     def _update_angles(self):
         """Update the angle calculations based on current value."""
@@ -91,7 +91,7 @@ class ProgressBar(QFrame):
             return QColor(color)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         """Paint the progress bar."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)

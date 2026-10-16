@@ -632,10 +632,9 @@ class SystrayWidget(BaseWidget):
     def get_screen_id(self):
         """Get the screen id for the current systray widget instance"""
         screen = self.screen()
-        if screen is not None:
-            raw_id = f"{screen.manufacturer()}{screen.name()}{screen.serialNumber()}".upper()
-            self.screen_id = re.sub(r"\W+", "", raw_id)
-            return self.screen_id
+        raw_id = f"{screen.manufacturer()}{screen.name()}{screen.serialNumber()}".upper()
+        self.screen_id = re.sub(r"\W+", "", raw_id)
+        return self.screen_id
 
     def get_widgets_from_layout(self, layout: QLayout) -> list[IconWidget]:
         """Get all the widgets from a layout."""

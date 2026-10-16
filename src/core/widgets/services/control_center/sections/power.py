@@ -24,12 +24,12 @@ class PowerPlanButton(QFrame):
         super().__init__(parent)
         self._pressed = False
 
-    def mousePressEvent(self, a0: QMouseEvent | None):
+    def mousePressEvent(self, a0: QMouseEvent):
         if a0 and a0.button() == Qt.MouseButton.LeftButton:
             a0.accept()
             self._pressed = True
 
-    def mouseReleaseEvent(self, a0: QMouseEvent | None):
+    def mouseReleaseEvent(self, a0: QMouseEvent):
         if a0 and a0.button() == Qt.MouseButton.LeftButton:
             a0.accept()
             if self._pressed and self.rect().contains(a0.position().toPoint()):

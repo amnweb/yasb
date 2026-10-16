@@ -65,7 +65,7 @@ class StepIndicator(QWidget):
         self._widths[self._current] = v
         self.update()
 
-    activeWidth: float = Property(float, _get_activeWidth, _set_activeWidth)
+    activeWidth = Property(float, _get_activeWidth, _set_activeWidth)
 
     def _get_prevWidth(self) -> float:
         return self._widths[self._prev] if hasattr(self, "_prev") else _DASH_INACTIVE_W
@@ -75,7 +75,7 @@ class StepIndicator(QWidget):
             self._widths[self._prev] = v
             self.update()
 
-    prevWidth: float = Property(float, _get_prevWidth, _set_prevWidth)
+    prevWidth = Property(float, _get_prevWidth, _set_prevWidth)
 
     def _get_activeColor(self) -> QColor:
         return self._colors[self._current]
@@ -84,7 +84,7 @@ class StepIndicator(QWidget):
         self._colors[self._current] = QColor(c)
         self.update()
 
-    activeColor: QColor = Property(QColor, _get_activeColor, _set_activeColor)
+    activeColor = Property(QColor, _get_activeColor, _set_activeColor)
 
     def _get_prevColor(self) -> QColor:
         return self._colors[self._prev] if hasattr(self, "_prev") else QColor(self._color_inactive)
@@ -94,7 +94,7 @@ class StepIndicator(QWidget):
             self._colors[self._prev] = QColor(c)
             self.update()
 
-    prevColor: QColor = Property(QColor, _get_prevColor, _set_prevColor)
+    prevColor = Property(QColor, _get_prevColor, _set_prevColor)
 
     def set_current(self, index: int) -> None:
         index = max(0, min(index, self._count - 1))
@@ -141,7 +141,7 @@ class StepIndicator(QWidget):
         self._anim_group = group  # prevent GC
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setPen(Qt.PenStyle.NoPen)

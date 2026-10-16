@@ -203,7 +203,7 @@ class Button(QPushButton):
             return
         self._animate_to(self._interaction_state(self.underMouse()))
 
-    def setIcon(self, icon: QIcon) -> None:
+    def setIcon(self, icon: QIcon | QPixmap) -> None:
         super().setIcon(icon)
         self.updateGeometry()
         self.update()
@@ -247,7 +247,7 @@ class Button(QPushButton):
         if shiboken6.isValid(self):
             self.update()
 
-    bg: QColor = Property(QColor, _get_bg, _set_bg)
+    bg = Property(QColor, _get_bg, _set_bg)
 
     def _get_fg(self) -> QColor:
         return self._fg
@@ -257,7 +257,7 @@ class Button(QPushButton):
         if shiboken6.isValid(self):
             self.update()
 
-    fg: QColor = Property(QColor, _get_fg, _set_fg)
+    fg = Property(QColor, _get_fg, _set_fg)
 
     def _get_border(self) -> QColor:
         return self._border
@@ -267,7 +267,7 @@ class Button(QPushButton):
         if shiboken6.isValid(self):
             self.update()
 
-    border: QColor = Property(QColor, _get_border, _set_border)
+    border = Property(QColor, _get_border, _set_border)
 
     def _get_border_top(self) -> QColor:
         return self._border_top
@@ -277,7 +277,7 @@ class Button(QPushButton):
         if shiboken6.isValid(self):
             self.update()
 
-    border_top: QColor = Property(QColor, _get_border_top, _set_border_top)
+    border_top = Property(QColor, _get_border_top, _set_border_top)
 
     def _animate_to(self, state: str) -> None:
         if not is_valid_qobject(self):
@@ -291,46 +291,46 @@ class Button(QPushButton):
         self._anim_group.start()
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         if is_valid_qobject(self) and self.isEnabled():
             self._animate_to(self._interaction_state(True))
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         if is_valid_qobject(self) and self.isEnabled():
             self._animate_to(self._interaction_state(False))
         super().leaveEvent(a0)
 
     @override
-    def mousePressEvent(self, e: QMouseEvent | None) -> None:
+    def mousePressEvent(self, e: QMouseEvent) -> None:
         if self.isEnabled():
             self._animate_to(self._press_state())
         super().mousePressEvent(e)
 
     @override
-    def mouseReleaseEvent(self, e: QMouseEvent | None) -> None:
+    def mouseReleaseEvent(self, e: QMouseEvent) -> None:
         # clicked may destroy this widget (e.g. Cancel closes the host overlay).
         super().mouseReleaseEvent(e)
         if not is_valid_qobject(self):
             return
         if self.isEnabled():
-            hovering = self.isVisible() and e is not None and self.rect().contains(e.position().toPoint())
+            hovering = self.isVisible() and self.rect().contains(e.position().toPoint())
             self._animate_to(self._interaction_state(hovering))
 
     @override
-    def changeEvent(self, e: QEvent | None) -> None:
+    def changeEvent(self, e: QEvent) -> None:
         super().changeEvent(e)
         if not is_valid_qobject(self):
             return
-        if e is not None and e.type() == e.Type.EnabledChange:
+        if e.type() == e.Type.EnabledChange:
             if self.isEnabled():
                 self._animate_to(self._interaction_state(self.underMouse()))
             else:
                 self._animate_to("disabled")
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         if not shiboken6.isValid(self):
             return
         p = QPainter(self)
@@ -400,7 +400,7 @@ class Button(QPushButton):
         if icon.isNull() or target.isEmpty():
             return
         dev = p.device()
-        dpr = float(dev.devicePixelRatioF()) if dev is not None else float(self.devicePixelRatioF())
+        dpr = float(dev.devicePixelRatioF())
         pm: QPixmap = icon.pixmap(target.size(), dpr, mode, state)
         if pm.isNull():
             return

@@ -75,14 +75,14 @@ class ClickableWidget(QFrame):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         if a0 and a0.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
             a0.accept()
         super().mousePressEvent(a0)
 
     @override
-    def setProperty(self, name: str | None, value: Any) -> bool:
+    def setProperty(self, name: str, value: Any) -> bool:
         super().setProperty(name, value)
         if name == "class":
             refresh_widget_style(self)
@@ -108,7 +108,7 @@ class HourlyTemperatureScrollArea(QScrollArea):
         self._scroll_start_pos = QPoint()
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None):
+    def mousePressEvent(self, a0: QMouseEvent):
         if a0 and a0.button() == Qt.MouseButton.LeftButton:
             self._drag_active = True
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
@@ -122,7 +122,7 @@ class HourlyTemperatureScrollArea(QScrollArea):
             super().mousePressEvent(a0)
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None):
+    def mouseMoveEvent(self, a0: QMouseEvent):
         if a0 and self._drag_active:
             delta = a0.pos() - self._drag_start_pos
             hsb = self.horizontalScrollBar()
@@ -136,7 +136,7 @@ class HourlyTemperatureScrollArea(QScrollArea):
             super().mouseMoveEvent(a0)
 
     @override
-    def mouseReleaseEvent(self, a0: QMouseEvent | None):
+    def mouseReleaseEvent(self, a0: QMouseEvent):
         if a0 and a0.button() == Qt.MouseButton.LeftButton and self._drag_active:
             self._drag_active = False
             self.setCursor(Qt.CursorShape.OpenHandCursor)
@@ -145,14 +145,11 @@ class HourlyTemperatureScrollArea(QScrollArea):
             super().mouseReleaseEvent(a0)
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None):
-        if a0 is not None:
-            hsb = self.horizontalScrollBar()
-            if hsb:
-                hsb.setValue(hsb.value() - a0.angleDelta().y())
-                a0.accept()
-            else:
-                super().wheelEvent(a0)
+    def wheelEvent(self, a0: QWheelEvent):
+        hsb = self.horizontalScrollBar()
+        if hsb:
+            hsb.setValue(hsb.value() - a0.angleDelta().y())
+            a0.accept()
         else:
             super().wheelEvent(a0)
 
@@ -493,13 +490,13 @@ class HourlyDataLineWidget(QFrame):
             pass
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         """Redraw static content on resize only"""
         self.force_update()
         super().resizeEvent(a0)
 
     @override
-    def hideEvent(self, a0: QHideEvent | None) -> None:
+    def hideEvent(self, a0: QHideEvent) -> None:
         # Reset cached data
         self.bg_pixmap = QPixmap()
         self.fg_pixmap = QPixmap()
@@ -508,7 +505,7 @@ class HourlyDataLineWidget(QFrame):
         super().hideEvent(a0)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None):
+    def paintEvent(self, a0: QPaintEvent):
         if len(self.hourly_data) < 2:
             return
         painter = QPainter(self)

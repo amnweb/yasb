@@ -161,7 +161,7 @@ class SystrayPopup(QWidget):
         self.move(QPoint(x, y))
 
     @override
-    def setProperty(self, name: str | None, value: object) -> bool:
+    def setProperty(self, name: str, value: object) -> bool:
         result = super().setProperty(name, value)
         if name == "class":
             self._popup_content.setProperty(name, value)
@@ -171,7 +171,7 @@ class SystrayPopup(QWidget):
         return QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         event = a0
         if self._blur:
             enable_blur(
@@ -226,17 +226,15 @@ class SystrayPopup(QWidget):
             self._is_closing = False
 
     @override
-    def hideEvent(self, a0: QHideEvent | None) -> None:
+    def hideEvent(self, a0: QHideEvent) -> None:
         event = a0
         self._watch_timer.stop()
         super().hideEvent(event)
         self.closed.emit()
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         event = a0
-        if event is None:
-            return
         event.ignore()
         self.hide_animated()
 
@@ -246,7 +244,7 @@ class SystrayPopup(QWidget):
             self._toggle_btn.setText(self._label_collapsed)
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         event = a0
         self._popup_content.setGeometry(0, 0, self.width(), self.height())
         if self._pos_args is not None:
@@ -254,10 +252,10 @@ class SystrayPopup(QWidget):
         super().resizeEvent(event)
 
     @override
-    def changeEvent(self, a0: QEvent | None) -> None:
+    def changeEvent(self, a0: QEvent) -> None:
         event = a0
         super().changeEvent(event)
-        if event is None or event.type() != QEvent.Type.ActivationChange or self._is_closing:
+        if event.type() != QEvent.Type.ActivationChange or self._is_closing:
             return
         if self.isActiveWindow():
             self._watch_timer.stop()

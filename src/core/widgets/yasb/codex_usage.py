@@ -51,7 +51,7 @@ class UsageBar(QFrame):
         self._fill.setGeometry(0, 0, fill_width, self.height())
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._update_fill()
 
@@ -77,7 +77,7 @@ class TokenBar(QFrame):
         self._fill.setGeometry(0, 0, width, self.height())
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._update_fill()
 
@@ -111,7 +111,7 @@ class RefreshButton(QPushButton):
         self.update()
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         option = QStyleOptionButton()
         self.initStyleOption(option)
         option.text = ""
@@ -197,11 +197,11 @@ class CodexUsageWidget(BaseWidget):
         self.callback_right = self.config.callbacks.on_right
 
         self._service.data_ready.connect(self._on_data)
-        self.destroyed.connect(lambda *_: self._release_service())
+        self.destroyed.connect(self._release_service)
         self._update_label()
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         self._release_service()
         super().closeEvent(a0)
 

@@ -230,16 +230,13 @@ class FormattedSpinBox(QSpinBox):
         """Create the formatted spin box and make the line edit read-only."""
         super().__init__(parent)
         line_edit = self.lineEdit()
-        if line_edit is not None:
-            line_edit.setReadOnly(True)
+        line_edit.setReadOnly(True)
 
     @override
-    def showEvent(self, e: QShowEvent | None) -> None:
+    def showEvent(self, e: QShowEvent) -> None:
         """Adjust selection colors after the widget is shown so colors match."""
         super().showEvent(e)
         line_edit = self.lineEdit()
-        if line_edit is None:
-            return
         current_color = self.palette().color(self.foregroundRole())
         line_edit.setStyleSheet(f"""
             QLineEdit {{
@@ -344,14 +341,14 @@ class CustomCalendar(QCalendarWidget):
             self._update_holidays_for_year(year)
 
     @override
-    def paintCell(self, painter: QPainter | None, rect: QRect, date: QDate | date) -> None:
+    def paintCell(self, painter: QPainter, rect: QRect, date: QDate) -> None:
         """Custom paint for cells; draw holiday dates in holiday_color."""
-        qdate = date if isinstance(date, QDate) else QDate(date.year, date.month, date.day)
+        qdate = date
         if qdate < self.minimumDate() or qdate > self.maximumDate():
             return
         pydate = qdate.toPython()
         is_holiday = self.show_holidays and pydate in self._holidays
-        if is_holiday and painter is not None:
+        if is_holiday:
             is_selected = qdate == self.selectedDate()
             if is_selected:
                 painter.save()
@@ -1467,9 +1464,6 @@ class ClockWidget(BaseWidget):
         win.adjustSize()
 
         screen = QApplication.screenAt(self.mapToGlobal(self.rect().center())) or QApplication.primaryScreen()
-        if screen is None:
-            win.show()
-            return
         geom = screen.availableGeometry()
 
         x = geom.x() + (geom.width() - win.width()) // 2

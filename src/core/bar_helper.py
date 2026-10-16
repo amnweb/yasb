@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QFrame,
+    QGraphicsEffect,
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QMenu,
@@ -160,9 +161,6 @@ class BarAnimationManager(QObject):
         self._target_geo = (geo.x(), geo.y(), geo.width(), geo.height())
 
         screen = bar.screen()
-        if screen is None:
-            self.start_fade(show)
-            return
         screen_geo = screen.geometry()
         if bar.alignment["position"] == "top":
             hidden_y = screen_geo.y() - geo.height()
@@ -245,7 +243,7 @@ class AutoHideZone(QFrame):
         self.setWindowOpacity(0.01)
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         # Show the parent bar when mouse enters detection zone
         if self._bar.autohide_manager is not None:
             self._bar.autohide_manager.show_bar()
@@ -295,7 +293,7 @@ class AutoHideManager(QObject):
     def setup_detection_zone(self):
         """Position and configure the autohide detection zone"""
         screen = self.bar_widget.screen()
-        if not self._is_enabled or not self._detection_zone or screen is None:
+        if not self._is_enabled or not self._detection_zone:
             return
 
         screen_geometry = screen.geometry()
@@ -367,9 +365,9 @@ class AutoHideManager(QObject):
                 self._detection_zone.raise_()
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
         """Filter bar Enter/Leave events for hide timer"""
-        if a0 is self.bar_widget and a1 is not None and self._is_enabled:
+        if a0 is self.bar_widget and self._is_enabled:
             if a1.type() == QEvent.Type.Enter:
                 if self._hide_timer:
                     self._hide_timer.stop()
@@ -386,8 +384,6 @@ class AutoHideManager(QObject):
     def is_mouse_in_safe_zone(self, cursor_pos: QPoint, bar_geometry: QRect) -> bool:
         """Check if mouse is in the gap between bar and detection zone"""
         screen = self.bar_widget.screen()
-        if screen is None:
-            return False
         screen_geometry = screen.geometry()
         alignment = self.bar_widget.alignment
 
@@ -999,8 +995,6 @@ class BarContextMenu:
             # Get bar and screen geometries
             bar_geometry = self.parent.geometry()
             screen = self.parent.screen()
-            if screen is None:
-                return
             screen_geometry = screen.geometry()
 
             # Get bar padding information
@@ -1055,7 +1049,7 @@ class BarContextMenu:
     def _screenshot_flash(self):
         """Create a flashing effect on the bar when taking screenshot"""
         try:
-            opacity_effect = QGraphicsOpacityEffect()
+            opacity_effect = QGraphicsOpacityEffect(self.parent)
             self.parent.setGraphicsEffect(opacity_effect)
 
             self.flash_animation = QPropertyAnimation(opacity_effect, b"opacity")
@@ -1065,7 +1059,7 @@ class BarContextMenu:
             self.flash_animation.setKeyValueAt(0.5, 0.2)
             self.flash_animation.setEndValue(1.0)
 
-            self.flash_animation.finished.connect(lambda: self.parent.setGraphicsEffect(None))
+            self.flash_animation.finished.connect(lambda: self.parent.setGraphicsEffect(cast(QGraphicsEffect, None)))
             self.flash_animation.start()
 
         except Exception as e:

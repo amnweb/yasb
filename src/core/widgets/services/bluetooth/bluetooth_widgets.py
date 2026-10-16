@@ -186,7 +186,7 @@ class BluetoothItem(QFrame):
             self.connect_pressed.emit(self._data)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None):
+    def mousePressEvent(self, a0: QMouseEvent):
         if a0 and a0.button() == Qt.MouseButton.LeftButton:
             if self._actions.isVisible() and self._actions.geometry().contains(a0.pos()):
                 return
@@ -273,8 +273,7 @@ class BluetoothList(QScrollArea):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setViewportMargins(0, 0, -4, 0)
         viewport = self.viewport()
-        if viewport is not None:
-            viewport.setAutoFillBackground(False)
+        viewport.setAutoFillBackground(False)
 
         container = QFrame(self)
         container.setProperty("class", "bluetooth-list")
@@ -439,8 +438,8 @@ class BluetoothMenu(QObject):
         self.popup.adjustSize()
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if a0 is self.popup and a1 is not None and a1.type() == QEvent.Type.Hide:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
+        if a0 is self.popup and a1.type() == QEvent.Type.Hide:
             self._scanning = False
             if is_valid_qobject(self.progress):
                 self.progress.stop()

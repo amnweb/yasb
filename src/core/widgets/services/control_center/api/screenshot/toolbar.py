@@ -65,12 +65,12 @@ class ScreenshotToolbar(QFrame):
             self._btns[action].setIcon(svg_to_icon(svg, 16, self._icon_color, dpr=dpr))
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         super().showEvent(a0)
         self._reload_icons()
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         r = self.rect().adjusted(0, 0, -1, -1)

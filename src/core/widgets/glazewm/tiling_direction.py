@@ -40,7 +40,7 @@ class GlazewmTilingDirectionWidget(BaseWidget):
         )
         self.glazewm_client.glazewm_connection_status.connect(self._update_connection_status)  # type: ignore
         self.glazewm_client.tiling_direction_processed.connect(self._update_tiling_direction)  # type: ignore
-        self.glazewm_client.connect()
+        self.glazewm_client.connect_websocket()
 
     @Slot()
     def toggle_tiling_direction(self):

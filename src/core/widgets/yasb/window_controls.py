@@ -234,7 +234,7 @@ class WindowControlsWidget(BaseWidget):
         self._poller_registered = False
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         self._cleanup_poller()
         self._stop_running_animations()
         super().closeEvent(a0)
@@ -294,7 +294,7 @@ class WindowControlsWidget(BaseWidget):
                 if result.fg_monitor_hwnd != widget_monitor:
                     mon_info = win32api.GetMonitorInfo(result.fg_monitor_hwnd)
                     screen = self.screen()
-                    if screen is not None and screen.name() != mon_info.get("Device"):
+                    if screen.name() != mon_info.get("Device"):
                         if self._is_visible:
                             self._tracked_hwnd = None
                             self._tracked_maximized = False

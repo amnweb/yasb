@@ -61,7 +61,7 @@ class UsageBar(QFrame):
         self._fill.setGeometry(0, 0, fill_width, self.height())
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._update_fill()
 
@@ -123,7 +123,7 @@ class ClaudeUsageWidget(BaseWidget):
             self._token_service.data_ready.connect(self._on_token_data)
         if self._status_service is not None:
             self._status_service.data_ready.connect(self._on_status_data)
-        self.destroyed.connect(lambda *_: self._release_service())
+        self.destroyed.connect(self._release_service)
         self._update_label()
 
     def _release_service(self) -> None:
@@ -146,7 +146,7 @@ class ClaudeUsageWidget(BaseWidget):
                 pass
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         self._release_service()
         super().closeEvent(a0)
 

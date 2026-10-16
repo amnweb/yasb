@@ -224,8 +224,8 @@ class ActiveWindowWidget(BaseWidget):
         self._update_text()
 
     @override
-    def event(self, a0: QEvent | None) -> bool:
-        if a0 is not None and a0.type() == QEvent.Type.DevicePixelRatioChange:
+    def event(self, a0: QEvent) -> bool:
+        if a0.type() == QEvent.Type.DevicePixelRatioChange:
             dpr = self.devicePixelRatioF()
             if dpr != self.dpi:
                 self.dpi = dpr
@@ -250,7 +250,7 @@ class ActiveWindowWidget(BaseWidget):
 
         if (
             self.config.monitor_exclusive
-            and (screen is None or screen.name() != monitor_name)
+            and screen.name() != monitor_name
             and win_info.get("monitor_hwnd", "Unknown") != widget_monitor
         ):
             self._set_no_window_or_hide()
@@ -352,7 +352,7 @@ class ActiveWindowWidget(BaseWidget):
 
             if self.config.label_icon:
                 screen = self.screen()
-                self.dpi = screen.devicePixelRatio() if screen is not None else self.devicePixelRatioF()
+                self.dpi = screen.devicePixelRatio()
                 self.pixmap = self._icons.get_icon(WindowIcon(hwnd), self.config.label_icon_size, self.dpi)
 
             if (

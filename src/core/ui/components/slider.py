@@ -89,7 +89,7 @@ class Slider(QWidget):
         self._thumb_scale = v
         self.update()
 
-    thumb_scale: float = Property(float, _get_thumb_scale, _set_thumb_scale)
+    thumb_scale = Property(float, _get_thumb_scale, _set_thumb_scale)
 
     def value(self) -> int:
         return self._value
@@ -127,8 +127,8 @@ class Slider(QWidget):
         return round(self._min + ratio * (self._max - self._min))
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton:
             tx, _, _, _ = self._track_rect()
             if a0.position().x() < tx - THUMB_OUTER_RADIUS:
                 self.labelClicked.emit()
@@ -138,20 +138,18 @@ class Slider(QWidget):
             self._animate_thumb(0.7)
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        if self._dragging and a0 is not None:
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
+        if self._dragging:
             self.set_value(self._value_from_x(a0.position().x()))
 
     @override
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton and self._dragging:
+    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton and self._dragging:
             self._dragging = False
             self._animate_thumb(1.0)
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        if a0 is None:
-            return
+    def wheelEvent(self, a0: QWheelEvent) -> None:
         dy = a0.angleDelta().y()
         if dy == 0:
             dy = a0.angleDelta().x()
@@ -165,12 +163,12 @@ class Slider(QWidget):
         a0.accept()
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         self._hover = True
         self.update()
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         self._hover = False
         self.update()
 
@@ -181,7 +179,7 @@ class Slider(QWidget):
         self._anim_scale.start()
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 

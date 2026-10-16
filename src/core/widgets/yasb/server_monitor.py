@@ -54,7 +54,7 @@ class ServerMonitor(BaseWidget):
         self._service_released = False
         self._service.status_updated.connect(self._handle_status_update)
         self._service.refresh_started.connect(self._on_refresh_started)
-        self.destroyed.connect(lambda *_: self._release_service())
+        self.destroyed.connect(self._release_service)
 
     def _release_service(self) -> None:
         if getattr(self, "_service_released", False):
@@ -128,7 +128,7 @@ class ServerMonitor(BaseWidget):
             return
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         self._release_service()
         self._cleanup_logging()
         super().closeEvent(a0)

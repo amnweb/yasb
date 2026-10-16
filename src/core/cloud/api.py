@@ -229,8 +229,6 @@ class ApiClient(QObject):
             reply = self._net.sendCustomRequest(request, b"DELETE")
         else:
             raise ValueError(f"Unsupported verb {verb}")
-        if reply is None:
-            raise RuntimeError(f"No reply for {verb} {path}")
         return self._track(Call(reply, self))
 
     def _authenticated(self, verb: str, path: str, body: dict[str, Any] | None = None) -> Call:
@@ -327,9 +325,6 @@ class ApiClient(QObject):
         if not handle.open(QIODevice.OpenModeFlag.ReadOnly):
             raise OSError(handle.errorString())
         reply = self._net.sendCustomRequest(request, b"PUT", handle)
-        if reply is None:
-            handle.close()
-            raise OSError("No reply for the upload")
         handle.setParent(reply)
         return self._track(Call(reply, self, device=handle))
 
@@ -340,14 +335,16 @@ class ApiClient(QObject):
         """
         request = self._request(f"/backups/{backup_id}/content")
         reply = self._net.get(request)
-        if reply is None:
-            raise RuntimeError("No reply for the download")
 
         timer = QTimer(reply)
         timer.setSingleShot(True)
         timer.timeout.connect(reply.abort)
         timer.start(CONTROL_TIMEOUT_MS)
-        reply.downloadProgress.connect(lambda *_: timer.start(CONTROL_TIMEOUT_MS))
+
+        def _restart_timer(*_: object) -> None:
+            timer.start(CONTROL_TIMEOUT_MS)
+
+        reply.downloadProgress.connect(_restart_timer)
         reply.finished.connect(timer.stop)
 
         self._downloads.append(reply)

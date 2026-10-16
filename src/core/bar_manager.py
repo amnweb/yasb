@@ -5,6 +5,7 @@ from contextlib import suppress
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from PySide6.QtGui import QScreen
 from PySide6.QtWidgets import QApplication
+from qt_css_engine import TransitionEngine, extract_rules
 
 from core.bar import Bar
 from core.bar_helper import GlobalState
@@ -21,7 +22,6 @@ from core.utils.win32.hotkeys import (
 )
 from core.validation.bar import BarConfig
 from core.validation.config import YasbConfig
-from qt_css_engine import TransitionEngine, extract_rules
 
 
 class BarManager(QObject):

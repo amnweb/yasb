@@ -37,7 +37,7 @@ class BluetoothWidget(BaseWidget):
         self._manager.scan_started.connect(self._on_scan_started)
         self._manager.scan_completed.connect(self._on_scan_completed)
         self._manager.connection_finished.connect(self._on_connection_finished)
-        self.destroyed.connect(lambda *_: self.stop())
+        self.destroyed.connect(self.stop)
 
         self._init_container()
         self.build_widget_label(self.config.label, self.config.label_alt)

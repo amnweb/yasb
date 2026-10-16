@@ -41,7 +41,7 @@ class Spinner(QWidget):
         return 0.5 * p * p * p + 1
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         m = self._pen_width / 2.0 + 1.0
@@ -174,13 +174,8 @@ class LoaderLine(QWidget):
             pass
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if (
-            self._auto_position_enabled
-            and a0 is self._target_widget
-            and a1 is not None
-            and a1.type() == QEvent.Type.Resize
-        ):
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
+        if self._auto_position_enabled and a0 is self._target_widget and a1.type() == QEvent.Type.Resize:
             self._position_in_widget()
         return super().eventFilter(a0, a1)
 
@@ -204,10 +199,10 @@ class LoaderLine(QWidget):
         self._offset = value
         self.update()
 
-    offset: float = Property(float, fget=getOffset, fset=setOffset)
+    offset = Property(float, fget=getOffset, fset=setOffset)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         if not self.isVisible():
             return
         w = self.width()

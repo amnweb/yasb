@@ -158,7 +158,7 @@ class AudioVisualizerWidget(BaseWidget):
         self._service = AudioVisualizerCaptureService.instance(config.source)
         self._token = _ReaderToken(self._service, config.framerate, channels)
         token = self._token
-        self.destroyed.connect(lambda *_: token.detach())
+        self.destroyed.connect(token.detach)
 
         self._service.frame_ready.connect(self._on_frame)
         self._service.audio_started.connect(self._on_audio_started)
@@ -218,7 +218,7 @@ class AudioVisualizerWidget(BaseWidget):
             self._analyzer_r.set_sample_rate(sample_rate)
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         super().showEvent(a0)
         self._token.attach()
         self._token.set_visible(True)
@@ -228,7 +228,7 @@ class AudioVisualizerWidget(BaseWidget):
             self._reset_visual()
 
     @override
-    def hideEvent(self, a0: QHideEvent | None) -> None:
+    def hideEvent(self, a0: QHideEvent) -> None:
         super().hideEvent(a0)
         self._fade_timer.stop()
         self._audio_active = False
