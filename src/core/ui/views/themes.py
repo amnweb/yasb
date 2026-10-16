@@ -107,14 +107,12 @@ from core.utils.markdown import md_to_html, preprocess_readme
 from core.utils.shell_utils import shell_open
 from core.utils.single_instance import wait_for_bar_exit
 from core.utils.system import get_architecture
+from core.utils.utilities import QWIDGETSIZE_MAX
 from core.utils.validation_errors import format_pydantic_errors_to_yaml
 from core.validation.config import YasbConfig
 from core.validation.widgets.yasb.grouper import GrouperWidgetConfig
 from core.widgets.services.quick_launch.icon_utils import svg_to_pixmap
 from settings import BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL
-
-# PySide6 does not export Qt's QWIDGETSIZE_MAX macro; same value as Qt ((1 << 24) - 1).
-QWIDGETSIZE_MAX = (1 << 24) - 1
 
 QNetworkProxyFactory.setUseSystemConfiguration(True)
 

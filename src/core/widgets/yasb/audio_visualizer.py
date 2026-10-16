@@ -6,6 +6,7 @@ from typing import override
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
 from PySide6.QtGui import QHideEvent, QShowEvent
 
+from core.utils.utilities import QWIDGETSIZE_MAX
 from core.validation.widgets.yasb.audio_visualizer import AudioVisualizerConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.audio_visualizer.loopback import AudioVisualizerCaptureService
@@ -16,9 +17,6 @@ from core.widgets.services.audio_visualizer.spectrum import (
     layout_mono,
     layout_stereo,
 )
-
-# PySide6 does not export Qt's QWIDGETSIZE_MAX macro; same value as Qt ((1 << 24) - 1).
-QWIDGETSIZE_MAX = (1 << 24) - 1
 
 
 def _sensitivity_mult(value: int) -> float:
