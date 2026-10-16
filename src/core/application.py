@@ -1,6 +1,6 @@
 from asyncio import AbstractEventLoop, Event
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 
 class YASBApplication(QApplication):

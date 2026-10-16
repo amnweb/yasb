@@ -2,12 +2,12 @@ import logging
 from functools import partial
 from typing import Any, override
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     Qt,
     QTimer,
 )
-from PyQt6.QtGui import QAction, QCursor, QMouseEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtGui import QAction, QCursor, QMouseEvent
+from PySide6.QtWidgets import (
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -52,7 +52,7 @@ class WorkspaceButton(QPushButton):
             self.parent_widget.on_button_clicked(self)
 
     @override
-    def mousePressEvent(self, e: QMouseEvent | None) -> None:
+    def mousePressEvent(self, e: QMouseEvent) -> None:
         if self.parent_widget:
             self.parent_widget.clicked_button = self
         super().mousePressEvent(e)

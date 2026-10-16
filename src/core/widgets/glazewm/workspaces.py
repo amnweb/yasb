@@ -3,9 +3,9 @@ import re
 from enum import StrEnum, auto
 from typing import override
 
-from PyQt6.QtCore import Qt, pyqtSlot
-from PyQt6.QtGui import QMouseEvent, QPixmap, QShowEvent, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtGui import QMouseEvent, QPixmap, QShowEvent, QWheelEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
 from core.utils.icons.service import IconService, WindowIcon
 from core.utils.utilities import refresh_widget_style
@@ -69,7 +69,7 @@ class GlazewmWorkspaceButton(QPushButton):
         self.setProperty("class", button_class)
         refresh_widget_style(self)
 
-    @pyqtSlot()
+    @Slot()
     def _activate_workspace(self):
         self.glazewm_client.activate_workspace(self.workspace_name)
 
@@ -229,8 +229,8 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
             logger.warning("Unknown workspace status: %s", self.status)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton:
             self._activate_workspace()
 
     def _activate_workspace(self):
@@ -270,8 +270,6 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
                     return None
 
             screen = self.screen()
-            if screen is None:
-                return None
             self.dpi = screen.devicePixelRatio()
             return IconService.instance().get_icon(WindowIcon(hwnd), self.config.app_icons.size, self.dpi)
 
@@ -366,17 +364,17 @@ class GlazewmWorkspacesWidget(BaseWidget):
                 btn.update_icons()
 
     @override
-    def showEvent(self, a0: QShowEvent | None):
+    def showEvent(self, a0: QShowEvent):
         super().showEvent(a0)
         self.monitor_handle = get_widget_monitor_hwnd(self)
-        self.glazewm_client.connect()
+        self.glazewm_client.connect_websocket()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def _update_connection_status(self, status: bool):
         self.workspace_container.setVisible(status)
         self.offline_text.setVisible(not status if not self.config.hide_if_offline else False)
 
-    @pyqtSlot(list)
+    @Slot(list)
     def _update_workspaces(self, message: list[Monitor]):
         current_mon = next((m for m in message if m.hwnd == self.monitor_handle), None)
         if not current_mon:
@@ -478,8 +476,8 @@ class GlazewmWorkspacesWidget(BaseWidget):
         return None
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        if a0 is None or not self.config.enable_scroll_switching:
+    def wheelEvent(self, a0: QWheelEvent) -> None:
+        if not self.config.enable_scroll_switching:
             return
         direction = a0.angleDelta().y()
         if self.config.reverse_scroll_direction:

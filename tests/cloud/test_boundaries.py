@@ -85,7 +85,7 @@ def test_encryption_has_no_qt_or_cross_package_dependency():
     for path in _encryption_modules():
         for name in _imported_names(path):
             root = name.split(".")[0]
-            if root in {"PyQt6", "PySide6", "qasync"}:
+            if root in {"PySide6", "qasync"}:
                 violations.append(f"{path.relative_to(SRC)} imports {name} (encryption must stay Qt-free)")
             elif _is_first_party(name) and not name.startswith("core.cloud"):
                 violations.append(f"{path.relative_to(SRC)} imports {name} (encryption may only use core.cloud)")

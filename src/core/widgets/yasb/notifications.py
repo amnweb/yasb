@@ -1,7 +1,7 @@
 import logging
 import re
 
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 from core.events.service import EventService
 from core.utils.system import is_windows_10
@@ -19,7 +19,7 @@ except ImportError:
 
 class NotificationsWidget(BaseWidget):
     validation_schema = NotificationsConfig
-    windows_notification_update_signal = pyqtSignal(int)
+    windows_notification_update_signal = Signal(int)
     event_listener = WindowsNotificationEventListener
 
     def __init__(self, config: NotificationsConfig):

@@ -1,8 +1,8 @@
 from threading import Lock
 from typing import Any
 
-import PyQt6.sip as sip
-from PyQt6.QtCore import QObject
+import shiboken6
+from PySide6.QtCore import QObject
 
 
 class Singleton(type):
@@ -26,6 +26,6 @@ class QSingleton(type(QObject)):
 
     def __call__(cls, *args: Any, **kwargs: Any):
         with cls._lock:
-            if cls not in cls._instances or sip.isdeleted(cls._instances[cls]):
+            if cls not in cls._instances or not shiboken6.isValid(cls._instances[cls]):
                 cls._instances[cls] = super().__call__(*args, **kwargs)
             return cls._instances[cls]

@@ -317,7 +317,7 @@ class GithubNotificationsProvider(BaseProvider):
         if action_id == "copy_url":
             url = data.get("url", "")
             if url:
-                from PyQt6.QtWidgets import QApplication
+                from PySide6.QtWidgets import QApplication
 
                 clipboard = QApplication.clipboard()
                 if clipboard:

@@ -1,13 +1,13 @@
 import logging
 import re
 from functools import partial
-from typing import override
+from typing import cast, override
 
 from pycaw.api.audioclient import ISimpleAudioVolume
 from pycaw.api.endpointvolume import IAudioEndpointVolume
-from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRect, Qt
-from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
+from PySide6.QtCore import QEasingCurve, QEvent, QObject, QPropertyAnimation, QRect, Qt
+from PySide6.QtGui import QMouseEvent, QPixmap, QWheelEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from core.utils.icons.service import IconService, ProcessIcon
 from core.utils.qobject import is_valid_qobject
@@ -278,8 +278,8 @@ class VolumeWidget(BaseWidget):
         return name if len(name) <= 23 else f"{name[:20]}..."
 
     @override
-    def event(self, a0: QEvent | None) -> bool:
-        if a0 is not None and a0.type() == QEvent.Type.DevicePixelRatioChange:
+    def event(self, a0: QEvent) -> bool:
+        if a0.type() == QEvent.Type.DevicePixelRatioChange:
             self._dpi = self.devicePixelRatioF()
         return super().event(a0)
 
@@ -287,8 +287,7 @@ class VolumeWidget(BaseWidget):
         """Process icon (gray when muted), blank while it loads (_refresh_app_icons sets it on icons_changed)."""
         try:
             screen = self.screen()
-            if screen is not None:
-                self._dpi = screen.devicePixelRatio()
+            self._dpi = screen.devicePixelRatio()
             return self._icons.get_icon(ProcessIcon(pid), icon_size, self._dpi, grayscale=force_grayscale)
         except Exception as e:
             logging.debug("Failed to get icon pixmap for PID %s: %s", pid, e)
@@ -316,7 +315,7 @@ class VolumeWidget(BaseWidget):
 
     def _set_default_device(self):
         """Set default audio device using pycaw's built-in method"""
-        sender = self.sender()
+        sender = cast(QObject | None, self.sender())
         if sender is None:
             return
         device_id: str = sender.property("device_id")
@@ -692,8 +691,8 @@ class VolumeWidget(BaseWidget):
             logging.error("Failed to decrease volume: %s", e)
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        if self.volume is None or a0 is None:
+    def wheelEvent(self, a0: QWheelEvent) -> None:
+        if self.volume is None:
             return
         delta = -a0.angleDelta().y() if self.config.invert_wheel else a0.angleDelta().y()
         if delta > 0:

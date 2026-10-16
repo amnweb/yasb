@@ -9,8 +9,8 @@ import uuid
 from datetime import datetime
 from typing import Any, cast
 
-from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication
 
 from core.utils.system import app_data_path
 from core.widgets.services.quick_launch.base_provider import (

@@ -1,8 +1,7 @@
-from collections.abc import Callable
-from typing import Any, override
+from typing import cast, override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
+    Property,
     QEasingCurve,
     QEvent,
     QParallelAnimationGroup,
@@ -11,9 +10,9 @@ from PyQt6.QtCore import (
     QPropertyAnimation,
     QRectF,
     Qt,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QBrush,
     QColor,
     QEnterEvent,
@@ -26,12 +25,9 @@ from PyQt6.QtGui import (
     QPen,
     QPolygonF,
 )
-from PyQt6.QtWidgets import QApplication, QGraphicsDropShadowEffect, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QGraphicsDropShadowEffect, QPushButton, QVBoxLayout, QWidget
 
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _DURATION = 90
 _RADIUS = 4.0
@@ -60,7 +56,7 @@ def _resolve(t: dict[str, str], key: str) -> QColor:
 
 
 class _DropDownItem(QWidget):
-    clicked = pyqtSignal(str)
+    clicked = Signal(str)
 
     def __init__(self, key: str, label: str, tokens: dict[str, str], parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -83,23 +79,23 @@ class _DropDownItem(QWidget):
         self.update()
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         self._bg = _resolve(self._tokens, "subtle_fill_secondary")
         self.update()
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         self._bg = QColor(_TRANSPARENT)
         self.update()
         super().leaveEvent(a0)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         self.clicked.emit(self._key)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.rect().adjusted(4, 2, -4, -2).toRectF()
@@ -128,7 +124,7 @@ class _DropDownItem(QWidget):
 
 
 class _DropDownPopup(QWidget):
-    itemSelected = pyqtSignal(str)
+    itemSelected = Signal(str)
 
     def __init__(self, items: list[tuple[str, str]], current: str, tokens: dict[str, str], trigger: QWidget) -> None:
         super().__init__(
@@ -183,7 +179,7 @@ class _DropDownPopup(QWidget):
         )
         self._container.move(_SHADOW_MARGIN, _SHADOW_MARGIN - int(top))
 
-    reveal: float = pyqtProperty(float, _get_reveal, _set_reveal)
+    reveal: float = cast(float, Property(float, _get_reveal, _set_reveal))
 
     def show_at(self, trigger: QWidget, current_index: int) -> None:
         self._selected_index = current_index
@@ -216,8 +212,8 @@ class _DropDownPopup(QWidget):
         group.start()
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and not self._container.geometry().contains(a0.pos()):
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if not self._container.geometry().contains(a0.pos()):
             self.close()
             return
         super().mousePressEvent(a0)
@@ -231,7 +227,7 @@ class _DropDownPopup(QWidget):
 
 
 class DropDown(QPushButton):
-    currentChanged = pyqtSignal(str)
+    currentChanged = Signal(str)
 
     def __init__(
         self, items: list[tuple[str, str]] | None = None, parent: QWidget | None = None, *, align_selected: bool = True
@@ -302,7 +298,7 @@ class DropDown(QPushButton):
         self._bg = c
         self.update()
 
-    bg: QColor = pyqtProperty(QColor, _get_bg, _set_bg)
+    bg = Property(QColor, _get_bg, _set_bg)
 
     def _get_border(self) -> QColor:
         return self._border
@@ -311,7 +307,7 @@ class DropDown(QPushButton):
         self._border = c
         self.update()
 
-    border: QColor = pyqtProperty(QColor, _get_border, _set_border)
+    border = Property(QColor, _get_border, _set_border)
 
     def _animate_to(self, state: str) -> None:
         target = self._states.get(state, self._states["normal"])
@@ -323,12 +319,12 @@ class DropDown(QPushButton):
         self._anim_group.start()
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         self._animate_to("hover")
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         self._animate_to("normal")
         super().leaveEvent(a0)
 
@@ -366,7 +362,7 @@ class DropDown(QPushButton):
         self._popup = None
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.rect().toRectF()
@@ -398,8 +394,8 @@ class DropDown(QPushButton):
             QPen(
                 _resolve(self._tokens, "text_secondary"),
                 1.4,
-                cap=Qt.PenCapStyle.RoundCap,
-                join=Qt.PenJoinStyle.RoundJoin,
+                c=Qt.PenCapStyle.RoundCap,
+                j=Qt.PenJoinStyle.RoundJoin,
             )
         )
         cx, cy = rect.right() - 16, rect.center().y()

@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, ClassVar, cast
 
-from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
 from core.utils.system import app_data_path
 
@@ -440,7 +440,7 @@ def fetch_usage(
 class _UsageWorker(QThread):
     """Run the blocking app-server exchange away from the Qt UI thread."""
 
-    data_ready = pyqtSignal(dict)
+    data_ready = Signal(dict)
 
     def __init__(
         self,
@@ -473,7 +473,7 @@ class _UsageWorker(QThread):
 class CodexUsageService(QObject):
     """Reference-counted background poller shared by identical Codex widgets."""
 
-    data_ready = pyqtSignal(dict)
+    data_ready = Signal(dict)
 
     _instances: ClassVar[dict[tuple[str, int, int, float, bool], CodexUsageService]] = {}
 

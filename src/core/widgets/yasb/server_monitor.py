@@ -4,9 +4,9 @@ import re
 from datetime import datetime
 from typing import Any, cast, override
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QUrl
-from PyQt6.QtGui import QCloseEvent, QDesktopServices, QMouseEvent
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QUrl
+from PySide6.QtGui import QCloseEvent, QDesktopServices, QMouseEvent
+from PySide6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.ui.components.loader import LoaderLine
 from core.utils.tooltip import set_tooltip
@@ -29,7 +29,6 @@ class ServerMonitor(BaseWidget):
         self._last_refresh_time: datetime | None = None
         self._server_status_data: list[dict[str, Any]] | None = None
         self._first_run = True
-        self._animations: list[QPropertyAnimation] = []
         self._icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png")
 
         # Construct container
@@ -55,7 +54,8 @@ class ServerMonitor(BaseWidget):
         self._service_released = False
         self._service.status_updated.connect(self._handle_status_update)
         self._service.refresh_started.connect(self._on_refresh_started)
-        self.destroyed.connect(lambda *_: self._release_service())
+        # Use a closure so cleanup runs during QObject destruction.
+        self.destroyed.connect(lambda: self._release_service())
 
     def _release_service(self) -> None:
         if getattr(self, "_service_released", False):
@@ -129,7 +129,7 @@ class ServerMonitor(BaseWidget):
             return
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         self._release_service()
         self._cleanup_logging()
         super().closeEvent(a0)
@@ -377,16 +377,15 @@ class ServerMonitor(BaseWidget):
                     server_data["status"] == "Offline"
                 ):
                     # Add opacity effect for animation
-                    opacity_effect = QGraphicsOpacityEffect()
+                    opacity_effect = QGraphicsOpacityEffect(server_status)
                     server_status.setGraphicsEffect(opacity_effect)
-                    animation = QPropertyAnimation(opacity_effect, b"opacity")
+                    animation = QPropertyAnimation(opacity_effect, b"opacity", opacity_effect)
                     animation.setDuration(1000)
                     animation.setStartValue(1.0)
                     animation.setEndValue(0.6)
                     animation.setLoopCount(-1)
                     animation.setEasingCurve(QEasingCurve.Type.SineCurve)
                     animation.start()
-                    self._animations.append(animation)  # Store animation reference
 
                 row_widget.setProperty("class", f"row {class_name}")
                 _server_url = (

@@ -2,9 +2,9 @@ import logging
 from collections.abc import Callable, Mapping
 from typing import Any, override
 
-from PyQt6.QtCore import QEvent, QObject, QThread
-from PyQt6.QtGui import QShowEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QPushButton
+from PySide6.QtCore import QEvent, QObject, QThread
+from PySide6.QtGui import QShowEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QPushButton
 
 from core.utils.widget_builder import WidgetBuilder
 from core.utils.win32.utils import get_widget_monitor_hwnd
@@ -61,7 +61,7 @@ class GrouperWidget(BaseWidget):
 
         self._create_child_widgets()
 
-        if self._collapsed and self._collapse_options.label_position.lower() == "right":
+        if self._collapse_button is not None and self._collapse_options.label_position.lower() == "right":
             self._widget_container_layout.addWidget(self._collapse_button)
 
     def _create_child_widgets(self):
@@ -148,15 +148,15 @@ class GrouperWidget(BaseWidget):
             logging.error("GrouperWidget failed to propagate bar context to child widgets")
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         self._propagate_bar_context()
         if self._hide_empty:
             self._update_grouper_visibility()
         super().showEvent(a0)
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if self._hide_empty and a1 is not None and a0 in self._child_widgets:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
+        if self._hide_empty and a0 in self._child_widgets:
             if a1.type() in (QEvent.Type.Show, QEvent.Type.ShowToParent, QEvent.Type.Hide, QEvent.Type.HideToParent):
                 try:
                     self._update_grouper_visibility()

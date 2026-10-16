@@ -1,13 +1,8 @@
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QEasingCurve, QPointF, QPropertyAnimation, QRect, QRectF, Qt
-from PyQt6.QtGui import QColor, QConicalGradient, QLinearGradient, QPainter, QPaintEvent, QPen
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QWidget
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
+from PySide6.QtCore import Property, QEasingCurve, QPointF, QPropertyAnimation, QRect, QRectF, Qt
+from PySide6.QtGui import QColor, QConicalGradient, QLinearGradient, QPainter, QPaintEvent, QPen
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget
 
 
 class ProgressBar(QFrame):
@@ -60,7 +55,7 @@ class ProgressBar(QFrame):
             self._update_angles()
         self.update()
 
-    animatedValue: float = pyqtProperty(float, _get_animated_value, _set_animated_value)
+    animatedValue = Property(float, _get_animated_value, _set_animated_value)
 
     def _update_angles(self):
         """Update the angle calculations based on current value."""
@@ -96,7 +91,7 @@ class ProgressBar(QFrame):
             return QColor(color)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         """Paint the progress bar."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)

@@ -6,9 +6,9 @@ from functools import partial
 from pathlib import Path
 from typing import Any, override
 
-from PyQt6.QtCore import QObject, QSettings, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QFont
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QObject, QSettings, Qt, QTimer, Signal
+from PySide6.QtGui import QCloseEvent, QFont
+from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
     QFrame,
@@ -541,7 +541,7 @@ class CloudWindow(ViewBase, QMainWindow):
             )
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         QSettings("YASB", "Cloud").setValue("window/geometry", self.saveGeometry())
         self._sign_in.cancel()
         self._ops.cancel_active()
@@ -587,8 +587,8 @@ def _footer_state(account: Account) -> str:
 class Footer(QFrame):
     """Who is signed in, what the plan allows, and how much of it is used."""
 
-    manage_requested = pyqtSignal()
-    sign_out_requested = pyqtSignal()
+    manage_requested = Signal()
+    sign_out_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -676,9 +676,9 @@ class Footer(QFrame):
 class SignInFlow(QObject):
     """Emits exactly one of `signed_in` or `failed` per attempt."""
 
-    code_ready = pyqtSignal(str)  # user_code, for the waiting screen
-    signed_in = pyqtSignal(dict)  # the token payload
-    failed = pyqtSignal(str, str)  # message, dialog title
+    code_ready = Signal(str)  # user_code, for the waiting screen
+    signed_in = Signal(dict)  # the token payload
+    failed = Signal(str, str)  # message, dialog title
 
     def __init__(self, api: ApiClient, parent: QObject | None = None) -> None:
         super().__init__(parent)

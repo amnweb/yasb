@@ -5,14 +5,14 @@ import threading
 from typing import Any, override
 from uuid import UUID
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QPoint,
     Qt,
     QThread,
     QTimer,
-    pyqtSlot,
+    Slot,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,
@@ -327,11 +327,11 @@ class SystrayWidget(BaseWidget):
             )
             self.unpinned_widget.setVisible(self.config.show_unpinned or not self.config.show_unpinned_button)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def on_pinned_drag_started(self, icon_width: int = 0):
         self.on_drag_started(icon_width, from_pinned=True)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def on_unpinned_drag_started(self, icon_width: int = 0):
         self.on_drag_started(icon_width, from_pinned=False)
 
@@ -351,7 +351,7 @@ class SystrayWidget(BaseWidget):
                 self.pinned_widget.setMinimumWidth(icon_width)
             self.pinned_widget.set_drop_target_style(True)
 
-    @pyqtSlot()
+    @Slot()
     def on_drag_ended(self):
         """Handle drag ended signal for drag-and-drop functionality"""
         if self.config.show_in_popup:
@@ -367,7 +367,7 @@ class SystrayWidget(BaseWidget):
             return False
         return data.exe.lower() in self.hidden_icons_lower
 
-    @pyqtSlot(IconData)
+    @Slot(IconData)
     def on_icon_modified(self, data: IconData):
         """Handle icon modified signal sent by the tray monitor"""
         if data.guid in self.filtered_guids:
@@ -409,7 +409,7 @@ class SystrayWidget(BaseWidget):
             self._relayout_popup_grid()
         self.pinned_vis_check_timer.start(300)
 
-    @pyqtSlot(IconData)
+    @Slot(IconData)
     def on_icon_deleted(self, data: IconData) -> None:
         """Handles the icon deleted signal sent by the tray monitor"""
         icon = self.find_icon(data.guid, data.hWnd, data.uID)
@@ -421,7 +421,7 @@ class SystrayWidget(BaseWidget):
                 self._relayout_popup_grid()
             self.pinned_vis_check_timer.start(300)
 
-    @pyqtSlot(object)
+    @Slot(object)
     def on_icon_pinned_changed(self, icon: IconWidget):
         """Handles the icon pinned changed signal sent when user [Mod]+Clicks on the icon"""
         if not icon.is_pinned:
@@ -437,7 +437,7 @@ class SystrayWidget(BaseWidget):
         self.save_state()
         self.update_pinned_widget_visibility()
 
-    @pyqtSlot(object)
+    @Slot(object)
     def on_icon_moved(self, icon: IconWidget):
         """Handle icon moved signal"""
         icon.is_pinned = self.pinned_layout.indexOf(icon) != -1
@@ -632,10 +632,9 @@ class SystrayWidget(BaseWidget):
     def get_screen_id(self):
         """Get the screen id for the current systray widget instance"""
         screen = self.screen()
-        if screen is not None:
-            raw_id = f"{screen.manufacturer()}{screen.name()}{screen.serialNumber()}".upper()
-            self.screen_id = re.sub(r"\W+", "", raw_id)
-            return self.screen_id
+        raw_id = f"{screen.manufacturer()}{screen.name()}{screen.serialNumber()}".upper()
+        self.screen_id = re.sub(r"\W+", "", raw_id)
+        return self.screen_id
 
     def get_widgets_from_layout(self, layout: QLayout) -> list[IconWidget]:
         """Get all the widgets from a layout."""

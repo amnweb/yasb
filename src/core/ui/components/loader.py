@@ -2,18 +2,13 @@
 Loading indicators: Spinner (indeterminate circular) and LoaderLine (horizontal).
 """
 
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QEasingCurve, QElapsedTimer, QEvent, QObject, QPropertyAnimation, Qt, QTimer
-from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPalette, QPen
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import Property, QEasingCurve, QElapsedTimer, QEvent, QObject, QPropertyAnimation, Qt, QTimer
+from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPalette, QPen
+from PySide6.QtWidgets import QWidget
 
 from core.utils.qobject import is_valid_qobject
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 
 class Spinner(QWidget):
@@ -46,7 +41,7 @@ class Spinner(QWidget):
         return 0.5 * p * p * p + 1
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         m = self._pen_width / 2.0 + 1.0
@@ -96,7 +91,7 @@ class LoaderLine(QWidget):
         loader.start()
 
     Attributes:
-        offset (pyqtProperty[float]): Animation progress from 0.0 to 1.0.
+        offset (Property[float]): Animation progress from 0.0 to 1.0.
 
     """
 
@@ -179,13 +174,8 @@ class LoaderLine(QWidget):
             pass
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if (
-            self._auto_position_enabled
-            and a0 is self._target_widget
-            and a1 is not None
-            and a1.type() == QEvent.Type.Resize
-        ):
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
+        if self._auto_position_enabled and a0 is self._target_widget and a1.type() == QEvent.Type.Resize:
             self._position_in_widget()
         return super().eventFilter(a0, a1)
 
@@ -209,10 +199,10 @@ class LoaderLine(QWidget):
         self._offset = value
         self.update()
 
-    offset: float = pyqtProperty(float, fget=getOffset, fset=setOffset)
+    offset = Property(float, fget=getOffset, fset=setOffset)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         if not self.isVisible():
             return
         w = self.width()

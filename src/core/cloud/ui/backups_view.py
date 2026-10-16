@@ -3,9 +3,9 @@
 from collections.abc import Callable
 from typing import override
 
-from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QFont, QFontMetrics, QGuiApplication, QResizeEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QFont, QFontMetrics, QGuiApplication, QResizeEvent
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -57,7 +57,7 @@ class ElidedLabel(QLabel):
         self._update_elided_text()
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._update_elided_text()
 
@@ -70,13 +70,13 @@ class BackupItemWidget(Card):
     """One snapshot: a title, a line of details, and the actions dropdown. Holds no state
     beyond the id, so every signal carries it."""
 
-    restore_requested = pyqtSignal(str)
-    download_requested = pyqtSignal(str)
-    delete_requested = pyqtSignal(str)
-    rename_requested = pyqtSignal(str)
-    share_requested = pyqtSignal(str)
-    unshare_requested = pyqtSignal(str)
-    copy_link_requested = pyqtSignal(str)
+    restore_requested = Signal(str)
+    download_requested = Signal(str)
+    delete_requested = Signal(str)
+    rename_requested = Signal(str)
+    share_requested = Signal(str)
+    unshare_requested = Signal(str)
+    copy_link_requested = Signal(str)
 
     def __init__(self, snapshot: Snapshot, parent: QWidget | None = None):
         super().__init__(parent)
@@ -164,16 +164,16 @@ class BackupItemWidget(Card):
 
 
 class BackupsView(QWidget):
-    backup_now_requested = pyqtSignal()
-    settings_requested = pyqtSignal()
-    restore_requested = pyqtSignal(str)
-    download_requested = pyqtSignal(str)
-    delete_requested = pyqtSignal(str)
-    rename_requested = pyqtSignal(str)
-    share_requested = pyqtSignal(str)
-    unshare_requested = pyqtSignal(str)
-    copy_link_requested = pyqtSignal(str)
-    load_more_requested = pyqtSignal(int)  # offset of the next page
+    backup_now_requested = Signal()
+    settings_requested = Signal()
+    restore_requested = Signal(str)
+    download_requested = Signal(str)
+    delete_requested = Signal(str)
+    rename_requested = Signal(str)
+    share_requested = Signal(str)
+    unshare_requested = Signal(str)
+    copy_link_requested = Signal(str)
+    load_more_requested = Signal(int)  # offset of the next page
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -249,8 +249,6 @@ class BackupsView(QWidget):
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
         """)
         scroll_bar = self.scroll_area.verticalScrollBar()
-        if scroll_bar is None:
-            raise RuntimeError("QScrollArea has no vertical scroll bar")
         self._scroll_bar = scroll_bar
         scroll_bar.valueChanged.connect(self._maybe_load_more)
         layout.addWidget(self.scroll_area)
@@ -284,8 +282,7 @@ class BackupsView(QWidget):
 
         def copy_link() -> None:
             clipboard = QGuiApplication.clipboard()
-            if clipboard is not None:
-                clipboard.setText(url)
+            clipboard.setText(url)
 
         self._dialog.primary_button_click.connect(copy_link)
         self._dialog.show_dialog()

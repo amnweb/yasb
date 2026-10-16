@@ -21,7 +21,7 @@ from uuid import UUID
 from PIL import Image
 from PIL.ImageFilter import SHARPEN
 from PIL.ImageQt import ImageQt
-from PyQt6.QtGui import QImage
+from PySide6.QtGui import QImage
 from win32con import (
     PROCESS_QUERY_INFORMATION,
     PROCESS_VM_READ,

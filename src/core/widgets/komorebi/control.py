@@ -4,9 +4,9 @@ import subprocess
 from collections.abc import Callable
 from typing import override
 
-from PyQt6.QtCore import QEvent, QObject, Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtCore import QEvent, QObject, Qt, QThread, Signal
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
@@ -24,11 +24,11 @@ except ImportError:
 
 class ExtPopupWidget(PopupWidget):
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
         parent = self.parent()
         # When menu is locked, block usually hiding events from komorebi
         if isinstance(parent, KomorebiControlWidget) and parent.lock_menu:
-            if a1 is not None and a1.type() == QEvent.Type.Close:
+            if a1.type() == QEvent.Type.Close:
                 return True
         return super().eventFilter(a0, a1)
 
@@ -36,8 +36,8 @@ class ExtPopupWidget(PopupWidget):
 class KomorebiControlWidget(BaseWidget):
     validation_schema = KomorebiControlWidgetConfig
 
-    k_signal_connect = pyqtSignal(dict)
-    k_signal_disconnect = pyqtSignal()
+    k_signal_connect = Signal(dict)
+    k_signal_disconnect = Signal()
     event_listener = KomorebiEventListener
 
     def __init__(self, config: KomorebiControlWidgetConfig):
@@ -101,7 +101,7 @@ class KomorebiControlWidget(BaseWidget):
             # Update the version label in the currently open dialog
             for child in self.dialog.findChildren(QLabel):
                 if child.property("class") == "text version":
-                    child.setText(self._version_text)
+                    child.setText(self._version_text or "")
                     break
         # Also update stored label if we created it on the dialog
         if hasattr(self, "_version_label") and self.config.show_version:
@@ -323,7 +323,7 @@ class KomorebiControlWidget(BaseWidget):
 
 
 class VersionCheckThread(QThread):
-    version_result = pyqtSignal(str)
+    version_result = Signal(str)
 
     def __init__(self, komorebic_client: KomorebiClient):
         super().__init__()

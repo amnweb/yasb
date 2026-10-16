@@ -5,9 +5,9 @@ import re
 import subprocess
 from functools import partial
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.utilities import ElidedLabel, PopupWidget
 from core.validation.widgets.yasb.vscode import VSCodeConfig
@@ -128,6 +128,7 @@ class VSCodeWidget(BaseWidget):
         return menu
 
     def _init_menu_layout(self):
+        assert self._menu is not None
         self._menu_layout = QVBoxLayout(self._menu)
         self._menu_layout.setSpacing(0)
         self._menu_layout.setContentsMargins(0, 0, 0, 0)
@@ -197,9 +198,8 @@ class VSCodeWidget(BaseWidget):
         for name, btn in self._pill_buttons.items():
             btn.setProperty("class", "filter-button active" if name == filter_name else "filter-button")
             style = btn.style()
-            if style is not None:
-                style.unpolish(btn)
-                style.polish(btn)
+            style.unpolish(btn)
+            style.polish(btn)
 
         self._refresh_menu_items(reload_db=False)
 

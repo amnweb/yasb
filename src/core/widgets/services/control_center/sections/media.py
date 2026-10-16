@@ -5,9 +5,9 @@ from collections.abc import Callable
 from typing import Any, override
 
 from PIL import Image
-from PyQt6.QtCore import QEvent, Qt, QTimer, pyqtSlot
-from PyQt6.QtGui import QMouseEvent, QPainter, QPainterPath, QPixmap, QWheelEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QEvent, Qt, QTimer, Slot
+from PySide6.QtGui import QMouseEvent, QPainter, QPainterPath, QPixmap, QWheelEvent
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -32,8 +32,8 @@ class _MediaButton(QLabel):
         self.data: Callable[[], Any] | None = None
 
     @override
-    def mouseReleaseEvent(self, ev: QMouseEvent | None) -> None:
-        if ev is not None and ev.button() == Qt.MouseButton.LeftButton and self.data is not None:
+    def mouseReleaseEvent(self, ev: QMouseEvent) -> None:
+        if ev.button() == Qt.MouseButton.LeftButton and self.data is not None:
             try:
                 self.data()
             except Exception as e:
@@ -146,15 +146,15 @@ class MediaSectionWidget(QFrame):
         except Exception:
             pass
 
-    @pyqtSlot()
+    @Slot()
     def _on_current_session_changed(self):
         self._sync_ui(force_thumbnail=True)
 
-    @pyqtSlot()
+    @Slot()
     def _on_media_properties_changed(self):
         self._sync_ui(force_thumbnail=True)
 
-    @pyqtSlot()
+    @Slot()
     def _on_playback_info_changed(self):
         self._update_controls()
 
@@ -162,9 +162,9 @@ class MediaSectionWidget(QFrame):
         self._sync_ui(force_thumbnail=True)
 
     @override
-    def event(self, e: QEvent | None) -> bool:
+    def event(self, e: QEvent) -> bool:
         # Built before the popup has a screen, so the scale is only known once it is shown
-        if e is not None and e.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
+        if e.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
             self._update_thumbnail_scale()
         return super().event(e)
 
@@ -344,9 +344,7 @@ class MediaSectionWidget(QFrame):
                 refresh_widget_style(btn)
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        if a0 is None:
-            return
+    def wheelEvent(self, a0: QWheelEvent) -> None:
         delta = a0.angleDelta().y()
         if delta == 0:
             return

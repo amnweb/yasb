@@ -8,8 +8,8 @@ from collections.abc import Callable
 from functools import partial
 from typing import TypedDict, override
 
-from PyQt6.QtCore import QMimeData, QObject, QPoint, Qt, QTimer
-from PyQt6.QtGui import (
+from PySide6.QtCore import QMimeData, QObject, QPoint, Qt, QTimer
+from PySide6.QtGui import (
     QAction,
     QDrag,
     QDragEnterEvent,
@@ -19,7 +19,7 @@ from PyQt6.QtGui import (
     QIcon,
     QMouseEvent,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -560,8 +560,6 @@ class TodoWidget(BaseWidget):
     def widget_context_menu(self, widget: QLineEdit | QTextEdit) -> None:
         def show_custom_menu(point: QPoint) -> None:
             standard_menu = widget.createStandardContextMenu()
-            if standard_menu is None:
-                return
             menu = QMenu(widget.window())
             menu.setProperty("class", "context-menu")
             menu.addActions(standard_menu.actions())
@@ -851,18 +849,14 @@ class TaskFrame(QFrame):
         self._reorder_callback = reorder_callback
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         if a0.button() == Qt.MouseButton.LeftButton:
             self._drag_start_position = a0.pos()
             if self._main_widget.expanded_task_id != self.task_id:
                 self._expand_callback(self.task_id)
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
         if self._drag_start_position is not None and a0.buttons() & Qt.MouseButton.LeftButton:
             if (a0.pos() - self._drag_start_position).manhattanLength() >= 1:
                 drag = QDrag(self)
@@ -872,11 +866,9 @@ class TaskFrame(QFrame):
                 drag.exec(Qt.DropAction.MoveAction)
 
     @override
-    def dragEnterEvent(self, a0: QDragEnterEvent | None) -> None:
-        if a0 is None:
-            return
+    def dragEnterEvent(self, a0: QDragEnterEvent) -> None:
         mime_data = a0.mimeData()
-        if mime_data is not None and mime_data.hasText():
+        if mime_data.hasText():
             self._drop_highlight = True
             self.setProperty("class", f"task-item drop-highlight {self._task.get('category', 'default')}")
             refresh_widget_style(self)
@@ -886,43 +878,38 @@ class TaskFrame(QFrame):
             a0.ignore()
 
     @override
-    def dragLeaveEvent(self, a0: QDragLeaveEvent | None) -> None:
+    def dragLeaveEvent(self, a0: QDragLeaveEvent) -> None:
         self._drop_highlight = False
         self.setProperty("class", f"task-item {self._task.get('category', 'default')}")
         refresh_widget_style(self)
         self.update()
 
     @override
-    def dragMoveEvent(self, a0: QDragMoveEvent | None) -> None:
-        if a0 is None:
-            return
+    def dragMoveEvent(self, a0: QDragMoveEvent) -> None:
         scroll_area: QObject | None = self
         while scroll_area and not isinstance(scroll_area, QScrollArea):
             scroll_area = scroll_area.parent()
         if isinstance(scroll_area, QScrollArea):
             viewport = scroll_area.viewport()
             scroll_bar = scroll_area.verticalScrollBar()
-            if viewport is not None and scroll_bar is not None:
-                global_pos = self.mapToGlobal(a0.position().toPoint())
-                viewport_pos = viewport.mapFromGlobal(global_pos)
-                margin = 40
-                if viewport_pos.y() < margin:
-                    scroll_bar.setValue(scroll_bar.value() - 20)
-                elif viewport_pos.y() > viewport.height() - margin:
-                    scroll_bar.setValue(scroll_bar.value() + 20)
+            global_pos = self.mapToGlobal(a0.position().toPoint())
+            viewport_pos = viewport.mapFromGlobal(global_pos)
+            margin = 40
+            if viewport_pos.y() < margin:
+                scroll_bar.setValue(scroll_bar.value() - 20)
+            elif viewport_pos.y() > viewport.height() - margin:
+                scroll_bar.setValue(scroll_bar.value() + 20)
         a0.acceptProposedAction()
 
     @override
-    def dropEvent(self, a0: QDropEvent | None) -> None:
-        if a0 is None:
-            return
+    def dropEvent(self, a0: QDropEvent) -> None:
         self._drop_highlight = False
         self.setProperty("class", f"task-item {self._task.get('category', 'default')}")
         refresh_widget_style(self)
         self.update()
         mime_data = a0.mimeData()
-        source_id = mime_data.text() if mime_data is not None else None
+        source_id = mime_data.text()
         target_id = str(self.task_id)
-        if source_id is not None and source_id != target_id:
+        if source_id != target_id:
             self._reorder_callback(source_id, target_id)
         a0.acceptProposedAction()

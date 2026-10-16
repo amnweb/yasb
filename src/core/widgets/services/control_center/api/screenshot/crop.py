@@ -2,8 +2,8 @@
 
 import math
 
-from PyQt6.QtCore import QPoint, QRect
-from PyQt6.QtGui import QColor, QImage, QPainter, QPixmap
+from PySide6.QtCore import QPoint, QRect
+from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
 
 from core.widgets.services.control_center.api.screenshot.capture import ScreenFreeze
 from core.widgets.services.control_center.api.screenshot.constants import MIN_SIZE

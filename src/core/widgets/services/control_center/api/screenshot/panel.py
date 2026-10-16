@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, override
 import win32api
 import win32con
 import win32gui
-from PyQt6.QtCore import QPoint, QRect, Qt
-from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPen
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPen
+from PySide6.QtWidgets import QWidget
 
 from core.widgets.services.control_center.api.screenshot.capture import ScreenFreeze
 from core.widgets.services.control_center.api.screenshot.constants import HANDLE, UI
@@ -56,32 +56,30 @@ class ScreenPanel(QWidget):
         return self.ctrl.physical_to_local_rect(self.freeze, self.ctrl.sel)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton:
             self.ctrl.on_press(self._event_physical(a0))
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None:
-            self.ctrl.on_move(self._event_physical(a0))
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
+        self.ctrl.on_move(self._event_physical(a0))
 
     @override
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton:
             self.ctrl.on_release(self._event_physical(a0))
 
     @override
-    def mouseDoubleClickEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+    def mouseDoubleClickEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton:
             self.ctrl.on_double_click()
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is not None:
-            self.ctrl.on_key(a0)
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
+        self.ctrl.on_key(a0)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         p.drawPixmap(0, 0, self.freeze.pixmap)

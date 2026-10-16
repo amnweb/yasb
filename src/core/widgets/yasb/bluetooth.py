@@ -1,7 +1,7 @@
 import re
 
-from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QLabel
+from PySide6.QtCore import QObject, Slot
+from PySide6.QtWidgets import QLabel
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
@@ -32,12 +32,15 @@ class BluetoothWidget(BaseWidget):
         self._bt_menu = BluetoothMenu(self, self.config.menu_config, self._manager)
         self._released = False
 
-        self._manager.status_updated.connect(self._on_status_updated)
-        self._manager.refresh_failed.connect(self._on_refresh_failed)
-        self._manager.scan_started.connect(self._on_scan_started)
-        self._manager.scan_completed.connect(self._on_scan_completed)
-        self._manager.connection_finished.connect(self._on_connection_finished)
-        self.destroyed.connect(lambda *_: self.stop())
+        self._manager_connections = [
+            self._manager.status_updated.connect(self._on_status_updated),
+            self._manager.refresh_failed.connect(self._on_refresh_failed),
+            self._manager.scan_started.connect(self._on_scan_started),
+            self._manager.scan_completed.connect(self._on_scan_completed),
+            self._manager.connection_finished.connect(self._on_connection_finished),
+        ]
+        # Use a closure so cleanup runs during QObject destruction.
+        self.destroyed.connect(lambda: self.stop())
 
         self._init_container()
         self.build_widget_label(self.config.label, self.config.label_alt)
@@ -56,17 +59,10 @@ class BluetoothWidget(BaseWidget):
         if self._released:
             return
         self._released = True
-        for signal, slot in (
-            (self._manager.status_updated, self._on_status_updated),
-            (self._manager.refresh_failed, self._on_refresh_failed),
-            (self._manager.scan_started, self._on_scan_started),
-            (self._manager.scan_completed, self._on_scan_completed),
-            (self._manager.connection_finished, self._on_connection_finished),
-        ):
-            try:
-                signal.disconnect(slot)
-            except TypeError:
-                pass
+        # Disconnect by handle: destroyed() may run after this widget's C++ object is gone.
+        for connection in self._manager_connections:
+            QObject.disconnect(connection)
+        self._manager_connections.clear()
         self._bt_menu.detach()
         self._manager.release()
 
@@ -78,7 +74,7 @@ class BluetoothWidget(BaseWidget):
             widget.setVisible(self._show_alt_label)
         self._update_label(self.bluetooth_icon, self.connected_devices)
 
-    @pyqtSlot(object)
+    @Slot(object)
     def _on_status_updated(self, status: BluetoothStatus):
         if self._released or not is_valid_qobject(self):
             return
@@ -102,25 +98,25 @@ class BluetoothWidget(BaseWidget):
                 self._bt_state = "bt-on"
         self._update_label(self.bluetooth_icon, self.connected_devices)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def _on_refresh_failed(self, message: str):
         if self._released:
             return
         self._bt_menu.on_refresh_failed(message)
 
-    @pyqtSlot()
+    @Slot()
     def _on_scan_started(self):
         if self._released:
             return
         self._bt_menu.on_scan_started()
 
-    @pyqtSlot(object, object)
+    @Slot(object, object)
     def _on_scan_completed(self, status: ScanResultStatus, devices: list[DeviceInfo]):
         if self._released:
             return
         self._bt_menu.on_scan_completed(status, devices)
 
-    @pyqtSlot(bool, str, object)
+    @Slot(bool, str, object)
     def _on_connection_finished(self, success: bool, message: str, device: DeviceInfo):
         if self._released:
             return

@@ -6,9 +6,9 @@ from datetime import datetime
 from functools import partial
 from typing import Any
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QTimer, Slot
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -476,7 +476,7 @@ class OpenMeteoWidget(BaseWidget):
         layout_today.addWidget(today_label1)
 
         # Switch hourly data by day
-        @pyqtSlot(int)
+        @Slot(int)
         def switch_hourly_data(day_idx: int):
             if day_idx == 0:
                 next_day_data = self._hourly_data[1] if len(self._hourly_data) > 1 else []
@@ -648,7 +648,7 @@ class OpenMeteoWidget(BaseWidget):
         refresh_widget_style(label)
         label.update()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def _update_label(self, update_class: bool = True):
         if self._weather_data is None:
             return
@@ -692,7 +692,7 @@ class OpenMeteoWidget(BaseWidget):
         except Exception as e:
             logging.exception("Failed to update label: %s", e)
 
-    @pyqtSlot(dict)
+    @Slot(dict)
     def process_weather_data(self, weather_data: dict[str, Any]):
         try:
             if not weather_data:

@@ -3,8 +3,8 @@ import random
 import re
 from typing import Any, override
 
-from PyQt6.QtCore import QRectF, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import (
+from PySide6.QtCore import QRectF, Qt, QTimer, Signal
+from PySide6.QtGui import (
     QColor,
     QCursor,
     QFont,
@@ -18,7 +18,7 @@ from PyQt6.QtGui import (
     QPen,
     QPixmap,
 )
-from PyQt6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QWidget
 
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_COLOR, ICON_COLOR_PICKER
@@ -621,7 +621,7 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
 class _ColorPickerOverlay(QWidget):
     """Small floating loupe centered on the cursor for picking colors."""
 
-    color_picked = pyqtSignal(str)
+    color_picked = Signal(str)
 
     GRID_SIZE = 11
     CELL_SIZE = 12
@@ -698,7 +698,7 @@ class _ColorPickerOverlay(QWidget):
         painter = QPainter(img)
         for s in screens:
             geo = s.geometry()
-            grab = s.grabWindow(x=0, y=0, width=geo.width(), height=geo.height())
+            grab = s.grabWindow(0, 0, 0, geo.width(), geo.height())
             painter.drawPixmap(geo.x() - combined.x(), geo.y() - combined.y(), grab)
         painter.end()
         self._src_img = img.copy()
@@ -713,7 +713,7 @@ class _ColorPickerOverlay(QWidget):
         self.update()
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         if not self._src_img:
             return
         painter = QPainter(self)
@@ -794,9 +794,7 @@ class _ColorPickerOverlay(QWidget):
         painter.end()
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         if a0.button() == Qt.MouseButton.LeftButton:
             self._timer.stop()
             self.color_picked.emit(self._current_color.name().upper())
@@ -806,9 +804,7 @@ class _ColorPickerOverlay(QWidget):
             self.close()
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is None:
-            return
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
         if a0.key() == Qt.Key.Key_Escape:
             self._timer.stop()
             self.close()

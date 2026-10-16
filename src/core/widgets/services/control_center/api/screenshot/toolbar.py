@@ -4,9 +4,9 @@ from collections.abc import Callable
 from functools import partial
 from typing import override
 
-from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPen, QShowEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QWidget
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPen, QShowEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QWidget
 
 from core.ui.components.button import Button
 from core.utils.tooltip import set_tooltip
@@ -65,12 +65,12 @@ class ScreenshotToolbar(QFrame):
             self._btns[action].setIcon(svg_to_icon(svg, 16, self._icon_color, dpr=dpr))
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         super().showEvent(a0)
         self._reload_icons()
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         r = self.rect().adjusted(0, 0, -1, -1)

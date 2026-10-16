@@ -4,7 +4,7 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ValidationError
-from PyQt6.QtCore import QObject, QThread
+from PySide6.QtCore import QObject, QThread
 
 from core.utils.alert_dialog import raise_info_alert
 from core.utils.validation_errors import format_pydantic_errors_to_yaml

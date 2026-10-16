@@ -1,8 +1,8 @@
 """SVG icons for the cloud app"""
 
-from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPixmap
-from PyQt6.QtSvg import QSvgRenderer
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 
 GEAR = """
 <svg viewBox="28 0 968 1024" xmlns="http://www.w3.org/2000/svg">
@@ -160,7 +160,7 @@ def svg_icon(svg: str, size: int, color: str) -> QIcon:
         return QIcon()
 
     screen = QGuiApplication.primaryScreen()
-    dpr = float(screen.devicePixelRatio()) if screen is not None else 1.0
+    dpr = float(screen.devicePixelRatio())
 
     # The theme hands out Qt's #AARRGGBB, which SVG reads as invalid and paints black, so
     # split it into #RRGGBB plus an opacity.

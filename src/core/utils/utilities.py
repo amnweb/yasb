@@ -3,7 +3,7 @@ from enum import StrEnum
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, cast, override
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QEasingCurve,
     QEvent,
     QObject,
@@ -13,9 +13,9 @@ from PyQt6.QtCore import (
     QSize,
     Qt,
     QTimer,
-    pyqtSlot,
+    Slot,
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QCloseEvent,
     QFontMetrics,
     QHideEvent,
@@ -28,7 +28,7 @@ from PyQt6.QtGui import (
     QStaticText,
     QTransform,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QBoxLayout,
     QDialog,
@@ -47,6 +47,9 @@ from core.utils.win32.backdrop import enable_blur
 
 if TYPE_CHECKING:
     from core.utils.progress_bar import ProgressWidget
+
+# PySide6 does not export Qt's QWIDGETSIZE_MAX macro; same value as Qt ((1 << 24) - 1).
+QWIDGETSIZE_MAX = (1 << 24) - 1
 
 
 def percent_to_float(percent: str) -> float:
@@ -209,7 +212,7 @@ class PopupWidget(QWidget):
         self._is_closing = False
 
     @override
-    def setProperty(self, name: str | None, value: Any) -> bool:
+    def setProperty(self, name: str, value: Any) -> bool:
         result = super().setProperty(name, value)
         if name == "class":
             self._popup_content.setProperty(name, value)
@@ -273,41 +276,35 @@ class PopupWidget(QWidget):
             self._drag_pos = None
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and self._pinnable and self._pinned and a0.button() == Qt.MouseButton.LeftButton:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if self._pinnable and self._pinned and a0.button() == Qt.MouseButton.LeftButton:
             self._drag_pos = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
             a0.accept()
             return
         super().mousePressEvent(a0)
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        if (
-            a0 is not None
-            and self._pinnable
-            and self._pinned
-            and self._drag_pos is not None
-            and a0.buttons() & Qt.MouseButton.LeftButton
-        ):
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
+        if self._pinnable and self._pinned and self._drag_pos is not None and a0.buttons() & Qt.MouseButton.LeftButton:
             self.move(a0.globalPosition().toPoint() - self._drag_pos)
             a0.accept()
             return
         super().mouseMoveEvent(a0)
 
     @override
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and self._pinnable and self._pinned and a0.button() == Qt.MouseButton.LeftButton:
+    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
+        if self._pinnable and self._pinned and a0.button() == Qt.MouseButton.LeftButton:
             self._drag_pos = None
             a0.accept()
             return
         super().mouseReleaseEvent(a0)
 
     @override
-    def event(self, a0: QEvent | None) -> bool:
+    def event(self, a0: QEvent) -> bool:
         # Tool-type windows (pinnable=True) don't auto-close on WindowDeactivate the way
         # Popup-type windows do, so we replicate that behaviour here:
         # close when not pinned, stay open when pinned.
-        if a0 is not None and a0.type() == QEvent.Type.WindowDeactivate and self._pinnable:
+        if a0.type() == QEvent.Type.WindowDeactivate and self._pinnable:
             if not self._pinned:
                 self.hide_animated()
             return True
@@ -387,10 +384,9 @@ class PopupWidget(QWidget):
             pass
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         """Override close event to use animation."""
-        if a0 is not None:
-            a0.ignore()  # Ignore the default close behavior
+        a0.ignore()  # Ignore the default close behavior
         self.hide_animated()
 
     def show(self):
@@ -413,7 +409,7 @@ class PopupWidget(QWidget):
         super().show()
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         # Install event filter only when popup is actually shown
         app = QApplication.instance()
         if app is not None:
@@ -457,9 +453,7 @@ class PopupWidget(QWidget):
         self._fade_animation.start()
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if not isinstance(a0, QObject) or a1 is None:
-            return False
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
         if self._suspend_close or self._pinned:
             return super().eventFilter(a0, a1)
         if a1.type() == QEvent.Type.MouseButtonPress:
@@ -500,7 +494,7 @@ class PopupWidget(QWidget):
         self._suspend_close = not enabled
 
     @override
-    def hideEvent(self, a0: QHideEvent | None) -> None:
+    def hideEvent(self, a0: QHideEvent) -> None:
         app = QApplication.instance()
         if self._is_closing and app is not None:
             app.removeEventFilter(self)
@@ -508,7 +502,7 @@ class PopupWidget(QWidget):
         super().hideEvent(a0)
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         # reset geometry
         self._popup_content.setGeometry(0, 0, self.width(), self.height())
         # reposition if we've already called setPosition()
@@ -593,7 +587,7 @@ class ElidedLabel(QLabel):
         return self._text
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._update_elided_text()
 
@@ -712,7 +706,7 @@ class ScrollingLabel(QLabel):
             self._offset = 0  # Reset to left-aligned
 
     @override
-    def setText(self, a0: str | None):
+    def setText(self, a0: str) -> None:
         super().setText(a0)
         self._offset = 0
         self._raw_text = a0 or ""
@@ -767,7 +761,7 @@ class ScrollingLabel(QLabel):
         if self._max_width:
             self.setMaximumWidth(self._font_metrics.averageCharWidth() * self._max_width)
 
-    @pyqtSlot()
+    @Slot()
     def _scroll_text(self):
         """Update the offset based on the state calculated in _build_text_and_metrics()"""
         if not self._scrolling_needed:
@@ -812,7 +806,7 @@ class ScrollingLabel(QLabel):
         self.update()
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None):
+    def paintEvent(self, a0: QPaintEvent):
         painter = QPainter(self)
 
         content_rect = QRect(
@@ -866,12 +860,12 @@ class ScrollingLabel(QLabel):
         return QSize(min(self.maximumWidth(), width), min(self.maximumHeight(), height))
 
     @override
-    def showEvent(self, a0: QShowEvent | None):
+    def showEvent(self, a0: QShowEvent):
         super().showEvent(a0)
         self._sync_scroll_timer()
 
     @override
-    def hideEvent(self, a0: QHideEvent | None):
+    def hideEvent(self, a0: QHideEvent):
         if self._scroll_timer.isActive():
             self._scroll_timer.stop()
         if self._style == ScrollingLabel.Style.BOUNCE_EASE:
@@ -879,7 +873,7 @@ class ScrollingLabel(QLabel):
         super().hideEvent(a0)
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None):
+    def resizeEvent(self, a0: QResizeEvent):
         super().resizeEvent(a0)
         # Re-build text, re-calculate metrics, and check for scrolling
         self._build_text_and_metrics()

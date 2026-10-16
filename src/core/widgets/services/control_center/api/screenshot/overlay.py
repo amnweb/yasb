@@ -1,7 +1,7 @@
 """Multi-monitor region select overlay (physical-pixel selection)."""
 
-from PyQt6.QtCore import QObject, QPoint, QRect, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QFontMetrics, QKeyEvent, QPainter, QPen, QPixmap
+from PySide6.QtCore import QObject, QPoint, QRect, Qt
+from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QKeyEvent, QPainter, QPen, QPixmap
 
 from core.widgets.services.control_center.api.screenshot.capture import ScreenFreeze
 from core.widgets.services.control_center.api.screenshot.constants import (

@@ -4,9 +4,9 @@ from dataclasses import dataclass, field
 from enum import StrEnum, auto
 from typing import Any, cast
 
-from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
-from PyQt6.QtNetwork import QAbstractSocket
-from PyQt6.QtWebSockets import QWebSocket
+from PySide6.QtCore import QObject, QTimer, QUrl, Signal
+from PySide6.QtNetwork import QAbstractSocket
+from PySide6.QtWebSockets import QWebSocket
 
 logger = logging.getLogger("glazewm_client")
 
@@ -62,10 +62,10 @@ class TilingDirection(StrEnum):
 
 
 class GlazewmClient(QObject):
-    workspaces_data_processed = pyqtSignal(list)
-    tiling_direction_processed = pyqtSignal(TilingDirection)
-    binding_mode_changed = pyqtSignal(BindingMode)
-    glazewm_connection_status = pyqtSignal(bool)
+    workspaces_data_processed = Signal(list)
+    tiling_direction_processed = Signal(TilingDirection)
+    binding_mode_changed = Signal(BindingMode)
+    glazewm_connection_status = Signal(bool)
 
     def __init__(
         self,
@@ -78,14 +78,14 @@ class GlazewmClient(QObject):
 
         self._uri = QUrl(uri)
         self._websocket = QWebSocket()
-        self._websocket.connected.connect(self._on_connected)  # type: ignore
-        self._websocket.textMessageReceived.connect(self._handle_message)  # type: ignore
-        self._websocket.stateChanged.connect(self._on_state_changed)  # type: ignore
-        self._websocket.errorOccurred.connect(self._on_error)  # type: ignore
+        self._websocket.connected.connect(self._on_connected)
+        self._websocket.textMessageReceived.connect(self._handle_message)
+        self._websocket.stateChanged.connect(self._on_state_changed)
+        self._websocket.errorOccurred.connect(self._on_error)
 
         self._reconnect_timer = QTimer()
         self._reconnect_timer.setInterval(reconnect_interval)
-        self._reconnect_timer.timeout.connect(self.connect)  # type: ignore
+        self._reconnect_timer.timeout.connect(self.connect_websocket)
 
     def activate_workspace(self, workspace_name: str):
         self._websocket.sendTextMessage(f"command focus --workspace {workspace_name}")
@@ -111,7 +111,7 @@ class GlazewmClient(QObject):
     def focus_prev_workspace_global(self):
         self._websocket.sendTextMessage("command focus --prev-active-workspace")
 
-    def connect(self):
+    def connect_websocket(self):
         if self._websocket.state() == QAbstractSocket.SocketState.ConnectedState:
             return
         logger.debug("Connecting to %s", self._uri.toString())

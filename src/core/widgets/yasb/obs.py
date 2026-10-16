@@ -2,9 +2,9 @@ import time
 from collections.abc import Callable
 from typing import Any, override
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QCloseEvent, QMouseEvent
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QCloseEvent, QMouseEvent
+from PySide6.QtWidgets import QGraphicsOpacityEffect, QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
@@ -564,7 +564,7 @@ class ObsWidget(BaseWidget):
             pass
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         if self in ObsWidget._subscribers:
             ObsWidget._subscribers.remove(self)
 
@@ -588,5 +588,4 @@ class ObsWidget(BaseWidget):
                     ObsWidget._time_timer.stop()
                     ObsWidget._time_timer = None
 
-        if a0 is not None:
-            a0.accept()
+        a0.accept()

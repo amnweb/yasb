@@ -2,8 +2,6 @@ import ctypes
 import logging
 import sys
 
-import PyQt6.sip as sip
-
 from core.utils.win32.bindings import (
     DwmExtendFrameIntoClientArea,
     DwmSetWindowAttribute,
@@ -81,7 +79,7 @@ def set_window_corner_preference(hwnd: int, preference: int, border_color: str) 
 
 
 def enable_blur(
-    hwnd: int | sip.voidptr,
+    hwnd: int,
     DarkMode: bool = False,
     RoundCorners: bool = False,
     RoundCornersType: str = "normal",

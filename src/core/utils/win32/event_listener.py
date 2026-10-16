@@ -3,7 +3,7 @@ import logging
 import time
 from ctypes import wintypes
 
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread
 from win32gui import GetForegroundWindow
 
 from core.events.service import EventService

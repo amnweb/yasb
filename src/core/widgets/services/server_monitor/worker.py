@@ -7,13 +7,13 @@ from datetime import datetime
 from typing import Any, override
 from urllib.parse import urlparse
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal
 
 logger = logging.getLogger("server_monitor")
 
 
 class ServerCheckWorker(QThread):
-    status_updated = pyqtSignal(list)
+    status_updated = Signal(list)
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)

@@ -4,7 +4,7 @@ import threading
 from collections.abc import Callable, Coroutine
 from typing import Any, ClassVar
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 from winrt.windows.devices.bluetooth import BluetoothConnectionStatus
 
 from core.widgets.services.bluetooth.bluetooth_api import (
@@ -49,11 +49,11 @@ def _connect_error(action: str, reason: str) -> str:
 
 
 class BluetoothManager(QObject):
-    scan_started = pyqtSignal()
-    scan_completed = pyqtSignal(object, object)  # ScanResultStatus, list[DeviceInfo]
-    status_updated = pyqtSignal(object)  # BluetoothStatus
-    refresh_failed = pyqtSignal(str)
-    connection_finished = pyqtSignal(bool, str, object)
+    scan_started = Signal()
+    scan_completed = Signal(object, object)  # ScanResultStatus, list[DeviceInfo]
+    status_updated = Signal(object)  # BluetoothStatus
+    refresh_failed = Signal(str)
+    connection_finished = Signal(bool, str, object)
     _instance: ClassVar[BluetoothManager | None] = None
     _users: ClassVar[int] = 0
 

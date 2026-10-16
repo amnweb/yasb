@@ -1,7 +1,7 @@
 import logging
 import socket
 
-from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
 from core.widgets.services.traffic.network_api import NetworkAPI
 
@@ -9,7 +9,7 @@ from core.widgets.services.traffic.network_api import NetworkAPI
 class ConnectionTestWorker(QThread):
     """Worker thread for testing internet connectivity"""
 
-    result_ready = pyqtSignal(bool)
+    result_ready = Signal(bool)
 
     def __init__(self, interface: str | None = None):
         super().__init__()
@@ -76,7 +76,7 @@ class ConnectionTestWorker(QThread):
 class InternetChecker(QObject):
     """Monitor internet connectivity and emit signals on changes"""
 
-    connection_changed = pyqtSignal(bool)
+    connection_changed = Signal(bool)
 
     def __init__(self, parent: QObject | None = None, check_interval: int = 10000, interface: str | None = None):
         super().__init__(parent)

@@ -6,9 +6,9 @@ import winreg
 from collections.abc import Callable, Iterator
 from typing import Any
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QThread,
-    pyqtSignal,
+    Signal,
 )
 
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource
@@ -103,7 +103,7 @@ class AppListLoader(QThread):
     This class caches the results to avoid reloading on subsequent calls.
     """
 
-    apps_loaded = pyqtSignal(list)
+    apps_loaded = Signal(list)
 
     @staticmethod
     def clear_cache() -> None:

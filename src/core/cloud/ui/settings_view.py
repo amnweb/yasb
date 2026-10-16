@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.cloud.constants import APP_LOG_FILE, MAX_EXCLUDE_RULES
 from core.cloud.session import cloud_dir
@@ -73,7 +73,7 @@ class SettingCard(Card):
 
 
 class RuleRow(Card):
-    removed = pyqtSignal(str)
+    removed = Signal(str)
 
     def __init__(self, rule: str, parent: QWidget | None = None) -> None:
         super().__init__(parent, hover=False)
@@ -91,10 +91,10 @@ class RuleRow(Card):
 
 
 class ExcludedFilesCard(Card):
-    rules_changed = pyqtSignal(list)
-    preview_requested = pyqtSignal()
-    add_requested = pyqtSignal()
-    docs_requested = pyqtSignal()
+    rules_changed = Signal(list)
+    preview_requested = Signal()
+    add_requested = Signal()
+    docs_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent, hover=False)
@@ -199,14 +199,14 @@ class ExcludedFilesCard(Card):
 class SettingsView(QWidget):
     """Holds no settings of its own; the window owns them and does the saving."""
 
-    back_requested = pyqtSignal()
-    rules_changed = pyqtSignal(list)
-    auto_backup_changed = pyqtSignal(bool)
-    debug_logging_changed = pyqtSignal(bool)
-    preview_requested = pyqtSignal()
-    add_rule_requested = pyqtSignal()
-    docs_requested = pyqtSignal()
-    open_log_requested = pyqtSignal()
+    back_requested = Signal()
+    rules_changed = Signal(list)
+    auto_backup_changed = Signal(bool)
+    debug_logging_changed = Signal(bool)
+    preview_requested = Signal()
+    add_rule_requested = Signal()
+    docs_requested = Signal()
+    open_log_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)

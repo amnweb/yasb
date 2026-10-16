@@ -3,7 +3,7 @@ import logging
 from ctypes import POINTER, Structure, c_ulong, sizeof, windll, wintypes
 
 import win32con
-from PyQt6.QtGui import QScreen
+from PySide6.QtGui import QScreen
 
 from core.utils.win32.bindings.user32 import GetWindowLongPtr, SetWindowLongPtr
 
@@ -14,7 +14,7 @@ user32 = windll.user32
 APPBAR_CALLBACK_MESSAGE = 0x0400 + 100  # WM_USER = 0x0400
 
 """
-Application Desktop Toolbar (with added support for PyQt6)
+Application Desktop Toolbar (with added support for PySide6)
 
 https://docs.microsoft.com/en-us/windows/win32/shell/application-desktop-toolbars
 """

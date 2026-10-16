@@ -4,14 +4,14 @@ import os
 from collections.abc import Callable
 from typing import Any, cast, override
 
-import PyQt6.QtCore as QtCore
+import PySide6.QtCore as QtCore
 from PIL import Image, ImageFilter
 from PIL.ImageQt import ImageQt
 from pycaw.pycaw import AudioUtilities
 from pycaw.utils import AudioSession
-from PyQt6.QtCore import QEvent, QObject, QPoint, QRectF, Qt, QTimer, pyqtSlot
-from PyQt6.QtGui import QEnterEvent, QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QWheelEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QEvent, QObject, QPoint, QRectF, Qt, QTimer, Slot
+from PySide6.QtGui import QEnterEvent, QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QWheelEvent
+from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -155,7 +155,7 @@ class MediaWidget(BaseWidget):
         self.register_callback("toggle_play_pause", self._toggle_play_pause)
         self.register_callback("open_media_source", self._open_media_source)
 
-    @pyqtSlot(dict)
+    @Slot(dict)
     def _on_media_data_changed(self, data: dict[str, SessionState]):
         old = self.current_session
         self.current_session = next((s for s in data.values() if s.is_current), None)
@@ -170,7 +170,7 @@ class MediaWidget(BaseWidget):
         if self._popup_open():
             self._sync_popup_session()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def _on_session_status_changed(self):
         if self.current_session is not None:
             self._bar_hide_timer.stop()
@@ -194,7 +194,7 @@ class MediaWidget(BaseWidget):
         if self._artist_label is not None:
             self._artist_label.setText("")
 
-    @pyqtSlot()
+    @Slot()
     def _on_media_properties_changed(self):
         session = self.current_session
         if session is None:
@@ -475,8 +475,8 @@ class MediaWidget(BaseWidget):
         self._popup_artist_label.setText(artist or "Unknown Artist")
 
     @override
-    def event(self, a0: QEvent | None) -> bool:
-        if a0 is not None and a0.type() == QEvent.Type.DevicePixelRatioChange:
+    def event(self, a0: QEvent) -> bool:
+        if a0.type() == QEvent.Type.DevicePixelRatioChange:
             dpr = self.devicePixelRatioF()
             if dpr != self._artwork_dpr:
                 self._artwork_dpr = dpr
@@ -595,10 +595,7 @@ class MediaWidget(BaseWidget):
         self._popup_source_label.show()
 
     def _dpr(self) -> float:
-        screen = self.screen()
-        if screen is None and is_valid_qobject(self.dialog):
-            screen = self.dialog.screen()
-        return float(screen.devicePixelRatio()) if screen is not None else 1.0
+        return float(self.screen().devicePixelRatio())
 
     def update_artwork_background(self):
         if not is_valid_qobject(self._artwork_bg_label) or not is_valid_qobject(self.dialog):
@@ -658,7 +655,7 @@ class MediaWidget(BaseWidget):
         probe.setStyleSheet("background: #000; border-color: transparent;")
         probe.ensurePolished()
         style = probe.style()
-        if style is None or self.dialog is None:
+        if self.dialog is None:
             return QPixmap.fromImage(art)
         option = QStyleOption()
         option.initFrom(probe)
@@ -834,9 +831,7 @@ class MediaWidget(BaseWidget):
         except Exception as e:
             logger.error("Error executing code: %s", e)
 
-    def wheelEvent(self, a0: QWheelEvent | None):
-        if a0 is None:
-            return
+    def wheelEvent(self, a0: QWheelEvent):
         if a0.angleDelta().y() > 0:
             self.media.switch_current_session(+1)
         elif a0.angleDelta().y() < 0:
@@ -1031,13 +1026,10 @@ class ClickableLabel(QLabel):
         self.parent_widget: MediaWidget | None = parent
         self.data: Callable[..., Any] | None = None
 
-    def mousePressEvent(self, ev: QMouseEvent | None):
-        if ev is not None:
-            ev.accept()
+    def mousePressEvent(self, ev: QMouseEvent):
+        ev.accept()
 
-    def mouseReleaseEvent(self, ev: QMouseEvent | None):
-        if ev is None:
-            return
+    def mouseReleaseEvent(self, ev: QMouseEvent):
         classes = (self.property("class") or "").split()
         if "disabled" in classes:
             ev.accept()
@@ -1052,7 +1044,7 @@ class RoundedClickableLabel(ClickableLabel):
         super().__init__(parent)
         self._corner_radius = max(0, radius)
 
-    def paintEvent(self, a0: QPaintEvent | None):
+    def paintEvent(self, a0: QPaintEvent):
         pix = self.pixmap()
         if pix.isNull() or self._corner_radius <= 0:
             super().paintEvent(a0)
@@ -1113,28 +1105,26 @@ class VolumeHoverWidget(QFrame):
         self.slider_popup.installEventFilter(self)
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         if self.media_widget.volume_available():
             self._hide_timer.stop()
             self._show_timer.start()
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         self._show_timer.stop()
         self._hide_timer.start()
         super().leaveEvent(a0)
 
-    def mouseReleaseEvent(self, a0: QMouseEvent | None):
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton and self.media_widget.volume_available():
+    def mouseReleaseEvent(self, a0: QMouseEvent):
+        if a0.button() == Qt.MouseButton.LeftButton and self.media_widget.volume_available():
             self.media_widget.toggle_app_mute()
             a0.accept()
             return
         super().mouseReleaseEvent(a0)
 
-    def wheelEvent(self, a0: QWheelEvent | None):
-        if a0 is None:
-            return
+    def wheelEvent(self, a0: QWheelEvent):
         if not self.media_widget.volume_available():
             a0.ignore()
             return

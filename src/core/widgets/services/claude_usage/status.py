@@ -12,7 +12,7 @@ import time
 import urllib.request
 from typing import Any, ClassVar
 
-from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
 logger = logging.getLogger("claude_usage")
 
@@ -46,7 +46,7 @@ def fetch_status() -> dict[str, Any]:
 class _StatusWorker(QThread):
     """Runs the (blocking) status request off the UI thread."""
 
-    data_ready = pyqtSignal(dict)
+    data_ready = Signal(dict)
 
     def run(self) -> None:
         self.data_ready.emit(fetch_status())
@@ -61,7 +61,7 @@ class ClaudeStatusService(QObject):
     the dot to grey.
     """
 
-    data_ready = pyqtSignal(dict)
+    data_ready = Signal(dict)
 
     _instances: ClassVar[dict[int, ClaudeStatusService]] = {}
 

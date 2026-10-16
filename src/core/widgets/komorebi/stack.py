@@ -4,9 +4,9 @@ from contextlib import suppress
 from typing import Any, Literal, override
 
 import win32gui
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QMouseEvent, QPixmap, QWheelEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
@@ -39,8 +39,8 @@ class WindowButton(QFrame):
         self.parent_widget = parent_widget
         self.status: WindowStatus = WINDOW_STATUS_INACTIVE
         self.setProperty("class", "window")
-        self.default_label = label
-        self.active_label = active_label if active_label else self.default_label
+        self.default_label: str = label or ""
+        self.active_label: str = active_label or self.default_label
 
         self.button_layout = QHBoxLayout(self)
         self.button_layout.setContentsMargins(0, 0, 0, 0)
@@ -63,9 +63,7 @@ class WindowButton(QFrame):
         self.update_icon()
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         if a0.button() == Qt.MouseButton.LeftButton:
             self.focus_stack_window()
         elif a0.button() == Qt.MouseButton.MiddleButton:
@@ -113,9 +111,9 @@ class WindowButton(QFrame):
 
 
 class StackWidget(BaseWidget):
-    k_signal_connect = pyqtSignal(dict)
-    k_signal_update = pyqtSignal(dict, dict)
-    k_signal_disconnect = pyqtSignal()
+    k_signal_connect = Signal(dict)
+    k_signal_update = Signal(dict, dict)
+    k_signal_disconnect = Signal()
     validation_schema = StackConfig
     event_listener = KomorebiEventListener
 
@@ -487,9 +485,9 @@ class StackWidget(BaseWidget):
         self._widget_container.show()
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
+    def wheelEvent(self, a0: QWheelEvent) -> None:
         """Handle mouse wheel events to switch windows."""
-        if a0 is None or not self.config.enable_scroll_switching or not self._komorebi_screen:
+        if not self.config.enable_scroll_switching or not self._komorebi_screen:
             return
 
         delta = a0.angleDelta().y()
@@ -515,8 +513,6 @@ class StackWidget(BaseWidget):
         try:
             hwnd = self.komorebi_windows[window_index]["hwnd"]
             screen = self.screen()
-            if screen is None:
-                return None
             self.dpi = screen.devicePixelRatio()
             return self._icons.get_icon(WindowIcon(hwnd), self.config.icon_size, self.dpi)
 

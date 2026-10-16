@@ -1,15 +1,10 @@
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QEasingCurve, QEvent, QParallelAnimationGroup, QPropertyAnimation, Qt
-from PyQt6.QtGui import QColor, QEnterEvent, QPainter, QPaintEvent, QPen
-from PyQt6.QtWidgets import QApplication, QFrame, QWidget
+from PySide6.QtCore import Property, QEasingCurve, QEvent, QParallelAnimationGroup, QPropertyAnimation, Qt
+from PySide6.QtGui import QColor, QEnterEvent, QPainter, QPaintEvent, QPen
+from PySide6.QtWidgets import QApplication, QFrame, QWidget
 
 from core.ui.theme import get_tokens, theme_key
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _DURATION = 100
 _RADIUS = 4.0
@@ -89,7 +84,7 @@ class Card(QFrame):
         self._bg = c
         self.update()
 
-    bg: QColor = pyqtProperty(QColor, _get_bg, _set_bg)
+    bg = Property(QColor, _get_bg, _set_bg)
 
     def _get_border(self) -> QColor:
         return self._border
@@ -98,7 +93,7 @@ class Card(QFrame):
         self._border = c
         self.update()
 
-    border: QColor = pyqtProperty(QColor, _get_border, _set_border)
+    border = Property(QColor, _get_border, _set_border)
 
     def _animate_to(self, state: str) -> None:
         target = self._states.get(state, self._states["normal"])
@@ -126,18 +121,18 @@ class Card(QFrame):
             label.set_color_override(color)
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         if self._hover and not self._selected:
             self._animate_to("hover")
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         self._animate_to(self._current_state())
         super().leaveEvent(a0)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.rect().adjusted(1, 1, -1, -1).toRectF()

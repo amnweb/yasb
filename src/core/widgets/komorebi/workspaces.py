@@ -2,9 +2,9 @@ import logging
 from contextlib import suppress
 from typing import Any, Literal, override
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QMouseEvent, QPixmap, QWheelEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
@@ -122,8 +122,8 @@ class WorkspaceButtonWithIcons(QFrame):
         self.update_and_redraw(self.status)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton:
             self.activate_workspace()
 
     def update_visible_buttons(self):
@@ -207,9 +207,9 @@ type AnyWorkspaceButton = WorkspaceButton | WorkspaceButtonWithIcons
 
 
 class WorkspaceWidget(BaseWidget):
-    k_signal_connect = pyqtSignal(dict)
-    k_signal_update = pyqtSignal(dict, dict)
-    k_signal_disconnect = pyqtSignal()
+    k_signal_connect = Signal(dict)
+    k_signal_update = Signal(dict, dict)
+    k_signal_disconnect = Signal()
     validation_schema = KomorebiWorkspacesConfig
     event_listener = KomorebiEventListener
 
@@ -620,9 +620,9 @@ class WorkspaceWidget(BaseWidget):
             self.workspace_layer_label.show()
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
+    def wheelEvent(self, a0: QWheelEvent) -> None:
         """Handle mouse wheel events to switch workspaces."""
-        if a0 is None or not self.config.enable_scroll_switching or not self.komorebi_screen:
+        if not self.config.enable_scroll_switching or not self.komorebi_screen:
             return
 
         delta = a0.angleDelta().y()
@@ -683,8 +683,6 @@ class WorkspaceWidget(BaseWidget):
                     return None
 
             screen = self.screen()
-            if screen is None:
-                return None
             self.dpi = screen.devicePixelRatio()
             return self._icons.get_icon(WindowIcon(hwnd), self.config.app_icons.size, self.dpi)
         except Exception:

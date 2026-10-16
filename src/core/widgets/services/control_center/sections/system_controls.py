@@ -4,9 +4,9 @@ from functools import partial
 from typing import Any, override
 
 from PIL import Image
-from PyQt6.QtCore import QEvent, QPoint, QSize, Qt
-from PyQt6.QtGui import QAction, QIcon, QPainter, QPainterPath, QPixmap
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPushButton, QWidget
+from PySide6.QtCore import QEvent, QPoint, QSize, Qt
+from PySide6.QtGui import QAction, QIcon, QPainter, QPainterPath, QPixmap
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPushButton, QWidget
 
 from core.bar_helper import GlobalState
 from core.utils.qobject import is_valid_qobject
@@ -71,9 +71,9 @@ class SystemControlsSectionWidget(QFrame):
         layout.addWidget(self._profile_image_btn)
 
     @override
-    def event(self, e: QEvent | None) -> bool:
+    def event(self, e: QEvent) -> bool:
         # Built before the popup has a screen, so the scale is only known once it is shown
-        if e is not None and e.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
+        if e.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
             self._update_profile_image()
         return super().event(e)
 

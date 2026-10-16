@@ -5,9 +5,9 @@ from collections.abc import Callable
 from typing import Any, override
 
 from pydantic import BaseModel
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QContextMenuEvent, QMouseEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtGui import QContextMenuEvent, QMouseEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 from core.events.service import EventService
 from core.utils.win32.system_function import function_map
@@ -18,7 +18,7 @@ class BaseWidget(QWidget):
     validation_schema: dict[str, Any] | type[BaseModel] | None = None
     event_listener: type[QThread] | None = None
 
-    _hotkey_signal = pyqtSignal(str, str, str)
+    _hotkey_signal = Signal(str, str, str)
 
     def __init_subclass__(cls, **kwargs: Any):
         """Register the widget class with the registry"""
@@ -76,9 +76,8 @@ class BaseWidget(QWidget):
         for w in [self, self._widget_frame, *self._widget_frame.findChildren(QWidget)]:
             w.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
             style = w.style()
-            if style is not None:
-                style.unpolish(w)
-                style.polish(w)
+            style.unpolish(w)
+            style.polish(w)
 
     def _handle_hotkey_event(self, widget_name: str, action: str, target_screen: str) -> None:
         """
@@ -109,14 +108,12 @@ class BaseWidget(QWidget):
         self._timer_callback()
 
     @override
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None:
-            self._handle_mouse_events(a0)
+    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
+        self._handle_mouse_events(a0)
 
     @override
-    def contextMenuEvent(self, a0: QContextMenuEvent | None) -> None:
-        if a0 is not None:
-            a0.accept()
+    def contextMenuEvent(self, a0: QContextMenuEvent) -> None:
+        a0.accept()
 
     def _handle_mouse_events(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:

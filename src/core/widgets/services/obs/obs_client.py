@@ -13,8 +13,8 @@ import uuid
 from collections.abc import Callable
 from typing import Any, override
 
-from PyQt6.QtCore import QThread, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QThread, Signal
+from PySide6.QtWidgets import QApplication
 
 type EventCallback = Callable[[str, dict[str, Any]], None]
 type ConnectionCallback = Callable[[bool], None]
@@ -362,12 +362,12 @@ class ObsWebSocketClient:
 class ObsWorker(QThread):
     """Shared worker thread for OBS WebSocket connection."""
 
-    connection_signal = pyqtSignal(bool)
-    state_signal = pyqtSignal(dict)
-    stream_signal = pyqtSignal(dict)
-    virtual_cam_signal = pyqtSignal(bool)
-    studio_mode_signal = pyqtSignal(bool)
-    scene_signal = pyqtSignal(str)
+    connection_signal = Signal(bool)
+    state_signal = Signal(dict)
+    stream_signal = Signal(dict)
+    virtual_cam_signal = Signal(bool)
+    studio_mode_signal = Signal(bool)
+    scene_signal = Signal(str)
 
     _instance: ObsWorker | None = None
     _users = 0

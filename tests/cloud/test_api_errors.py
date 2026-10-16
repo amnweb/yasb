@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 from typing import cast
 
-from PyQt6.QtNetwork import QNetworkReply, QNetworkRequest
+from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from core.cloud.api import error_from, reply_error, save_reply
 

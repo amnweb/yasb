@@ -1,9 +1,9 @@
 import logging
 import os
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QHBoxLayout,
@@ -122,11 +122,10 @@ class KeybindsDialog(QDialog):
         self.setMinimumWidth(self.calculate_content_width())
 
         screen = QApplication.primaryScreen()
-        if screen is not None:
-            geometry = screen.geometry()
-            x = (geometry.width() - self.width()) // 2
-            y = (geometry.height() - self.height()) // 2
-            self.move(x, y)
+        geometry = screen.geometry()
+        x = (geometry.width() - self.width()) // 2
+        y = (geometry.height() - self.height()) // 2
+        self.move(x, y)
 
     def calculate_content_width(self) -> int:
         min_width = 400
@@ -156,8 +155,6 @@ class KeybindsDialog(QDialog):
 
         # Cap the width at 80% of screen width
         screen = QApplication.primaryScreen()
-        if screen is None:
-            return min_width
         return min(min_width, int(screen.geometry().width() * 0.8))
 
     def update_display(self) -> None:

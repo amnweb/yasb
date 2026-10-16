@@ -3,9 +3,9 @@
 from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtCore import QStandardPaths
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QApplication, QFileDialog, QWidget
+from PySide6.QtCore import QStandardPaths
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QApplication, QFileDialog, QWidget
 
 HANDLE = 8
 MIN_SIZE = 5
@@ -36,8 +36,6 @@ def export_pixmap(pix: QPixmap, *, save: bool, parent: QWidget | None = None) ->
     """
     if not save:
         clipboard = QApplication.clipboard()
-        if clipboard is None:
-            return False
         clipboard.setPixmap(pix)
         return True
     folder = default_save_dir()

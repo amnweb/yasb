@@ -3,9 +3,9 @@ import re
 from typing import override
 
 from pycaw.api.endpointvolume import IAudioEndpointVolume
-from PyQt6.QtCore import QRect, Qt
-from PyQt6.QtGui import QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
+from PySide6.QtCore import QRect, Qt
+from PySide6.QtGui import QWheelEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import CustomToolTip, set_tooltip
@@ -267,8 +267,8 @@ class MicrophoneWidget(BaseWidget):
             logging.error("Failed to decrease microphone volume: %s", e)
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        if self.audio_endpoint is None or a0 is None:
+    def wheelEvent(self, a0: QWheelEvent) -> None:
+        if self.audio_endpoint is None:
             return
         delta = -a0.angleDelta().y() if self.config.invert_wheel else a0.angleDelta().y()
         if delta > 0:

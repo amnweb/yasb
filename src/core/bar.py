@@ -1,9 +1,9 @@
 import logging
 from typing import TYPE_CHECKING, override
 
-from PyQt6.QtCore import QEvent, QObject, QRect, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QContextMenuEvent, QResizeEvent, QScreen, QShowEvent
-from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
+from PySide6.QtCore import QEvent, QObject, QRect, Qt, QTimer, Signal
+from PySide6.QtGui import QCloseEvent, QContextMenuEvent, QResizeEvent, QScreen, QShowEvent
+from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
 
 from core.bar_helper import (
     AppBarManager,
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 class Bar(QWidget):
-    handle_bar_management = pyqtSignal(str, str)
+    handle_bar_management = Signal(str, str)
 
     def __init__(
         self,
@@ -301,7 +301,7 @@ class Bar(QWidget):
             self._animation_manager.hide_bar()
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         super().showEvent(a0)
         if self.animation.get("enabled", False) and self._animation_manager:
             # Use fade on initial show to avoid DWM blur/shadow flash with slide
@@ -312,7 +312,7 @@ class Bar(QWidget):
                 self.show_bar()
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         if self._hide_on_fullscreen and self.app_bar_manager:
             AppBarManager().unregister_bar(int(self.winId()))
 
@@ -325,26 +325,25 @@ class Bar(QWidget):
         self.try_remove_app_bar()
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         # On a DPI change Qt keeps the old native size when the logical size is unchanged
-        if a0 is not None and a0.size() != self.bar_frame.size():
+        if a0.size() != self.bar_frame.size():
             QTimer.singleShot(0, self.position_bar)
 
     @override
-    def changeEvent(self, a0: QEvent | None) -> None:
-        if a0 is not None and a0.type() == QEvent.Type.PaletteChange:
+    def changeEvent(self, a0: QEvent) -> None:
+        if a0.type() == QEvent.Type.PaletteChange:
             if self._os_theme_manager:
                 self._os_theme_manager.update_theme_class()
         super().changeEvent(a0)
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
         if (
             self._is_auto_width
             and self._auto_width_manager
             and a0 == self.bar_frame
-            and a1 is not None
             and a1.type() == QEvent.Type.LayoutRequest
         ):
             previous_width = self._auto_width_manager.current_auto_width
@@ -363,10 +362,8 @@ class Bar(QWidget):
             super().hide()
 
     @override
-    def contextMenuEvent(self, a0: QContextMenuEvent | None) -> None:
+    def contextMenuEvent(self, a0: QContextMenuEvent) -> None:
         """Handle right-click context menu"""
-        if a0 is None:
-            return
         if not self._context_menu or not self.rect().contains(a0.pos()):
             a0.ignore()
             return

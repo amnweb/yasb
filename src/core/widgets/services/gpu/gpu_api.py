@@ -4,8 +4,8 @@ import threading
 from ctypes import Array, byref, c_byte, c_char, wintypes
 from typing import NamedTuple, NotRequired, TypedDict
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtWidgets import QApplication
 
 from core.utils.win32.bindings.pdh import pdh
 from core.utils.win32.constants import PDH_FMT_DOUBLE
@@ -538,7 +538,7 @@ class GpuApi:
 
 class GpuWorker(QThread):
     _instance: GpuWorker | None = None
-    data_ready = pyqtSignal(list)
+    data_ready = Signal(list)
 
     @classmethod
     def get_instance(cls, update_interval: int) -> GpuWorker:

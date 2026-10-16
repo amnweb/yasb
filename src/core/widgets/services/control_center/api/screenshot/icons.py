@@ -1,8 +1,8 @@
 """Toolbar SVG icons for screenshot UI."""
 
-from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QGuiApplication, QIcon, QPainter, QPixmap
-from PyQt6.QtSvg import QSvgRenderer
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import QGuiApplication, QIcon, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 
 SVG_COPY = """\
 <svg viewBox="64 64 896 896" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -99,7 +99,7 @@ def svg_to_icon(svg_text: str, size: int, color: str, dpr: float | None = None) 
 
         if dpr is None or dpr <= 0:
             screen = QGuiApplication.primaryScreen()
-            dpr = float(screen.devicePixelRatio()) if screen is not None else 1.0
+            dpr = float(screen.devicePixelRatio())
 
         svg_text = svg_text.replace("currentColor", color)
         renderer = QSvgRenderer(svg_text.encode("utf-8"))

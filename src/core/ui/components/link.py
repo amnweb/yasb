@@ -1,15 +1,10 @@
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QEasingCurve, QEvent, QParallelAnimationGroup, QPropertyAnimation, QSize, Qt
-from PyQt6.QtGui import QColor, QEnterEvent, QFont, QFontMetrics, QMouseEvent, QPainter, QPaintEvent
-from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
+from PySide6.QtCore import Property, QEasingCurve, QEvent, QParallelAnimationGroup, QPropertyAnimation, QSize, Qt
+from PySide6.QtGui import QColor, QEnterEvent, QFont, QFontMetrics, QMouseEvent, QPainter, QPaintEvent
+from PySide6.QtWidgets import QApplication, QPushButton, QWidget
 
 from core.ui.theme import FONT_FAMILIES, FONT_WEIGHTS, get_tokens, theme_key
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _DURATION = 83
 _RADIUS = 4.0
@@ -132,7 +127,7 @@ class Link(QPushButton):
         self._bg = c
         self.update()
 
-    bg: QColor = pyqtProperty(QColor, _get_bg, _set_bg)
+    bg = Property(QColor, _get_bg, _set_bg)
 
     def _get_fg(self) -> QColor:
         return self._fg
@@ -141,7 +136,7 @@ class Link(QPushButton):
         self._fg = c
         self.update()
 
-    fg: QColor = pyqtProperty(QColor, _get_fg, _set_fg)
+    fg = Property(QColor, _get_fg, _set_fg)
 
     def _animate_to(self, state: str) -> None:
         target = self._states.get(state, self._states["normal"])
@@ -153,37 +148,37 @@ class Link(QPushButton):
         self._anim_group.start()
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         if self.isEnabled():
             self._animate_to("hover")
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         if self.isEnabled():
             self._animate_to("normal")
         super().leaveEvent(a0)
 
     @override
-    def mousePressEvent(self, e: QMouseEvent | None) -> None:
+    def mousePressEvent(self, e: QMouseEvent) -> None:
         if self.isEnabled():
             self._animate_to("pressed")
         super().mousePressEvent(e)
 
     @override
-    def mouseReleaseEvent(self, e: QMouseEvent | None) -> None:
+    def mouseReleaseEvent(self, e: QMouseEvent) -> None:
         if self.isEnabled():
-            self._animate_to("hover" if e is not None and self.rect().contains(e.pos()) else "normal")
+            self._animate_to("hover" if self.rect().contains(e.pos()) else "normal")
         super().mouseReleaseEvent(e)
 
     @override
-    def changeEvent(self, e: QEvent | None) -> None:
+    def changeEvent(self, e: QEvent) -> None:
         super().changeEvent(e)
-        if e is not None and e.type() == e.Type.EnabledChange:
+        if e.type() == e.Type.EnabledChange:
             self._animate_to("normal" if self.isEnabled() else "disabled")
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         r = self.rect().adjusted(1, 1, -1, -1).toRectF()

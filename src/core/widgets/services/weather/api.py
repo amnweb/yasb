@@ -5,8 +5,8 @@ from datetime import datetime
 from random import randint
 from typing import Any
 
-from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
-from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
+from PySide6.QtCore import QObject, QTimer, QUrl, Signal
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
 HEADER = (b"User-Agent", b"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0")
 CACHE_CONTROL = (b"Cache-Control", b"no-cache")
@@ -23,7 +23,7 @@ class HostNotFoundError(Exception):
 class WeatherDataFetcher(QObject):
     """Fetches and processes weather data from a URL."""
 
-    finished = pyqtSignal(dict)
+    finished = Signal(dict)
 
     _cached_url = None
     _instance: WeatherDataFetcher | None = None
@@ -67,14 +67,14 @@ class WeatherDataFetcher(QObject):
             status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
             if error == QNetworkReply.NetworkError.NoError:
                 logging.info("Fetching new weather data at %s", datetime.now())
-                data = json.loads(reply.readAll().data().decode())
+                data = json.loads(bytes(reply.readAll().data()).decode())
                 self.finished.emit(data)
                 reply.deleteLater()
                 return
             elif error == QNetworkReply.NetworkError.HostNotFoundError:
                 raise HostNotFoundError("No internet connection or host not found. Unable to fetch weather.")
             elif status in {400, 401, 403}:
-                data = json.loads(reply.readAll().data().decode())
+                data = json.loads(bytes(reply.readAll().data()).decode())
                 raise BadRequestError(f"Weather response error {status}: {data['error']['message']}")
             else:
                 logging.warning("Weather API returned error %s. Will retry on next interval.", status)
@@ -91,7 +91,7 @@ class WeatherDataFetcher(QObject):
 class IconFetcher(QObject):
     """Fetches and caches icons from a list of URLs."""
 
-    finished = pyqtSignal()
+    finished = Signal()
 
     _instance: IconFetcher | None = None
 
@@ -126,7 +126,7 @@ class IconFetcher(QObject):
     def _handle_reply(self, reply: QNetworkReply, url: str):
         try:
             if reply.error() == QNetworkReply.NetworkError.NoError:
-                data = reply.readAll().data()
+                data = bytes(reply.readAll().data())
                 if not data:
                     raise Exception(f"Failed to fetch icon {url}: No data received")
                 self._icon_cache[url] = data

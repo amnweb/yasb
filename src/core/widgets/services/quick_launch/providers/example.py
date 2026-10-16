@@ -306,7 +306,7 @@ class ExampleProvider(BaseProvider):
             shell_open(url)
             return ProviderMenuActionResult(close_popup=True)
         if action_id == "copy_url" and url:
-            from PyQt6.QtWidgets import QApplication
+            from PySide6.QtWidgets import QApplication
 
             clipboard = QApplication.clipboard()
             if clipboard:

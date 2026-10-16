@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any, override
 
 import win32gui
 from PIL import Image
-from PyQt6.QtCore import QEasingCurve, QEvent, QMimeData, QObject, QPoint, QPropertyAnimation, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import (
+from PySide6.QtCore import QEasingCurve, QEvent, QMimeData, QObject, QPoint, QPropertyAnimation, Qt, QTimer, Signal
+from PySide6.QtGui import (
     QCursor,
     QDrag,
     QDragEnterEvent,
@@ -19,7 +19,7 @@ from PyQt6.QtGui import (
     QPixmap,
     QShowEvent,
 )
-from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
+from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 from core.utils.icons.extract import get_stock_icon
 from core.utils.icons.service import IconService, WindowIcon
@@ -86,7 +86,7 @@ class DraggableAppButton(QFrame):
         self._preview_timer.timeout.connect(self._on_preview_timeout)
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         try:
             if self._taskbar.preview_enabled and not self._dragging:
                 # Check if there's already a preview showing for this hwnd
@@ -108,7 +108,7 @@ class DraggableAppButton(QFrame):
             pass
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         try:
             self._preview_timer.stop()
             if self._taskbar.preview_enabled:
@@ -180,9 +180,7 @@ class DraggableAppButton(QFrame):
         return False
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         if a0.button() == Qt.MouseButton.LeftButton:
             self._press_pos = a0.position().toPoint()
             self._press_global_pos = a0.globalPosition().toPoint()
@@ -193,9 +191,7 @@ class DraggableAppButton(QFrame):
         super().mousePressEvent(a0)
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
         if a0.buttons() & Qt.MouseButton.LeftButton:
             if not self._dragging:
                 if not self._maybe_start_drag(a0):
@@ -204,9 +200,7 @@ class DraggableAppButton(QFrame):
         a0.accept()
 
     @override
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
         if a0.button() == Qt.MouseButton.LeftButton:
             was_dragging = self._dragging
             self._dragging = False
@@ -235,8 +229,8 @@ class DraggableAppButton(QFrame):
 
 
 class TaskbarDropWidget(QFrame):
-    drag_started = pyqtSignal()
-    drag_ended = pyqtSignal()
+    drag_started = Signal()
+    drag_ended = Signal()
 
     def __init__(self, owner: TaskbarWidget, parent: QWidget | None = None):
         super().__init__(parent)
@@ -266,9 +260,7 @@ class TaskbarDropWidget(QFrame):
             pass
 
     @override
-    def dragEnterEvent(self, a0: QDragEnterEvent | None) -> None:
-        if a0 is None:
-            return
+    def dragEnterEvent(self, a0: QDragEnterEvent) -> None:
         source = a0.source()
         if isinstance(source, DraggableAppButton):
             if source.parent() is not self:
@@ -290,9 +282,7 @@ class TaskbarDropWidget(QFrame):
         a0.ignore()
 
     @override
-    def dragMoveEvent(self, a0: QDragMoveEvent | None) -> None:
-        if a0 is None:
-            return
+    def dragMoveEvent(self, a0: QDragMoveEvent) -> None:
         source = a0.source()
         if isinstance(source, DraggableAppButton):
             if source.parent() is not self:
@@ -318,9 +308,7 @@ class TaskbarDropWidget(QFrame):
         a0.ignore()
 
     @override
-    def dragLeaveEvent(self, a0: QDragLeaveEvent | None) -> None:
-        if a0 is None:
-            return
+    def dragLeaveEvent(self, a0: QDragLeaveEvent) -> None:
         self.hide_drop_indicator()
         self._clear_hover_highlight()
         self._hover_timer.stop()
@@ -333,9 +321,7 @@ class TaskbarDropWidget(QFrame):
         a0.accept()
 
     @override
-    def dropEvent(self, a0: QDropEvent | None) -> None:
-        if a0 is None:
-            return
+    def dropEvent(self, a0: QDropEvent) -> None:
         source = a0.source()
         if not isinstance(source, DraggableAppButton):
             self._hover_timer.stop()
@@ -1032,8 +1018,8 @@ class TaskbarWidget(BaseWidget):
             pass
 
     @override
-    def event(self, a0: QEvent | None) -> bool:
-        if a0 is not None and a0.type() == QEvent.Type.DevicePixelRatioChange:
+    def event(self, a0: QEvent) -> bool:
+        if a0.type() == QEvent.Type.DevicePixelRatioChange:
             dpr = self.devicePixelRatioF()
             if dpr != self._dpi:
                 self._dpi = dpr
@@ -1061,7 +1047,7 @@ class TaskbarWidget(BaseWidget):
                 icon_label.setPixmap(icon)
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         try:
             super().showEvent(a0)
         except Exception:

@@ -10,9 +10,9 @@ from typing import cast
 
 import win32con
 import win32gui
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
-from PyQt6.QtWidgets import QSystemTrayIcon
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PySide6.QtWidgets import QSystemTrayIcon
 
 from core.bar_manager import BarManager
 from core.ui.views.about import AboutDialog
@@ -42,7 +42,7 @@ def _append_menu(menu: int, flags: int, item_id: int, label: str) -> None:
 
 
 class SystemTrayManager(QSystemTrayIcon):
-    _update_signal = pyqtSignal(object)
+    _update_signal = Signal(object)
 
     def __init__(self, bar_manager: BarManager):
         super().__init__()

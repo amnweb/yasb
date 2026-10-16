@@ -19,7 +19,7 @@ from typing import Any, TypedDict
 
 import win32gui
 import win32process
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource
 from core.utils.system import app_data_path
@@ -43,7 +43,7 @@ from core.widgets.services.taskbar.shortcut_resolver import (
 class TaskbarSignalBus(QObject):
     """Signal bus for coordinating pinned app changes across multiple taskbar instances."""
 
-    pinned_apps_changed = pyqtSignal(str, str)  # action, unique_id
+    pinned_apps_changed = Signal(str, str)  # action, unique_id
 
 
 _taskbar_signal_bus = TaskbarSignalBus()

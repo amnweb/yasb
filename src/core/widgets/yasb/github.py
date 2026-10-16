@@ -2,9 +2,9 @@ import os
 import re
 from typing import Any
 
-from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
-from PyQt6.QtGui import QColor, QDesktopServices, QMouseEvent, QPainter, QPaintEvent
-from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PySide6.QtCore import QPoint, Qt, QTimer, QUrl
+from PySide6.QtGui import QColor, QDesktopServices, QMouseEvent, QPainter, QPaintEvent
+from PySide6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.time_utils import get_relative_time
 from core.utils.tooltip import set_tooltip
@@ -47,7 +47,7 @@ class NotificationLabel(QLabel):
         self._color = color
         self.update()
 
-    def paintEvent(self, a0: QPaintEvent | None):
+    def paintEvent(self, a0: QPaintEvent):
         super().paintEvent(a0)
         if self._show_dot:
             painter = QPainter(self)
@@ -556,13 +556,13 @@ class GithubWidget(BaseWidget):
         else:
             large_label = QLabel(self.config.icons.github_logo)
             large_label.setStyleSheet("font-size:88px;font-weight:400")
-            opacity_effect = QGraphicsOpacityEffect()
+            opacity_effect = QGraphicsOpacityEffect(large_label)
             opacity_effect.setOpacity(0.4)
             large_label.setGraphicsEffect(opacity_effect)
 
             no_data = QLabel("No unread notifications")
             no_data.setStyleSheet("font-size:18px;font-weight:400;font-family: Segoe UI")
-            opacity_effect = QGraphicsOpacityEffect()
+            opacity_effect = QGraphicsOpacityEffect(no_data)
             opacity_effect.setOpacity(0.5)
             no_data.setGraphicsEffect(opacity_effect)
 

@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 from threading import Event
 
-from PyQt6.QtCore import QLockFile, QObject, pyqtSignal
+from PySide6.QtCore import QLockFile, QObject, Signal
 
 from core.cloud.constants import DOWNLOAD_DIR, LOCK_FILE, SAFETY_DIR, UPLOAD_DIR
 from core.cloud.encryption.stream import decrypt_snapshot, encrypt_snapshot
@@ -61,8 +61,8 @@ def device_name() -> str:
 class PrepareWorker(QObject):
     """Config directory to archive to encrypted .ysb, ready to upload."""
 
-    prepared = pyqtSignal(object)
-    failed = pyqtSignal(str)
+    prepared = Signal(object)
+    failed = Signal(str)
 
     def __init__(self, master_key: bytes, note: str, max_total_bytes: int, exclude: tuple[str, ...] = ()) -> None:
         super().__init__()
@@ -141,8 +141,8 @@ def unpack_into(target: Path) -> Apply:
 class DecryptWorker(QObject):
     """Decrypts a downloaded .ysb here and hands the zip to `apply`."""
 
-    done = pyqtSignal(object)
-    failed = pyqtSignal(str)
+    done = Signal(object)
+    failed = Signal(str)
 
     def __init__(self, blob: Path, master_key: bytes, apply: Apply) -> None:
         super().__init__()

@@ -5,9 +5,9 @@ from enum import StrEnum, auto
 from itertools import groupby
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QObject, QPointF, QRectF, Qt, QTimer
-from PyQt6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QObject, QPointF, QRectF, Qt, QTimer
+from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
+from PySide6.QtWidgets import QWidget
 
 from core.widgets.services.open_meteo.utils import create_path_from_points, find_point_and_percent
 

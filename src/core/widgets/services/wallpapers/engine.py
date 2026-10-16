@@ -28,9 +28,8 @@ import winreg
 from ctypes import wintypes
 from typing import override
 
-import PyQt6.sip as sip
-from PyQt6.QtCore import QByteArray, QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, QTimer, pyqtSignal
-from PyQt6.QtGui import (
+from PySide6.QtCore import QByteArray, QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, QTimer, Signal
+from PySide6.QtGui import (
     QCloseEvent,
     QColor,
     QImage,
@@ -41,7 +40,7 @@ from PyQt6.QtGui import (
     QPixmap,
     QPolygonF,
 )
-from PyQt6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QWidget
 from win32con import (
     GWL_EXSTYLE,
     GWL_STYLE,
@@ -423,7 +422,7 @@ def _attach_to_workerw(widget: WallpaperEngine) -> bool:
 class _ImageLoader(QThread):
     """Background thread to load new and old wallpaper images without blocking the UI."""
 
-    loaded = pyqtSignal(object, object)
+    loaded = Signal(object, object)
 
     def __init__(self, new_path: str, old_path: str):
         super().__init__()
@@ -442,7 +441,7 @@ class WallpaperEngine(QWidget):
     _ANIMATION_MS = 1200
     _FRAME_MS = 16
 
-    finished = pyqtSignal()
+    finished = Signal()
 
     def __init__(self, image_path: str, animation: str = "circle") -> None:
         super().__init__()
@@ -461,8 +460,7 @@ class WallpaperEngine(QWidget):
         self._resources_freed = False
 
         primary = QApplication.primaryScreen()
-        if primary is not None:
-            self.setGeometry(primary.geometry())
+        self.setGeometry(primary.geometry())
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
@@ -724,7 +722,7 @@ class WallpaperEngine(QWidget):
         return circ.intersected(rect)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
 
         t = self._progress
@@ -784,18 +782,18 @@ class WallpaperEngine(QWidget):
 
     @override
     def nativeEvent(
-        self, eventType: QByteArray | bytes | bytearray | memoryview, message: sip.voidptr | None
-    ) -> tuple[bool, sip.voidptr | None]:
+        self, eventType: QByteArray | bytes | bytearray | memoryview, message: int | None
+    ) -> tuple[bool, int | None]:
         if message is None:
-            return False, sip.voidptr(0)
+            return False, 0
         msg = ctypes.cast(int(message), ctypes.POINTER(wintypes.MSG)).contents
         if msg.message == WM_DESTROY:
             self._free_resources()
             self.deleteLater()
-            return True, sip.voidptr(0)
-        return False, sip.voidptr(0)
+            return True, 0
+        return False, 0
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         self._free_resources()
         super().closeEvent(a0)

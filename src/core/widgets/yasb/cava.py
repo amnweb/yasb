@@ -7,9 +7,9 @@ import subprocess
 import threading
 from typing import override
 
-from PyQt6.QtCore import QEvent, QPointF, QRectF, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent
-from PyQt6.QtWidgets import QApplication, QFrame, QLabel
+from PySide6.QtCore import QEvent, QPointF, QRectF, QTimer, Signal
+from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent
+from PySide6.QtWidgets import QApplication, QFrame, QLabel
 
 from core.utils.system import app_data_path
 from core.validation.widgets.yasb.cava import CavaConfig
@@ -40,8 +40,8 @@ class CavaBar(QFrame):
         self.setContentsMargins(0, 0, 0, 0)
 
     @override
-    def event(self, e: QEvent | None) -> bool:
-        if e is not None and e.type() == QEvent.Type.DevicePixelRatioChange:
+    def event(self, e: QEvent) -> bool:
+        if e.type() == QEvent.Type.DevicePixelRatioChange:
             self._dpr = None
             self.update()
         return super().event(e)
@@ -95,7 +95,7 @@ class CavaBar(QFrame):
         return 1.0
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         """Draw the cava bars according to the selected style."""
         painter = QPainter(self)
 
@@ -374,7 +374,7 @@ class CavaBar(QFrame):
 
 class CavaWidget(BaseWidget):
     validation_schema = CavaConfig
-    samplesUpdated = pyqtSignal(list)
+    samplesUpdated = Signal(list)
     _instance_counter = 0  # Class variable to track instances
 
     _edge_fade_left: int

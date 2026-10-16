@@ -2,9 +2,9 @@ import threading
 from collections.abc import Callable
 from typing import Any, override
 
-from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QColor, QDesktopServices, QFont, QPalette, QShowEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import QCloseEvent, QColor, QDesktopServices, QFont, QPalette, QShowEvent
+from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QFrame,
@@ -21,11 +21,11 @@ from core.widgets.services.github import auth as github_auth
 
 
 class GitHubAuthDialog(ViewBase, QDialog):
-    auth_completed = pyqtSignal(str)
-    _device_code_received = pyqtSignal(dict)
-    _device_error = pyqtSignal(str)
-    _auth_success = pyqtSignal(str)
-    _auth_error = pyqtSignal(str)
+    auth_completed = Signal(str)
+    _device_code_received = Signal(dict)
+    _device_error = Signal(str)
+    _auth_success = Signal(str)
+    _auth_error = Signal(str)
 
     def __init__(
         self,
@@ -210,7 +210,7 @@ class GitHubAuthDialog(ViewBase, QDialog):
 
     def _copy_code(self):
         clipboard = QApplication.clipboard()
-        if self._user_code and clipboard is not None:
+        if self._user_code:
             clipboard.setText(self._user_code)
             self._copy_btn.setText("Copied")
             QTimer.singleShot(1000, lambda: self._copy_btn.setText("Copy"))
@@ -219,11 +219,11 @@ class GitHubAuthDialog(ViewBase, QDialog):
         QDesktopServices.openUrl(QUrl("https://github.com/login/device"))
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         self._apply_frame_styles()
         super().showEvent(a0)
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         self._stop = True
         super().closeEvent(a0)

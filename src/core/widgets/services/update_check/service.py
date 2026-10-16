@@ -5,7 +5,7 @@ import threading
 from functools import partial
 from typing import TYPE_CHECKING, Protocol, TypedDict, override
 
-from PyQt6.QtCore import QObject, Qt, QThread, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, Qt, QThread, QTimer, Signal
 
 from core.utils.qobject import is_valid_qobject
 from core.widgets.services.update_check import scoop as scoop_mgr
@@ -39,7 +39,7 @@ _SOURCE_MODULES: dict[str, UpdateSource] = {
 class _UpdateWorker(QThread):
     """Background worker that checks one source for updates."""
 
-    finished = pyqtSignal(str, dict)  # (source, result_dict)
+    finished = Signal(str, dict)  # (source, result_dict)
 
     def __init__(self, source: str, exclude_list: list[str] | None = None, parent: QObject | None = None):
         super().__init__(parent)
