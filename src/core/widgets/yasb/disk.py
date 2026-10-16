@@ -25,8 +25,8 @@ class ClickableDiskWidget(QWidget):
         self.label = label
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         super().mousePressEvent(a0)
 

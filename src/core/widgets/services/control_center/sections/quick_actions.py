@@ -26,14 +26,14 @@ class ActionButton(QFrame):
         super().__init__(parent)
         self.setMouseTracking(True)
 
-    def mousePressEvent(self, a0: QMouseEvent | None):
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+    def mousePressEvent(self, a0: QMouseEvent):
+        if a0.button() == Qt.MouseButton.LeftButton:
             a0.accept()
             return
         super().mousePressEvent(a0)
 
-    def mouseReleaseEvent(self, a0: QMouseEvent | None):
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+    def mouseReleaseEvent(self, a0: QMouseEvent):
+        if a0.button() == Qt.MouseButton.LeftButton:
             if self.rect().contains(a0.position().toPoint()):
                 self.clicked.emit()
                 a0.accept()

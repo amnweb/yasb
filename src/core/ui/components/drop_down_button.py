@@ -1,4 +1,4 @@
-from typing import override
+from typing import cast, override
 
 from PySide6.QtCore import (
     Property,
@@ -104,28 +104,24 @@ class _MenuItem(QWidget):
         return QSize(width, _ITEM_HEIGHT)
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         self._hovered = True
         self.update()
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         self._hovered = False
         self.update()
         super().leaveEvent(a0)
 
     @override
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        if (
-            a0 is not None
-            and a0.button() == Qt.MouseButton.LeftButton
-            and self.rect().contains(a0.position().toPoint())
-        ):
+    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton and self.rect().contains(a0.position().toPoint()):
             self.clicked.emit(self._key)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.rect().adjusted(4, 2, -4, -2).toRectF()
@@ -155,7 +151,7 @@ class _Separator(QWidget):
         self.setFixedHeight(_SEPARATOR_HEIGHT)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.fillRect(QRect(0, self.height() // 2, self.width(), 1), self._color)
         p.end()
@@ -218,7 +214,7 @@ class _MenuFlyout(QWidget):
         )
         self._container.move(_SHADOW_MARGIN, _SHADOW_MARGIN - hidden)
 
-    reveal: float = Property(float, _get_reveal, _set_reveal)
+    reveal: float = cast(float, Property(float, _get_reveal, _set_reveal))
 
     def popup(self) -> None:
         trigger = self._trigger
@@ -226,11 +222,11 @@ class _MenuFlyout(QWidget):
         below = trigger.mapToGlobal(QPoint(0, trigger.height() + _MENU_GAP))
         window = trigger.window()
         x = below.x()
-        if window is not None and x + size.width() > window.mapToGlobal(QPoint(window.width(), 0)).x():
+        if x + size.width() > window.mapToGlobal(QPoint(window.width(), 0)).x():
             x = trigger.mapToGlobal(QPoint(trigger.width(), 0)).x() - size.width()
         y = below.y()
         screen = trigger.screen()
-        self._upward = screen is not None and y + size.height() > screen.availableGeometry().bottom()
+        self._upward = y + size.height() > screen.availableGeometry().bottom()
         if self._upward:
             y = trigger.mapToGlobal(QPoint(0, -_MENU_GAP)).y() - size.height()
         self._menu_rect = QRect(QPoint(x, y), size)
@@ -255,8 +251,8 @@ class _MenuFlyout(QWidget):
         group.start()
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and not self._container.geometry().contains(a0.position().toPoint()):
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if not self._container.geometry().contains(a0.position().toPoint()):
             # Qt replays the closing click to the widget under it; on the trigger that would reopen the menu.
             if self._trigger.rect().contains(self._trigger.mapFromGlobal(a0.globalPosition().toPoint())):
                 self.setAttribute(Qt.WidgetAttribute.WA_NoMouseReplay)
@@ -265,8 +261,8 @@ class _MenuFlyout(QWidget):
         super().mousePressEvent(a0)
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is not None and a0.key() == Qt.Key.Key_Escape:
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
+        if a0.key() == Qt.Key.Key_Escape:
             self.close()
             return
         super().keyPressEvent(a0)
@@ -320,7 +316,7 @@ class DropDownButton(Button):
         if not self._icon_svg:
             return
         screen = QApplication.primaryScreen()
-        dpr = screen.devicePixelRatio() if screen is not None else 1.0
+        dpr = screen.devicePixelRatio()
         self.setIcon(QIcon(_tinted_svg(self._icon_svg, QColor(get_tokens()["text_primary"]), _ICON_SIZE, dpr)))
 
     def _on_theme_changed(self) -> None:
@@ -343,13 +339,13 @@ class DropDownButton(Button):
         self._animate_to(self._interaction_state(hovering))
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         super().paintEvent(a0)
         if not self._chevron:
             return
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setPen(QPen(self._fg, 1.4, cap=Qt.PenCapStyle.RoundCap, join=Qt.PenJoinStyle.RoundJoin))
+        p.setPen(QPen(self._fg, 1.4, c=Qt.PenCapStyle.RoundCap, j=Qt.PenJoinStyle.RoundJoin))
         cx = self.width() - DEFAULT_PADDING[2] - _CHEVRON_WIDTH / 2
         cy = self.height() / 2
         p.drawPolyline(QPolygonF([QPointF(cx - 3, cy - 1.5), QPointF(cx, cy + 1.5), QPointF(cx + 3, cy - 1.5)]))

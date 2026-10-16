@@ -52,7 +52,7 @@ class WorkspaceButton(QPushButton):
             self.parent_widget.on_button_clicked(self)
 
     @override
-    def mousePressEvent(self, e: QMouseEvent | None) -> None:
+    def mousePressEvent(self, e: QMouseEvent) -> None:
         if self.parent_widget:
             self.parent_widget.clicked_button = self
         super().mousePressEvent(e)

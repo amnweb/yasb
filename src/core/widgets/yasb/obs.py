@@ -564,7 +564,7 @@ class ObsWidget(BaseWidget):
             pass
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         if self in ObsWidget._subscribers:
             ObsWidget._subscribers.remove(self)
 
@@ -588,5 +588,4 @@ class ObsWidget(BaseWidget):
                     ObsWidget._time_timer.stop()
                     ObsWidget._time_timer = None
 
-        if a0 is not None:
-            a0.accept()
+        a0.accept()

@@ -416,8 +416,7 @@ class WallpaperEngine(QWidget):
         self._resources_freed = False
 
         primary = QApplication.primaryScreen()
-        if primary is not None:
-            self.setGeometry(primary.geometry())
+        self.setGeometry(primary.geometry())
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
@@ -679,7 +678,7 @@ class WallpaperEngine(QWidget):
         return circ.intersected(rect)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
 
         t = self._progress
@@ -751,6 +750,6 @@ class WallpaperEngine(QWidget):
         return False, 0
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         self._free_resources()
         super().closeEvent(a0)

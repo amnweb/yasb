@@ -67,14 +67,14 @@ class WeatherDataFetcher(QObject):
             status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
             if error == QNetworkReply.NetworkError.NoError:
                 logging.info("Fetching new weather data at %s", datetime.now())
-                data = json.loads(reply.readAll().data().decode())
+                data = json.loads(bytes(reply.readAll().data()).decode())
                 self.finished.emit(data)
                 reply.deleteLater()
                 return
             elif error == QNetworkReply.NetworkError.HostNotFoundError:
                 raise HostNotFoundError("No internet connection or host not found. Unable to fetch weather.")
             elif status in {400, 401, 403}:
-                data = json.loads(reply.readAll().data().decode())
+                data = json.loads(bytes(reply.readAll().data()).decode())
                 raise BadRequestError(f"Weather response error {status}: {data['error']['message']}")
             else:
                 logging.warning("Weather API returned error %s. Will retry on next interval.", status)
@@ -126,7 +126,7 @@ class IconFetcher(QObject):
     def _handle_reply(self, reply: QNetworkReply, url: str):
         try:
             if reply.error() == QNetworkReply.NetworkError.NoError:
-                data = reply.readAll().data()
+                data = bytes(reply.readAll().data())
                 if not data:
                     raise Exception(f"Failed to fetch icon {url}: No data received")
                 self._icon_cache[url] = data

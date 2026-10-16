@@ -62,7 +62,7 @@ class BrightnessWidget(BaseWidget):
     def _hmonitor(self) -> int | None:
         return get_widget_monitor_hwnd(self)
 
-    def showEvent(self, a0: QShowEvent | None):
+    def showEvent(self, a0: QShowEvent):
         """Handle widget show event detect monitor and check support."""
         super().showEvent(a0)
         if not self._initialized:
@@ -412,8 +412,6 @@ class BrightnessWidget(BaseWidget):
     @staticmethod
     def _is_over_slider_handle(slider: QSlider, pos: QPoint) -> bool:
         style = slider.style()
-        if style is None:
-            return False
         option = QStyleOptionSlider()
         slider.initStyleOption(option)
         handle_rect = style.subControlRect(
@@ -425,8 +423,8 @@ class BrightnessWidget(BaseWidget):
         return handle_rect.contains(pos)
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if isinstance(a0, QSlider) and a1 is not None and self.config.tooltip:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
+        if isinstance(a0, QSlider) and self.config.tooltip:
             event_type = a1.type()
             if event_type == QEvent.Type.MouseMove and isinstance(a1, QMouseEvent):
                 pos = a1.position().toPoint()
@@ -456,10 +454,8 @@ class BrightnessWidget(BaseWidget):
             level = self.config.auto_light_night_level if is_night else self.config.auto_light_day_level
             self.set_brightness(level)
 
-    def wheelEvent(self, a0: QWheelEvent | None):
+    def wheelEvent(self, a0: QWheelEvent):
         """Handle mouse wheel for brightness adjustment."""
-        if a0 is None:
-            return
 
         current = self.get_brightness()
         if current is None:

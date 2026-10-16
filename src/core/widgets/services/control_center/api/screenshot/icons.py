@@ -99,7 +99,7 @@ def svg_to_icon(svg_text: str, size: int, color: str, dpr: float | None = None) 
 
         if dpr is None or dpr <= 0:
             screen = QGuiApplication.primaryScreen()
-            dpr = float(screen.devicePixelRatio()) if screen is not None else 1.0
+            dpr = float(screen.devicePixelRatio())
 
         svg_text = svg_text.replace("currentColor", color)
         renderer = QSvgRenderer(svg_text.encode("utf-8"))

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from enum import Enum, auto
 from functools import partial
 from os import makedirs, path
-from typing import Any, TypedDict, override
+from typing import Any, TypedDict, cast, override
 
 from PySide6.QtCore import (
     QEasingCurve,
@@ -22,6 +22,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QCloseEvent, QDesktopServices, QFontDatabase, QMouseEvent
 from PySide6.QtWidgets import (
     QDialog,
+    QGraphicsEffect,
     QGraphicsOpacityEffect,
     QGridLayout,
     QHBoxLayout,
@@ -268,7 +269,7 @@ class _ClickableCard(Card):
         self._on_click = on_click
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         self._on_click()
 
 
@@ -834,7 +835,7 @@ class WelcomeWizard(ViewBase, QDialog):
                 w = self._stack.widget(i)
                 if w is not None:
                     w.move(0, 0)
-                    w.setGraphicsEffect(None)
+                    w.setGraphicsEffect(cast(QGraphicsEffect, None))
             self._stack.setCurrentIndex(self._anim_target)
             self._anim_group = None
 
@@ -879,7 +880,7 @@ class WelcomeWizard(ViewBase, QDialog):
             w = self._stack.widget(i)
             if w is not None:
                 w.move(0, 0)
-                w.setGraphicsEffect(None)
+                w.setGraphicsEffect(cast(QGraphicsEffect, None))
         self._stack.setCurrentIndex(self._anim_target)
         self._anim_group.deleteLater()
         self._anim_group = None
@@ -951,7 +952,7 @@ class WelcomeWizard(ViewBase, QDialog):
         return self._result_code
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         if self._font_check_worker is not None and self._font_check_worker.isRunning():
             self._font_check_worker.finished.disconnect()
         if self._font_worker is not None and self._font_worker.isRunning():

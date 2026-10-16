@@ -36,8 +36,6 @@ def export_pixmap(pix: QPixmap, *, save: bool, parent: QWidget | None = None) ->
     """
     if not save:
         clipboard = QApplication.clipboard()
-        if clipboard is None:
-            return False
         clipboard.setPixmap(pix)
         return True
     folder = default_save_dir()

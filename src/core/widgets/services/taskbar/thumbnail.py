@@ -57,7 +57,7 @@ class ThumbnailHost(QWidget):
         self.setMouseTracking(True)
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         """Notify preview that mouse entered thumbnail and hover its item."""
         try:
             if self.preview_popup:
@@ -68,7 +68,7 @@ class ThumbnailHost(QWidget):
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         """Notify preview that mouse left thumbnail, and drop the item's hover with it."""
         try:
             if self.preview_popup:
@@ -79,7 +79,7 @@ class ThumbnailHost(QWidget):
         super().leaveEvent(a0)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         """Forward click to preview to bring the hosted window to foreground."""
         if self.preview_popup:
             self.preview_popup.activate_window(self._hwnd)
@@ -268,13 +268,13 @@ class PreviewItem(QFrame):
                 manager.set_peek(self.hwnd, hovered)
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         """Hovering the header counts as hovering the item, same as hovering its thumbnail."""
         self.set_hovered(True)
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         """Leaving means not hovered.
 
         Whatever the pointer moved onto sets the hover itself: crossing to the thumbnail raises
@@ -286,7 +286,7 @@ class PreviewItem(QFrame):
         super().leaveEvent(a0)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         """Clicking anywhere on the item focuses its window."""
         self._popup.activate_window(self.hwnd)
         super().mousePressEvent(a0)
@@ -390,14 +390,14 @@ class PreviewPopup(QFrame):
             return 1.0
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         # Only peek moves what is behind the preview, so without it the backdrop cannot go stale
         if self._blur and self._peek:
             self._backdrop.start()
         super().showEvent(a0)
 
     @override
-    def hideEvent(self, a0: QHideEvent | None) -> None:
+    def hideEvent(self, a0: QHideEvent) -> None:
         self._backdrop.stop()
         self._fade_anim.stop()
         self.cancel_hide()
@@ -418,7 +418,7 @@ class PreviewPopup(QFrame):
         screen = None
         try:
             screen = anchor_widget.screen()
-            self._dpr = float(screen.devicePixelRatio()) if screen is not None else 1.0
+            self._dpr = float(screen.devicePixelRatio())
         except Exception:
             self._dpr = 1.0
         if screen is None:
@@ -624,19 +624,19 @@ class PreviewPopup(QFrame):
             logger.exception("Failed to bring window to foreground")
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         """Handle click on the popup background - activate the window it was opened from."""
         if self.src_hwnd is not None:
             self.activate_window(self.src_hwnd)
         super().mousePressEvent(a0)
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         self.cancel_hide()
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         self.schedule_hide()
         super().leaveEvent(a0)
 

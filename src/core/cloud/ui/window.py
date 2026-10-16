@@ -541,7 +541,7 @@ class CloudWindow(ViewBase, QMainWindow):
             )
 
     @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         QSettings("YASB", "Cloud").setValue("window/geometry", self.saveGeometry())
         self._sign_in.cancel()
         self._ops.cancel_active()

@@ -113,15 +113,13 @@ class NotesPopup(PopupWidget):
         super().setPosition(alignment, direction, offset_left, offset_top)
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
         if self.is_floating or self._block_deactivate:
-            return False
-        if a0 is None or a1 is None:
             return False
         return super().eventFilter(a0, a1)
 
     @override
-    def event(self, a0: QEvent | None) -> bool:
+    def event(self, a0: QEvent) -> bool:
         if a0 and a0.type() == QEvent.Type.WindowDeactivate:
             if self.is_floating or self._block_deactivate:
                 a0.accept()
@@ -205,14 +203,10 @@ class NoteTextEdit(QTextEdit):
         else:
             super().insertFromMimeData(source)
 
-    def contextMenuEvent(self, e: QContextMenuEvent | None) -> None:
+    def contextMenuEvent(self, e: QContextMenuEvent) -> None:
         """Replace the default context menu with a styled one, but keeping the standard actions."""
-        if e is None:
-            return
 
         menu = self.createStandardContextMenu(e.pos())
-        if menu is None:
-            return
 
         menu.setProperty("class", "context-menu")
         apply_qmenu_style(menu)
@@ -337,9 +331,7 @@ class NoteTextEdit(QTextEdit):
 
         cursor.endEditBlock()
 
-    def keyPressEvent(self, e: QKeyEvent | None) -> None:
-        if e is None:
-            return
+    def keyPressEvent(self, e: QKeyEvent) -> None:
 
         if (
             e.key() == Qt.Key.Key_V

@@ -87,14 +87,11 @@ class ClickableLabel(QLabel):
         self.container: QWidget | None = None
 
     @override
-    def mousePressEvent(self, ev: QMouseEvent | None) -> None:
-        if ev is not None:
-            ev.accept()
+    def mousePressEvent(self, ev: QMouseEvent) -> None:
+        ev.accept()
 
     @override
-    def mouseReleaseEvent(self, ev: QMouseEvent | None) -> None:
-        if ev is None:
-            return
+    def mouseReleaseEvent(self, ev: QMouseEvent) -> None:
         if ev.button() == Qt.MouseButton.LeftButton and self.data and self.parent_widget:
             self.parent_widget.execute_code(self.data)
         ev.accept()

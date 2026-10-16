@@ -40,8 +40,8 @@ class CavaBar(QFrame):
         self.setContentsMargins(0, 0, 0, 0)
 
     @override
-    def event(self, e: QEvent | None) -> bool:
-        if e is not None and e.type() == QEvent.Type.DevicePixelRatioChange:
+    def event(self, e: QEvent) -> bool:
+        if e.type() == QEvent.Type.DevicePixelRatioChange:
             self._dpr = None
             self.update()
         return super().event(e)
@@ -95,7 +95,7 @@ class CavaBar(QFrame):
         return 1.0
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         """Draw the cava bars according to the selected style."""
         painter = QPainter(self)
 

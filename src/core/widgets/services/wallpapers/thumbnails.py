@@ -3,6 +3,7 @@ import os
 import threading
 import time
 from contextlib import suppress
+from typing import cast
 
 from PySide6.QtGui import QImage
 
@@ -35,7 +36,7 @@ def save(name: str, image: QImage) -> None:
     partial = f"{path}.{threading.get_ident()}.tmp"
     try:
         os.makedirs(FOLDER, exist_ok=True)
-        if image.save(partial, "PNG"):
+        if image.save(partial, cast(bytes, "PNG")):  # stub wants bytes, runtime wants str
             os.replace(partial, path)
             return
     except OSError:

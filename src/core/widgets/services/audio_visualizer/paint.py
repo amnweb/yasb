@@ -6,10 +6,10 @@ frame costs no more than the fills it actually needs.
 """
 
 import logging
-from typing import override
+from typing import cast, override
 
 from PySide6.QtCore import Property, QRect, Qt
-from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent, QPixmap
+from PySide6.QtGui import QBrush, QColor, QGradient, QLinearGradient, QPainter, QPainterPath, QPaintEvent, QPixmap
 from PySide6.QtWidgets import QFrame, QWidget
 
 
@@ -63,7 +63,7 @@ class AudioVizCanvas(QFrame):
         self._surface_brush_cache = None
         self.update()
 
-    fillbrush: QBrush = Property(QBrush, _get_fillbrush, _set_fillbrush)
+    fillbrush = Property(QBrush, _get_fillbrush, _set_fillbrush)
 
     def set_samples(self, samples: list[float]) -> None:
         if samples == self.samples:
@@ -76,7 +76,7 @@ class AudioVizCanvas(QFrame):
         self.set_samples([0.0] * len(self.samples))
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         if not self.samples:
             return
         try:
@@ -118,7 +118,7 @@ class AudioVizCanvas(QFrame):
 
     def _surface_brush(self, width: float, height: float) -> QBrush:
         """fillbrush with its gradient anchored to the whole surface, not each shape."""
-        gradient = self._fill.gradient()
+        gradient = cast(QGradient | None, self._fill.gradient())
         if gradient is None or not isinstance(gradient, QLinearGradient):
             return self._fill
         if gradient.coordinateMode() != QLinearGradient.CoordinateMode.ObjectBoundingMode:

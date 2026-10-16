@@ -77,9 +77,8 @@ class ProgressBar(QFrame):
             parts.append(self._state)
         self.setProperty("class", " ".join(parts))
         style = self.style()
-        if style is not None:
-            style.unpolish(self)
-            style.polish(self)
+        style.unpolish(self)
+        style.polish(self)
 
     def _update_state(self) -> None:
         pct = (self._value / self._max_value * 100) if self._max_value > 0 else 0
@@ -103,7 +102,7 @@ class ProgressBar(QFrame):
         self._fill.setGeometry(0, 0, fill_width, self.height())
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._update_fill()
 
@@ -148,12 +147,12 @@ class UsageChartWidget(QFrame):
             self._points.append(QPointF(x, y))
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._calculate_points()
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         super().paintEvent(a0)
         if not self._points:
             return
@@ -206,8 +205,8 @@ class UsageChartWidget(QFrame):
             painter.drawEllipse(self._points[self._hovered_index], 4, 4)
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None or not self._points:
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
+        if not self._points:
             return
         mouse_x = a0.pos().x()
         closest_idx = min(range(len(self._points)), key=lambda i: abs(self._points[i].x() - mouse_x))
@@ -223,7 +222,7 @@ class UsageChartWidget(QFrame):
             self._hide_tooltip()
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         self._hovered_index = -1
         self.update()
         self._hide_tooltip()

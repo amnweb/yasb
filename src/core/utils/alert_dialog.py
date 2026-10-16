@@ -127,8 +127,8 @@ class AlertDialog(QWidget):
             app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton:
             if self._btn_bar.geometry().contains(a0.pos()):
                 return
             if wh := self.windowHandle():
@@ -200,8 +200,6 @@ class AlertDialog(QWidget):
 
     def _center_on_screen(self) -> None:
         screen = QApplication.screenAt(self.pos()) or QApplication.primaryScreen()
-        if screen is None:
-            return
 
         self.ensurePolished()
         self.adjustSize()

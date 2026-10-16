@@ -10,6 +10,7 @@ from PySide6.QtCore import (
     QMimeData,
     QModelIndex,
     QObject,
+    QPersistentModelIndex,
     QPoint,
     QPropertyAnimation,
     QRect,
@@ -39,6 +40,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
+    QGraphicsEffect,
     QGraphicsOpacityEffect,
     QGridLayout,
     QHBoxLayout,
@@ -90,7 +92,7 @@ class ResultListModel(QAbstractListModel):
         self._icon_size: int = 0
         self._dpr: float = 1.0
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+    def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
             return super().flags(index)
         result = self.result_at(index.row())
@@ -101,12 +103,12 @@ class ResultListModel(QAbstractListModel):
             return default | Qt.ItemFlag.ItemIsDragEnabled
         return default
 
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def rowCount(self, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
         if parent.isValid():
             return 0
         return len(self._results)
 
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+    def data(self, index: QModelIndex | QPersistentModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid() or not (0 <= index.row() < len(self._results)):
             return None
         row = index.row()
@@ -171,11 +173,7 @@ class ResultListModel(QAbstractListModel):
 
         img = img.convertToFormat(QImage.Format.Format_ARGB32)
         width, height = img.width(), img.height()
-        ptr = img.bits()
-        if ptr is None:
-            return None
-        ptr.setsize(img.sizeInBytes())
-        raw = ptr.asstring(img.sizeInBytes())
+        raw = bytes(img.bits())
         bpl = img.bytesPerLine()
         scan_width = width * 4
 
@@ -264,7 +262,7 @@ class ResultItemDelegate(QStyledItemDelegate):
         """Get description color from CSS style probe."""
         return self._desc_style_label.palette().color(QPalette.ColorRole.WindowText)
 
-    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> QSize:
         result: ProviderResult | None = index.data(ResultListModel.RESULT_ROLE)
         if result and result.is_separator:
             m = self._sep_style_label.contentsMargins()
@@ -282,16 +280,14 @@ class ResultItemDelegate(QStyledItemDelegate):
         opt.icon = QIcon()
         opt.decorationSize = QSize(0, 0)
         style = opt.widget.style() if opt.widget else QApplication.style()
-        if style is None:
-            return super().sizeHint(option, index)
         return style.sizeFromContents(
             QStyle.ContentsType.CT_ItemViewItem, opt, QSize(option.rect.width(), content_h), opt.widget
         )
 
     @override
-    def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
-        if painter is None:
-            return
+    def paint(
+        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex
+    ) -> None:
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setClipping(True)
@@ -317,9 +313,6 @@ class ResultItemDelegate(QStyledItemDelegate):
         opt.icon = QIcon()
         opt.decorationSize = QSize(0, 0)
         style = opt.widget.style() if opt.widget else QApplication.style()
-        if style is None:
-            painter.restore()
-            return
 
         style.drawPrimitive(QStyle.PrimitiveElement.PE_PanelItemViewItem, opt, painter, opt.widget)
         if not result:
@@ -467,9 +460,8 @@ class QuickLaunchPopup(PopupWidget):
         return self._is_closing
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is not None:
-            self._on_key_press(a0)
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
+        self._on_key_press(a0)
 
 
 class QuickLaunchWidget(BaseWidget):
@@ -1006,8 +998,6 @@ class QuickLaunchWidget(BaseWidget):
         if not index.isValid():
             return
         viewport = self._popup.results_view.viewport()
-        if viewport is None:
-            return
         global_pos = viewport.mapToGlobal(pos)
         self._show_item_context_menu(index.row(), global_pos)
 
@@ -1517,10 +1507,10 @@ class QuickLaunchWidget(BaseWidget):
             search.setCursor(QCursor(Qt.CursorShape.SizeAllCursor))
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
         """Intercept mouse events on search_input for drag-to-move and prefix removal."""
         event = a1
-        if not self._popup or a0 is not self._popup.search_input or event is None:
+        if not self._popup or a0 is not self._popup.search_input:
             return super().eventFilter(a0, a1)
 
         etype = event.type()
@@ -1587,7 +1577,7 @@ class QuickLaunchWidget(BaseWidget):
             return
         content = self._popup.popup_content
         if opacity >= 1.0:
-            content.setGraphicsEffect(None)
+            content.setGraphicsEffect(cast(QGraphicsEffect, None))
         else:
             effect = QGraphicsOpacityEffect(content)
             effect.setOpacity(opacity)

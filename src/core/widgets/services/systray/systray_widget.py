@@ -3,7 +3,7 @@
 import ctypes as ct
 from ctypes import byref
 from dataclasses import dataclass
-from typing import ClassVar, override
+from typing import ClassVar, cast, override
 
 from PySide6.QtCore import (
     QMimeData,
@@ -24,6 +24,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QFrame,
+    QGraphicsEffect,
     QGraphicsOpacityEffect,
     QGridLayout,
     QHBoxLayout,
@@ -96,9 +97,7 @@ class IconWidget(QPushButton):
             self.scaled_pixmap = None
 
     @override
-    def mousePressEvent(self, e: QMouseEvent | None) -> None:
-        if e is None:
-            return
+    def mousePressEvent(self, e: QMouseEvent) -> None:
         mouse_button = e.button()
         if mouse_button == Qt.MouseButton.LeftButton:
             self.last_cursor_pos = e.pos()
@@ -110,10 +109,8 @@ class IconWidget(QPushButton):
         return super().mousePressEvent(e)
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
         event = a0
-        if event is None:
-            return super().mouseMoveEvent(event)
 
         # Only start drag if left mouse button is pressed and moved more than 10 pixels
         if self.lmb_pressed and (event.pos() - self.last_cursor_pos).manhattanLength() > 10:
@@ -137,16 +134,14 @@ class IconWidget(QPushButton):
                     if isinstance(parent, DropWidget):
                         parent.drag_ended.emit()
             finally:
-                self.setGraphicsEffect(None)
+                self.setGraphicsEffect(cast(QGraphicsEffect, None))
                 self.lmb_pressed = False
                 IconWidget.drag_in_progress = False
 
         return super().mouseMoveEvent(event)
 
     @override
-    def mouseReleaseEvent(self, e: QMouseEvent | None) -> None:
-        if e is None:
-            return super().mouseReleaseEvent(e)
+    def mouseReleaseEvent(self, e: QMouseEvent) -> None:
         if self.ignore_next_release:
             self.ignore_next_release = False
             return super().mouseReleaseEvent(e)
@@ -166,10 +161,8 @@ class IconWidget(QPushButton):
         return super().mouseReleaseEvent(e)
 
     @override
-    def mouseDoubleClickEvent(self, a0: QMouseEvent | None) -> None:
+    def mouseDoubleClickEvent(self, a0: QMouseEvent) -> None:
         event = a0
-        if event is None:
-            return super().mouseDoubleClickEvent(event)
         self.ignore_next_release = True
         self.send_action(WM_LBUTTONDBLCLK)
         return super().mouseDoubleClickEvent(event)
@@ -267,10 +260,8 @@ class DropWidget(QFrame):
         refresh_widget_style(widget)
 
     @override
-    def dragEnterEvent(self, a0: QDragEnterEvent | None) -> None:
+    def dragEnterEvent(self, a0: QDragEnterEvent) -> None:
         event = a0
-        if event is None:
-            return
         source = event.source()
         if isinstance(source, IconWidget):
             self.dragged_button = source
@@ -279,9 +270,9 @@ class DropWidget(QFrame):
             self.drag_started.emit(source.width())
 
     @override
-    def dragMoveEvent(self, a0: QDragMoveEvent | None) -> None:
+    def dragMoveEvent(self, a0: QDragMoveEvent) -> None:
         event = a0
-        if event is None or not isinstance(event.source(), IconWidget):
+        if not isinstance(event.source(), IconWidget):
             return
         hovered = self._find_icon_at(event.position().toPoint())
         if hovered is not None and hovered is not self.dragged_button:
@@ -292,20 +283,15 @@ class DropWidget(QFrame):
         self.drag_started.emit(self.dragged_button.width() if self.dragged_button else 0)
 
     @override
-    def dragLeaveEvent(self, a0: QDragLeaveEvent | None) -> None:
-        event = a0
-        if event is None:
-            return
+    def dragLeaveEvent(self, a0: QDragLeaveEvent) -> None:
         self._clear_hover_highlight()
         if self.dragged_button:
             self._set_class(self.dragged_button, "dragging", False)
             self.dragged_button = None
 
     @override
-    def dropEvent(self, a0: QDropEvent | None) -> None:
+    def dropEvent(self, a0: QDropEvent) -> None:
         event = a0
-        if event is None:
-            return
         source = event.source()
         if not isinstance(source, IconWidget):
             return

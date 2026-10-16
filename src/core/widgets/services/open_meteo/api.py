@@ -102,13 +102,13 @@ class OpenMeteoDataFetcher(QObject):
             error = reply.error()
             status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
             if error == QNetworkReply.NetworkError.NoError:
-                data = json.loads(reply.readAll().data().decode())
+                data = json.loads(bytes(reply.readAll().data()).decode())
                 self.finished.emit(data)
             elif error == QNetworkReply.NetworkError.HostNotFoundError:
                 logger.error("No internet connection or host not found. Unable to fetch weather.")
                 self.finished.emit({})
             elif status in {400, 401, 403}:
-                data = json.loads(reply.readAll().data().decode())
+                data = json.loads(bytes(reply.readAll().data()).decode())
                 logger.error("Open-Meteo API error %s: %s", status, data.get("reason", "Unknown"))
                 self.finished.emit({})
             else:
@@ -151,7 +151,7 @@ class GeocodingFetcher(QObject):
 
         url = QUrl(
             f"{GEOCODING_BASE_URL}"
-            f"?name={QUrl.toPercentEncoding(name.strip()).data().decode()}"
+            f"?name={bytes(QUrl.toPercentEncoding(name.strip()).data()).decode()}"
             f"&count={count}"
             f"&language=en"
             f"&format=json"
@@ -167,7 +167,7 @@ class GeocodingFetcher(QObject):
         try:
             error = reply.error()
             if error == QNetworkReply.NetworkError.NoError:
-                data = json.loads(reply.readAll().data().decode())
+                data = json.loads(bytes(reply.readAll().data()).decode())
                 results = data.get("results", [])
                 region = reply.request().attribute(QNetworkRequest.Attribute.User)
                 if region:

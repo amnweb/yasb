@@ -220,19 +220,19 @@ class _ColorChip(QPushButton):
         return QColor(self._color)
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         self._hover = True
         self.update()
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         self._hover = False
         self.update()
         super().leaveEvent(a0)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         r = self.rect().adjusted(1, 1, -1, -1)
@@ -352,8 +352,8 @@ class _PopupToggleHost(QObject):
         self._filter_installed = False
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if a1 is None or self._popup is None or not self._popup.isVisible():
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
+        if self._popup is None or not self._popup.isVisible():
             return False
         if a1.type() != QEvent.Type.MouseButtonPress:
             return False
@@ -516,10 +516,8 @@ class EditorCanvas(QWidget):
         target_y = int(round(img_anchor.y() * new_z))
         h = sa.horizontalScrollBar()
         v = sa.verticalScrollBar()
-        if h is not None:
-            h.setValue(target_x - vp_anchor.x())
-        if v is not None:
-            v.setValue(target_y - vp_anchor.y())
+        h.setValue(target_x - vp_anchor.x())
+        v.setValue(target_y - vp_anchor.y())
 
     def zoom(self) -> float:
         return self._zoom
@@ -774,8 +772,6 @@ class EditorCanvas(QWidget):
             return
         h = sa.horizontalScrollBar()
         v = sa.verticalScrollBar()
-        if h is None or v is None:
-            return
         nx = max(h.minimum(), min(h.maximum(), h.value() - delta.x()))
         ny = max(v.minimum(), min(v.maximum(), v.value() - delta.y()))
         if nx == h.value() and ny == v.value():
@@ -784,8 +780,8 @@ class EditorCanvas(QWidget):
         v.setValue(ny)
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        if a0 is not None and self._ctrl_held(a0.modifiers()):
+    def wheelEvent(self, a0: QWheelEvent) -> None:
+        if self._ctrl_held(a0.modifiers()):
             delta = a0.angleDelta().y()
             if delta == 0:
                 a0.ignore()
@@ -799,16 +795,16 @@ class EditorCanvas(QWidget):
         super().wheelEvent(a0)
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is not None and a0.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
+        if a0.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
             self.update_nav_cursor(a0.modifiers() | Qt.KeyboardModifier.ControlModifier)
             a0.accept()
             return
         super().keyPressEvent(a0)
 
     @override
-    def keyReleaseEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is not None and a0.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
+    def keyReleaseEvent(self, a0: QKeyEvent) -> None:
+        if a0.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
             if self._panning and not (a0.modifiers() & Qt.KeyboardModifier.ControlModifier):
                 self._end_pan(a0.modifiers())
             else:
@@ -818,19 +814,19 @@ class EditorCanvas(QWidget):
         super().keyReleaseEvent(a0)
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         self.update_nav_cursor(QApplication.keyboardModifiers())
         super().enterEvent(event)
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         if not self._panning:
             self.setCursor(Qt.CursorShape.CrossCursor)
         super().leaveEvent(a0)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None or a0.button() != Qt.MouseButton.LeftButton or self._base.isNull():
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() != Qt.MouseButton.LeftButton or self._base.isNull():
             return
         if self._ctrl_held(a0.modifiers()):
             self._panning = True
@@ -851,9 +847,7 @@ class EditorCanvas(QWidget):
         self.update()
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
         if self._panning:
             global_pos = a0.globalPosition().toPoint()
             delta = global_pos - self._pan_last_global
@@ -878,9 +872,7 @@ class EditorCanvas(QWidget):
         self.update()
 
     @override
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
         if a0.button() == Qt.MouseButton.LeftButton and self._panning:
             self._end_pan(a0.modifiers())
             a0.accept()
@@ -945,11 +937,11 @@ class EditorCanvas(QWidget):
         self.update()
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         p = QPainter(self)
         t = get_tokens()
         bg = QColor(t.get("layer_alt", "#2c2c2c"))
-        dirty = a0.rect() if a0 is not None else self.rect()
+        dirty = a0.rect()
         p.fillRect(dirty, bg)
         if self._base.isNull():
             return
@@ -1050,12 +1042,10 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         for scroll_bar in (self._scroll.horizontalScrollBar(), self._scroll.verticalScrollBar()):
-            if scroll_bar is not None:
-                scroll_bar.setSingleStep(1)
+            scroll_bar.setSingleStep(1)
         vp = self._scroll.viewport()
-        if vp is not None:
-            vp.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
-            vp.setAutoFillBackground(True)
+        vp.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
+        vp.setAutoFillBackground(True)
         self._canvas = EditorCanvas(self)
         self._canvas.set_image(image)
         self._canvas.tool_finished.connect(self._on_canvas_changed)
@@ -1174,11 +1164,11 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
         self._refresh_toolbar_icons()
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         super().showEvent(a0)
         self._refresh_toolbar_icons()
         wh = self.windowHandle()
-        if wh is not None:
+        if wh:
             try:
                 wh.screenChanged.disconnect(self._refresh_toolbar_icons)
             except TypeError:
@@ -1288,8 +1278,6 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
         if not self._zoom_auto or self._applying_auto_zoom:
             return
         viewport = self._scroll.viewport()
-        if viewport is None:
-            return
         vp = viewport.size()
         if vp.width() < 32 or vp.height() < 32:
             return
@@ -1306,7 +1294,7 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
             self._applying_auto_zoom = False
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         if getattr(self, "_scroll", None) is not None:
             self._apply_auto_zoom()
@@ -1394,9 +1382,7 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
         export_pixmap(self._canvas.composite(), save=True, parent=self)
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is None:
-            return
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
         if a0.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
             self._canvas.update_nav_cursor(a0.modifiers() | Qt.KeyboardModifier.ControlModifier)
         if a0.key() == Qt.Key.Key_Escape:
@@ -1424,8 +1410,8 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
             super().keyPressEvent(a0)
 
     @override
-    def keyReleaseEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is not None and a0.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
+    def keyReleaseEvent(self, a0: QKeyEvent) -> None:
+        if a0.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
             self._canvas.update_nav_cursor(a0.modifiers())
         super().keyReleaseEvent(a0)
 

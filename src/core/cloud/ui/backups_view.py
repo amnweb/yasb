@@ -57,7 +57,7 @@ class ElidedLabel(QLabel):
         self._update_elided_text()
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._update_elided_text()
 
@@ -249,8 +249,6 @@ class BackupsView(QWidget):
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
         """)
         scroll_bar = self.scroll_area.verticalScrollBar()
-        if scroll_bar is None:
-            raise RuntimeError("QScrollArea has no vertical scroll bar")
         self._scroll_bar = scroll_bar
         scroll_bar.valueChanged.connect(self._maybe_load_more)
         layout.addWidget(self.scroll_area)
@@ -284,8 +282,7 @@ class BackupsView(QWidget):
 
         def copy_link() -> None:
             clipboard = QGuiApplication.clipboard()
-            if clipboard is not None:
-                clipboard.setText(url)
+            clipboard.setText(url)
 
         self._dialog.primary_button_click.connect(copy_link)
         self._dialog.show_dialog()

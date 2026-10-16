@@ -87,8 +87,6 @@ def get_widget_monitor_hwnd(widget: QWidget) -> int | None:
     # Don't use widget.winId() here, Qt would turn the widget and all its
     # siblings into native windows.
     top = widget.window()
-    if top is None:
-        return None
     return MonitorFromWindow(int(top.winId()))
 
 
@@ -356,7 +354,7 @@ def find_focused_screen(
     }
 
     if follow_primary:
-        if primary_screen is not None and is_valid(primary_screen.name()):
+        if is_valid(primary_screen.name()):
             return primary_screen.name()
 
     if follow_mouse:
@@ -379,7 +377,7 @@ def find_focused_screen(
                     return screen_name
 
     # Fallback to primary screen
-    if primary_screen is not None and is_valid(primary_screen.name()):
+    if is_valid(primary_screen.name()):
         return primary_screen.name()
     # Final fallback to first available screen from the list if no other screen is valid
     for screen in qt_screens:

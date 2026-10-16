@@ -64,7 +64,7 @@ class ClickableLabel(QLabel):
         self._clickable = value
 
     @override
-    def mousePressEvent(self, ev: QMouseEvent | None):
+    def mousePressEvent(self, ev: QMouseEvent):
         if ev and ev.button() == Qt.MouseButton.LeftButton and self._clickable:
             self.clicked.emit()
             return
@@ -199,7 +199,7 @@ class WifiItem(QFrame):
                 super().__init__()
                 self.checkbox = checkbox
 
-            def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+            def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
                 if isinstance(a1, QMouseEvent):
                     if a1.type() == QEvent.Type.MouseButtonPress and a1.button() == Qt.MouseButton.LeftButton:
                         if is_valid_qobject(self.checkbox):
@@ -288,12 +288,10 @@ class WifiItem(QFrame):
         # Set the SSID field visibility for hidden network
         self.ssid_field.setVisible(self.data.ssid == "<Hidden Network>")
         # Update the style
-        style = self.style()
-        if style is not None:
-            refresh_widget_style(self)
+        refresh_widget_style(self)
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None):
+    def mousePressEvent(self, a0: QMouseEvent):
         super().mousePressEvent(a0)
         if not a0:
             return

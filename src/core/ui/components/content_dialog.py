@@ -74,20 +74,19 @@ class SmokeLayer(QWidget):
         self._opacity = value
         self.update()
 
-    smoke_opacity: float = Property(float, _get_smoke_opacity, _set_smoke_opacity)
+    smoke_opacity = Property(float, _get_smoke_opacity, _set_smoke_opacity)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         if self._opacity > 0:
             painter = QPainter(self)
             painter.fillRect(self.rect(), QColor(0, 0, 0, int(76 * self._opacity)))
             painter.end()
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         self.clicked.emit()
-        if a0 is not None:
-            a0.accept()
+        a0.accept()
 
 
 class ContentDialog(QWidget):
@@ -329,7 +328,7 @@ class ContentDialog(QWidget):
         self._slide_offset_val = value
         self._position_center(value)
 
-    slide_offset: int = Property(int, _get_slide_offset, _set_slide_offset)
+    slide_offset = Property(int, _get_slide_offset, _set_slide_offset)
 
     def _position_center(self, y_offset: int = 0) -> None:
         centre = self._host.mapToGlobal(self._host.rect().center())
@@ -339,8 +338,8 @@ class ContentDialog(QWidget):
         self._center_y = centre.y() - self.height() // 2
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if a0 is self._host and a1 is not None and a1.type() in (QEvent.Type.Resize, QEvent.Type.Move):
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
+        if a0 is self._host and a1.type() in (QEvent.Type.Resize, QEvent.Type.Move):
             if self._smoke and a1.type() == QEvent.Type.Resize:
                 self._smoke.setGeometry(self._host.rect())
             self._position_center(0)
@@ -362,11 +361,12 @@ class ContentDialog(QWidget):
         opacity_anim.setEndValue(1.0)
         group.addAnimation(opacity_anim)
 
-        smoke_anim = QPropertyAnimation(self._smoke, b"smoke_opacity")
-        smoke_anim.setDuration(_OPEN_OPACITY_MS)
-        smoke_anim.setStartValue(0.0)
-        smoke_anim.setEndValue(1.0)
-        group.addAnimation(smoke_anim)
+        if self._smoke is not None:
+            smoke_anim = QPropertyAnimation(self._smoke, b"smoke_opacity")
+            smoke_anim.setDuration(_OPEN_OPACITY_MS)
+            smoke_anim.setStartValue(0.0)
+            smoke_anim.setEndValue(1.0)
+            group.addAnimation(smoke_anim)
 
         group.finished.connect(self.opened.emit)
         self._anim = group
@@ -381,11 +381,12 @@ class ContentDialog(QWidget):
         opacity_anim.setEndValue(0.0)
         group.addAnimation(opacity_anim)
 
-        smoke_anim = QPropertyAnimation(self._smoke, b"smoke_opacity")
-        smoke_anim.setDuration(_CLOSE_MS)
-        smoke_anim.setStartValue(1.0)
-        smoke_anim.setEndValue(0.0)
-        group.addAnimation(smoke_anim)
+        if self._smoke is not None:
+            smoke_anim = QPropertyAnimation(self._smoke, b"smoke_opacity")
+            smoke_anim.setDuration(_CLOSE_MS)
+            smoke_anim.setStartValue(1.0)
+            smoke_anim.setEndValue(0.0)
+            group.addAnimation(smoke_anim)
 
         group.finished.connect(self._on_close_finished)
         self._anim = group
@@ -418,9 +419,7 @@ class ContentDialog(QWidget):
         self.hide_dialog()
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is None:
-            return
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
         if a0.key() == Qt.Key.Key_Escape:
             self._on_close()
         elif a0.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):

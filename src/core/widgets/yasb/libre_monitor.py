@@ -158,13 +158,11 @@ class LibreHardwareMonitorWidget(BaseWidget):
         manager = QNetworkAccessManager()
         manager.authenticationRequired.connect(self._handle_authentication)
         reply = manager.post(request, b"")
-        if reply is None:
-            return
         loop = QEventLoop()
         reply.finished.connect(loop.quit)
         loop.exec()
         if reply.error() == QNetworkReply.NetworkError.NoError:
-            bytes_string = reply.readAll().data()
+            bytes_string = bytes(reply.readAll().data())
             data = json.loads(bytes_string.decode("utf-8"))
             if data.get("result") == "ok":
                 value = data.get("value", "N/A")
@@ -254,7 +252,7 @@ class LibreHardwareMonitorWidget(BaseWidget):
         Handles the potential error codes and populates the data dict with the result.
         """
         if reply.error() == QNetworkReply.NetworkError.NoError:
-            bytes_string = reply.readAll().data()
+            bytes_string = bytes(reply.readAll().data())
             self._data = json.loads(bytes_string.decode("utf-8"))
             if self._data.get("result") == "ok":
                 self._data["status"] = "Connected..."

@@ -92,8 +92,7 @@ class SlidersSectionWidget(QFrame):
                 config.brightness,
                 self._on_brightness_slider_changed,
             )
-            if brightness_row is not None:
-                layout.addWidget(brightness_row)
+            layout.addWidget(brightness_row)
 
     def _get_brightness_target(self) -> int | None:
         if self._selected_brightness_hmonitor is not None:
@@ -130,7 +129,7 @@ class SlidersSectionWidget(QFrame):
 
     def _create_slider_row(
         self, key: str, slider_config: ControlCenterSliderConfig, callback: Callable[[int], None]
-    ) -> QWidget | None:
+    ) -> QWidget:
         row = QFrame(self)
         row.setProperty("class", f"slider {key}")
         layout = QHBoxLayout(row)
@@ -271,7 +270,7 @@ class SlidersSectionWidget(QFrame):
         current_default = service.get_default_device_id()
 
         for device_id, device_name in devices:
-            action = QAction(device_name, menu)
+            action = QAction(device_name or "", menu)
             menu.addAction(action)
             action.setCheckable(True)
             action.setChecked(device_id == current_default)
@@ -313,7 +312,7 @@ class SlidersSectionWidget(QFrame):
         current_default = service.get_default_device_id()
 
         for device_id, device_name in devices:
-            action = QAction(device_name, menu)
+            action = QAction(device_name or "", menu)
             menu.addAction(action)
             action.setCheckable(True)
             action.setChecked(device_id == current_default)
@@ -379,7 +378,7 @@ class SlidersSectionWidget(QFrame):
         self.refresh_popup()
 
     @override
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+    def eventFilter(self, a0: QObject, a1: QEvent) -> bool:
         if (
             isinstance(a1, QWheelEvent)
             and isinstance(a0, QSlider)

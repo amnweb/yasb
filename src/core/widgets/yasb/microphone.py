@@ -267,8 +267,8 @@ class MicrophoneWidget(BaseWidget):
             logging.error("Failed to decrease microphone volume: %s", e)
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        if self.audio_endpoint is None or a0 is None:
+    def wheelEvent(self, a0: QWheelEvent) -> None:
+        if self.audio_endpoint is None:
             return
         delta = -a0.angleDelta().y() if self.config.invert_wheel else a0.angleDelta().y()
         if delta > 0:

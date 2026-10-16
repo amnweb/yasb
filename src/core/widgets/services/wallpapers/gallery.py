@@ -111,8 +111,6 @@ class GalleryWindow(QMainWindow):
                 screen = parent.screen()
         if not screen:
             screen = QApplication.primaryScreen()
-        if screen is None:
-            raise RuntimeError("No screen to show the wallpaper gallery on")
 
         try:
             self.dpr = float(screen.devicePixelRatio())
@@ -125,13 +123,13 @@ class GalleryWindow(QMainWindow):
         return screen
 
     @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
+    def showEvent(self, a0: QShowEvent) -> None:
         super().showEvent(a0)
         force_foreground_focus(int(self.winId()))
 
     @override
-    def changeEvent(self, a0: QEvent | None) -> None:
-        if a0 is not None and a0.type() == QEvent.Type.ActivationChange:
+    def changeEvent(self, a0: QEvent) -> None:
+        if a0.type() == QEvent.Type.ActivationChange:
             if not self.isActiveWindow() and not self.is_closing and not self._menu_open:
                 self.fade_out_and_close_gallery()
         super().changeEvent(a0)
@@ -290,7 +288,7 @@ class CardsView(QWidget):
         if abs(scale - 1.0) < 0.01:
             # Unscaled and on whole device pixels, QPainter copies the pixmap instead of resampling it.
             device = painter.device()
-            dpr = device.devicePixelRatio() if device is not None else 1.0
+            dpr = device.devicePixelRatio()
             x = round((centre.x() - size.width() / 2.0) * dpr) / dpr
             y = round((centre.y() - size.height() / 2.0) * dpr) / dpr
             painter.drawPixmap(QPointF(x, y), pixmap)
@@ -322,7 +320,7 @@ class CardsView(QWidget):
         painter.drawText(self.rect(), align, message)
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
@@ -412,7 +410,7 @@ class CardsView(QWidget):
         return None
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self.gallery.fit_to_view(self.width(), self.height())
 
@@ -455,38 +453,33 @@ class CardsView(QWidget):
             self.go_to(max(0, min(count - 1, self.index + delta)))
 
     @override
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        if a0 is None:
-            return
+    def wheelEvent(self, a0: QWheelEvent) -> None:
         delta = a0.angleDelta().y()
         if delta:
             self.move_by(-1 if delta > 0 else 1)
             a0.accept()
 
     @override
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None:
-            return
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
         hovered = self.card_at(a0.position())
         if hovered != self.hovered:
             self.hovered = hovered
             self.update()
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         if self.hovered is not None:
             self.hovered = None
             self.update()
 
     @override
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
         # Clicking never moves the cards, so a double click acts on what you aimed at.
-        if a0 is not None:
-            a0.accept()
+        a0.accept()
 
     @override
-    def mouseDoubleClickEvent(self, a0: QMouseEvent | None) -> None:
-        if a0 is None or a0.button() != Qt.MouseButton.LeftButton:
+    def mouseDoubleClickEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() != Qt.MouseButton.LeftButton:
             return
         index = self.card_at(a0.position())
         if index is not None:
@@ -494,9 +487,7 @@ class CardsView(QWidget):
         a0.accept()
 
     @override
-    def contextMenuEvent(self, a0: QContextMenuEvent | None) -> None:
-        if a0 is None:
-            return
+    def contextMenuEvent(self, a0: QContextMenuEvent) -> None:
         mouse = a0.reason() == a0.Reason.Mouse
         index = self.card_at(QPointF(a0.pos())) if mouse else self.index
         if index is not None:
@@ -684,9 +675,7 @@ class Cards(GalleryWindow):
         return max(1, int((self.view.width() / 2 - card_w / 2) // step))
 
     @override
-    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        if a0 is None:
-            return
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
         key = a0.key()
         page = self.page_step()
 

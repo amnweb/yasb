@@ -44,7 +44,7 @@ class _ClearButton(QAbstractButton):
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
 
     @override
-    def paintEvent(self, e: QPaintEvent | None) -> None:
+    def paintEvent(self, e: QPaintEvent) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         inner = QRectF(self.rect()).adjusted(0, _BUTTON_MARGIN, -_BUTTON_MARGIN, -_BUTTON_MARGIN)
@@ -58,7 +58,7 @@ class _ClearButton(QAbstractButton):
         cy = (math.floor(inner.center().y() * dpr) + 0.5) / dpr
         half = (round(_GLYPH_HALF * dpr) + 0.5) / dpr
         color = QColor(self.tokens["text_tertiary" if self.isDown() else "text_secondary"])
-        p.setPen(QPen(color, 1.0, cap=Qt.PenCapStyle.FlatCap))
+        p.setPen(QPen(color, 1.0, c=Qt.PenCapStyle.FlatCap))
         p.drawLine(QPointF(cx - half, cy - half), QPointF(cx + half, cy + half))
         p.drawLine(QPointF(cx - half, cy + half), QPointF(cx + half, cy - half))
         p.end()
@@ -156,38 +156,38 @@ class TextBox(QLineEdit):
         return self._icon_pixmap
 
     @override
-    def focusInEvent(self, a0: QFocusEvent | None) -> None:
+    def focusInEvent(self, a0: QFocusEvent) -> None:
         super().focusInEvent(a0)
         self._update_clear_button()
 
     @override
-    def focusOutEvent(self, a0: QFocusEvent | None) -> None:
+    def focusOutEvent(self, a0: QFocusEvent) -> None:
         super().focusOutEvent(a0)
         self._update_clear_button()
 
     @override
-    def enterEvent(self, event: QEnterEvent | None) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         super().enterEvent(event)
         self.update()
 
     @override
-    def leaveEvent(self, a0: QEvent | None) -> None:
+    def leaveEvent(self, a0: QEvent) -> None:
         super().leaveEvent(a0)
         self.update()
 
     @override
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+    def resizeEvent(self, a0: QResizeEvent) -> None:
         super().resizeEvent(a0)
         self._update_clear_button()
 
     @override
-    def changeEvent(self, a0: QEvent | None) -> None:
+    def changeEvent(self, a0: QEvent) -> None:
         super().changeEvent(a0)
-        if a0 is not None and a0.type() == a0.Type.EnabledChange:
+        if a0.type() == a0.Type.EnabledChange:
             self._update_clear_button()
 
     @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0: QPaintEvent) -> None:
         t = self._tokens
         enabled, focused = self.isEnabled(), self.hasFocus()
         if not enabled:
