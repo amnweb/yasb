@@ -158,7 +158,8 @@ class AudioVisualizerWidget(BaseWidget):
         self._service = AudioVisualizerCaptureService.instance(config.source)
         self._token = _ReaderToken(self._service, config.framerate, channels)
         token = self._token
-        self.destroyed.connect(token.detach)
+        # Keep the token alive until destruction without retaining the widget.
+        self.destroyed.connect(lambda: token.detach())
 
         self._service.frame_ready.connect(self._on_frame)
         self._service.audio_started.connect(self._on_audio_started)

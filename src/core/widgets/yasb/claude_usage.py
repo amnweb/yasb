@@ -123,7 +123,8 @@ class ClaudeUsageWidget(BaseWidget):
             self._token_service.data_ready.connect(self._on_token_data)
         if self._status_service is not None:
             self._status_service.data_ready.connect(self._on_status_data)
-        self.destroyed.connect(self._release_service)
+        # Use a closure so cleanup runs during QObject destruction.
+        self.destroyed.connect(lambda: self._release_service())
         self._update_label()
 
     def _release_service(self) -> None:

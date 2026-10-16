@@ -54,7 +54,8 @@ class ServerMonitor(BaseWidget):
         self._service_released = False
         self._service.status_updated.connect(self._handle_status_update)
         self._service.refresh_started.connect(self._on_refresh_started)
-        self.destroyed.connect(self._release_service)
+        # Use a closure so cleanup runs during QObject destruction.
+        self.destroyed.connect(lambda: self._release_service())
 
     def _release_service(self) -> None:
         if getattr(self, "_service_released", False):

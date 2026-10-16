@@ -197,7 +197,8 @@ class CodexUsageWidget(BaseWidget):
         self.callback_right = self.config.callbacks.on_right
 
         self._service.data_ready.connect(self._on_data)
-        self.destroyed.connect(self._release_service)
+        # Use a closure so cleanup runs during QObject destruction.
+        self.destroyed.connect(lambda: self._release_service())
         self._update_label()
 
     @override
