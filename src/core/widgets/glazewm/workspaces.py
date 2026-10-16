@@ -3,13 +3,12 @@ import re
 from enum import StrEnum, auto
 from typing import override
 
-from PIL import Image
 from PyQt6.QtCore import Qt, pyqtSlot
-from PyQt6.QtGui import QImage, QMouseEvent, QPixmap, QShowEvent, QWheelEvent
+from PyQt6.QtGui import QMouseEvent, QPixmap, QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
+from core.utils.icons.service import IconService, WindowIcon
 from core.utils.utilities import refresh_widget_style
-from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utils import get_process_info, get_widget_monitor_hwnd
 from core.validation.widgets.glazewm.workspaces import GlazewmWorkspacesConfig
 from core.widgets.base import BaseWidget
@@ -171,7 +170,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
     def update_button(self):
         self._update_status()
         self._update_label()
-        self._update_icons()
+        self.update_icons()
         button_class = "ws-btn "
         # To maintain previous functionality, apply the equivalent active_ class to the focused_ workspace.
         if self.status.value == WorkspaceStatus.FOCUSED_POPULATED:
@@ -258,7 +257,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self._unique_pids = set()
         return {window.handle: self._get_app_icon(window) for window in windows}
 
-    def _get_app_icon(self, window: Window, ignore_cache: bool = False) -> QPixmap | None:
+    def _get_app_icon(self, window: Window) -> QPixmap | None:
         hwnd = window.handle
         try:
             process = get_process_info(hwnd)
@@ -274,38 +273,13 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
             if screen is None:
                 return None
             self.dpi = screen.devicePixelRatio()
-            cache_key = (hwnd, pid, self.dpi)
-
-            if cache_key in self.parent_widget.icon_cache and not ignore_cache:
-                return self.parent_widget.icon_cache[cache_key]
-            else:
-                icon_img = get_window_icon(hwnd)
-                if icon_img:
-                    icon_img = icon_img.resize(
-                        (
-                            int(self.config.app_icons.size * self.dpi),
-                            int(self.config.app_icons.size * self.dpi),
-                        ),
-                        Image.LANCZOS,
-                    ).convert("RGBA")
-                    qimage = QImage(
-                        icon_img.tobytes(),  # pyright: ignore[reportUnknownMemberType]
-                        icon_img.width,
-                        icon_img.height,
-                        QImage.Format.Format_RGBA8888,
-                    )
-                    pixmap = QPixmap.fromImage(qimage)
-                    pixmap.setDevicePixelRatio(self.dpi)
-                    self.parent_widget.icon_cache[cache_key] = pixmap
-                    return pixmap
-                else:
-                    return None
+            return IconService.instance().get_icon(WindowIcon(hwnd), self.config.app_icons.size, self.dpi)
 
         except Exception:
             logging.debug("Failed to get icons for window with HWND %s", hwnd, exc_info=True)
             return None
 
-    def _update_icons(self):
+    def update_icons(self):
         self.icons = self._get_all_icons_in_workspace()
 
         if not self.config.app_icons.enabled_active and self.status == WorkspaceStatus.ACTIVE_POPULATED:
@@ -379,12 +353,17 @@ class GlazewmWorkspacesWidget(BaseWidget):
         )
         self.glazewm_client.glazewm_connection_status.connect(self._update_connection_status)  # type: ignore
         self.glazewm_client.workspaces_data_processed.connect(self._update_workspaces)  # type: ignore
-        self.icon_cache: dict[tuple[int, int, float], QPixmap] = {}
+        IconService.instance().icons_changed.connect(self._refresh_icons)
         self.workspace_app_icons_enabled = (
             self.config.app_icons.enabled_populated
             or self.config.app_icons.enabled_active
             or self.config.app_icons.enabled_focused
         )
+
+    def _refresh_icons(self) -> None:
+        for btn in self.workspaces.values():
+            if isinstance(btn, GlazewmWorkspaceButtonWithIcons):
+                btn.update_icons()
 
     @override
     def showEvent(self, a0: QShowEvent | None):

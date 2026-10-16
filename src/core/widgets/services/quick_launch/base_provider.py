@@ -3,6 +3,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from core.utils.icons.service import IconSource
+
 
 @dataclass
 class ProviderResult:
@@ -12,6 +14,7 @@ class ProviderResult:
     description: str = ""
     icon_path: str = ""
     icon_char: str = ""
+    icon_source: IconSource | None = None
     provider: str = ""
     id: str = ""
     action_data: dict[str, Any] = field(default_factory=dict[str, Any])

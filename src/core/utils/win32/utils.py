@@ -10,6 +10,7 @@ from typing import Any, NotRequired, TypedDict, cast
 
 import win32api
 import win32gui
+import win32process
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QApplication, QMenu, QWidget
 from win32api import GetMonitorInfo, MonitorFromWindow
@@ -193,6 +194,40 @@ def get_process_info(hwnd: int) -> ProcessInfo:
         return {"name": name, "pid": pid, "path": path}
     finally:
         CloseHandle(h_process)
+
+
+def get_process_path(pid: int) -> str | None:
+    """The exe path of a process, or None when it is gone or YASB may not open it."""
+    h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not h_process:
+        return None
+    try:
+        size = c_ulong(1024)
+        buf = create_unicode_buffer(size.value)
+        return buf.value if QueryFullProcessImageNameW(h_process, 0, buf, byref(size)) else None
+    finally:
+        CloseHandle(h_process)
+
+
+def get_process_window(pid: int) -> int:
+    """A visible, titled top-level window of a process, or 0."""
+    found: list[int] = []
+
+    def collect(hwnd: int, _: None) -> bool:
+        if (
+            win32process.GetWindowThreadProcessId(hwnd)[1] == pid
+            and win32gui.IsWindowVisible(hwnd)
+            and GetWindowText(hwnd)
+        ):
+            found.append(hwnd)
+            return False
+        return True
+
+    try:
+        win32gui.EnumWindows(collect, None)
+    except Exception:
+        pass  # EnumWindows reports an error when the callback stops it early
+    return found[0] if found else 0
 
 
 def get_app_name_from_pid(pid: int) -> str | None:

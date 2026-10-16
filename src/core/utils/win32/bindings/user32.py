@@ -210,6 +210,13 @@ user32.AllowSetForegroundWindow.restype = BOOL
 user32.GetIconInfo.argtypes = [HICON, POINTER(ICONINFO)]
 user32.GetIconInfo.restype = BOOL
 
+# https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadimagew
+user32.LoadImageW.argtypes = [HINSTANCE, LPCWSTR, UINT, INT, INT, UINT]
+user32.LoadImageW.restype = HANDLE
+
+user32.DestroyIcon.argtypes = [HICON]
+user32.DestroyIcon.restype = BOOL
+
 user32.GetDC.argtypes = [HANDLE]
 user32.GetDC.restype = HDC
 
@@ -221,6 +228,9 @@ user32.EnumWindows.restype = BOOL
 
 user32.GetClassNameW.argtypes = [HWND, LPCWSTR, INT]
 user32.GetClassNameW.restype = INT
+
+user32.InternalGetWindowText.argtypes = [HWND, LPCWSTR, INT]
+user32.InternalGetWindowText.restype = INT
 
 user32.SetForegroundWindow.argtypes = [HWND]
 user32.SetForegroundWindow.restype = BOOL
@@ -452,6 +462,14 @@ def GetIconInfo(hIcon: int, piconinfo: CArgObject) -> bool:
     return user32.GetIconInfo(hIcon, piconinfo)
 
 
+def LoadImage(hInst: int, name: LPCWSTR | str, type: int, cx: int, cy: int, fuLoad: int) -> int:
+    return int(user32.LoadImageW(hInst, name, type, cx, cy, fuLoad) or 0)
+
+
+def DestroyIcon(hIcon: int) -> bool:
+    return bool(user32.DestroyIcon(hIcon))
+
+
 def GetDC(hwnd: int | None) -> int:
     return user32.GetDC(hwnd)
 
@@ -489,6 +507,15 @@ def GetClassName(hwnd: int, buf_size: int = 256) -> str:
 
     buf = create_unicode_buffer(buf_size)
     user32.GetClassNameW(hwnd, buf, buf_size)
+    return buf.value
+
+
+def InternalGetWindowText(hwnd: int, buf_size: int = 512) -> str:
+    """Window title without sending WM_GETTEXT, so it cannot wait on a hung window."""
+    from ctypes import create_unicode_buffer
+
+    buf = create_unicode_buffer(buf_size)
+    user32.InternalGetWindowText(hwnd, buf, buf_size)
     return buf.value
 
 

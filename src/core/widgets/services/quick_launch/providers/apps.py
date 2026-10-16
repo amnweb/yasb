@@ -13,7 +13,7 @@ from win32comext.shell import shell
 
 from core.utils.shell_utils import shell_open
 from core.utils.system import app_data_path
-from core.utils.win32.app_loader import AppEntry
+from core.utils.win32.app_loader import AppEntry, app_icon_source
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
@@ -362,11 +362,6 @@ class AppsProvider(BaseProvider):
                         # higher tiers for frequently used apps.
                         fs = min(pkg_fs, 3.5)
                 if fs is not None:
-                    # Demote apps with default icon (system shortcuts,
-                    # not real apps) so they sink below real app matches.
-                    icon = svc.icon_paths.get(f"{n}::{p}", "")
-                    if icon.endswith("_default_app.png"):
-                        fs = min(fs, 0.5)
                     scored_apps.append((float(fs), n, p))
 
             if show_recent:
@@ -387,7 +382,6 @@ class AppsProvider(BaseProvider):
         results: list[ProviderResult] = []
         for name, path in apps:
             app_key = f"{name}::{path}"
-            icon_path = svc.icon_paths.get(app_key, "")
             if show_description:
                 desc = self._desc_cache.get(path, "")
             else:
@@ -396,7 +390,7 @@ class AppsProvider(BaseProvider):
                 ProviderResult(
                     title=name,
                     description=desc,
-                    icon_path=icon_path,
+                    icon_source=app_icon_source(path),
                     provider=self.name,
                     id=app_key,
                     action_data={"name": name, "path": path},

@@ -4,15 +4,14 @@ from contextlib import suppress
 from typing import Any, Literal, override
 
 import win32gui
-from PIL import Image
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QImage, QMouseEvent, QPixmap, QWheelEvent
+from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
+from core.utils.icons.service import IconService, WindowIcon
 from core.utils.utilities import refresh_widget_style
-from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.utils.win32.window_actions import close_application
 from core.validation.widgets.komorebi.stack import StackConfig
@@ -96,9 +95,9 @@ class WindowButton(QFrame):
             else:
                 self.icon_label.hide()
 
-    def update_icon(self, pixmap: QPixmap | None = None, ignore_cache: bool = False):
+    def update_icon(self):
         if self.parent_widget.config.show_icons != "never":
-            self.icon = pixmap if pixmap else self.parent_widget.get_app_icon(self.window_index, ignore_cache)
+            self.icon = self.parent_widget.get_app_icon(self.window_index)
             if self.icon:
                 self.icon_label.setPixmap(self.icon)
 
@@ -173,7 +172,8 @@ class StackWidget(BaseWidget):
         self.widget_layout.addWidget(self._offline_text)
         self.widget_layout.addWidget(self._no_window_text)
         self.widget_layout.addWidget(self._widget_container)
-        self._icon_cache: dict[tuple[int, float], Image.Image] = {}
+        self._icons = IconService.instance()
+        self._icons.icons_changed.connect(self._refresh_icons)
         self.dpi: float | None = None
 
         self._hide_no_window_text()
@@ -273,7 +273,7 @@ class StackWidget(BaseWidget):
                             self.komorebi_windows[curr_idx]["exe"] == "ApplicationFrameHost.exe"
                             and not new_window_button.icon
                         ):
-                            new_window_button.update_icon(ignore_cache=True)
+                            new_window_button.update_icon()
                 except IndexError, TypeError:
                     pass
 
@@ -299,7 +299,7 @@ class StackWidget(BaseWidget):
                     window_btn_hwnd = self.komorebi_windows[window_btn.window_index]["hwnd"]
                     if window_btn_hwnd == hwnd:
                         self._update_button_label(window_btn)
-                        window_btn.update_icon(ignore_cache=True)
+                        window_btn.update_icon()
 
             if self.config.show_only_stack and len(self.window_buttons) <= 1:
                 self.hide()
@@ -510,7 +510,7 @@ class StackWidget(BaseWidget):
         except Exception:
             logging.exception("Failed to switch to stack window at index %s", next_idx)
 
-    def get_app_icon(self, window_index: int, ignore_cache: bool) -> QPixmap | None:
+    def get_app_icon(self, window_index: int) -> QPixmap | None:
         hwnd = None
         try:
             hwnd = self.komorebi_windows[window_index]["hwnd"]
@@ -518,35 +518,15 @@ class StackWidget(BaseWidget):
             if screen is None:
                 return None
             self.dpi = screen.devicePixelRatio()
-            cache_key = (hwnd, self.dpi)
-
-            if cache_key in self._icon_cache and not ignore_cache:
-                icon_img = self._icon_cache[cache_key]
-            else:
-                icon_img = get_window_icon(hwnd)
-                if icon_img:
-                    icon_img = icon_img.resize(
-                        (int(self.config.icon_size * self.dpi), int(self.config.icon_size * self.dpi)), Image.LANCZOS
-                    ).convert("RGBA")
-                    self._icon_cache[cache_key] = icon_img
-            if not icon_img:
-                return None
-            if icon_img:
-                qimage = QImage(
-                    icon_img.tobytes(),  # pyright: ignore[reportUnknownMemberType]
-                    icon_img.width,
-                    icon_img.height,
-                    QImage.Format.Format_RGBA8888,
-                )
-                pixmap = QPixmap.fromImage(qimage)
-                pixmap.setDevicePixelRatio(self.dpi)
-                try:
-                    self.window_buttons[window_index].update_icon(pixmap=pixmap)
-                except IndexError:
-                    return pixmap
+            return self._icons.get_icon(WindowIcon(hwnd), self.config.icon_size, self.dpi)
 
         except Exception:
             logging.debug(
                 "Failed to get icons for window with HWND %s", hwnd if hwnd is not None else "unknown", exc_info=True
             )
             return None
+
+    def _refresh_icons(self) -> None:
+        for window_btn in self.window_buttons:
+            if window_btn.window_index < len(self.komorebi_windows):
+                window_btn.update_icon()

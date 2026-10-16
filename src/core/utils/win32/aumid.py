@@ -8,6 +8,7 @@ import ctypes
 import ctypes.wintypes as wt
 from ctypes import POINTER, WINFUNCTYPE, byref, c_void_p
 
+from core.utils.win32.bindings.user32 import GetClassName
 from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, TH32CS_SNAPPROCESS
 from core.utils.win32.structs import PROCESSENTRY32
 
@@ -210,27 +211,28 @@ def get_aumid_for_window(hwnd: int) -> str | None:
             except Exception:
                 pass
 
-    # Process-based fallback (if API available)
-    pid = wt.DWORD(0)
-    GetWindowThreadProcessId(wt.HWND(hwnd), byref(pid))
-    if pid.value != 0 and GetApplicationUserModelId is not None:
-        hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid.value)
-        if hProcess:
-            try:
-                length = ctypes.c_uint32(0)
-                res = GetApplicationUserModelId(hProcess, byref(length), None)
-                if res == ERROR_INSUFFICIENT_BUFFER and length.value:
-                    buf = ctypes.create_unicode_buffer(length.value)
-                    res = GetApplicationUserModelId(hProcess, byref(length), buf)
-                    if res == 0 and buf.value:
-                        return buf.value
-            finally:
-                try:
-                    CloseHandle(hProcess)
-                except Exception:
-                    pass
+    # 2) Process-based fallback
+    return get_aumid_for_process(_window_pid(hwnd))
 
-    return None
+
+def get_aumid_for_process(pid: int) -> str | None:
+    """The AUMID a process runs under (Store apps, and apps that set their own), or None."""
+    if not pid or GetApplicationUserModelId is None:
+        return None
+    hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not hProcess:
+        return None
+    try:
+        length = ctypes.c_uint32(0)
+        res = GetApplicationUserModelId(hProcess, byref(length), None)
+        if res == ERROR_INSUFFICIENT_BUFFER and length.value:
+            buf = ctypes.create_unicode_buffer(length.value)
+            res = GetApplicationUserModelId(hProcess, byref(length), buf)
+            if res == 0 and buf.value:
+                return buf.value
+        return None
+    finally:
+        CloseHandle(hProcess)
 
 
 def get_aumid_from_shortcut(shortcut_path: str) -> str | None:
@@ -326,39 +328,49 @@ def activate_app_by_aumid(aumid: str, fallback_process_name: str | None = None) 
     Returns:
         True if a window was found and activation was attempted, False otherwise.
     """
-    from core.utils.win32.window_actions import force_foreground_focus, restore_window
+    from core.utils.win32.window_actions import restore_window, set_foreground
 
-    found_hwnd: int | None = None
-    fallback_pids: set[int] = _pids_for_exe_tree(fallback_process_name) if fallback_process_name else set()
+    hwnd = _find_window_by_aumid(aumid, fallback_process_name)
+    if hwnd is None:
+        return False
 
-    WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, wt.HWND, wt.LPARAM)
+    if user32.IsIconic(hwnd):
+        restore_window(hwnd)
+    set_foreground(hwnd)
+    return True
 
-    def enum_window_callback(hwnd: int, _: int) -> bool:
-        nonlocal found_hwnd
-        if not user32.IsWindowVisible(hwnd):
-            return True
 
-        # Exact AUMID match
+def _find_window_by_aumid(aumid: str, fallback_process_name: str | None) -> int | None:
+    windows = _visible_top_level_windows()
+    for hwnd in windows:
         if get_aumid_for_window(hwnd) == aumid:
-            found_hwnd = hwnd
-            return False
+            return hwnd
 
-        # Fallback: process (or descendant) match; skip untitled helpers
-        if fallback_pids:
-            pid = wt.DWORD(0)
-            GetWindowThreadProcessId(wt.HWND(hwnd), byref(pid))
-            if pid.value in fallback_pids and user32.GetWindowTextLengthW(hwnd) > 0:
-                found_hwnd = hwnd
-                return False
+    if fallback_process_name:
+        fallback_pids = _pids_for_exe_tree(fallback_process_name)
+        for hwnd in windows:
+            # Skip untitled helper windows of the same process
+            if _window_pid(hwnd) in fallback_pids and user32.GetWindowTextLengthW(hwnd) > 0:
+                return hwnd
 
+    return None
+
+
+def _visible_top_level_windows() -> list[int]:
+    WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, wt.HWND, wt.LPARAM)
+    hwnds: list[int] = []
+
+    def collect(hwnd: int, _: int) -> bool:
+        # minimized Store apps leave their CoreWindow as a cloaked top-level window, restore the frame instead
+        if user32.IsWindowVisible(hwnd) and GetClassName(hwnd) != "Windows.UI.Core.CoreWindow":
+            hwnds.append(hwnd)
         return True
 
-    user32.EnumWindows(WNDENUMPROC(enum_window_callback), 0)
+    user32.EnumWindows(WNDENUMPROC(collect), 0)
+    return hwnds
 
-    if found_hwnd:
-        force_foreground_focus(found_hwnd)
-        if user32.IsIconic(found_hwnd):
-            restore_window(found_hwnd)
-        return True
 
-    return False
+def _window_pid(hwnd: int) -> int:
+    pid = wt.DWORD(0)
+    GetWindowThreadProcessId(wt.HWND(hwnd), byref(pid))
+    return pid.value

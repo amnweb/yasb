@@ -33,7 +33,7 @@ from win32con import (
     WS_POPUP,
 )
 
-from core.utils.win32.app_icons import hicon_to_image
+from core.utils.icons.convert import hicon_to_image
 from core.utils.win32.bindings import (
     CloseHandle,
     CreateWindowEx,

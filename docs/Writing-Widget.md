@@ -300,13 +300,59 @@ When `pinnable=True`:
 
 `set_pinned()` does nothing when `pinnable=False`, so it is safe to call it from a generic callback without checking first.
 
-## 10. Python Code Style
+## 10. Showing app, window and file icons
+
+Use `IconService` for every app, window, process or file icon. It loads icons on its own thread, keeps them in memory and picks the right picture for the size, so a widget never calls Windows icon functions itself.
+
+Say where the icon comes from with one of these:
+
+| Source | For |
+|---|---|
+| `WindowIcon(hwnd)` | An open window: the icon the window shows, as on the Windows taskbar. |
+| `ProcessIcon(pid)` | Any running process: the icon of the program it runs, or of its Store app. A process of another account, such as a system service, gives the icon of one of its windows, else the default app icon. |
+| `AppIcon(aumid)` | An app by its App User Model ID, as listed in `shell:AppsFolder`: Store apps and desktop apps such as `MSEdge`. An unknown ID gives the default app icon. |
+| `FileIcon(path)` | A file, folder or shortcut, or a shell item such as `shell:::{20D04FE0-3AEA-1069-A2D8-08002B30309D}` (This PC). |
+
+Use the source that matches what the widget shows:
+
+-   A button or row for an open window, as in the taskbar, window switcher and workspace widgets: `WindowIcon(hwnd)`. A window can show an icon of its own, such as an Explorer window showing the folder it is in, so do not use its process instead.
+-   Something that has a process but no window, such as an app in the volume mixer or a program listening on a port: `ProcessIcon(pid)`.
+-   An app known by its ID, such as a pinned Store app or an app from `shell:AppsFolder`: `AppIcon(aumid)`.
+-   Something the user opens from a path, such as a Start menu shortcut, a pinned folder or an exe: `FileIcon(path)`. Pass the shortcut itself, not its target: a shortcut can have an icon of its own.
+
+```py
+from core.utils.icons.service import IconService, WindowIcon
+
+class MyWidget(BaseWidget):
+    def __init__(self, config: MyWidgetConfig):
+        super().__init__(class_name="my-widget")
+        ...
+        self._icons = IconService.instance()
+        self._icons.icons_changed.connect(self._update_icon)
+
+    def _update_icon(self):
+        pixmap = self._icons.get_icon(WindowIcon(self._hwnd), 16, self.devicePixelRatioF())
+        if pixmap is not None:
+            self._icon_label.setPixmap(pixmap)
+```
+
+-   `get_icon(source, size, dpr, grayscale=False)` returns a `QPixmap` at once: the icon when it is in memory, otherwise a transparent pixmap of the same size while it loads, so the widget keeps its size. `icons_changed` is emitted when the icon is ready, and the widget asks again. Use the same method to show the icon and to handle `icons_changed`, as above.
+-   `get_icon` returns `None` only when there is no icon to show: a size of 0, or a source that names nothing, such as `ProcessIcon(0)` or `AppIcon("")`.
+-   `size` is in logical pixels, like the `icon_size` options. `dpr` is the screen's device pixel ratio: `self.devicePixelRatioF()` or `self.screen().devicePixelRatio()`.
+-   Do not keep your own icon cache. Asking again is cheap, and the service notices when a window handle or process ID is reused by another app.
+-   `preload(sources, size, dpr)` loads icons the widget will show later, such as the items of a popup, after the icons widgets show now.
+-   `grayscale=True` returns a gray version, for example for a muted app.
+-   Call these from the UI thread.
+
+To save an icon to a file, for example when the user adds an app, use `load_icon(source, size).image` from `core.utils.icons.sources`. It returns a PIL image and waits for Windows, so do not call it while painting or on a timer.
+
+## 11. Python Code Style
 
 -  Format and lint with Ruff, see [Contributing](./Contributing) for the commands.
 -  Add type hints. Pyright runs in strict mode.
 -  Keep methods focused and concise.
 
-## 11. Test your widget:
+## 12. Test your widget:
 
 -   Ensure it behaves as expected in the application.
 -   Check for any errors or issues in the console.
@@ -316,12 +362,12 @@ When `pinnable=True`:
 -   Use thread-safe methods for any background tasks or long-running processes.
 -   Ensure that the widget does not block the main thread and remains responsive to user interactions.
 
-## 12. Document your widget:
+## 13. Document your widget:
 
 -   Write clear documentation for your widget, including its purpose, options, and styling.
 -   Doc file should be located in `docs/` folder and linked in the main documentation and readme.
 
-## 13. Submit PR:
+## 14. Submit PR:
 
 -   Once your widget is complete and tested, submit a pull request to the main repository.
 -   Ensure that your code follows the project's coding standards and guidelines.

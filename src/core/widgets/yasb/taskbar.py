@@ -3,7 +3,6 @@ import logging
 from functools import partial
 from typing import TYPE_CHECKING, Any, override
 
-import win32con
 import win32gui
 from PIL import Image
 from PyQt6.QtCore import QEasingCurve, QEvent, QMimeData, QObject, QPoint, QPropertyAnimation, Qt, QTimer, pyqtSignal
@@ -22,10 +21,11 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
+from core.utils.icons.extract import get_stock_icon
+from core.utils.icons.service import IconService, WindowIcon
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
-from core.utils.win32.app_icons import get_stock_icon, get_window_icon
 from core.utils.win32.constants import KnownCLSID
 from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.utils.win32.window_actions import (
@@ -525,7 +525,8 @@ class TaskbarWidget(BaseWidget):
         self.config.ignore_apps.processes = list(set(self.config.ignore_apps.processes))
         self.config.ignore_apps.titles = list(set(self.config.ignore_apps.titles))
 
-        self._icon_cache: dict[tuple[int, str, float], Image.Image] = {}
+        self._icons = IconService.instance()
+        self._icons.icons_changed.connect(self._reload_icons)
         self._rbin_icon_cache: dict[tuple[bool, float | None], QPixmap] = {}
         self.hwnd_to_widget: dict[int, DraggableAppButton] = {}
         self.window_buttons: dict[int, tuple[str, QPixmap | None, int, str]] = {}
@@ -592,10 +593,6 @@ class TaskbarWidget(BaseWidget):
         """Load pinned apps from disk using PinManager."""
         self.pin_manager.load_pinned_apps()
 
-    def _get_app_identifier(self, hwnd: int, window_data: dict[str, Any]) -> tuple[str | None, dict[str, str]]:
-        """Get a unique identifier for an app and its metadata. Delegates to PinManager."""
-        return PinManager.get_app_identifier(hwnd, window_data)
-
     def pin_app(self, hwnd: int) -> None:
         """Pin an application to the taskbar (pinned apps are global across all monitors)."""
         try:
@@ -607,13 +604,10 @@ class TaskbarWidget(BaseWidget):
 
             window_data = app_window.as_dict()
 
-            # Get icon for caching
-            icon_img = get_window_icon(hwnd)
-
             # Pin at the end of existing pinned apps (position = number of pinned apps)
             # This puts it after all other pinned apps but before unpinned running apps
             position = len(self.pin_manager.pinned_order)
-            unique_id = self.pin_manager.pin_app(hwnd, window_data, icon_img, position=position)
+            unique_id = self.pin_manager.pin_app(hwnd, window_data, position=position)
 
             if unique_id:
                 self._update_pinned_status(hwnd, is_pinned=True)
@@ -756,8 +750,7 @@ class TaskbarWidget(BaseWidget):
         pseudo_hwnd = -(abs(hash(unique_id)) % 1000000000 + 1000000000)
         title = metadata.get("title", "App")
 
-        # Always use _load_cached_icon - it handles Recycle Bin caching internally
-        icon = self._load_cached_icon(unique_id)
+        icon = self._pinned_icon(unique_id)
 
         container = self._create_pinned_app_container(title, icon, pseudo_hwnd, unique_id)
         self.hwnd_to_widget[pseudo_hwnd] = container
@@ -790,7 +783,7 @@ class TaskbarWidget(BaseWidget):
         metadata = self.pin_manager.pinned_apps[unique_id]
         pseudo_hwnd = -(abs(hash(unique_id)) % 1000000000 + 1000000000)
         title = metadata.get("title", "App")
-        icon = self._load_cached_icon(unique_id)
+        icon = self._pinned_icon(unique_id)
 
         container = self._create_pinned_app_container(title, icon, pseudo_hwnd, unique_id)
         self.hwnd_to_widget[pseudo_hwnd] = container
@@ -858,17 +851,17 @@ class TaskbarWidget(BaseWidget):
 
         return container
 
-    def _load_cached_icon(self, unique_id: str) -> QPixmap | None:
-        """Load a cached icon using PinManager with DPI awareness."""
+    def _pinned_icon(self, unique_id: str) -> QPixmap | None:
+        """A pinned app's icon, blank while it loads (_reload_icons sets it on icons_changed)."""
         # Special handling for Recycle Bin, always generate fresh based on current state
         if KnownCLSID.RECYCLE_BIN in unique_id.upper():
             is_empty = self._recycle_bin_state.get("is_empty", True)
             return self._get_recycle_bin_icon(is_empty)
 
-        # Normal apps use PinManager cache
         screen = self.screen()
         dpi = screen.devicePixelRatio() if screen else 1.0
-        return self.pin_manager.load_cached_icon(unique_id, self.config.icon_size, dpi)
+        source = self.pin_manager.icon_source(unique_id)
+        return self._icons.get_icon(source, self.config.icon_size, dpi) if source else None
 
     def _on_recycle_bin_update(self, info: dict[str, Any]) -> None:
         """Update pinned Recycle Bin icons when bin state changes."""
@@ -1056,10 +1049,10 @@ class TaskbarWidget(BaseWidget):
                 continue
             if hwnd < 0:
                 unique_id = widget.property("unique_id")
-                icon = self._load_cached_icon(unique_id) if unique_id else None
+                icon = self._pinned_icon(unique_id) if unique_id else None
             elif hwnd in self.window_buttons:
                 title, _, _, process = self.window_buttons[hwnd]
-                icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
+                icon = self._get_app_icon(hwnd)
                 self.window_buttons[hwnd] = (title, icon, hwnd, process)
             else:
                 continue
@@ -1142,7 +1135,7 @@ class TaskbarWidget(BaseWidget):
                             if app_window is not None:
                                 window_data = app_window.as_dict()
 
-                            window_unique_id, _ = self._get_app_identifier(hwnd, window_data)
+                            window_unique_id = PinManager.get_app_unique_id(hwnd, window_data)
                             if window_unique_id == unique_id:
                                 # This window matches the pinned app, as do the rest of its group
                                 self.pin_manager.running_pinned[hwnd] = unique_id
@@ -1190,7 +1183,7 @@ class TaskbarWidget(BaseWidget):
                             # Create the pinned button
                             pseudo_hwnd = -(abs(hash(unique_id)) % 1000000000 + 1000000000)
                             title = metadata.get("title", "App")
-                            icon = self._load_cached_icon(unique_id)
+                            icon = self._pinned_icon(unique_id)
 
                             container = self._create_pinned_app_container(title, icon, pseudo_hwnd, unique_id)
                             self.hwnd_to_widget[pseudo_hwnd] = container
@@ -1424,7 +1417,7 @@ class TaskbarWidget(BaseWidget):
             self._minimized_hwnds.add(hwnd)
 
         # Check if this is a pinned app
-        unique_id, _ = self._get_app_identifier(hwnd, window_data)
+        unique_id = PinManager.get_app_unique_id(hwnd, window_data)
 
         # Pinned apps are global across all monitors
         is_pinned = unique_id in self.pin_manager.pinned_apps
@@ -1442,7 +1435,7 @@ class TaskbarWidget(BaseWidget):
                 self.group_hwnds[group_key].append(hwnd)
                 self.hwnd_to_group[hwnd] = group_key
                 self.hwnd_to_widget[hwnd] = container
-                icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
+                icon = self._get_app_icon(hwnd)
                 self.window_buttons[hwnd] = (title, icon, hwnd, process)
                 self._sync_group_button(group_key)
                 return
@@ -1517,7 +1510,7 @@ class TaskbarWidget(BaseWidget):
         self.window_buttons.pop(hwnd, None)
 
         # Create the window widget
-        icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
+        icon = self._get_app_icon(hwnd)
         self.window_buttons[hwnd] = (title, icon, hwnd, process)
 
         container = self._create_app_container(title, icon, hwnd)
@@ -1656,8 +1649,7 @@ class TaskbarWidget(BaseWidget):
         process = window_data.get("process_name", "")
         title_wrapper = None
         title_label = None
-        # If process is explorer.exe (e.g. file explorer), we use the title for caching the icon.
-        icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
+        icon = self._get_app_icon(hwnd)
         self.window_buttons[hwnd] = (title, icon, hwnd, process)
 
         # Direct lookup for the widget
@@ -1896,7 +1888,6 @@ class TaskbarWidget(BaseWidget):
                 # Directly remove from pinned apps data structures
                 del self.pin_manager.pinned_apps[unique_id]
                 self.pin_manager.pinned_order.remove(unique_id)
-                self.pin_manager.delete_cached_icon(unique_id)
                 self.pin_manager.save_pinned_apps()
 
                 # Notify other taskbar instances
@@ -2095,8 +2086,8 @@ class TaskbarWidget(BaseWidget):
                     return False
         return True
 
-    def _get_app_icon(self, hwnd: int, title: str) -> QPixmap | None:
-        """Return a QPixmap for the given window handle, using a DPI-aware cache."""
+    def _get_app_icon(self, hwnd: int) -> QPixmap | None:
+        """Return the window's icon, blank while it loads (_reload_icons sets it on icons_changed)."""
         if self.config.icon_size <= 0:
             return None
         try:
@@ -2107,33 +2098,9 @@ class TaskbarWidget(BaseWidget):
                 is_empty = self._recycle_bin_state.get("is_empty", True)
                 return self._get_recycle_bin_icon(is_empty)
 
-            dpi = self._dpi
-            if dpi is None:
+            if self._dpi is None:
                 return None
-            cache_key = (hwnd, title, dpi)
-            if cache_key in self._icon_cache:
-                icon_img = self._icon_cache[cache_key]
-            else:
-                icon_img = get_window_icon(hwnd)
-                if icon_img:
-                    pixel_size = int(self.config.icon_size * dpi)
-                    icon_img = icon_img.resize((pixel_size, pixel_size), Image.LANCZOS).convert("RGBA")
-                    self._icon_cache[cache_key] = icon_img
-                    # Becasue of explorer, browsing folders in longs session, the cache can grow large.
-                    if len(self._icon_cache) > 128:
-                        self._icon_cache.pop(next(iter(self._icon_cache)))
-            if not icon_img:
-                return None
-
-            qimage = QImage(
-                icon_img.tobytes(),  # pyright: ignore[reportUnknownMemberType]
-                icon_img.width,
-                icon_img.height,
-                QImage.Format.Format_RGBA8888,
-            )
-            pixmap = QPixmap.fromImage(qimage)
-            pixmap.setDevicePixelRatio(dpi)
-            return pixmap
+            return self._icons.get_icon(WindowIcon(hwnd), self.config.icon_size, self._dpi)
 
         except Exception:
             logging.debug("Failed to get icons for window with HWND %s", hwnd, exc_info=True)
@@ -2207,15 +2174,14 @@ class TaskbarWidget(BaseWidget):
             set_foreground(base)
 
         except Exception as e:
+            logging.debug("Could not bring window %s to foreground: %s", hwnd, e)
             try:
-                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-                win32gui.SetActiveWindow(hwnd)  # pyright: ignore[reportUnknownMemberType]
-            except Exception:
-                try:
-                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE if win32gui.IsIconic(hwnd) else win32con.SW_SHOW)
-                    logging.debug("Could not bring window %s to foreground: %s", hwnd, e)
-                except Exception as final_e:
-                    logging.debug("Failed to show window %s: %s", hwnd, final_e)
+                if win32gui.IsIconic(hwnd):
+                    restore_window(hwnd)
+                else:
+                    show_window(hwnd)
+            except Exception as final_e:
+                logging.debug("Failed to show window %s: %s", hwnd, final_e)
 
     def launch_pinned_app(self, unique_id_or_hwnd: int | str, extra_arguments: str = "") -> None:
         """Launch a pinned application using PinManager with optional extra arguments."""
@@ -2244,7 +2210,7 @@ class TaskbarWidget(BaseWidget):
         try:
             base, focus_target = resolve_base_and_focus(hwnd)
             if win32gui.IsIconic(base):
-                win32gui.ShowWindow(base, win32con.SW_RESTORE)
+                restore_window(base)
             set_foreground(focus_target)
             # After successful raise, reflect expected focus immediately
             try:
@@ -2253,13 +2219,12 @@ class TaskbarWidget(BaseWidget):
                 pass
         except Exception:
             try:
-                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-                win32gui.SetActiveWindow(hwnd)  # pyright: ignore[reportUnknownMemberType]
+                if win32gui.IsIconic(hwnd):
+                    restore_window(hwnd)
+                else:
+                    show_window(hwnd)
             except Exception:
-                try:
-                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE if win32gui.IsIconic(hwnd) else win32con.SW_SHOW)
-                except Exception:
-                    pass
+                pass
 
     def _clear_others_set_foreground(self, target_hwnd: int | None) -> None:
         """Set a single 'foreground' entry; preserve flashing from manager; toggle focused-only titles."""

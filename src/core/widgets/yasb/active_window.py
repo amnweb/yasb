@@ -6,14 +6,13 @@ from typing import override
 
 import win32gui
 import win32process
-from PIL import Image
 from PyQt6.QtCore import QElapsedTimer, QEvent, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel
 
 from core.events.service import EventService
 from core.events.win32 import WinEvent
-from core.utils.win32.app_icons import get_window_icon
+from core.utils.icons.service import IconService, WindowIcon
 from core.utils.win32.utils import (
     WindowInfo,
     get_app_name_from_aumid,
@@ -82,9 +81,10 @@ class ActiveWindowWidget(BaseWidget):
         self._ignore_window.classes += IGNORED_CLASSES
         self._ignore_window.processes += IGNORED_PROCESSES
         self._ignore_window.titles += IGNORED_TITLES
-        self._icon_cache: dict[tuple[int, str, float | None], Image.Image | None] = {}
+        self._icons = IconService.instance()
         self._app_name_cache: dict[int, str] = {}
         if self.config.label_icon:
+            self._icons.icons_changed.connect(self._refresh_icon)
             self._widget_container_layout.addWidget(self._window_icon_label)
         self._widget_container_layout.addWidget(self._window_title_text)
         self.register_callback("toggle_label", self._toggle_title_text)
@@ -351,35 +351,9 @@ class ActiveWindowWidget(BaseWidget):
             win_info["app_name"] = app_name
 
             if self.config.label_icon:
-                cache_key = (hwnd, title, self.dpi)
-
-                if cache_key in self._icon_cache:
-                    icon_img = self._icon_cache[cache_key]
-                else:
-                    screen = self.screen()
-                    self.dpi = screen.devicePixelRatio() if screen is not None else self.devicePixelRatioF()
-                    icon_img = get_window_icon(hwnd)
-                    if icon_img:
-                        icon_img = icon_img.resize(
-                            (int(self.config.label_icon_size * self.dpi), int(self.config.label_icon_size * self.dpi)),
-                            Image.LANCZOS,
-                        ).convert("RGBA")
-                    if not process["name"] == "explorer.exe":
-                        # Do not cache icons for explorer.exe windows
-                        self._icon_cache[cache_key] = icon_img
-                        if len(self._icon_cache) > 128:
-                            self._icon_cache.pop(next(iter(self._icon_cache)))
-                if icon_img:
-                    qimage = QImage(
-                        icon_img.tobytes(),  # pyright: ignore[reportUnknownMemberType]
-                        icon_img.width,
-                        icon_img.height,
-                        QImage.Format.Format_RGBA8888,
-                    )
-                    self.pixmap = QPixmap.fromImage(qimage)
-                    self.pixmap.setDevicePixelRatio(self.dpi or 1.0)
-                else:
-                    self.pixmap = None
+                screen = self.screen()
+                self.dpi = screen.devicePixelRatio() if screen is not None else self.devicePixelRatioF()
+                self.pixmap = self._icons.get_icon(WindowIcon(hwnd), self.config.label_icon_size, self.dpi)
 
             if (
                 title.strip() in self._ignore_window.titles
@@ -420,6 +394,14 @@ class ActiveWindowWidget(BaseWidget):
                 hwnd,
                 event,
             )
+
+    def _refresh_icon(self) -> None:
+        if self._tracked_hwnd is None or self.dpi is None:
+            return
+        pixmap = self._icons.get_icon(WindowIcon(self._tracked_hwnd), self.config.label_icon_size, self.dpi)
+        if pixmap is not None:
+            self.pixmap = pixmap
+            self._window_icon_label.setPixmap(pixmap)
 
     def _update_text(self):
         try:
