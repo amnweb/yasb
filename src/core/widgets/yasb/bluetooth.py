@@ -1,6 +1,6 @@
 import re
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import QObject, Slot
 from PySide6.QtWidgets import QLabel
 
 from core.utils.qobject import is_valid_qobject
@@ -32,11 +32,13 @@ class BluetoothWidget(BaseWidget):
         self._bt_menu = BluetoothMenu(self, self.config.menu_config, self._manager)
         self._released = False
 
-        self._manager.status_updated.connect(self._on_status_updated)
-        self._manager.refresh_failed.connect(self._on_refresh_failed)
-        self._manager.scan_started.connect(self._on_scan_started)
-        self._manager.scan_completed.connect(self._on_scan_completed)
-        self._manager.connection_finished.connect(self._on_connection_finished)
+        self._manager_connections = [
+            self._manager.status_updated.connect(self._on_status_updated),
+            self._manager.refresh_failed.connect(self._on_refresh_failed),
+            self._manager.scan_started.connect(self._on_scan_started),
+            self._manager.scan_completed.connect(self._on_scan_completed),
+            self._manager.connection_finished.connect(self._on_connection_finished),
+        ]
         # Use a closure so cleanup runs during QObject destruction.
         self.destroyed.connect(lambda: self.stop())
 
@@ -57,17 +59,10 @@ class BluetoothWidget(BaseWidget):
         if self._released:
             return
         self._released = True
-        for signal, slot in (
-            (self._manager.status_updated, self._on_status_updated),
-            (self._manager.refresh_failed, self._on_refresh_failed),
-            (self._manager.scan_started, self._on_scan_started),
-            (self._manager.scan_completed, self._on_scan_completed),
-            (self._manager.connection_finished, self._on_connection_finished),
-        ):
-            try:
-                signal.disconnect(slot)
-            except TypeError:
-                pass
+        # Disconnect by handle: destroyed() may run after this widget's C++ object is gone.
+        for connection in self._manager_connections:
+            QObject.disconnect(connection)
+        self._manager_connections.clear()
         self._bt_menu.detach()
         self._manager.release()
 
