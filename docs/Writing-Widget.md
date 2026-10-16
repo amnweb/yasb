@@ -163,7 +163,7 @@ PopupWidget(
 Build the popup, add your content, call `adjustSize()` and `setPosition()`, then `show()`.
 
 ```py
-from PyQt6.QtWidgets import QLabel, QVBoxLayout
+from PySide6.QtWidgets import QLabel, QVBoxLayout
 from core.utils.utilities import PopupWidget
 
 def show_menu(self):
@@ -229,7 +229,7 @@ def show_menu(self):
 Use `pinnable=True` when you want a pin button that keeps the popup open. When pinned the popup ignores outside clicks and can be dragged by the user. When unpinned it goes back to closing normally on outside click or focus loss - no flickering or rebuilding happens.
 
 ```py
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.tooltip import set_tooltip
 
