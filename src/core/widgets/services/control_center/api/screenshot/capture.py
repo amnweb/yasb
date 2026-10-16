@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass
 
-from PyQt6.QtCore import QRect
-from PyQt6.QtGui import QGuiApplication, QPixmap
+from PySide6.QtCore import QRect
+from PySide6.QtGui import QGuiApplication, QPixmap
 
 from core.utils.win32.bindings.user32 import enum_display_monitors
 

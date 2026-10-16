@@ -4,9 +4,9 @@ import subprocess
 from collections.abc import Callable
 from typing import override
 
-from PyQt6.QtCore import QEvent, QObject, Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtCore import QEvent, QObject, Qt, QThread, Signal
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
@@ -36,8 +36,8 @@ class ExtPopupWidget(PopupWidget):
 class KomorebiControlWidget(BaseWidget):
     validation_schema = KomorebiControlWidgetConfig
 
-    k_signal_connect = pyqtSignal(dict)
-    k_signal_disconnect = pyqtSignal()
+    k_signal_connect = Signal(dict)
+    k_signal_disconnect = Signal()
     event_listener = KomorebiEventListener
 
     def __init__(self, config: KomorebiControlWidgetConfig):
@@ -323,7 +323,7 @@ class KomorebiControlWidget(BaseWidget):
 
 
 class VersionCheckThread(QThread):
-    version_result = pyqtSignal(str)
+    version_result = Signal(str)
 
     def __init__(self, komorebic_client: KomorebiClient):
         super().__init__()

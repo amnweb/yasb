@@ -10,7 +10,7 @@ from threading import Event
 from typing import Any
 from xml.etree import ElementTree
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from core.utils.shell_utils import shell_open
 from core.utils.system import app_data_path

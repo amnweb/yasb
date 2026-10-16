@@ -20,7 +20,7 @@ from uuid import UUID
 from PIL import Image
 from PIL.ImageFilter import SHARPEN
 from PIL.ImageQt import ImageQt
-from PyQt6.QtGui import QImage
+from PySide6.QtGui import QImage
 
 from core.utils.icons.convert import hicon_to_image
 from core.utils.win32.bindings.kernel32 import (

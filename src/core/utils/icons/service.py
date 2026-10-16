@@ -20,9 +20,9 @@ from enum import IntEnum
 from typing import ClassVar, NamedTuple
 
 from PIL import Image
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import QApplication
 
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource, ProcessIcon, WindowIcon, load_icon
 from core.utils.win32.bindings.ole32 import CoInitialize
@@ -65,9 +65,9 @@ class _Icon:
 
 
 class IconService(QObject):
-    icons_changed = pyqtSignal()
+    icons_changed = Signal()
     # emitted on the icon thread
-    _icon_loaded = pyqtSignal()
+    _icon_loaded = Signal()
 
     _instance: ClassVar[IconService | None] = None
     _instance_lock: ClassVar[threading.Lock] = threading.Lock()

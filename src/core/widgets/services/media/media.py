@@ -7,10 +7,10 @@ from collections.abc import Callable
 from functools import partial
 from typing import Any
 
-import PyQt6.sip as sip
+import shiboken6
 from PIL import Image
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QApplication
 from qasync import asyncSlot  # type: ignore
 from winrt.windows.media import MediaPlaybackAutoRepeatMode
 from winrt.windows.media.control import (
@@ -98,7 +98,7 @@ class QSingleton(type(QObject)):
 
     def __call__(cls, *args: Any, **kwargs: Any):
         with cls._lock:
-            if cls not in cls._instances or sip.isdeleted(cls._instances[cls]):
+            if cls not in cls._instances or not shiboken6.isValid(cls._instances[cls]):
                 cls._instances[cls] = super().__call__(*args, **kwargs)
             return cls._instances[cls]
 
@@ -106,11 +106,11 @@ class QSingleton(type(QObject)):
 class WindowsMedia(QObject, metaclass=QSingleton):
     """Windows Media Control singleton"""
 
-    media_data_changed = pyqtSignal(dict)
-    current_session_changed = pyqtSignal()
-    media_properties_changed = pyqtSignal()
-    timeline_info_changed = pyqtSignal()
-    playback_info_changed = pyqtSignal()
+    media_data_changed = Signal(dict)
+    current_session_changed = Signal()
+    media_properties_changed = Signal()
+    timeline_info_changed = Signal()
+    playback_info_changed = Signal()
 
     def __init__(self):
         super().__init__()

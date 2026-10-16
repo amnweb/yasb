@@ -5,9 +5,9 @@ import re
 import subprocess
 from functools import partial
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.utilities import ElidedLabel, PopupWidget
 from core.validation.widgets.yasb.vscode import VSCodeConfig

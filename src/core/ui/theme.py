@@ -7,8 +7,8 @@ then returns the matching token set from tokens.py.
 
 import logging
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QGuiApplication
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont, QGuiApplication
 
 from core.ui.tokens import COLOR_TOKENS
 

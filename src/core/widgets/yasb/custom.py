@@ -3,7 +3,7 @@ import re
 import subprocess
 import threading
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from core.utils.tooltip import set_tooltip
 from core.utils.win32.system_function import function_map
@@ -14,8 +14,8 @@ type JsonValue = dict[str, JsonValue] | list[JsonValue] | str | int | float | bo
 
 
 class CustomWorker(QObject):
-    finished = pyqtSignal()
-    data_ready = pyqtSignal(object)
+    finished = Signal()
+    data_ready = Signal(object)
 
     def __init__(
         self,

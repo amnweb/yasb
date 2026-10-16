@@ -8,7 +8,7 @@ from typing import Literal
 from uuid import uuid4
 
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from core.utils.win32.bindings.kernel32 import CloseHandle, CreateFile, WaitForSingleObject, WaitNamedPipe, WriteFile
 from core.utils.win32.constants import (

@@ -12,9 +12,9 @@ from pathlib import Path
 from typing import Any, override
 
 import certifi
-from PyQt6.QtCore import QObject, Qt, QThread, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QImage
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QObject, Qt, QThread, QTimer, QUrl, Signal
+from PySide6.QtGui import QCloseEvent, QImage
+from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QProgressBar,
@@ -48,9 +48,9 @@ class ReleaseFetcher(QThread):
     and architecture-specific asset selection.
     """
 
-    update_available = pyqtSignal(object)
-    up_to_date = pyqtSignal(str)
-    error = pyqtSignal(str)
+    update_available = Signal(object)
+    up_to_date = Signal(str)
+    error = Signal(str)
 
     def __init__(self, current_version: str, parent: QObject | None = None):
         super().__init__(parent)
@@ -81,9 +81,9 @@ class ReleaseFetcher(QThread):
 
 
 class DownloadWorker(QThread):
-    progress = pyqtSignal(int)
-    finished = pyqtSignal(Path)
-    error = pyqtSignal(str)
+    progress = Signal(int)
+    finished = Signal(Path)
+    error = Signal(str)
 
     def __init__(
         self, download_url: str, output_path: Path, expected_size: int | None = None, parent: QObject | None = None
@@ -157,7 +157,7 @@ class DownloadWorker(QThread):
 class _ImageLoaderWorker(QThread):
     """Background thread that fetches remote images without blocking the UI."""
 
-    finished = pyqtSignal(dict)  # {url_str: QImage}
+    finished = Signal(dict)  # {url_str: QImage}
 
     def __init__(self, urls: list[str], max_width: int, parent: QObject | None = None):
         super().__init__(parent)
@@ -186,7 +186,7 @@ class _ImageLoaderWorker(QThread):
 class _RemoteImageTextBrowser(QTextBrowser):
     """QTextBrowser subclass that loads remote images asynchronously."""
 
-    images_loaded = pyqtSignal()
+    images_loaded = Signal()
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)

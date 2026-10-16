@@ -1,7 +1,7 @@
 import re
 
-from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QLabel
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QLabel
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
@@ -78,7 +78,7 @@ class BluetoothWidget(BaseWidget):
             widget.setVisible(self._show_alt_label)
         self._update_label(self.bluetooth_icon, self.connected_devices)
 
-    @pyqtSlot(object)
+    @Slot(object)
     def _on_status_updated(self, status: BluetoothStatus):
         if self._released or not is_valid_qobject(self):
             return
@@ -102,25 +102,25 @@ class BluetoothWidget(BaseWidget):
                 self._bt_state = "bt-on"
         self._update_label(self.bluetooth_icon, self.connected_devices)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def _on_refresh_failed(self, message: str):
         if self._released:
             return
         self._bt_menu.on_refresh_failed(message)
 
-    @pyqtSlot()
+    @Slot()
     def _on_scan_started(self):
         if self._released:
             return
         self._bt_menu.on_scan_started()
 
-    @pyqtSlot(object, object)
+    @Slot(object, object)
     def _on_scan_completed(self, status: ScanResultStatus, devices: list[DeviceInfo]):
         if self._released:
             return
         self._bt_menu.on_scan_completed(status, devices)
 
-    @pyqtSlot(bool, str, object)
+    @Slot(bool, str, object)
     def _on_connection_finished(self, success: bool, message: str, device: DeviceInfo):
         if self._released:
             return

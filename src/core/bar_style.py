@@ -1,14 +1,9 @@
 import math
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QEvent, QRect, QRectF, Qt, QTimer
-from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPaintEvent, QPalette, QPen, QResizeEvent, QTransform
-from PyQt6.QtWidgets import QFrame, QLayout, QWidget
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
+from PySide6.QtCore import Property, QEvent, QRect, QRectF, Qt, QTimer
+from PySide6.QtGui import QColor, QPainter, QPainterPath, QPaintEvent, QPalette, QPen, QResizeEvent, QTransform
+from PySide6.QtWidgets import QFrame, QLayout, QWidget
 
 RESTYLE_EVENTS = frozenset({QEvent.Type.Polish, QEvent.Type.StyleChange})
 
@@ -70,7 +65,7 @@ class AdaptiveBarFrame(BarFrame):
         self._rail_height = max(0, int(value))
         self._update_shape(force=True)
 
-    railheight: int = pyqtProperty(int, _get_railheight, _set_railheight)
+    railheight: int = Property(int, _get_railheight, _set_railheight)
 
     def _get_islandradius(self) -> int:
         return self._island_radius
@@ -79,7 +74,7 @@ class AdaptiveBarFrame(BarFrame):
         self._island_radius = max(0, int(value))
         self._update_shape(force=True)
 
-    islandradius: int = pyqtProperty(int, _get_islandradius, _set_islandradius)
+    islandradius: int = Property(int, _get_islandradius, _set_islandradius)
 
     def _get_grouppadding(self) -> int:
         return self._group_padding
@@ -88,7 +83,7 @@ class AdaptiveBarFrame(BarFrame):
         self._group_padding = max(0, int(value))
         self._update_shape(force=True)
 
-    grouppadding: int = pyqtProperty(int, _get_grouppadding, _set_grouppadding)
+    grouppadding: int = Property(int, _get_grouppadding, _set_grouppadding)
 
     def _get_islands(self) -> bool:
         return self._islands_enabled
@@ -99,7 +94,7 @@ class AdaptiveBarFrame(BarFrame):
         self._islands_enabled = value
         self._update_shape(force=True)
 
-    islands: bool = pyqtProperty(bool, _get_islands, _set_islands)
+    islands: bool = Property(bool, _get_islands, _set_islands)
 
     def _get_edgeradius(self) -> int:
         return self._edge_radius
@@ -117,7 +112,7 @@ class AdaptiveBarFrame(BarFrame):
         else:
             self._apply_edge_radius()
 
-    edgeradius: int = pyqtProperty(int, _get_edgeradius, _set_edgeradius)
+    edgeradius: int = Property(int, _get_edgeradius, _set_edgeradius)
 
     def _apply_edge_radius(self) -> None:
         self._reserve_edge_space()
@@ -136,7 +131,7 @@ class AdaptiveBarFrame(BarFrame):
         self._border_width = max(0, int(value))
         self.update()
 
-    borderwidth: int = pyqtProperty(int, _get_borderwidth, _set_borderwidth)
+    borderwidth: int = Property(int, _get_borderwidth, _set_borderwidth)
 
     def _get_bordercolor(self) -> QColor:
         return self._border_color
@@ -145,7 +140,7 @@ class AdaptiveBarFrame(BarFrame):
         self._border_color = QColor(value)
         self.update()
 
-    bordercolor: QColor = pyqtProperty(QColor, _get_bordercolor, _set_bordercolor)
+    bordercolor: QColor = Property(QColor, _get_bordercolor, _set_bordercolor)
 
     @property
     def edge_overhang(self) -> int:

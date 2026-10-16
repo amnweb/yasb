@@ -3,8 +3,8 @@ import random
 import re
 from typing import Any, override
 
-from PyQt6.QtCore import QRectF, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import (
+from PySide6.QtCore import QRectF, Qt, QTimer, Signal
+from PySide6.QtGui import (
     QColor,
     QCursor,
     QFont,
@@ -18,7 +18,7 @@ from PyQt6.QtGui import (
     QPen,
     QPixmap,
 )
-from PyQt6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QWidget
 
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_COLOR, ICON_COLOR_PICKER
@@ -621,7 +621,7 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
 class _ColorPickerOverlay(QWidget):
     """Small floating loupe centered on the cursor for picking colors."""
 
-    color_picked = pyqtSignal(str)
+    color_picked = Signal(str)
 
     GRID_SIZE = 11
     CELL_SIZE = 12

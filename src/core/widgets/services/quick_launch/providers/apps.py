@@ -4,8 +4,8 @@ import os
 import time
 from typing import TYPE_CHECKING, Any, cast
 
-from PyQt6.QtCore import QThread, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QThread, Signal
+from PySide6.QtWidgets import QApplication
 
 from core.utils.shell_utils import shell_open
 from core.utils.system import app_data_path
@@ -182,7 +182,7 @@ def _get_lnk_description(lnk_path: str) -> str | None:
 class DescriptionResolverWorker(QThread):
     """Background thread to resolve app descriptions."""
 
-    finished = pyqtSignal(dict)
+    finished = Signal(dict)
 
     def __init__(self, apps: list[AppEntry]):
         super().__init__()

@@ -5,14 +5,14 @@ from collections.abc import Callable
 from enum import StrEnum
 from typing import Any, Literal, cast
 
-import PyQt6.QtCore as QtCore
+import PySide6.QtCore as QtCore
 from PIL import Image, ImageChops
 from PIL.ImageDraw import ImageDraw
 from PIL.ImageQt import ImageQt
 from pycaw.pycaw import AudioUtilities
-from PyQt6.QtCore import QEvent, QObject, QRectF, Qt, QTimer, pyqtSlot
-from PyQt6.QtGui import QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QWheelEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QEvent, QObject, QRectF, Qt, QTimer, Slot
+from PySide6.QtGui import QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QWheelEvent
+from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -191,7 +191,7 @@ class MediaWidget(BaseWidget):
         self._is_playing = False
         self._app_is_muted = False
 
-    @pyqtSlot(dict)
+    @Slot(dict)
     def _on_media_data_changed(self, data: dict[str, SessionState]):
         self.all_sessions = data
         old_session = self.current_session
@@ -616,7 +616,7 @@ class MediaWidget(BaseWidget):
         except Exception as e:
             logger.error("Error updating interpolated position: %s", e)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def _on_session_status_changed(self):
         active_label = self._label_alt if self._show_alt_label else self._label
 
@@ -711,7 +711,7 @@ class MediaWidget(BaseWidget):
             self._popup_prev_label = None
             self._popup_next_label = None
 
-    @pyqtSlot()
+    @Slot()
     def _on_media_properties_changed(self):
         try:
             if self.current_session is not None and hasattr(self, "dialog") and self.dialog.isVisible():

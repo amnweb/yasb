@@ -5,7 +5,7 @@ import subprocess
 import threading
 
 import comtypes.client  # pyright: ignore[reportMissingTypeStubs]
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from core.events.service import EventService
 from core.utils.win32.bindings.ole32 import CoInitialize
@@ -18,8 +18,8 @@ from core.widgets.services.wallpapers.images import collect_image_files
 class WallpaperManager(QObject):
     _instance: WallpaperManager | None = None
     _initialized: bool
-    toggle_gallery_signal = pyqtSignal(str)
-    _set_wallpaper_signal = pyqtSignal(str)
+    toggle_gallery_signal = Signal(str)
+    _set_wallpaper_signal = Signal(str)
 
     def __new__(cls):
         if cls._instance is None:

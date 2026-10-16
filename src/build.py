@@ -33,7 +33,7 @@ build_options = {
     "constants": [f"ARCHITECTURE='{display_arch}'"],
     "silent_level": 1,
     "silent": True,
-    "excludes": ["PySide6", "pydoc_data", "email", "tkinter", "PyQt5", "PySide2", "unittest"],
+    "excludes": ["PyQt6", "pydoc_data", "email", "tkinter", "PyQt5", "PySide2", "unittest"],
     "bin_excludes": ["Qt6Pdf.dll", "_avif.cp314-win_amd64.pyd"],
     "zip_exclude_packages": [],
     "zip_include_packages": ["*"],

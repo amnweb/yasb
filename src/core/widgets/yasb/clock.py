@@ -12,9 +12,9 @@ from types import ModuleType
 from typing import NotRequired, TypedDict, cast, override
 from zoneinfo import ZoneInfo, available_timezones
 
-from PyQt6.QtCore import QDate, QLocale, QPoint, QRect, Qt, QTimer
-from PyQt6.QtGui import QAction, QColor, QPainter, QPalette, QShowEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QDate, QLocale, QPoint, QRect, Qt, QTimer
+from PySide6.QtGui import QAction, QColor, QPainter, QPalette, QShowEvent
+from PySide6.QtWidgets import (
     QAbstractSpinBox,
     QApplication,
     QButtonGroup,
@@ -349,7 +349,7 @@ class CustomCalendar(QCalendarWidget):
         qdate = date if isinstance(date, QDate) else QDate(date.year, date.month, date.day)
         if qdate < self.minimumDate() or qdate > self.maximumDate():
             return
-        pydate = qdate.toPyDate()
+        pydate = qdate.toPython()
         is_holiday = self.show_holidays and pydate in self._holidays
         if is_holiday and painter is not None:
             is_selected = qdate == self.selectedDate()

@@ -1,10 +1,10 @@
 import logging
 from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QEvent, QObject, Qt, QTimer
-from PyQt6.QtGui import QKeyEvent, QMouseEvent, QPixmap, QScreen, QShowEvent, QWheelEvent
-from PyQt6.QtWidgets import (
+import PySide6.QtCore as QtCore
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer
+from PySide6.QtGui import QKeyEvent, QMouseEvent, QPixmap, QScreen, QShowEvent, QWheelEvent
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,

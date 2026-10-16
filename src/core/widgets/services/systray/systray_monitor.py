@@ -7,7 +7,7 @@ from ctypes import (
     cast,
 )
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from core.utils.win32.bindings.user32 import (
     DefWindowProc,
@@ -62,9 +62,9 @@ WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
 class SystrayMonitor(QObject):
     """Main class to handle systray message interception and forwarding"""
 
-    update_icons = pyqtSignal()
-    icon_modified = pyqtSignal(IconData)
-    icon_deleted = pyqtSignal(IconData)
+    update_icons = Signal()
+    icon_modified = Signal(IconData)
+    icon_deleted = Signal(IconData)
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)

@@ -1,9 +1,8 @@
-from collections.abc import Callable
 from enum import IntEnum
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
+    Property,
     QEasingCurve,
     QEvent,
     QObject,
@@ -11,10 +10,10 @@ from PyQt6.QtCore import (
     QPropertyAnimation,
     QRect,
     Qt,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtGui import QColor, QFont, QKeyEvent, QMouseEvent, QPainter, QPaintEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtGui import QColor, QFont, QKeyEvent, QMouseEvent, QPainter, QPaintEvent
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QGraphicsDropShadowEffect,
@@ -27,9 +26,6 @@ from PyQt6.QtWidgets import (
 
 from core.ui.components.button import Button
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _MIN_W, _MAX_W = 320, 548
 _MIN_H, _MAX_H = 184, 756
@@ -65,7 +61,7 @@ class ContentDialogButton(IntEnum):
 class SmokeLayer(QWidget):
     """Semi-transparent overlay on the parent."""
 
-    clicked = pyqtSignal()
+    clicked = Signal()
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
@@ -78,7 +74,7 @@ class SmokeLayer(QWidget):
         self._opacity = value
         self.update()
 
-    smoke_opacity: float = pyqtProperty(float, _get_smoke_opacity, _set_smoke_opacity)
+    smoke_opacity: float = Property(float, _get_smoke_opacity, _set_smoke_opacity)
 
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
@@ -112,11 +108,11 @@ class ContentDialog(QWidget):
         dlg.show_dialog()
     """
 
-    primary_button_click = pyqtSignal()
-    secondary_button_click = pyqtSignal()
-    close_button_click = pyqtSignal()
-    opened = pyqtSignal()
-    closed = pyqtSignal(ContentDialogResult)
+    primary_button_click = Signal()
+    secondary_button_click = Signal()
+    close_button_click = Signal()
+    opened = Signal()
+    closed = Signal(ContentDialogResult)
 
     def __init__(
         self,
@@ -333,7 +329,7 @@ class ContentDialog(QWidget):
         self._slide_offset_val = value
         self._position_center(value)
 
-    slide_offset: int = pyqtProperty(int, _get_slide_offset, _set_slide_offset)
+    slide_offset: int = Property(int, _get_slide_offset, _set_slide_offset)
 
     def _position_center(self, y_offset: int = 0) -> None:
         centre = self._host.mapToGlobal(self._host.rect().center())

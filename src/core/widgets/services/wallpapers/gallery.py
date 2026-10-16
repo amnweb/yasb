@@ -4,7 +4,7 @@ from collections import OrderedDict
 from functools import partial
 from typing import NamedTuple, override
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QEasingCurve,
     QEvent,
     QPoint,
@@ -15,7 +15,7 @@ from PyQt6.QtCore import (
     QThreadPool,
     QVariantAnimation,
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QAction,
     QColor,
     QContextMenuEvent,
@@ -32,7 +32,7 @@ from PyQt6.QtGui import (
     QShowEvent,
     QWheelEvent,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QMenu,

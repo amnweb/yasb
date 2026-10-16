@@ -8,7 +8,7 @@ from collections.abc import Callable
 from ctypes import wintypes
 from typing import TypedDict, override
 
-from PyQt6.QtCore import QObject, QThread, pyqtBoundSignal, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal, SignalInstance
 
 from core.utils.win32.bindings.kernel32 import GetLastError, kernel32
 from core.utils.win32.bindings.shell32 import shell32
@@ -42,7 +42,7 @@ class BinInfo(TypedDict):
 class BinInfoWorker(QThread):
     """Reusable worker thread to query recycle bin info on demand"""
 
-    info_ready = pyqtSignal(dict)
+    info_ready = Signal(dict)
 
     def __init__(self):
         super().__init__()
@@ -116,7 +116,7 @@ class RecycleBinMonitor(QObject):
     """Utility class to monitor Recycle Bin status and changes"""
 
     # Signal that will be emitted when recycle bin status changes
-    bin_updated = pyqtSignal(dict)
+    bin_updated = Signal(dict)
 
     # Add these class variables
     _instance: RecycleBinMonitor | None = None
@@ -277,7 +277,7 @@ class RecycleBinMonitor(QObject):
 
     def empty_recycle_bin_async(
         self, show_confirmation: bool = False, show_progress: bool = False, play_sound: bool = False
-    ) -> tuple[pyqtBoundSignal, EmptyBinThread]:
+    ) -> tuple[SignalInstance, EmptyBinThread]:
         """Empty the recycle bin asynchronously with configurable UI options
 
         Args:

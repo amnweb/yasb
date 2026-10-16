@@ -6,7 +6,7 @@ import time
 from typing import Any
 from xml.etree import ElementTree
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from core.utils.system import app_data_path
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult

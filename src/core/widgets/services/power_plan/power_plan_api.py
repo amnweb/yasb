@@ -5,8 +5,8 @@ import winreg
 from ctypes import byref, c_void_p, wintypes
 from dataclasses import dataclass
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 
 from core.events.service import EventService
 from core.utils.win32.bindings.advapi32 import RegNotifyChangeKeyValue

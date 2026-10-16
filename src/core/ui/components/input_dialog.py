@@ -1,18 +1,17 @@
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
+    Property,
     QEasingCurve,
     QEvent,
     QObject,
     QParallelAnimationGroup,
     QPropertyAnimation,
     Qt,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtGui import QColor, QFocusEvent, QFont, QKeyEvent, QPainter, QPaintEvent, QPen
-from PyQt6.QtWidgets import (
+from PySide6.QtGui import QColor, QFocusEvent, QFont, QKeyEvent, QPainter, QPaintEvent, QPen
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QGraphicsDropShadowEffect,
@@ -27,9 +26,6 @@ from PyQt6.QtWidgets import (
 from core.ui.components.button import Button
 from core.ui.components.content_dialog import SmokeLayer
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _MIN_W, _MAX_W = 360, 548
 _PAD = 24
@@ -116,8 +112,8 @@ class InputDialog(QWidget):
         dlg.show_dialog()
     """
 
-    accepted = pyqtSignal(str)
-    rejected = pyqtSignal()
+    accepted = Signal(str)
+    rejected = Signal()
 
     def __init__(
         self,
@@ -289,7 +285,7 @@ class InputDialog(QWidget):
         self._slide_offset_val = value
         self._position_center(value)
 
-    slide_offset: int = pyqtProperty(int, _get_slide_offset, _set_slide_offset)
+    slide_offset: int = Property(int, _get_slide_offset, _set_slide_offset)
 
     def _position_center(self, y_offset: int = 0) -> None:
         if self._host is None:

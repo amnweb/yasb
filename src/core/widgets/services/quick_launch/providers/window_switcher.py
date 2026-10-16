@@ -3,7 +3,7 @@ import os
 import time
 from typing import Any
 
-from PyQt6.QtCore import QTimer
+from PySide6.QtCore import QTimer
 
 from core.utils.icons.service import WindowIcon
 from core.utils.win32.bindings.user32 import IsIconic, IsWindow, enum_windows

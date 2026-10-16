@@ -1,8 +1,8 @@
 from typing import override
 
-from PyQt6.QtCore import QEvent, QPoint, QPropertyAnimation, QRect, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QCursor, QHideEvent, QResizeEvent, QShowEvent
-from PyQt6.QtWidgets import QApplication, QFrame, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtCore import QEvent, QPoint, QPropertyAnimation, QRect, Qt, QTimer, Signal
+from PySide6.QtGui import QCloseEvent, QCursor, QHideEvent, QResizeEvent, QShowEvent
+from PySide6.QtWidgets import QApplication, QFrame, QPushButton, QVBoxLayout, QWidget
 
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.bindings.user32 import GetAsyncKeyState
@@ -21,7 +21,7 @@ def _is_mouse_pressed() -> bool:
 class SystrayPopup(QWidget):
     """Popup grid window for unpinned systray icons."""
 
-    closed = pyqtSignal()
+    closed = Signal()
 
     def __init__(
         self,

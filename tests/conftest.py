@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 _REDIRECTED_ENV = ("YASB_CONFIG_HOME", "LOCALAPPDATA")
 _saved_env: dict[str, str | None] = {}

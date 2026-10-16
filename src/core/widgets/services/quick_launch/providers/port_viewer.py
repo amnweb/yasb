@@ -3,7 +3,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from core.utils.icons.service import ProcessIcon
 from core.utils.process import terminate_process

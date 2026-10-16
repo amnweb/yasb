@@ -6,7 +6,7 @@ from ctypes.wintypes import MSG
 from dataclasses import dataclass
 from typing import Any
 
-from PyQt6.QtCore import Q_ARG, QMetaObject, QObject, Qt, QThread, pyqtSlot
+from PySide6.QtCore import Q_ARG, QMetaObject, QObject, Qt, QThread, Slot
 
 from core.events.service import EventService
 from core.utils.win32.bindings.kernel32 import GetCurrentThreadId
@@ -158,7 +158,7 @@ class HotkeyDispatcher(QObject):
         super().__init__()
         self._event_service = EventService()
 
-    @pyqtSlot(str, str, str)
+    @Slot(str, str, str)
     def dispatch(self, widget_name: str, action: str, screen_name: str) -> None:
         """Dispatch a hotkey event to the target widget."""
         self._event_service.emit_event("handle_widget_hotkey", widget_name, action, screen_name)

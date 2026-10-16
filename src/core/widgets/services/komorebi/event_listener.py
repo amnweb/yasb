@@ -5,7 +5,7 @@ import uuid
 from ctypes import WinError
 from typing import Any, override
 
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService

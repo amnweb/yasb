@@ -7,8 +7,8 @@ from ctypes import POINTER, addressof, byref, cast, string_at
 from ctypes.wintypes import BYTE, DWORD, HWND, MSG, RECT
 from typing import ClassVar
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QApplication
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.win32.bindings.dxva2 import PHYSICAL_MONITOR, VCP_BRIGHTNESS, VCP_CONTRAST, dxva2
@@ -69,8 +69,8 @@ class BrightnessService(QObject):
     _instance: ClassVar[BrightnessService | None] = None
     _instance_lock: ClassVar[threading.Lock] = threading.Lock()
 
-    brightness_changed = pyqtSignal(int, object)
-    contrast_changed = pyqtSignal(int, object)
+    brightness_changed = Signal(int, object)
+    contrast_changed = Signal(int, object)
 
     def __init__(self) -> None:
         super().__init__()

@@ -5,9 +5,9 @@ from collections.abc import Callable
 from typing import Any, override
 
 from pydantic import BaseModel
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QContextMenuEvent, QMouseEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtGui import QContextMenuEvent, QMouseEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 from core.events.service import EventService
 from core.utils.win32.system_function import function_map
@@ -18,7 +18,7 @@ class BaseWidget(QWidget):
     validation_schema: dict[str, Any] | type[BaseModel] | None = None
     event_listener: type[QThread] | None = None
 
-    _hotkey_signal = pyqtSignal(str, str, str)
+    _hotkey_signal = Signal(str, str, str)
 
     def __init_subclass__(cls, **kwargs: Any):
         """Register the widget class with the registry"""

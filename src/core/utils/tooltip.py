@@ -1,8 +1,7 @@
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
+    Property,
     QEasingCurve,
     QEvent,
     QObject,
@@ -12,14 +11,11 @@ from PyQt6.QtCore import (
     Qt,
     QTimer,
 )
-from PyQt6.QtGui import QCursor, QGuiApplication
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
+from PySide6.QtGui import QCursor, QGuiApplication
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 from core.bar_helper import GlobalState
 from core.utils.win32.backdrop import enable_blur
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 
 class CustomToolTip(QFrame):
@@ -158,7 +154,7 @@ class CustomToolTip(QFrame):
         self._opacity = opacity
         self.setWindowOpacity(opacity)
 
-    opacity: float = pyqtProperty(float, get_opacity, set_opacity)
+    opacity: float = Property(float, get_opacity, set_opacity)
 
     def get_slide_offset(self) -> float:
         return self._slide_offset
@@ -168,7 +164,7 @@ class CustomToolTip(QFrame):
         if self._base_pos is not None:
             self.move(self._base_pos.x(), self._base_pos.y() + int(offset))
 
-    slide_offset: float = pyqtProperty(float, get_slide_offset, set_slide_offset)
+    slide_offset: float = Property(float, get_slide_offset, set_slide_offset)
 
     def update_content(self, text: str) -> None:
         """Update tooltip content without hiding it."""

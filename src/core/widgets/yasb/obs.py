@@ -2,9 +2,9 @@ import time
 from collections.abc import Callable
 from typing import Any, override
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QCloseEvent, QMouseEvent
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QCloseEvent, QMouseEvent
+from PySide6.QtWidgets import QGraphicsOpacityEffect, QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style

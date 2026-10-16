@@ -1,6 +1,6 @@
 import logging
 
-from PyQt6.QtCore import QObject
+from PySide6.QtCore import QObject
 
 from core.widgets.services.control_center.api.screenshot.capture import capture_screens
 from core.widgets.services.control_center.api.screenshot.overlay import Overlay

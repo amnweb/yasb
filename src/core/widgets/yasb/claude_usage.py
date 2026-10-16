@@ -3,9 +3,9 @@ from datetime import UTC, datetime
 from functools import partial
 from typing import Any, override
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QCloseEvent, QResizeEvent
-from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QCloseEvent, QResizeEvent
+from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.stat_popup import GraphWidget

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from datetime import UTC
 from typing import Any
 
-from PyQt6.QtCore import QTimer
+from PySide6.QtCore import QTimer
 
 type NotificationsCallback = Callable[[list[dict[str, Any]]], None]
 

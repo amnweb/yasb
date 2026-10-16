@@ -7,9 +7,9 @@ from datetime import datetime
 from functools import partial
 from typing import Any
 
-from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSlot
-from PyQt6.QtGui import QMouseEvent, QPixmap
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, QTimer, QUrl, Slot
+from PySide6.QtGui import QMouseEvent, QPixmap
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
@@ -218,7 +218,7 @@ class WeatherWidget(BaseWidget):
         if self.config.show_alerts and self._weather_data["{alert_title}"] and self._weather_data["{alert_desc}"]:
             layout_today.addWidget(today_label2)
 
-        @pyqtSlot(int)
+        @Slot(int)
         def switch_hourly_data(day_idx: int):
             combined_data = []
             current_time = None
@@ -366,7 +366,7 @@ class WeatherWidget(BaseWidget):
         refresh_widget_style(label)
         label.update()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def _update_label(self, update_class: bool = True):
         if self._weather_data is None:
             logging.warning("Weather data is not yet available.")
@@ -451,7 +451,7 @@ class WeatherWidget(BaseWidget):
             return f"{imperial_val} {imperial_unit}"
         return f"{metric_val} {metric_unit}"
 
-    @pyqtSlot(dict)
+    @Slot(dict)
     def process_weather_data(self, weather_data: dict[str, Any]):
         try:
             if not weather_data:

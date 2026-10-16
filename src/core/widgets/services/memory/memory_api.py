@@ -6,8 +6,8 @@ import threading
 from ctypes import wintypes
 from typing import NamedTuple
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtWidgets import QApplication
 
 from core.utils.win32.bindings.kernel32 import kernel32
 from core.utils.win32.bindings.ntdll import SystemMemoryListInformation, ntdll
@@ -211,7 +211,7 @@ class MemoryWorker(QThread):
     """Background thread for non-blocking memory data collection."""
 
     _instance: MemoryWorker | None = None
-    data_ready = pyqtSignal(object)
+    data_ready = Signal(object)
 
     @classmethod
     def get_instance(cls, update_interval: int) -> MemoryWorker:

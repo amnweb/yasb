@@ -1,10 +1,8 @@
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-import PyQt6.sip as sip
-from PyQt6.QtCore import QEasingCurve, QEvent, QParallelAnimationGroup, QPropertyAnimation, QRect, QSize, Qt
-from PyQt6.QtGui import (
+import shiboken6
+from PySide6.QtCore import Property, QEasingCurve, QEvent, QParallelAnimationGroup, QPropertyAnimation, QRect, QSize, Qt
+from PySide6.QtGui import (
     QBrush,
     QColor,
     QEnterEvent,
@@ -18,13 +16,10 @@ from PyQt6.QtGui import (
     QPen,
     QPixmap,
 )
-from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QPushButton, QWidget
 
 from core.ui.theme import FONT_FAMILIES, FONT_WEIGHTS, get_tokens, theme_key
 from core.utils.qobject import is_valid_qobject
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _DURATION = 83
 _RADIUS = 4.0
@@ -249,40 +244,40 @@ class Button(QPushButton):
 
     def _set_bg(self, c: QColor) -> None:
         self._bg = c
-        if not sip.isdeleted(self):
+        if shiboken6.isValid(self):
             self.update()
 
-    bg: QColor = pyqtProperty(QColor, _get_bg, _set_bg)
+    bg: QColor = Property(QColor, _get_bg, _set_bg)
 
     def _get_fg(self) -> QColor:
         return self._fg
 
     def _set_fg(self, c: QColor) -> None:
         self._fg = c
-        if not sip.isdeleted(self):
+        if shiboken6.isValid(self):
             self.update()
 
-    fg: QColor = pyqtProperty(QColor, _get_fg, _set_fg)
+    fg: QColor = Property(QColor, _get_fg, _set_fg)
 
     def _get_border(self) -> QColor:
         return self._border
 
     def _set_border(self, c: QColor) -> None:
         self._border = c
-        if not sip.isdeleted(self):
+        if shiboken6.isValid(self):
             self.update()
 
-    border: QColor = pyqtProperty(QColor, _get_border, _set_border)
+    border: QColor = Property(QColor, _get_border, _set_border)
 
     def _get_border_top(self) -> QColor:
         return self._border_top
 
     def _set_border_top(self, c: QColor) -> None:
         self._border_top = c
-        if not sip.isdeleted(self):
+        if shiboken6.isValid(self):
             self.update()
 
-    border_top: QColor = pyqtProperty(QColor, _get_border_top, _set_border_top)
+    border_top: QColor = Property(QColor, _get_border_top, _set_border_top)
 
     def _animate_to(self, state: str) -> None:
         if not is_valid_qobject(self):
@@ -336,7 +331,7 @@ class Button(QPushButton):
 
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
-        if sip.isdeleted(self):
+        if not shiboken6.isValid(self):
             return
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)

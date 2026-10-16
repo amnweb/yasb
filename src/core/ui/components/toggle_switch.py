@@ -1,15 +1,10 @@
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QEasingCurve, QParallelAnimationGroup, QPropertyAnimation, QRectF, Qt
-from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent, QPen
-from PyQt6.QtWidgets import QAbstractButton, QApplication, QHBoxLayout, QLabel, QSizePolicy, QWidget
+from PySide6.QtCore import Property, QEasingCurve, QParallelAnimationGroup, QPropertyAnimation, QRectF, Qt
+from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent, QPen
+from PySide6.QtWidgets import QAbstractButton, QApplication, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 from core.ui.theme import get_tokens, theme_key
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 TRACK_W = 40
 TRACK_H = 20
@@ -113,7 +108,7 @@ class ToggleSwitch(QAbstractButton):
         self._knob_x = value
         self.update()
 
-    knob_x: float = pyqtProperty(float, _get_knob_x, _set_knob_x)
+    knob_x: float = Property(float, _get_knob_x, _set_knob_x)
 
     def _get_track_color(self) -> QColor:
         return self._track_color
@@ -122,7 +117,7 @@ class ToggleSwitch(QAbstractButton):
         self._track_color = value
         self.update()
 
-    track_color: QColor = pyqtProperty(QColor, _get_track_color, _set_track_color)
+    track_color: QColor = Property(QColor, _get_track_color, _set_track_color)
 
     def _get_border_color(self) -> QColor:
         return self._border_color
@@ -131,7 +126,7 @@ class ToggleSwitch(QAbstractButton):
         self._border_color = value
         self.update()
 
-    border_color: QColor = pyqtProperty(QColor, _get_border_color, _set_border_color)
+    border_color: QColor = Property(QColor, _get_border_color, _set_border_color)
 
     def _get_knob_color(self) -> QColor:
         return self._knob_color
@@ -140,7 +135,7 @@ class ToggleSwitch(QAbstractButton):
         self._knob_color = value
         self.update()
 
-    knob_color: QColor = pyqtProperty(QColor, _get_knob_color, _set_knob_color)
+    knob_color: QColor = Property(QColor, _get_knob_color, _set_knob_color)
 
     def _get_knob_stretch(self) -> float:
         return self._knob_stretch
@@ -149,7 +144,7 @@ class ToggleSwitch(QAbstractButton):
         self._knob_stretch = value
         self.update()
 
-    knob_stretch: float = pyqtProperty(float, _get_knob_stretch, _set_knob_stretch)
+    knob_stretch: float = Property(float, _get_knob_stretch, _set_knob_stretch)
 
     def _on_toggled(self, checked: bool) -> None:
         on, off = self._on_colors, self._off_colors

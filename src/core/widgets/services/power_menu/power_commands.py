@@ -3,8 +3,8 @@ import subprocess
 from ctypes import WinError
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import QCoreApplication
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QCoreApplication
+from PySide6.QtWidgets import QWidget
 
 from core.utils.controller import exit_application
 from core.utils.win32.bindings.advapi32 import OpenProcessToken, enable_token_privilege

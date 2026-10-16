@@ -3,7 +3,7 @@ import os
 from queue import Empty, SimpleQueue
 from threading import Event
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from core.utils.win32.bindings.ole32 import CoInitialize, CoUninitialize
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
@@ -12,7 +12,7 @@ from core.widgets.services.quick_launch.base_provider import BaseProvider, Provi
 class StartMenuWatcherThread(QThread):
     """Collects Start Menu and UWP package directories for file system watching."""
 
-    dirs_ready = pyqtSignal(list)
+    dirs_ready = Signal(list)
 
     def run(self):
         start_dirs = [
@@ -42,7 +42,7 @@ class QueryWorker(QThread):
     the queue to only process the latest query, avoiding wasted work.
     """
 
-    finished = pyqtSignal(str, list)
+    finished = Signal(str, list)
 
     def __init__(self):
         super().__init__()

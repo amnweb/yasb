@@ -2,8 +2,8 @@ import re
 from datetime import timedelta
 
 import humanize
-from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QLabel
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QLabel
 
 from core.utils.utilities import build_progress_widget, refresh_widget_style
 from core.validation.widgets.yasb.battery import BatteryConfig

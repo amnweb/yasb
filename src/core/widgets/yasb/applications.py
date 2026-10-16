@@ -3,9 +3,9 @@ import os
 import subprocess
 from typing import override
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QMouseEvent, QPixmap
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QMouseEvent, QPixmap
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.win32.system_function import function_map

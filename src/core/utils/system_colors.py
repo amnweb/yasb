@@ -2,7 +2,7 @@ import logging
 import os
 
 import winrt.windows.ui.viewmanagement as viewmanagement
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from settings import DEFAULT_CONFIG_DIRECTORY
 

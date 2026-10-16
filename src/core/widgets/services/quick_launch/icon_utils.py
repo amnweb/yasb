@@ -1,6 +1,6 @@
-from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QPainter, QPixmap
-from PyQt6.QtSvg import QSvgRenderer
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 
 _ICON_CACHE: dict[str, QPixmap] = {}
 
@@ -41,7 +41,7 @@ def svg_to_pixmap(svg_text: str, size: int, dpr: float = 1.0) -> QPixmap:
         painter = QPainter(pixmap)
         vb = renderer.viewBoxF()
         if vb.width() > 0 and vb.height() > 0:
-            from PyQt6.QtCore import QRectF
+            from PySide6.QtCore import QRectF
 
             aspect = vb.width() / vb.height()
             if aspect > 1:

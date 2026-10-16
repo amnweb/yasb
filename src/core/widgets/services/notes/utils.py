@@ -1,9 +1,9 @@
 import re
 from typing import TYPE_CHECKING, Any, override
 
-from PyQt6.QtCore import QEvent, QMimeData, QObject, Qt
-from PyQt6.QtGui import QContextMenuEvent, QIcon, QKeyEvent, QMouseEvent, QTextCharFormat, QTextCursor
-from PyQt6.QtWidgets import QApplication, QPushButton, QTextEdit, QWidget
+from PySide6.QtCore import QEvent, QMimeData, QObject, Qt
+from PySide6.QtGui import QContextMenuEvent, QIcon, QKeyEvent, QMouseEvent, QTextCharFormat, QTextCursor
+from PySide6.QtWidgets import QApplication, QPushButton, QTextEdit, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style

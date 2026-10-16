@@ -6,9 +6,9 @@ import threading
 from collections.abc import Callable
 from functools import partial
 
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
-from PyQt6.QtWidgets import QSystemTrayIcon
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PySide6.QtWidgets import QSystemTrayIcon
 
 from core.bar_manager import BarManager
 from core.ui.views.about import AboutDialog
@@ -51,7 +51,7 @@ AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
 
 
 class SystemTrayManager(QSystemTrayIcon):
-    _update_signal = pyqtSignal(object)
+    _update_signal = Signal(object)
 
     def __init__(self, bar_manager: BarManager):
         super().__init__()

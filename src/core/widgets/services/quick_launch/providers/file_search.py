@@ -14,8 +14,8 @@ from collections.abc import Callable
 from threading import Event
 from typing import Any
 
-from PyQt6.QtCore import QStandardPaths, QTimer
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QStandardPaths, QTimer
+from PySide6.QtWidgets import QApplication
 
 from core.utils.shell_utils import shell_open
 from core.utils.win32.bindings.everything import (

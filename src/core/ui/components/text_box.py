@@ -1,8 +1,8 @@
 import math
 from typing import Literal, override
 
-from PyQt6.QtCore import QEvent, QPointF, QRectF, Qt
-from PyQt6.QtGui import (
+from PySide6.QtCore import QEvent, QPointF, QRectF, Qt
+from PySide6.QtGui import (
     QBrush,
     QColor,
     QEnterEvent,
@@ -16,8 +16,8 @@ from PyQt6.QtGui import (
     QPixmap,
     QResizeEvent,
 )
-from PyQt6.QtSvg import QSvgRenderer
-from PyQt6.QtWidgets import QAbstractButton, QApplication, QLineEdit, QWidget
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import QAbstractButton, QApplication, QLineEdit, QWidget
 
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
 

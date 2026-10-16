@@ -1,8 +1,7 @@
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
+    Property,
     QEasingCurve,
     QEvent,
     QParallelAnimationGroup,
@@ -13,9 +12,9 @@ from PyQt6.QtCore import (
     QRectF,
     QSize,
     Qt,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QColor,
     QCursor,
     QEnterEvent,
@@ -30,14 +29,11 @@ from PyQt6.QtGui import (
     QPixmap,
     QPolygonF,
 )
-from PyQt6.QtSvg import QSvgRenderer
-from PyQt6.QtWidgets import QApplication, QGraphicsDropShadowEffect, QVBoxLayout, QWidget
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import QApplication, QGraphicsDropShadowEffect, QVBoxLayout, QWidget
 
 from core.ui.components.button import DEFAULT_PADDING, Button
 from core.ui.theme import FONT_FAMILIES, get_tokens
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _ITEM_HEIGHT = 36
 _ITEM_RADIUS = 4.0
@@ -74,7 +70,7 @@ def _tinted_svg(svg: str, color: QColor, size: int, dpr: float) -> QPixmap:
 
 
 class _MenuItem(QWidget):
-    clicked = pyqtSignal(str)
+    clicked = Signal(str)
 
     def __init__(
         self,
@@ -166,7 +162,7 @@ class _Separator(QWidget):
 
 
 class _MenuFlyout(QWidget):
-    triggered = pyqtSignal(str)
+    triggered = Signal(str)
 
     def __init__(self, items: list[MenuItem], tokens: dict[str, str], trigger: QWidget) -> None:
         super().__init__(
@@ -222,7 +218,7 @@ class _MenuFlyout(QWidget):
         )
         self._container.move(_SHADOW_MARGIN, _SHADOW_MARGIN - hidden)
 
-    reveal: float = pyqtProperty(float, _get_reveal, _set_reveal)
+    reveal: float = Property(float, _get_reveal, _set_reveal)
 
     def popup(self) -> None:
         trigger = self._trigger
@@ -291,7 +287,7 @@ class DropDownButton(Button):
         chevron: Draw the down arrow that marks the button as a menu.
     """
 
-    triggered = pyqtSignal(str)
+    triggered = Signal(str)
 
     def __init__(
         self,

@@ -3,7 +3,7 @@ import logging
 import time
 from ctypes import wintypes
 
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread
 
 from core.events.service import EventService
 from core.events.win32 import WinEvent

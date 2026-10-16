@@ -2,8 +2,8 @@ import logging
 from ctypes import byref, wintypes
 from typing import TYPE_CHECKING, override
 
-from PyQt6.QtCore import QEasingCurve, QEvent, QPoint, QPropertyAnimation, QRect, Qt, QTimer
-from PyQt6.QtGui import (
+from PySide6.QtCore import QEasingCurve, QEvent, QPoint, QPropertyAnimation, QRect, Qt, QTimer
+from PySide6.QtGui import (
     QCursor,
     QEnterEvent,
     QFontMetrics,
@@ -14,7 +14,7 @@ from PyQt6.QtGui import (
     QRegion,
     QShowEvent,
 )
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.backdrop import enable_blur

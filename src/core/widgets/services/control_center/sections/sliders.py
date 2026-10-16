@@ -4,9 +4,9 @@ from functools import partial
 from typing import override
 
 from pycaw.api.endpointvolume import IAudioEndpointVolume
-from PyQt6.QtCore import QEvent, QObject, QPoint, Qt
-from PyQt6.QtGui import QAction, QWheelEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QEvent, QObject, QPoint, Qt
+from PySide6.QtGui import QAction, QWheelEvent
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,

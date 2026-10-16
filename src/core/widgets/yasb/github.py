@@ -2,9 +2,9 @@ import os
 import re
 from typing import Any
 
-from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
-from PyQt6.QtGui import QColor, QDesktopServices, QMouseEvent, QPainter, QPaintEvent
-from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PySide6.QtCore import QPoint, Qt, QTimer, QUrl
+from PySide6.QtGui import QColor, QDesktopServices, QMouseEvent, QPainter, QPaintEvent
+from PySide6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.time_utils import get_relative_time
 from core.utils.tooltip import set_tooltip

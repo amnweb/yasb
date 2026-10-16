@@ -3,8 +3,8 @@ import os
 import sys
 import threading
 
-from PyQt6.QtCore import QMetaObject, QProcess, Qt
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QMetaObject, QProcess, Qt
+from PySide6.QtWidgets import QApplication
 
 from core.application import YASBApplication
 from core.cli.server import CliPipeHandler

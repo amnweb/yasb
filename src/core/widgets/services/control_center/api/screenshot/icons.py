@@ -1,8 +1,8 @@
 """Toolbar SVG icons for screenshot UI."""
 
-from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QGuiApplication, QIcon, QPainter, QPixmap
-from PyQt6.QtSvg import QSvgRenderer
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import QGuiApplication, QIcon, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 
 SVG_COPY = """\
 <svg viewBox="64 64 896 896" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">

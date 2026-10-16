@@ -2,7 +2,7 @@ import collections
 import re
 
 from humanize import naturalsize
-from PyQt6.QtWidgets import QLabel, QVBoxLayout
+from PySide6.QtWidgets import QLabel, QVBoxLayout
 
 from core.utils.stat_popup import PinnablePopup, StatRow, build_stat_popup
 from core.utils.utilities import (

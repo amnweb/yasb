@@ -4,8 +4,8 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, override
 
 from PIL import Image
-from PyQt6.QtCore import QEasingCurve, QEvent, QMimeData, QObject, QPoint, QPropertyAnimation, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import (
+from PySide6.QtCore import QEasingCurve, QEvent, QMimeData, QObject, QPoint, QPropertyAnimation, Qt, QTimer, Signal
+from PySide6.QtGui import (
     QCursor,
     QDrag,
     QDragEnterEvent,
@@ -18,7 +18,7 @@ from PyQt6.QtGui import (
     QPixmap,
     QShowEvent,
 )
-from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
+from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 from core.utils.icons.extract import get_stock_icon
 from core.utils.icons.service import IconService, WindowIcon
@@ -235,8 +235,8 @@ class DraggableAppButton(QFrame):
 
 
 class TaskbarDropWidget(QFrame):
-    drag_started = pyqtSignal()
-    drag_ended = pyqtSignal()
+    drag_started = Signal()
+    drag_ended = Signal()
 
     def __init__(self, owner: TaskbarWidget, parent: QWidget | None = None):
         super().__init__(parent)

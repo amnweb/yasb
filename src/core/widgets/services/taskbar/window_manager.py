@@ -3,8 +3,7 @@ import logging
 from collections.abc import Callable
 from typing import Any, override
 
-import PyQt6.sip as sip
-from PyQt6.QtCore import QAbstractNativeEventFilter, QCoreApplication, QObject, QTimer, pyqtSignal
+from PySide6.QtCore import QAbstractNativeEventFilter, QCoreApplication, QObject, QTimer, Signal
 
 from core.utils.win32 import constants as WCONST
 from core.utils.win32.bindings.ole32 import ole32
@@ -107,8 +106,8 @@ class _ShellHookEventFilter(QAbstractNativeEventFilter):
         self._get_manager = manager_getter  # callable returning TaskbarWindowManager
 
     @override
-    def nativeEventFilter(self, eventType: Any, message: sip.voidptr | None) -> tuple[bool, sip.voidptr | None]:
-        # On Windows + PyQt6, eventType is 'windows_generic_MSG' and message is MSG*
+    def nativeEventFilter(self, eventType: Any, message: int | None) -> tuple[bool, int | None]:
+        # On Windows + PySide6, eventType is 'windows_generic_MSG' and message is MSG*
         try:
             if eventType != "windows_generic_MSG" or message is None:
                 return False, 0  # pyright: ignore[reportReturnType]
@@ -137,11 +136,11 @@ class TaskbarWindowManager(QObject):
     """
 
     # Signal definitions for Qt integration
-    window_added = pyqtSignal(int, dict)
-    window_removed = pyqtSignal(int, dict)
-    window_updated = pyqtSignal(int, dict)
-    window_monitor_changed = pyqtSignal(int, dict)
-    window_minimize_changed = pyqtSignal(int, bool)
+    window_added = Signal(int, dict)
+    window_removed = Signal(int, dict)
+    window_updated = Signal(int, dict)
+    window_monitor_changed = Signal(int, dict)
+    window_minimize_changed = Signal(int, bool)
 
     shell_hook_message: int | None = None
 

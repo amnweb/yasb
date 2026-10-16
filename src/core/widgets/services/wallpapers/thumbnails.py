@@ -4,7 +4,7 @@ import threading
 import time
 from contextlib import suppress
 
-from PyQt6.QtGui import QImage
+from PySide6.QtGui import QImage
 
 from core.utils.system import app_data_path
 

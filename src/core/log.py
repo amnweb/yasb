@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from os.path import join
 
-from PyQt6.QtCore import QMessageLogContext, QtMsgType, qFormatLogMessage, qInstallMessageHandler
+from PySide6.QtCore import QMessageLogContext, QtMsgType, qFormatLogMessage, qInstallMessageHandler
 
 from core.config import get_config_dir
 from settings import APP_NAME, BUILD_VERSION, DEFAULT_LOG_FILENAME

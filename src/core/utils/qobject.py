@@ -2,10 +2,10 @@
 
 from typing import TypeGuard
 
-import PyQt6.sip as sip
-from PyQt6.QtCore import QObject
+import shiboken6
+from PySide6.QtCore import QObject
 
 
 def is_valid_qobject[T](obj: T | None) -> TypeGuard[T]:
     """Check if the object is a valid QObject with specific type."""
-    return obj is not None and isinstance(obj, QObject) and not sip.isdeleted(obj)
+    return obj is not None and isinstance(obj, QObject) and shiboken6.isValid(obj)

@@ -5,9 +5,9 @@ from typing import override
 
 from pycaw.api.audioclient import ISimpleAudioVolume
 from pycaw.api.endpointvolume import IAudioEndpointVolume
-from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRect, Qt
-from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
+from PySide6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRect, Qt
+from PySide6.QtGui import QMouseEvent, QPixmap, QWheelEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from core.utils.icons.service import IconService, ProcessIcon
 from core.utils.qobject import is_valid_qobject

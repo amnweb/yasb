@@ -6,16 +6,11 @@ frame costs no more than the fills it actually needs.
 """
 
 import logging
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QRect, Qt
-from PyQt6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent, QPixmap
-from PyQt6.QtWidgets import QFrame, QWidget
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
+from PySide6.QtCore import Property, QRect, Qt
+from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent, QPixmap
+from PySide6.QtWidgets import QFrame, QWidget
 
 
 class AudioVizCanvas(QFrame):
@@ -68,7 +63,7 @@ class AudioVizCanvas(QFrame):
         self._surface_brush_cache = None
         self.update()
 
-    fillbrush: QBrush = pyqtProperty(QBrush, _get_fillbrush, _set_fillbrush)
+    fillbrush: QBrush = Property(QBrush, _get_fillbrush, _set_fillbrush)
 
     def set_samples(self, samples: list[float]) -> None:
         if samples == self.samples:

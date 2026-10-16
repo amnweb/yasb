@@ -6,9 +6,9 @@ signs in properly, and the app waits.
 
 import os
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QPixmap
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont, QPixmap
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.cloud.constants import PRIVACY_URL, TERMS_URL
 from core.ui.components.button import Button
@@ -23,9 +23,9 @@ from settings import SCRIPT_PATH
 class ConnectView(QWidget):
     """Two states: idle, and waiting for browser approval."""
 
-    connect_requested = pyqtSignal()
-    cancel_requested = pyqtSignal()
-    reopen_requested = pyqtSignal()
+    connect_requested = Signal()
+    cancel_requested = Signal()
+    reopen_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)

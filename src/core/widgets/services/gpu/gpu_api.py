@@ -5,8 +5,8 @@ from ctypes import Array, byref, c_byte, c_char, wintypes
 from typing import NamedTuple, NotRequired, TypedDict
 
 from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtWidgets import QApplication
 
 from core.utils.win32.bindings.adl import (
     ADL_MAIN_MALLOC_CALLBACK,
@@ -421,7 +421,7 @@ class GpuApi:
 
 class GpuWorker(QThread):
     _instance: GpuWorker | None = None
-    data_ready = pyqtSignal(list)
+    data_ready = Signal(list)
 
     @classmethod
     def get_instance(cls, update_interval: int) -> GpuWorker:

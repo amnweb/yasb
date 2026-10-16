@@ -1,8 +1,8 @@
 import logging
 import re
 
-from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QLabel
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QLabel
 
 from core.utils.utilities import refresh_widget_style
 from core.validation.widgets.glazewm.binding_mode import GlazewmBindingModeConfig
@@ -101,12 +101,12 @@ class GlazewmBindingModeWidget(BaseWidget):
                 self._reload_css(active_widgets[widget_index])
                 widget_index += 1
 
-    @pyqtSlot()
+    @Slot()
     def _disable_binding_mode(self):
         if self._active_binding_mode and self._active_binding_mode.name:
             self.glazewm_client.disable_binding_mode(self._active_binding_mode.name)
 
-    @pyqtSlot()
+    @Slot()
     def _cycle_through_binding_modes(self, direction: int):
         if len(self._binding_modes_to_cycle_through) == 0:
             return
@@ -122,12 +122,12 @@ class GlazewmBindingModeWidget(BaseWidget):
 
         self.glazewm_client.enable_binding_mode(self._binding_modes_to_cycle_through[self._current_binding_mode_index])
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def _update_connection_status(self, status: bool):
         if not status:
             self.hide()
 
-    @pyqtSlot(BindingMode)
+    @Slot(BindingMode)
     def _update_binding_mode(self, binding_mode: BindingMode):
         if not binding_mode.name and "none" in self._binding_modes_to_cycle_through:
             self._current_binding_mode_index = self._binding_modes_to_cycle_through.index("none")

@@ -3,14 +3,14 @@ import os
 from collections.abc import Callable
 from typing import Any, cast, override
 
-import PyQt6.QtCore as QtCore
+import PySide6.QtCore as QtCore
 from PIL import Image, ImageFilter
 from PIL.ImageQt import ImageQt
 from pycaw.pycaw import AudioUtilities
 from pycaw.utils import AudioSession
-from PyQt6.QtCore import QEvent, QObject, QPoint, QRectF, Qt, QTimer, pyqtSlot
-from PyQt6.QtGui import QEnterEvent, QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QWheelEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QEvent, QObject, QPoint, QRectF, Qt, QTimer, Slot
+from PySide6.QtGui import QEnterEvent, QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QWheelEvent
+from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -143,7 +143,7 @@ class MediaWidget(BaseWidget):
         self.register_callback("toggle_play_pause", self._toggle_play_pause)
         self.register_callback("open_media_source", self._open_media_source)
 
-    @pyqtSlot(dict)
+    @Slot(dict)
     def _on_media_data_changed(self, data: dict[str, SessionState]):
         old = self.current_session
         self.current_session = next((s for s in data.values() if s.is_current), None)
@@ -158,7 +158,7 @@ class MediaWidget(BaseWidget):
         if self._popup_open():
             self._sync_popup_session()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def _on_session_status_changed(self):
         if self.current_session is not None:
             self._bar_hide_timer.stop()
@@ -182,7 +182,7 @@ class MediaWidget(BaseWidget):
         if self._artist_label is not None:
             self._artist_label.setText("")
 
-    @pyqtSlot()
+    @Slot()
     def _on_media_properties_changed(self):
         session = self.current_session
         if session is None:

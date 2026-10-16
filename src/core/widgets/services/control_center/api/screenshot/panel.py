@@ -2,9 +2,9 @@
 
 from typing import TYPE_CHECKING, override
 
-from PyQt6.QtCore import QPoint, QRect, Qt
-from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPen
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPen
+from PySide6.QtWidgets import QWidget
 
 from core.utils.win32.bindings.user32 import GetWindowLongPtr, SetWindowLongPtr, SetWindowPos
 from core.utils.win32.constants import (

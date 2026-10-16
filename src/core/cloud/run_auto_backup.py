@@ -5,7 +5,7 @@ import sys
 from dataclasses import replace
 from typing import Any
 
-from PyQt6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication
 
 from core.cloud import schedule
 from core.cloud.api import ApiClient, ApiError

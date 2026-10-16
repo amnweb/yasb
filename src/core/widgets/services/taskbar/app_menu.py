@@ -13,9 +13,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from humanize import naturalsize
-from PyQt6.QtCore import QPoint, Qt
-from PyQt6.QtGui import QAction, QCursor
-from PyQt6.QtWidgets import QMenu
+from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import QAction, QCursor
+from PySide6.QtWidgets import QMenu
 
 from core.utils.win32.bindings.ole32 import CoInitialize, CoUninitialize, create_dispatch
 from core.utils.win32.bindings.user32 import IsWindow

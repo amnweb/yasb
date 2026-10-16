@@ -8,8 +8,8 @@ import re
 from datetime import UTC, datetime
 from typing import override
 
-from PyQt6.QtCore import QEvent, QPointF, Qt, QTimer
-from PyQt6.QtGui import (
+from PySide6.QtCore import QEvent, QPointF, Qt, QTimer
+from PySide6.QtGui import (
     QBrush,
     QColor,
     QGuiApplication,
@@ -21,7 +21,7 @@ from PyQt6.QtGui import (
     QPen,
     QResizeEvent,
 )
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
