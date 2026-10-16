@@ -8,7 +8,7 @@ from collections.abc import Callable
 from functools import lru_cache, partial
 from typing import Any, cast, override
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QAbstractAnimation,
     QEasingCurve,
     QEvent,
@@ -21,9 +21,9 @@ from PyQt6.QtCore import (
     Qt,
     QThread,
     QTimer,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QAction,
     QCloseEvent,
     QColor,
@@ -43,8 +43,8 @@ from PyQt6.QtGui import (
     QShowEvent,
     QWheelEvent,
 )
-from PyQt6.QtSvg import QSvgRenderer
-from PyQt6.QtWidgets import (
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import (
     QApplication,
     QCompleter,
     QDialog,
@@ -127,7 +127,7 @@ def load_and_scale_icon(icon_path: str, size: int, dpr: float = 1.0) -> QPixmap:
 class IconLoadWorker(QThread):
     """Background thread for loading icons"""
 
-    icon_loaded = pyqtSignal(str, QPixmap)
+    icon_loaded = Signal(str, QPixmap)
 
     def __init__(self, icon_requests: list[IconRequest]):
         super().__init__()
@@ -151,7 +151,7 @@ class IconLoadWorker(QThread):
 
 
 class UrlFetchWorker(QThread):
-    finished = pyqtSignal(object, object)  # icon_path, title
+    finished = Signal(object, object)  # icon_path, title
 
     def __init__(self, url: str):
         super().__init__()
@@ -573,7 +573,7 @@ class TransparentOverlay(QWidget):
     Transparent overlay window that captures clicks to hide the launchpad
     """
 
-    overlay_clicked = pyqtSignal()
+    overlay_clicked = Signal()
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)

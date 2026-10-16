@@ -4,8 +4,8 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, cast, override
 
-from PyQt6.QtCore import QPoint, QPointF, QRectF, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import (
+from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, Qt, Signal
+from PySide6.QtGui import (
     QBrush,
     QColor,
     QHideEvent,
@@ -20,7 +20,7 @@ from PyQt6.QtGui import (
     QResizeEvent,
     QWheelEvent,
 )
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QScrollArea, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QScrollArea, QWidget
 
 from core.utils.utilities import refresh_widget_style
 from core.widgets.services.weather.animation import WeatherAnimationManager
@@ -68,7 +68,7 @@ class HourlyData:
 
 
 class ClickableWidget(QFrame):
-    clicked = pyqtSignal()
+    clicked = Signal()
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)

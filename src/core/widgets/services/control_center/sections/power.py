@@ -2,9 +2,9 @@ import logging
 from collections.abc import Callable
 from functools import partial
 
-from PyQt6.QtCore import QPoint, Qt, pyqtSignal
-from PyQt6.QtGui import QAction, QMouseEvent
-from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QMenu, QVBoxLayout, QWidget
+from PySide6.QtCore import QPoint, Qt, Signal
+from PySide6.QtGui import QAction, QMouseEvent
+from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QMenu, QVBoxLayout, QWidget
 
 from core.bar_helper import GlobalState
 from core.utils.qobject import is_valid_qobject
@@ -18,7 +18,7 @@ from core.widgets.services.power_plan.power_plan_api import PowerPlanInfo, Power
 
 
 class PowerPlanButton(QFrame):
-    clicked = pyqtSignal()
+    clicked = Signal()
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)

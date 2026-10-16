@@ -5,9 +5,9 @@ from datetime import date, datetime
 from math import log1p
 from typing import Any, override
 
-from PyQt6.QtCore import QEasingCurve, QPointF, Qt, QTimer, QVariantAnimation
-from PyQt6.QtGui import QCloseEvent, QPainter, QPainterPath, QPaintEvent, QResizeEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QEasingCurve, QPointF, Qt, QTimer, QVariantAnimation
+from PySide6.QtGui import QCloseEvent, QPainter, QPainterPath, QPaintEvent, QResizeEvent
+from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,

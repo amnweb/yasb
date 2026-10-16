@@ -6,9 +6,9 @@ from typing import override
 
 import win32gui
 import win32process
-from PyQt6.QtCore import QElapsedTimer, QEvent, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QLabel
+from PySide6.QtCore import QElapsedTimer, QEvent, Qt, QTimer, Signal
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QLabel
 
 from core.events.service import EventService
 from core.events.win32 import WinEvent
@@ -46,10 +46,10 @@ except ImportError:
 
 
 class ActiveWindowWidget(BaseWidget):
-    foreground_change = pyqtSignal(int, WinEvent)
-    window_name_change = pyqtSignal(int, WinEvent)
-    window_destroy = pyqtSignal(int, WinEvent)
-    focus_change_workspaces = pyqtSignal(str)
+    foreground_change = Signal(int, WinEvent)
+    window_name_change = Signal(int, WinEvent)
+    window_destroy = Signal(int, WinEvent)
+    focus_change_workspaces = Signal(str)
     validation_schema = ActiveWindowConfig
     event_listener = SystemEventListener
 

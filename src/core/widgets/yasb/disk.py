@@ -4,9 +4,9 @@ from functools import partial
 from typing import override
 
 import win32api
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
 from core.utils.utilities import (
     PopupWidget,
@@ -18,7 +18,7 @@ from core.widgets.base import BaseWidget
 
 
 class ClickableDiskWidget(QWidget):
-    clicked = pyqtSignal()
+    clicked = Signal()
 
     def __init__(self, label: str, parent: QWidget | None = None):
         super().__init__(parent)

@@ -1,7 +1,7 @@
 import re
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget
 
 from core.events.service import EventService
 from core.utils.tooltip import set_tooltip
@@ -13,7 +13,7 @@ from core.widgets.services.dnd.dnd_api import DndService
 
 class DndWidget(BaseWidget):
     validation_schema = DndConfig
-    dnd_status_changed_signal = pyqtSignal(str)
+    dnd_status_changed_signal = Signal(str)
 
     def __init__(self, config: DndConfig):
         super().__init__(class_name=f"dnd-widget {config.class_name}")

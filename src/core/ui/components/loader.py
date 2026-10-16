@@ -2,18 +2,13 @@
 Loading indicators: Spinner (indeterminate circular) and LoaderLine (horizontal).
 """
 
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QEasingCurve, QElapsedTimer, QEvent, QObject, QPropertyAnimation, Qt, QTimer
-from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPalette, QPen
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import Property, QEasingCurve, QElapsedTimer, QEvent, QObject, QPropertyAnimation, Qt, QTimer
+from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPalette, QPen
+from PySide6.QtWidgets import QWidget
 
 from core.utils.qobject import is_valid_qobject
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 
 class Spinner(QWidget):
@@ -96,7 +91,7 @@ class LoaderLine(QWidget):
         loader.start()
 
     Attributes:
-        offset (pyqtProperty[float]): Animation progress from 0.0 to 1.0.
+        offset (Property[float]): Animation progress from 0.0 to 1.0.
 
     """
 
@@ -209,7 +204,7 @@ class LoaderLine(QWidget):
         self._offset = value
         self.update()
 
-    offset: float = pyqtProperty(float, fget=getOffset, fset=setOffset)
+    offset: float = Property(float, fget=getOffset, fset=setOffset)
 
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:

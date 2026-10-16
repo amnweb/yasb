@@ -5,9 +5,9 @@ from collections.abc import Callable
 from typing import Any, override
 
 from PIL import Image
-from PyQt6.QtCore import QEvent, Qt, QTimer, pyqtSlot
-from PyQt6.QtGui import QMouseEvent, QPainter, QPainterPath, QPixmap, QWheelEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QEvent, Qt, QTimer, Slot
+from PySide6.QtGui import QMouseEvent, QPainter, QPainterPath, QPixmap, QWheelEvent
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -146,15 +146,15 @@ class MediaSectionWidget(QFrame):
         except Exception:
             pass
 
-    @pyqtSlot()
+    @Slot()
     def _on_current_session_changed(self):
         self._sync_ui(force_thumbnail=True)
 
-    @pyqtSlot()
+    @Slot()
     def _on_media_properties_changed(self):
         self._sync_ui(force_thumbnail=True)
 
-    @pyqtSlot()
+    @Slot()
     def _on_playback_info_changed(self):
         self._update_controls()
 

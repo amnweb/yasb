@@ -1,8 +1,8 @@
 import logging
 import re
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QFrame, QPushButton, QVBoxLayout
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QFrame, QPushButton, QVBoxLayout
 
 from core.events.service import EventService
 from core.utils.utilities import PopupWidget, refresh_widget_style
@@ -15,7 +15,7 @@ from core.widgets.services.power_plan.power_plan_api import PowerPlanInfo, Power
 class PowerPlanWidget(BaseWidget):
     validation_schema = PowerPlanConfig
 
-    power_plan_changed_signal = pyqtSignal()
+    power_plan_changed_signal = Signal()
 
     def __init__(self, config: PowerPlanConfig) -> None:
         super().__init__(class_name=f"power-plan-widget {config.class_name}")

@@ -1,7 +1,7 @@
 from typing import TypedDict
 
-from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import QApplication, QLabel, QWidget
 
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
 

@@ -1,13 +1,11 @@
 import logging
 import os
 import re
-from collections.abc import Callable
 from typing import Any, TypedDict, override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QPropertyAnimation, QRectF, Qt, QTimer
-from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPen
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtCore import Property, QPropertyAnimation, QRectF, Qt, QTimer
+from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPen
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from core.utils.utilities import (
     PopupWidget,
@@ -18,9 +16,6 @@ from core.utils.utilities import (
 from core.validation.widgets.yasb.pomodoro import PomodoroConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 
 class PomodoroState(TypedDict):
@@ -562,7 +557,7 @@ class CircularProgressWidget(QWidget):
         self._value = value
         self.update()
 
-    animationValue: float = pyqtProperty(float, getAnimationValue, setAnimationValue)
+    animationValue: float = Property(float, getAnimationValue, setAnimationValue)
 
     def setMaximum(self, maximum: int) -> None:
         self._maximum = maximum

@@ -1,6 +1,6 @@
-from PyQt6.QtCore import QPointF
-from PyQt6.QtGui import QPainter, QPainterPath
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QPointF
+from PySide6.QtGui import QPainter, QPainterPath
+from PySide6.QtWidgets import QWidget
 
 
 def copy_painter_state(source: QPainter, destination: QPainter):

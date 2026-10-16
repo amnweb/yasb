@@ -2,9 +2,9 @@ import logging
 from collections.abc import Callable, Mapping
 from typing import Any, override
 
-from PyQt6.QtCore import QEvent, QObject, QThread
-from PyQt6.QtGui import QShowEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QPushButton
+from PySide6.QtCore import QEvent, QObject, QThread
+from PySide6.QtGui import QShowEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QPushButton
 
 from core.utils.widget_builder import WidgetBuilder
 from core.utils.win32.utils import get_widget_monitor_hwnd

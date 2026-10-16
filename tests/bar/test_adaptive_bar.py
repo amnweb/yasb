@@ -5,9 +5,9 @@ from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
-from PyQt6.QtCore import QEventLoop, QPoint, QTimer
-from PyQt6.QtGui import QColor, QImage
-from PyQt6.QtWidgets import QApplication, QLabel
+from PySide6.QtCore import QEventLoop, QPoint, QTimer
+from PySide6.QtGui import QColor, QImage
+from PySide6.QtWidgets import QApplication, QLabel
 
 from core.bar import Bar
 from core.bar_style import AdaptiveBarFrame

@@ -1,9 +1,9 @@
 import logging
 from typing import TYPE_CHECKING, override
 
-from PyQt6.QtCore import QEvent, QObject, QRect, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QContextMenuEvent, QResizeEvent, QScreen, QShowEvent
-from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
+from PySide6.QtCore import QEvent, QObject, QRect, Qt, QTimer, Signal
+from PySide6.QtGui import QCloseEvent, QContextMenuEvent, QResizeEvent, QScreen, QShowEvent
+from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
 
 from core.bar_helper import (
     AppBarManager,
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 class Bar(QWidget):
-    handle_bar_management = pyqtSignal(str, str)
+    handle_bar_management = Signal(str, str)
 
     def __init__(
         self,

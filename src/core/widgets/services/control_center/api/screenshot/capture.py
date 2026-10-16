@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 
 import win32api
-from PyQt6.QtCore import QRect
-from PyQt6.QtGui import QGuiApplication, QPixmap
+from PySide6.QtCore import QRect
+from PySide6.QtGui import QGuiApplication, QPixmap
 
 
 @dataclass(frozen=True)

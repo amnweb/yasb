@@ -3,7 +3,7 @@ from enum import StrEnum
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, cast, override
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QEasingCurve,
     QEvent,
     QObject,
@@ -13,9 +13,9 @@ from PyQt6.QtCore import (
     QSize,
     Qt,
     QTimer,
-    pyqtSlot,
+    Slot,
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QCloseEvent,
     QFontMetrics,
     QHideEvent,
@@ -28,7 +28,7 @@ from PyQt6.QtGui import (
     QStaticText,
     QTransform,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QBoxLayout,
     QDialog,
@@ -767,7 +767,7 @@ class ScrollingLabel(QLabel):
         if self._max_width:
             self.setMaximumWidth(self._font_metrics.averageCharWidth() * self._max_width)
 
-    @pyqtSlot()
+    @Slot()
     def _scroll_text(self):
         """Update the offset based on the state calculated in _build_text_and_metrics()"""
         if not self._scrolling_needed:

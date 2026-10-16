@@ -1,5 +1,5 @@
-from PyQt6.QtGui import QScreen
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtGui import QScreen
+from PySide6.QtWidgets import QApplication
 
 from core.utils.tooltip import set_tooltip
 from core.utils.win32.utils import find_focused_screen

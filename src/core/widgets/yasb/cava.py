@@ -7,9 +7,9 @@ import subprocess
 import threading
 from typing import override
 
-from PyQt6.QtCore import QEvent, QPointF, QRectF, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent
-from PyQt6.QtWidgets import QApplication, QFrame, QLabel
+from PySide6.QtCore import QEvent, QPointF, QRectF, QTimer, Signal
+from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent
+from PySide6.QtWidgets import QApplication, QFrame, QLabel
 
 from core.utils.system import app_data_path
 from core.validation.widgets.yasb.cava import CavaConfig
@@ -374,7 +374,7 @@ class CavaBar(QFrame):
 
 class CavaWidget(BaseWidget):
     validation_schema = CavaConfig
-    samplesUpdated = pyqtSignal(list)
+    samplesUpdated = Signal(list)
     _instance_counter = 0  # Class variable to track instances
 
     _edge_fade_left: int

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, cast, override
 
 import win32gui
 import win32process
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QAbstractNativeEventFilter,
     QEasingCurve,
     QEvent,
@@ -21,8 +21,8 @@ from PyQt6.QtCore import (
     Qt,
     QTimer,
 )
-from PyQt6.QtGui import QAction, QCursor, QEnterEvent, QMouseEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtGui import QAction, QCursor, QEnterEvent, QMouseEvent
+from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QFrame,
@@ -45,8 +45,6 @@ from core.utils.win32.structs import MSG
 from core.utils.win32.utils import apply_qmenu_style
 
 if TYPE_CHECKING:
-    import PyQt6.sip as sip
-
     from core.bar import Bar
     from core.widgets.base import BaseWidget
 
@@ -541,7 +539,7 @@ class AppBarManager(QAbstractNativeEventFilter):
         self._ready = True
 
     @override
-    def nativeEventFilter(self, eventType: Any, message: sip.voidptr | None) -> tuple[bool, sip.voidptr | None]:
+    def nativeEventFilter(self, eventType: Any, message: int | None) -> tuple[bool, int | None]:
         """Filter native Windows messages for AppBar fullscreen notifications and Explorer restarts"""
         try:
             if eventType == b"windows_generic_MSG" and message is not None:

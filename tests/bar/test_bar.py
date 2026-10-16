@@ -4,9 +4,9 @@ from collections.abc import Callable, Iterator
 from typing import Any, cast
 
 import pytest
-from PyQt6.QtCore import QEventLoop, QPoint, QTimer
-from PyQt6.QtGui import QContextMenuEvent
-from PyQt6.QtWidgets import QApplication, QMenu
+from PySide6.QtCore import QEventLoop, QPoint, QTimer
+from PySide6.QtGui import QContextMenuEvent
+from PySide6.QtWidgets import QApplication, QMenu
 
 from core.bar import Bar
 from core.bar_helper import AppBarManager

@@ -28,7 +28,7 @@ from urllib.parse import urlencode
 import certifi
 from PIL import Image, ImageFilter
 from pydantic import BaseModel, ValidationError
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QAbstractListModel,
     QEasingCurve,
     QEvent,
@@ -48,9 +48,9 @@ from PyQt6.QtCore import (
     QTimer,
     QUrl,
     QVariantAnimation,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QCloseEvent,
     QColor,
     QEnterEvent,
@@ -71,9 +71,8 @@ from PyQt6.QtGui import (
     QShowEvent,
     QWheelEvent,
 )
-from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkProxyFactory, QNetworkReply, QNetworkRequest
-from PyQt6.QtWidgets import (
-    QWIDGETSIZE_MAX,
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkProxyFactory, QNetworkReply, QNetworkRequest
+from PySide6.QtWidgets import (
     QApplication,
     QCompleter,
     QFileDialog,
@@ -115,6 +114,9 @@ from core.validation.config import YasbConfig
 from core.validation.widgets.yasb.grouper import GrouperWidgetConfig
 from core.widgets.services.quick_launch.icon_utils import svg_to_pixmap
 from settings import BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL
+
+# PySide6 does not export Qt's QWIDGETSIZE_MAX macro; same value as Qt ((1 << 24) - 1).
+QWIDGETSIZE_MAX = (1 << 24) - 1
 
 QNetworkProxyFactory.setUseSystemConfiguration(True)
 
@@ -758,8 +760,8 @@ def _theme_config_errors(raw: bytes) -> str:
 
 
 class ThemeInstallWorker(QThread):
-    incompatible = pyqtSignal(str)
-    failed = pyqtSignal(str)
+    incompatible = Signal(str)
+    failed = Signal(str)
 
     def __init__(self, theme_id: str, parent: QObject | None = None):
         super().__init__(parent)
@@ -778,8 +780,8 @@ class ThemeInstallWorker(QThread):
 
 
 class TaskWorker(QThread):
-    succeeded = pyqtSignal()
-    failed = pyqtSignal(str)
+    succeeded = Signal()
+    failed = Signal(str)
 
     def __init__(self, task: Callable[[], None], parent: QObject | None = None):
         super().__init__(parent)
@@ -902,7 +904,7 @@ class FlowLayout(QLayout):
 
 
 class PreviewImage(QLabel):
-    clicked = pyqtSignal()
+    clicked = Signal()
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -1095,9 +1097,9 @@ class ImageViewer(QWidget):
 
 
 class ImageFetcher(QObject):
-    ready = pyqtSignal(str, QImage)
-    failed = pyqtSignal(str)
-    _decoded = pyqtSignal(str, int, QImage)
+    ready = Signal(str, QImage)
+    failed = Signal(str)
+    _decoded = Signal(str, int, QImage)
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
@@ -1170,7 +1172,7 @@ class ImageFetcher(QObject):
 
 
 class ThemeCard(QWidget):
-    clicked = pyqtSignal(dict)
+    clicked = Signal(dict)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -1284,8 +1286,8 @@ class ThemeCard(QWidget):
 
 
 class ThemeGrid(QWidget):
-    theme_clicked = pyqtSignal(dict)
-    rendered = pyqtSignal()
+    theme_clicked = Signal(dict)
+    rendered = Signal()
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -1388,7 +1390,7 @@ class ThemeGrid(QWidget):
 
 
 class FeaturedBanner(QWidget):
-    opened = pyqtSignal(dict)
+    opened = Signal(dict)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -1670,7 +1672,7 @@ def _promo_card(card: object) -> dict[str, Any] | None:
 
 
 class PromoCard(QWidget):
-    clicked = pyqtSignal(dict)
+    clicked = Signal(dict)
 
     def __init__(self, card: dict[str, Any], parent: QWidget | None = None):
         super().__init__(parent)
@@ -1777,9 +1779,9 @@ class PromoCard(QWidget):
 
 
 class BrowsePage(QWidget):
-    theme_opened = pyqtSignal(dict)
-    retry_requested = pyqtSignal()
-    preview_changed = pyqtSignal(str)
+    theme_opened = Signal(dict)
+    retry_requested = Signal()
+    preview_changed = Signal(str)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -2090,7 +2092,7 @@ class Swatch(QWidget):
 
 
 class RelatedItem(QFrame):
-    clicked = pyqtSignal(dict)
+    clicked = Signal(dict)
 
     def __init__(self, theme: dict[str, Any], tint: QImage | None, parent: QWidget | None = None):
         super().__init__(parent)
@@ -2165,7 +2167,7 @@ class ReadmeBrowser(QTextBrowser):
 
 
 class ScreenshotStrip(QWidget):
-    images_clicked = pyqtSignal(list, int)
+    images_clicked = Signal(list, int)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -2301,10 +2303,10 @@ class ScreenshotStrip(QWidget):
 
 
 class DetailsPage(QWidget):
-    scrolled = pyqtSignal(int)
-    widget_tag_clicked = pyqtSignal(str)
-    theme_requested = pyqtSignal(dict)
-    images_clicked = pyqtSignal(list, int)
+    scrolled = Signal(int)
+    widget_tag_clicked = Signal(str)
+    theme_requested = Signal(dict)
+    images_clicked = Signal(list, int)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from core.utils.win32.bindings.user32 import GetClassName, GetForegroundWindow, GetWindowThreadProcessId
 from core.widgets.services.windows_desktops.com import (
@@ -90,12 +90,12 @@ class WindowsDesktopService(QObject):
     _instance = None
     _init_done = False
 
-    desktop_changed = pyqtSignal(dict)
-    desktops_updated = pyqtSignal(dict, dict)
+    desktop_changed = Signal(dict)
+    desktops_updated = Signal(dict, dict)
 
     # Carries a notification from whichever thread COM called in on to the Qt
     # main thread. Same-thread emits stay direct; cross-thread ones queue.
-    _com_event = pyqtSignal(object)
+    _com_event = Signal(object)
 
     def __new__(cls):
         if cls._instance is None:

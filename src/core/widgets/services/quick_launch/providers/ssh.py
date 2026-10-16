@@ -345,7 +345,7 @@ class SshProvider(BaseProvider):
 
         if action_id == "copy_cmd" and ssh_cmd:
             try:
-                from PyQt6.QtWidgets import QApplication
+                from PySide6.QtWidgets import QApplication
 
                 cb = QApplication.clipboard()
                 if cb:

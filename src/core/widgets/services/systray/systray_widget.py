@@ -5,14 +5,14 @@ from ctypes import byref
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QMimeData,
     QPoint,
     QSize,
     Qt,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QDrag,
     QDragEnterEvent,
     QDragLeaveEvent,
@@ -22,7 +22,7 @@ from PyQt6.QtGui import (
     QMouseEvent,
     QPixmap,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QFrame,
     QGraphicsOpacityEffect,
     QGridLayout,
@@ -71,8 +71,8 @@ class IconState:
 
 
 class IconWidget(QPushButton):
-    pinned_changed = pyqtSignal(object)
-    icon_moved = pyqtSignal(object)
+    pinned_changed = Signal(object)
+    icon_moved = Signal(object)
     pin_modifier_key: ClassVar[Qt.KeyboardModifier] = Qt.KeyboardModifier.AltModifier
     icon_size: ClassVar[int] = 16
     enable_tooltips: ClassVar[bool] = True
@@ -233,8 +233,8 @@ class IconWidget(QPushButton):
 class DropWidget(QFrame):
     """Drop target container for systray icons."""
 
-    drag_started = pyqtSignal(int)
-    drag_ended = pyqtSignal()
+    drag_started = Signal(int)
+    drag_ended = Signal()
 
     def __init__(self, parent: QWidget | None = None, *, grid_cols: int = 0) -> None:
         super().__init__(parent)

@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote
 
-from PyQt6.QtCore import QByteArray, QFile, QIODevice, QObject, QTimer, QUrl, pyqtSignal
-from PyQt6.QtNetwork import (
+from PySide6.QtCore import QByteArray, QFile, QIODevice, QObject, QTimer, QUrl, Signal
+from PySide6.QtNetwork import (
     QNetworkAccessManager,
     QNetworkProxyFactory,
     QNetworkReply,
@@ -107,9 +107,9 @@ def save_reply(reply: QNetworkReply, path: Path) -> ApiError | None:
 class Call(QObject):
     """One in-flight request."""
 
-    succeeded = pyqtSignal(object)
-    failed = pyqtSignal(object)
-    finished = pyqtSignal()
+    succeeded = Signal(object)
+    failed = Signal(object)
+    finished = Signal()
 
     def __init__(self, reply: QNetworkReply, parent: QObject | None = None, device: QIODevice | None = None) -> None:
         super().__init__(parent)
@@ -188,7 +188,7 @@ class Call(QObject):
 class ApiClient(QObject):
     """Typed-ish wrapper around the REST API."""
 
-    signed_out = pyqtSignal()
+    signed_out = Signal()
 
     def __init__(self, session: Session, parent: QObject | None = None) -> None:
         super().__init__(parent)

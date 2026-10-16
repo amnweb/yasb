@@ -1,7 +1,7 @@
 """Drawing helpers for the screenshot editor (arrow, blur, circle, ...)."""
 
-from PyQt6.QtCore import QPoint, QPointF, QRect, Qt
-from PyQt6.QtGui import QBrush, QColor, QImage, QPainter, QPen, QPixmap, QPolygonF
+from PySide6.QtCore import QPoint, QPointF, QRect, Qt
+from PySide6.QtGui import QBrush, QColor, QImage, QPainter, QPen, QPixmap, QPolygonF
 
 
 def draw_arrow(p: QPainter, a: QPoint, b: QPoint, color: QColor, width: int = 3) -> None:

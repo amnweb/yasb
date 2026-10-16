@@ -7,8 +7,8 @@ from functools import cmp_to_key, partial
 import comtypes.client  # pyright: ignore[reportMissingTypeStubs]
 import pythoncom
 import win32api
-from PyQt6.QtCore import QObject, QRect, QRunnable, QSize, Qt, QThreadPool, pyqtSignal
-from PyQt6.QtGui import QImageIOHandler, QImageReader, QPainter, QPixmap
+from PySide6.QtCore import QObject, QRect, QRunnable, QSize, Qt, QThreadPool, Signal
+from PySide6.QtGui import QImageIOHandler, QImageReader, QPainter, QPixmap
 
 from core.utils.system import get_build_and_ubr
 from core.utils.win32.bindings.shell32 import CLSID_DesktopWallpaper, IDesktopWallpaper
@@ -78,7 +78,7 @@ def find_wallpapers(files: list[str], wallpapers: dict[str, str]) -> dict[str, i
 
 
 class ScanSignals(QObject):
-    finished = pyqtSignal(list, dict)
+    finished = Signal(list, dict)
 
 
 class FolderScanner(QRunnable):
@@ -108,7 +108,7 @@ class FolderScanner(QRunnable):
 
 
 class ImageSignals(QObject):
-    loaded = pyqtSignal(str, QPixmap, int)
+    loaded = Signal(str, QPixmap, int)
 
 
 class ImageLoader(QRunnable):

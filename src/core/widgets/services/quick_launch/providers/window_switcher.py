@@ -4,7 +4,7 @@ import time
 from typing import Any
 
 import win32gui
-from PyQt6.QtCore import QTimer
+from PySide6.QtCore import QTimer
 
 from core.utils.icons.service import WindowIcon
 from core.utils.win32.window_actions import (

@@ -3,8 +3,8 @@ import logging
 from ctypes import POINTER, byref, c_void_p, wintypes
 from typing import Any
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 
 from core.events.service import EventService
 from core.utils.win32.bindings.ntdll import (

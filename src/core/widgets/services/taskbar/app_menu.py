@@ -15,9 +15,9 @@ from typing import TYPE_CHECKING, Any, Protocol, cast
 import pythoncom
 import win32gui
 from humanize import naturalsize
-from PyQt6.QtCore import QPoint, Qt
-from PyQt6.QtGui import QAction, QCursor
-from PyQt6.QtWidgets import QMenu
+from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import QAction, QCursor
+from PySide6.QtWidgets import QMenu
 from win32comext.shell import shell, shellcon
 
 from core.utils.win32.constants import KnownCLSID

@@ -5,8 +5,8 @@ import winreg
 from ctypes import byref, c_void_p, windll, wintypes
 from dataclasses import dataclass
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 
 from core.events.service import EventService
 from core.utils.win32.bindings.powrprof import (

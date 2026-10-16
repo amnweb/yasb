@@ -1,8 +1,8 @@
 from collections.abc import Iterable, Sequence
 from typing import Protocol, override
 
-from PyQt6.QtCore import QEvent, QObject, QPoint, QPointF, Qt
-from PyQt6.QtGui import (
+from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, Qt
+from PySide6.QtGui import (
     QBrush,
     QCloseEvent,
     QColor,
@@ -14,7 +14,7 @@ from PyQt6.QtGui import (
     QPen,
     QResizeEvent,
 )
-from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style

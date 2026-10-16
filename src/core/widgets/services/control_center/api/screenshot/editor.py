@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Literal, override
 
-from PyQt6.QtCore import QEvent, QObject, QPoint, QPointF, QRect, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import (
+from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRect, QSize, Qt, Signal
+from PySide6.QtGui import (
     QColor,
     QCursor,
     QEnterEvent,
@@ -19,7 +19,7 @@ from PyQt6.QtGui import (
     QShowEvent,
     QWheelEvent,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
     QDialog,
@@ -254,7 +254,7 @@ class _ColorChip(QPushButton):
 class _ColorPopup(_FramelessPopup):
     """Color grid popup."""
 
-    colorPicked = pyqtSignal(QColor)
+    colorPicked = Signal(QColor)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -373,7 +373,7 @@ class _PopupToggleHost(QObject):
 class ColorSwatchButton(_ColorChip):
     """Toolbar color control."""
 
-    colorChanged = pyqtSignal(QColor)
+    colorChanged = Signal(QColor)
 
     def __init__(self, color: str | QColor = _DEFAULT_COLOR, parent: QWidget | None = None):
         super().__init__(color, size=18, parent=parent)
@@ -410,7 +410,7 @@ class ColorSwatchButton(_ColorChip):
 class _SliderPopup(_FramelessPopup):
     """Popup with YASB Slider (stroke size, blur strength, ...)."""
 
-    valueChanged = pyqtSignal(int)
+    valueChanged = Signal(int)
 
     def __init__(
         self,
@@ -446,8 +446,8 @@ class _SliderPopup(_FramelessPopup):
 class EditorCanvas(QWidget):
     """Zoomable canvas: draws base + annotation layer; emits strokes in image coords."""
 
-    tool_finished = pyqtSignal()
-    zoom_changed = pyqtSignal(float)
+    tool_finished = Signal()
+    zoom_changed = Signal(float)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)

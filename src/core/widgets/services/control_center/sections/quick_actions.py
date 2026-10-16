@@ -3,9 +3,9 @@ from collections.abc import Callable
 from functools import partial
 
 from pycaw.api.endpointvolume import IAudioEndpointVolume
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.shell_utils import shell_open
 from core.utils.tooltip import CustomToolTip, set_tooltip
@@ -20,7 +20,7 @@ from core.widgets.services.volume.service import AudioOutputService
 
 
 class ActionButton(QFrame):
-    clicked = pyqtSignal()
+    clicked = Signal()
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)

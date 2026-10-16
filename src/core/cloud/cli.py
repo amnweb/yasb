@@ -15,7 +15,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
-from PyQt6.QtCore import QCoreApplication, QTimer
+from PySide6.QtCore import QCoreApplication, QTimer
 
 from core.cloud import logs
 from core.cloud.api import ApiClient, ApiError, Call, approve_uri

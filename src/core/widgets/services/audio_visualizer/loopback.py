@@ -20,8 +20,8 @@ from pycaw.api.mmdeviceapi import PROPERTYKEY, IMMDevice, IMMDeviceEnumerator
 from pycaw.callbacks import MMNotificationClient
 from pycaw.constants import DEVICE_STATE, STGM
 from pycaw.pycaw import AudioUtilities, EDataFlow, ERole, IAudioClient
-from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtWidgets import QApplication
 
 from core.utils.win32.bindings.ole32 import COINIT_MULTITHREADED, RPC_E_CHANGED_MODE, ole32
 from core.widgets.services.audio_visualizer.spectrum import FFT_SIZE, SpectrumSource
@@ -339,16 +339,16 @@ class AudioVisualizerCaptureService(QObject):
 
     #: A new spectrum has been published. Rate limited to the fastest framerate
     #: among attached widgets.
-    frame_ready = pyqtSignal()
+    frame_ready = Signal()
     #: Real audio started flowing, whether or not any widget is on screen.
-    audio_started = pyqtSignal()
+    audio_started = Signal()
     #: The render stream went away. The published spectra have been dropped, so
     #: magnitudes() now returns silence and widgets should fade out.
-    audio_stopped = pyqtSignal()
+    audio_stopped = Signal()
     #: Audio has been silent for the delay registered under this widget name.
-    idle_timeout = pyqtSignal(str)
+    idle_timeout = Signal(str)
     #: The endpoint sample rate changed; analyzers must be rebuilt.
-    format_changed = pyqtSignal(int)
+    format_changed = Signal(int)
 
     _instances: dict[str, AudioVisualizerCaptureService] = {}
     _instance_lock = threading.Lock()

@@ -4,8 +4,8 @@ import traceback
 import unicodedata
 from typing import Any
 
-from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
-from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
+from PySide6.QtCore import QObject, QTimer, QUrl, Signal
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
 logger = logging.getLogger("open_meteo")
 
@@ -42,7 +42,7 @@ REGION_FIELDS = ("admin3", "admin2", "admin1", "country", "country_code")
 class OpenMeteoDataFetcher(QObject):
     """Fetches weather forecast data from the Open-Meteo API."""
 
-    finished = pyqtSignal(dict)
+    finished = Signal(dict)
 
     def __init__(
         self,
@@ -133,7 +133,7 @@ def fold(value: str) -> str:
 class GeocodingFetcher(QObject):
     """Searches for locations using the Open-Meteo Geocoding API."""
 
-    results_ready = pyqtSignal(list)
+    results_ready = Signal(list)
 
     def __init__(self, parent: QObject):
         super().__init__(parent)

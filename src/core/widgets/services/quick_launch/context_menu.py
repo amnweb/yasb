@@ -1,6 +1,6 @@
-from PyQt6.QtCore import QPoint
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMenu, QWidget
+from PySide6.QtCore import QPoint
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMenu, QWidget
 
 from core.utils.win32.utils import apply_qmenu_style
 from core.widgets.services.quick_launch.base_provider import (

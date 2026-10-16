@@ -1,7 +1,7 @@
 import logging
 from typing import Any, ClassVar
 
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from core.widgets.services.server_monitor.worker import ServerCheckWorker
 
@@ -13,8 +13,8 @@ type ServiceKey = tuple[tuple[str, ...], bool, bool, int, int]
 class ServerCheckService(QObject):
     """Server-check runner."""
 
-    status_updated = pyqtSignal(int, list)
-    refresh_started = pyqtSignal()
+    status_updated = Signal(int, list)
+    refresh_started = Signal()
 
     _instances: ClassVar[dict[ServiceKey, ServerCheckService]] = {}
 

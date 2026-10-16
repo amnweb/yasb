@@ -3,9 +3,9 @@
 import os
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QWidget
 
 from core.ui.theme import get_tokens, is_dark
 from core.utils.win32.backdrop import enable_mica, is_mica_supported, set_dark_mode

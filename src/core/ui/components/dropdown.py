@@ -1,8 +1,7 @@
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
+    Property,
     QEasingCurve,
     QEvent,
     QParallelAnimationGroup,
@@ -11,9 +10,9 @@ from PyQt6.QtCore import (
     QPropertyAnimation,
     QRectF,
     Qt,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QBrush,
     QColor,
     QEnterEvent,
@@ -26,12 +25,9 @@ from PyQt6.QtGui import (
     QPen,
     QPolygonF,
 )
-from PyQt6.QtWidgets import QApplication, QGraphicsDropShadowEffect, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QGraphicsDropShadowEffect, QPushButton, QVBoxLayout, QWidget
 
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _DURATION = 90
 _RADIUS = 4.0
@@ -60,7 +56,7 @@ def _resolve(t: dict[str, str], key: str) -> QColor:
 
 
 class _DropDownItem(QWidget):
-    clicked = pyqtSignal(str)
+    clicked = Signal(str)
 
     def __init__(self, key: str, label: str, tokens: dict[str, str], parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -128,7 +124,7 @@ class _DropDownItem(QWidget):
 
 
 class _DropDownPopup(QWidget):
-    itemSelected = pyqtSignal(str)
+    itemSelected = Signal(str)
 
     def __init__(self, items: list[tuple[str, str]], current: str, tokens: dict[str, str], trigger: QWidget) -> None:
         super().__init__(
@@ -183,7 +179,7 @@ class _DropDownPopup(QWidget):
         )
         self._container.move(_SHADOW_MARGIN, _SHADOW_MARGIN - int(top))
 
-    reveal: float = pyqtProperty(float, _get_reveal, _set_reveal)
+    reveal: float = Property(float, _get_reveal, _set_reveal)
 
     def show_at(self, trigger: QWidget, current_index: int) -> None:
         self._selected_index = current_index
@@ -231,7 +227,7 @@ class _DropDownPopup(QWidget):
 
 
 class DropDown(QPushButton):
-    currentChanged = pyqtSignal(str)
+    currentChanged = Signal(str)
 
     def __init__(
         self, items: list[tuple[str, str]] | None = None, parent: QWidget | None = None, *, align_selected: bool = True
@@ -302,7 +298,7 @@ class DropDown(QPushButton):
         self._bg = c
         self.update()
 
-    bg: QColor = pyqtProperty(QColor, _get_bg, _set_bg)
+    bg: QColor = Property(QColor, _get_bg, _set_bg)
 
     def _get_border(self) -> QColor:
         return self._border
@@ -311,7 +307,7 @@ class DropDown(QPushButton):
         self._border = c
         self.update()
 
-    border: QColor = pyqtProperty(QColor, _get_border, _set_border)
+    border: QColor = Property(QColor, _get_border, _set_border)
 
     def _animate_to(self, state: str) -> None:
         target = self._states.get(state, self._states["normal"])

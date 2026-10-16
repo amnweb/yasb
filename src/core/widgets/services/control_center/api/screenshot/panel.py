@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, override
 import win32api
 import win32con
 import win32gui
-from PyQt6.QtCore import QPoint, QRect, Qt
-from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPen
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPen
+from PySide6.QtWidgets import QWidget
 
 from core.widgets.services.control_center.api.screenshot.capture import ScreenFreeze
 from core.widgets.services.control_center.api.screenshot.constants import HANDLE, UI

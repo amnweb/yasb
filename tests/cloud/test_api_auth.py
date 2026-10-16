@@ -18,7 +18,7 @@ import tempfile
 from collections.abc import Callable
 
 import pytest
-from PyQt6.QtCore import QObject
+from PySide6.QtCore import QObject
 
 from core.cloud.api import ApiClient, ApiError
 from core.cloud.constants import SESSION_FILE

@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QWidget
 
 from core.validation.widgets.yasb.custom import CustomConfig
 from core.widgets.yasb import custom

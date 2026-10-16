@@ -2,9 +2,9 @@ import logging
 from contextlib import suppress
 from typing import Any, Literal, override
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QMouseEvent, QPixmap, QWheelEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
@@ -207,9 +207,9 @@ type AnyWorkspaceButton = WorkspaceButton | WorkspaceButtonWithIcons
 
 
 class WorkspaceWidget(BaseWidget):
-    k_signal_connect = pyqtSignal(dict)
-    k_signal_update = pyqtSignal(dict, dict)
-    k_signal_disconnect = pyqtSignal()
+    k_signal_connect = Signal(dict)
+    k_signal_update = Signal(dict, dict)
+    k_signal_disconnect = Signal()
     validation_schema = KomorebiWorkspacesConfig
     event_listener = KomorebiEventListener
 

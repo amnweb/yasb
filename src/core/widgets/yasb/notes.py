@@ -6,9 +6,9 @@ import re
 from typing import Any
 
 from pydantic import BaseModel
-from PyQt6.QtCore import QPoint, Qt, QTimer
-from PyQt6.QtGui import QTextCursor
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QPoint, Qt, QTimer
+from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,

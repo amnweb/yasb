@@ -4,9 +4,9 @@ from functools import partial
 from typing import Any, override
 
 from PIL import Image
-from PyQt6.QtCore import QEvent, QPoint, QSize, Qt
-from PyQt6.QtGui import QAction, QIcon, QPainter, QPainterPath, QPixmap
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPushButton, QWidget
+from PySide6.QtCore import QEvent, QPoint, QSize, Qt
+from PySide6.QtGui import QAction, QIcon, QPainter, QPainterPath, QPixmap
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPushButton, QWidget
 
 from core.bar_helper import GlobalState
 from core.utils.qobject import is_valid_qobject

@@ -8,8 +8,8 @@ from collections.abc import Callable
 from functools import partial
 from typing import TypedDict, override
 
-from PyQt6.QtCore import QMimeData, QObject, QPoint, Qt, QTimer
-from PyQt6.QtGui import (
+from PySide6.QtCore import QMimeData, QObject, QPoint, Qt, QTimer
+from PySide6.QtGui import (
     QAction,
     QDrag,
     QDragEnterEvent,
@@ -19,7 +19,7 @@ from PyQt6.QtGui import (
     QIcon,
     QMouseEvent,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog,
     QFrame,
     QHBoxLayout,

@@ -5,8 +5,8 @@ from datetime import datetime
 from random import randint
 from typing import Any
 
-from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
-from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
+from PySide6.QtCore import QObject, QTimer, QUrl, Signal
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
 HEADER = (b"User-Agent", b"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0")
 CACHE_CONTROL = (b"Cache-Control", b"no-cache")
@@ -23,7 +23,7 @@ class HostNotFoundError(Exception):
 class WeatherDataFetcher(QObject):
     """Fetches and processes weather data from a URL."""
 
-    finished = pyqtSignal(dict)
+    finished = Signal(dict)
 
     _cached_url = None
     _instance: WeatherDataFetcher | None = None
@@ -91,7 +91,7 @@ class WeatherDataFetcher(QObject):
 class IconFetcher(QObject):
     """Fetches and caches icons from a list of URLs."""
 
-    finished = pyqtSignal()
+    finished = Signal()
 
     _instance: IconFetcher | None = None
 

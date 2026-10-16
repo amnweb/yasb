@@ -5,8 +5,8 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
 
 from core.utils.win32.utils import get_monitor_hwnd, get_widget_monitor_hwnd
 from core.widgets.base import BaseWidget

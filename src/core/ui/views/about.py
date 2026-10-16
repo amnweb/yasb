@@ -4,8 +4,8 @@ from collections.abc import Callable
 from functools import partial
 from typing import TYPE_CHECKING, NotRequired, TypedDict
 
-from PyQt6.QtCore import QObject, Qt, QTimer
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QObject, Qt, QTimer
+from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,

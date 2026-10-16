@@ -4,7 +4,7 @@ from collections.abc import Callable
 from functools import partial
 from typing import Any, cast, override
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QAbstractListModel,
     QEvent,
     QMimeData,
@@ -18,7 +18,7 @@ from PyQt6.QtCore import (
     QTimer,
     QUrl,
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QAction,
     QColor,
     QCursor,
@@ -36,7 +36,7 @@ from PyQt6.QtGui import (
     QScreen,
     QShortcut,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QGraphicsOpacityEffect,

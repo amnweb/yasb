@@ -11,8 +11,8 @@ from typing import Any, NotRequired, TypedDict, cast
 import win32api
 import win32gui
 import win32process
-from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QApplication, QMenu, QWidget
+from PySide6.QtGui import QCursor
+from PySide6.QtWidgets import QApplication, QMenu, QWidget
 from win32api import GetMonitorInfo, MonitorFromWindow
 from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowText
 from winrt.windows.management.deployment import PackageManager
@@ -453,7 +453,7 @@ def apply_qmenu_style(qwidget: QMenu):
     if is_windows_10():
         return
     try:
-        from PyQt6.QtWidgets import QStyleFactory
+        from PySide6.QtWidgets import QStyleFactory
 
         from core.utils.win32.backdrop import enable_blur
 

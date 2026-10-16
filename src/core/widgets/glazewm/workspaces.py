@@ -3,9 +3,9 @@ import re
 from enum import StrEnum, auto
 from typing import override
 
-from PyQt6.QtCore import Qt, pyqtSlot
-from PyQt6.QtGui import QMouseEvent, QPixmap, QShowEvent, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtGui import QMouseEvent, QPixmap, QShowEvent, QWheelEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
 from core.utils.icons.service import IconService, WindowIcon
 from core.utils.utilities import refresh_widget_style
@@ -69,7 +69,7 @@ class GlazewmWorkspaceButton(QPushButton):
         self.setProperty("class", button_class)
         refresh_widget_style(self)
 
-    @pyqtSlot()
+    @Slot()
     def _activate_workspace(self):
         self.glazewm_client.activate_workspace(self.workspace_name)
 
@@ -371,12 +371,12 @@ class GlazewmWorkspacesWidget(BaseWidget):
         self.monitor_handle = get_widget_monitor_hwnd(self)
         self.glazewm_client.connect()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def _update_connection_status(self, status: bool):
         self.workspace_container.setVisible(status)
         self.offline_text.setVisible(not status if not self.config.hide_if_offline else False)
 
-    @pyqtSlot(list)
+    @Slot(list)
     def _update_workspaces(self, message: list[Monitor]):
         current_mon = next((m for m in message if m.hwnd == self.monitor_handle), None)
         if not current_mon:

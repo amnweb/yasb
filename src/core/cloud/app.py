@@ -5,8 +5,8 @@ import sys
 import threading
 from ctypes import wintypes
 
-from PyQt6.QtNetwork import QSslSocket
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtNetwork import QSslSocket
+from PySide6.QtWidgets import QApplication
 
 from core.cloud import logs
 from core.cloud.constants import APP_LOG_FILE, TASK_LOG_FILE

@@ -5,7 +5,7 @@ from ctypes import wintypes
 from dataclasses import dataclass
 from typing import Any
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from core.utils.icons.service import ProcessIcon
 from core.utils.win32.bindings.kernel32 import kernel32

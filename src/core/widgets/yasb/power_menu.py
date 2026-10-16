@@ -3,10 +3,10 @@ import os
 from collections.abc import Callable
 from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QEvent, QObject, QPropertyAnimation, QRect, Qt
-from PyQt6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QShowEvent
-from PyQt6.QtWidgets import (
+import PySide6.QtCore as QtCore
+from PySide6.QtCore import QEvent, QObject, QPropertyAnimation, QRect, Qt
+from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QShowEvent
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,

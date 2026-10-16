@@ -8,7 +8,7 @@ from pycaw.callbacks import AudioEndpointVolumeCallback, MMNotificationClient
 from pycaw.constants import DEVICE_STATE
 from pycaw.pycaw import AudioUtilities, EDataFlow, ERole
 from pycaw.utils import AudioDevice
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 
 class AudioInputListener(Protocol):
@@ -21,8 +21,8 @@ class AudioInputService(QObject):
 
     _instance: AudioInputService | None = None
     _initialized: bool
-    device_change_requested = pyqtSignal()
-    volume_change_requested = pyqtSignal()
+    device_change_requested = Signal()
+    volume_change_requested = Signal()
 
     def __new__(cls):
         if cls._instance is None:

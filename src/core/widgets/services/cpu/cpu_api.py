@@ -13,8 +13,8 @@ import time
 from ctypes import POINTER, byref, wintypes
 from typing import NamedTuple
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtWidgets import QApplication
 
 from core.utils.system import get_build_and_ubr
 from core.utils.win32.bindings.kernel32 import kernel32
@@ -302,7 +302,7 @@ class CpuWorker(QThread):
     """Background thread for non-blocking CPU data collection."""
 
     _instance: CpuWorker | None = None
-    data_ready = pyqtSignal(object)
+    data_ready = Signal(object)
 
     @classmethod
     def get_instance(cls, update_interval: int) -> CpuWorker:

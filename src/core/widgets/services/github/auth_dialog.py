@@ -2,9 +2,9 @@ import threading
 from collections.abc import Callable
 from typing import Any, override
 
-from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QColor, QDesktopServices, QFont, QPalette, QShowEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import QCloseEvent, QColor, QDesktopServices, QFont, QPalette, QShowEvent
+from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QFrame,
@@ -21,11 +21,11 @@ from core.widgets.services.github import auth as github_auth
 
 
 class GitHubAuthDialog(ViewBase, QDialog):
-    auth_completed = pyqtSignal(str)
-    _device_code_received = pyqtSignal(dict)
-    _device_error = pyqtSignal(str)
-    _auth_success = pyqtSignal(str)
-    _auth_error = pyqtSignal(str)
+    auth_completed = Signal(str)
+    _device_code_received = Signal(dict)
+    _device_error = Signal(str)
+    _auth_success = Signal(str)
+    _auth_error = Signal(str)
 
     def __init__(
         self,

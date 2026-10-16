@@ -1,8 +1,8 @@
 """SVG icons for the cloud app"""
 
-from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPixmap
-from PyQt6.QtSvg import QSvgRenderer
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 
 GEAR = """
 <svg viewBox="28 0 968 1024" xmlns="http://www.w3.org/2000/svg">

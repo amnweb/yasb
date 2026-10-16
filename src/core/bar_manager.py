@@ -2,10 +2,9 @@ import logging
 import uuid
 from contextlib import suppress
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QScreen
-from PyQt6.QtWidgets import QApplication
-from qt_css_engine import TransitionEngine, extract_rules
+from PySide6.QtCore import QObject, QThread, Signal, Slot
+from PySide6.QtGui import QScreen
+from PySide6.QtWidgets import QApplication
 
 from core.bar import Bar
 from core.bar_helper import GlobalState
@@ -22,11 +21,12 @@ from core.utils.win32.hotkeys import (
 )
 from core.validation.bar import BarConfig
 from core.validation.config import YasbConfig
+from qt_css_engine import TransitionEngine, extract_rules
 
 
 class BarManager(QObject):
-    styles_modified = pyqtSignal()
-    config_modified = pyqtSignal()
+    styles_modified = Signal()
+    config_modified = Signal()
 
     def __init__(self, config: YasbConfig, stylesheet: str):
         super().__init__()
@@ -65,7 +65,7 @@ class BarManager(QObject):
             self._app.screenRemoved.disconnect(self.on_screens_update)
             self.config_modified.disconnect(self.on_config_modified)
 
-    @pyqtSlot()
+    @Slot()
     def on_styles_modified(self):
         stylesheet = get_stylesheet(show_error_dialog=True)
         if stylesheet and (stylesheet != self.stylesheet):
@@ -75,7 +75,7 @@ class BarManager(QObject):
             for bar in self.bars:
                 bar.setStyleSheet(self.stylesheet)
 
-    @pyqtSlot()
+    @Slot()
     def on_config_modified(self):
         try:
             config = get_config(show_error_dialog=True)
@@ -95,7 +95,7 @@ class BarManager(QObject):
                 logging.info("Configuration updated (no reload required).")
             logging.info("Successfully loaded updated config and re-initialised all bars.")
 
-    @pyqtSlot(QScreen)
+    @Slot(QScreen)
     def on_screens_update(self, _screen: QScreen) -> None:
         logging.info("Screens updated. Re-initialising all bars.")
         self._disconnect_reload_signals()

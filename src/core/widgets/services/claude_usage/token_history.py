@@ -20,7 +20,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Any, ClassVar, cast
 
-from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
 from core.utils.system import app_data_path
 from core.widgets.services.claude_usage.claude_api import claude_config_dir
@@ -390,7 +390,7 @@ def summarize(
 class _ScanWorker(QThread):
     """Runs the (blocking) transcript scan off the UI thread."""
 
-    data_ready = pyqtSignal(dict)
+    data_ready = Signal(dict)
 
     def __init__(self, cache_path: str, parent: Any = None):
         super().__init__(parent)
@@ -411,7 +411,7 @@ class TokenHistoryService(QObject):
     the merged aggregate with every widget on the same interval.
     """
 
-    data_ready = pyqtSignal(dict)
+    data_ready = Signal(dict)
 
     _instances: ClassVar[dict[int, TokenHistoryService]] = {}
 

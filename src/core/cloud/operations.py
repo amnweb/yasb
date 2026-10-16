@@ -11,8 +11,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import QLockFile, QObject, QThread, pyqtSignal
-from PyQt6.QtNetwork import QNetworkReply
+from PySide6.QtCore import QLockFile, QObject, QThread, Signal
+from PySide6.QtNetwork import QNetworkReply
 
 from core.cloud.api import ApiClient, ApiError, Call, save_reply
 from core.cloud.constants import BUSY_MESSAGE, NOTE_MAX_LENGTH, SHUTDOWN_WAIT_MS
@@ -46,9 +46,9 @@ class Operation(QObject):
     """One job: a backup, a restore, or saving a copy. Owns the lock, temp files, call and
     worker thread it creates, and releases all of them in `_release`."""
 
-    status = pyqtSignal(str)
-    failed = pyqtSignal(str)  # why, in a sentence the user can read
-    finished = pyqtSignal(object)  # the result, or None if it failed or was cancelled
+    status = Signal(str)
+    failed = Signal(str)  # why, in a sentence the user can read
+    finished = Signal(object)  # the result, or None if it failed or was cancelled
 
     def __init__(self, api: ApiClient, session: Session, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -299,19 +299,19 @@ class SaveCopyOperation(Operation):
 class Operations(QObject):
     """Runs one Operation at a time, plus the small account calls that own nothing."""
 
-    status = pyqtSignal(str)  # progress text for the backups view
-    busy = pyqtSignal(bool)  # a backup, restore or save is running; the only thing the UI locks
-    failed = pyqtSignal(str)  # why, in a sentence the user can read
-    restored = pyqtSignal(object)  # RestoreOutcome
-    saved = pyqtSignal(object)  # folder a copy was written to
+    status = Signal(str)  # progress text for the backups view
+    busy = Signal(bool)  # a backup, restore or save is running; the only thing the UI locks
+    failed = Signal(str)  # why, in a sentence the user can read
+    restored = Signal(object)  # RestoreOutcome
+    saved = Signal(object)  # folder a copy was written to
 
     # One row changed, and which one. Reloading the list would throw away the reader's
     # position and rebuild every widget to alter one of them.
-    backed_up = pyqtSignal(str)  # id of the snapshot just uploaded
-    delete_finished = pyqtSignal(str, bool)  # id, whether the server confirmed it
-    note_saved = pyqtSignal(str, str)  # id, the note now stored
-    shared = pyqtSignal(str, str)  # id, the public link the server minted
-    unshared = pyqtSignal(str)  # id
+    backed_up = Signal(str)  # id of the snapshot just uploaded
+    delete_finished = Signal(str, bool)  # id, whether the server confirmed it
+    note_saved = Signal(str, str)  # id, the note now stored
+    shared = Signal(str, str)  # id, the public link the server minted
+    unshared = Signal(str)  # id
 
     def __init__(self, api: ApiClient, session: Session, parent: QObject | None = None) -> None:
         super().__init__(parent)

@@ -1,8 +1,8 @@
 import logging
 from typing import Any
 
-from PyQt6.QtCore import QFileSystemWatcher, QObject, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QFileSystemWatcher, QObject, QTimer, Signal
+from PySide6.QtWidgets import QApplication
 
 from core.utils.icons.service import IconService
 from core.utils.win32.app_loader import AppEntry, AppListLoader, app_icon_source
@@ -70,8 +70,8 @@ PROVIDER_REGISTRY: dict[str, type[BaseProvider]] = {
 class QuickLaunchService(QObject):
     """Quick Launch service."""
 
-    request_refresh = pyqtSignal()
-    query_finished = pyqtSignal(str, list)
+    request_refresh = Signal()
+    query_finished = Signal(str, list)
 
     _instance: QuickLaunchService | None = None
 

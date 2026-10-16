@@ -16,8 +16,8 @@ from dataclasses import dataclass
 from enum import IntFlag, StrEnum, auto
 from typing import override
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtWidgets import QApplication
 from winrt.windows.devices.wifi import (
     WiFiAdapter,
     WiFiConnectionStatus,
@@ -111,7 +111,7 @@ class NetworkInfo:
 class WiFiWorker(QThread):
     """Singleton worker thread that periodically fetches WiFi info"""
 
-    result = pyqtSignal(WiFiInfo)
+    result = Signal(WiFiInfo)
     _instance = None
 
     def __new__(cls, get_exact: bool = False, poll_interval: int = 1000):
@@ -196,8 +196,8 @@ class WiFiWorker(QThread):
 class WiFiConnectWorker(QThread):
     """WiFi connect worker"""
 
-    result = pyqtSignal(WiFiConnectionStatus, str, NetworkInfo)
-    error = pyqtSignal(str)
+    result = Signal(WiFiConnectionStatus, str, NetworkInfo)
+    error = Signal(str)
 
     def __init__(self, network_info: NetworkInfo, ssid: str, password: str, hidden_ssid: bool):
         super().__init__()
@@ -268,7 +268,7 @@ class WiFiConnectWorker(QThread):
 class WifiDisconnectWorker(QThread):
     """Worker for disconnecting from Wi-Fi"""
 
-    result = pyqtSignal(str)
+    result = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -284,8 +284,8 @@ class WifiDisconnectWorker(QThread):
 class WiFiManager(QObject):
     """WiFi manager that holds scanning, notification and profile management logic"""
 
-    wifi_scan_completed = pyqtSignal(ScanResultStatus, list)
-    wifi_disconnected = pyqtSignal(str)
+    wifi_scan_completed = Signal(ScanResultStatus, list)
+    wifi_disconnected = Signal(str)
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)

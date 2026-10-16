@@ -3,9 +3,9 @@ import os
 import subprocess
 from collections.abc import Callable
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.shell_utils import shell_open
 from core.utils.utilities import PopupWidget

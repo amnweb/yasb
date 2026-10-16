@@ -4,9 +4,9 @@ from collections.abc import Callable
 from functools import partial
 from typing import override
 
-from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPen, QShowEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QWidget
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPen, QShowEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QWidget
 
 from core.ui.components.button import Button
 from core.utils.tooltip import set_tooltip

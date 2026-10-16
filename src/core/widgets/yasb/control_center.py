@@ -1,5 +1,5 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QVBoxLayout
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QVBoxLayout
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import PopupWidget

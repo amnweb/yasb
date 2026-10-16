@@ -10,7 +10,7 @@ from functools import partial
 from os import makedirs, path
 from typing import Any, TypedDict, override
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QEasingCurve,
     QParallelAnimationGroup,
     QPoint,
@@ -18,10 +18,10 @@ from PyQt6.QtCore import (
     Qt,
     QThread,
     QUrl,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtGui import QCloseEvent, QDesktopServices, QFontDatabase, QMouseEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtGui import QCloseEvent, QDesktopServices, QFontDatabase, QMouseEvent
+from PySide6.QtWidgets import (
     QDialog,
     QGraphicsOpacityEffect,
     QGridLayout,
@@ -96,7 +96,7 @@ class _FontState(Enum):
 class FontCheckWorker(QThread):
     """Checks which required fonts are already installed."""
 
-    finished = pyqtSignal(dict)
+    finished = Signal(dict)
 
     def run(self) -> None:
         db_families = set(QFontDatabase.families())
@@ -109,8 +109,8 @@ class FontCheckWorker(QThread):
 class FontInstallWorker(QThread):
     """Downloads and installs missing fonts for the current user."""
 
-    progress = pyqtSignal(str)
-    finished = pyqtSignal(bool, str, list)
+    progress = Signal(str)
+    finished = Signal(bool, str, list)
 
     def __init__(self, install_nerd: bool = False, install_segoe: bool = False) -> None:
         super().__init__()

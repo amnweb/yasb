@@ -8,8 +8,8 @@ from functools import partial
 from typing import Any
 
 from PIL import Image
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QApplication
 from qasync import asyncSlot  # type: ignore
 from winrt.windows.media import MediaPlaybackAutoRepeatMode
 from winrt.windows.media.control import (
@@ -94,11 +94,11 @@ class SessionState:
 class WindowsMedia(QObject, metaclass=QSingleton):
     """Windows Media Control singleton"""
 
-    media_data_changed = pyqtSignal(dict)
-    current_session_changed = pyqtSignal()
-    media_properties_changed = pyqtSignal()
-    timeline_info_changed = pyqtSignal()
-    playback_info_changed = pyqtSignal()
+    media_data_changed = Signal(dict)
+    current_session_changed = Signal()
+    media_properties_changed = Signal()
+    timeline_info_changed = Signal()
+    playback_info_changed = Signal()
 
     def __init__(self):
         super().__init__()

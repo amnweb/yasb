@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import NotRequired, TypedDict
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from core.utils.system import app_data_path
 from core.widgets.services.traffic.network_api import IOCounters, NetworkAPI

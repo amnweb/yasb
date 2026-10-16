@@ -2,7 +2,7 @@ import math
 import random
 from datetime import datetime, timedelta
 
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 
 from core.widgets.services.weather.widgets import HourlyData
 

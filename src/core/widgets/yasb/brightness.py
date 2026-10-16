@@ -3,9 +3,9 @@ from datetime import datetime
 from functools import partial
 from typing import override
 
-from PyQt6.QtCore import QEvent, QObject, QPoint, QRect, Qt, QTimer
-from PyQt6.QtGui import QMouseEvent, QShowEvent, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QStyle, QStyleOptionSlider, QVBoxLayout
+from PySide6.QtCore import QEvent, QObject, QPoint, QRect, Qt, QTimer
+from PySide6.QtGui import QMouseEvent, QShowEvent, QWheelEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QStyle, QStyleOptionSlider, QVBoxLayout
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import CustomToolTip, set_tooltip

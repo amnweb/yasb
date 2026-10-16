@@ -1,7 +1,7 @@
 import re
 from typing import Any
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_UNIT

@@ -6,7 +6,7 @@ import re
 import urllib.request
 from collections.abc import Callable
 
-from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
 from core.utils.shell_utils import shell_open
 from core.utils.tooltip import set_tooltip
@@ -21,8 +21,8 @@ class GlucoseMonitorWorker(QThread):
     def get_instance(cls):
         return cls()
 
-    status_updated = pyqtSignal(int, float, str, str)
-    error_signal = pyqtSignal(str)
+    status_updated = Signal(int, float, str, str)
+    error_signal = Signal(str)
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)

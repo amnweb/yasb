@@ -1,15 +1,10 @@
-from collections.abc import Callable
-from typing import Any, override
+from typing import override
 
-import PyQt6.QtCore as QtCore
-from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRectF, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QEnterEvent, QFont, QMouseEvent, QPainter, QPaintEvent, QPen, QWheelEvent
-from PyQt6.QtWidgets import QApplication, QSizePolicy, QWidget
+from PySide6.QtCore import Property, QEasingCurve, QEvent, QPropertyAnimation, QRectF, Qt, Signal
+from PySide6.QtGui import QColor, QEnterEvent, QFont, QMouseEvent, QPainter, QPaintEvent, QPen, QWheelEvent
+from PySide6.QtWidgets import QApplication, QSizePolicy, QWidget
 
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
-
-# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
-pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 TRACK_H = 4
 THUMB_RADIUS = 6
@@ -24,8 +19,8 @@ def _resolve(t: dict[str, str], key: str) -> QColor:
 class Slider(QWidget):
     """Horizontal slider with a numeric value label."""
 
-    valueChanged = pyqtSignal(int)
-    labelClicked = pyqtSignal()
+    valueChanged = Signal(int)
+    labelClicked = Signal()
 
     def __init__(
         self,
@@ -94,7 +89,7 @@ class Slider(QWidget):
         self._thumb_scale = v
         self.update()
 
-    thumb_scale: float = pyqtProperty(float, _get_thumb_scale, _set_thumb_scale)
+    thumb_scale: float = Property(float, _get_thumb_scale, _set_thumb_scale)
 
     def value(self) -> int:
         return self._value

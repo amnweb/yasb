@@ -2,9 +2,9 @@ import logging
 import sys
 from typing import override
 
-from PyQt6.QtCore import QEasingCurve, QParallelAnimationGroup, QPoint, QPropertyAnimation, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QEasingCurve, QParallelAnimationGroup, QPoint, QPropertyAnimation, Qt, QTimer, Signal
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,
@@ -23,7 +23,7 @@ _alert_dialogs: list[AlertDialog] = []
 
 
 class AlertDialog(QWidget):
-    closed = pyqtSignal()
+    closed = Signal()
 
     def __init__(
         self,

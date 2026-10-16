@@ -1,8 +1,8 @@
 import re
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style

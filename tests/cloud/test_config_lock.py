@@ -11,8 +11,8 @@ and in another one, which is what stops a CLI restore running under the window's
 from pathlib import Path
 
 import pytest
-from PyQt6.QtGui import QCloseEvent
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtWidgets import QApplication
 
 from core.cloud.api import ApiClient
 from core.cloud.constants import BUSY_MESSAGE

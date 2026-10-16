@@ -4,9 +4,9 @@ import re
 from datetime import datetime
 from typing import Any, cast, override
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QUrl
-from PyQt6.QtGui import QCloseEvent, QDesktopServices, QMouseEvent
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QUrl
+from PySide6.QtGui import QCloseEvent, QDesktopServices, QMouseEvent
+from PySide6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.ui.components.loader import LoaderLine
 from core.utils.tooltip import set_tooltip

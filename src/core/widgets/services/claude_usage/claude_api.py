@@ -5,7 +5,7 @@ import time
 import urllib.request
 from typing import Any, ClassVar, cast
 
-from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
 from core.utils.system import app_data_path
 
@@ -155,7 +155,7 @@ def fetch_usage(cache_path: str, cache_ttl: int) -> dict[str, Any]:
 class _UsageWorker(QThread):
     """Runs the (blocking) credential read + HTTP request off the UI thread."""
 
-    data_ready = pyqtSignal(dict)
+    data_ready = Signal(dict)
 
     def __init__(self, cache_path: str, cache_ttl: int, parent: Any = None):
         super().__init__(parent)
@@ -176,7 +176,7 @@ class ClaudeUsageService(QObject):
     away (mirrors the ``server_monitor`` service).
     """
 
-    data_ready = pyqtSignal(dict)
+    data_ready = Signal(dict)
 
     _instances: ClassVar[dict[tuple[int, int], ClaudeUsageService]] = {}
 

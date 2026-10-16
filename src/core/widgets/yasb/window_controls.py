@@ -6,9 +6,9 @@ from typing import override
 import win32api
 import win32gui
 import win32process
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
-from PyQt6.QtGui import QCloseEvent
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QPushButton
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtWidgets import QGraphicsOpacityEffect, QLabel, QPushButton
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
