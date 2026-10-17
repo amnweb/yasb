@@ -14,9 +14,9 @@ from ctypes import (
 )
 from ctypes.wintypes import (
     BOOL,
-    BOOLEAN,
     BYTE,
     DWORD,
+    FILETIME,
     HANDLE,
     HBITMAP,
     HBRUSH,
@@ -40,6 +40,7 @@ from ctypes.wintypes import (
 
 WNDPROC = WINFUNCTYPE(LPARAM, HWND, UINT, WPARAM, LPARAM)
 WINEVENTPROC = WINFUNCTYPE(None, HANDLE, DWORD, HWND, LONG, LONG, DWORD, DWORD)
+WNDENUMPROC = WINFUNCTYPE(BOOL, HWND, LPARAM)
 
 
 class OVERLAPPED(ct.Structure):
@@ -217,6 +218,13 @@ class GUID(ct.Structure):
         ("Data4", ct.c_ubyte * 8),
     ]
 
+    @classmethod
+    def from_string(cls, guid_str: str) -> GUID:
+        u = uuid.UUID(guid_str)
+        guid = cls(u.time_low, u.time_mid, u.time_hi_version)
+        guid.Data4[:] = u.bytes[8:]
+        return guid
+
     def to_uuid(self):
         # fmt: off
         return uuid.UUID(
@@ -266,7 +274,7 @@ class NOTIFYICONDATA(ct.Structure):
 
 class SHELLTRAYDATA(ct.Structure):
     _fields_ = [
-        ("magic_number", ct.c_int32),
+        ("magic_number", ct.c_uint32),
         ("message_type", ct.c_uint32),
         ("icon_data", NOTIFYICONDATA),
     ]
@@ -274,10 +282,10 @@ class SHELLTRAYDATA(ct.Structure):
 
 class WINNOTIFYICONIDENTIFIER(ct.Structure):
     _fields_ = [
-        ("magic_number", ct.c_int32),
-        ("message", ct.c_int32),
-        ("callback_size", ct.c_int32),
-        ("padding", ct.c_int32),
+        ("magic_number", ct.c_uint32),
+        ("message", ct.c_uint32),
+        ("callback_size", ct.c_uint32),
+        ("padding", ct.c_uint32),
         ("window_handle", ct.c_uint32),
         ("uid", ct.c_uint32),
         ("guid_item", GUID),
@@ -428,50 +436,6 @@ class WLAN_PROFILE_INFO_LIST(ct.Structure):
     ]
 
 
-class WLAN_RATE_SET(ct.Structure):
-    _fields_ = [
-        ("uRateSetLength", ULONG),
-        ("usRateSet", USHORT * 126),
-    ]
-
-
-class WLAN_BSS_ENTRY(ct.Structure):
-    _fields_ = [
-        ("dot11Ssid", DOT11_SSID),
-        ("uPhyId", ULONG),
-        ("dot11Bssid", c_ubyte * 6),
-        ("dot11BssType", DWORD),
-        ("dot11BssPhyType", DWORD),
-        ("lRssi", LONG),
-        ("uLinkQuality", ULONG),
-        ("bInRegDomain", BOOLEAN),
-        ("usBeaconPeriod", USHORT),
-        ("ullTimestamp", c_ulonglong),
-        ("ullHostTimestamp", c_ulonglong),
-        ("usCapabilityInformation", USHORT),
-        ("ulChCenterFrequency", ULONG),
-        ("wlanRateSet", WLAN_RATE_SET),
-        ("ulIeOffset", ULONG),
-        ("ulIeSize", ULONG),
-    ]
-
-
-class WLAN_BSS_LIST(ct.Structure):
-    _fields_ = [
-        ("dwTotalSize", DWORD),
-        ("dwNumberOfItems", DWORD),
-        ("wlanBssEntries", WLAN_BSS_ENTRY * 1),  # temporary, will cast later
-    ]
-
-
-class NDIS_OBJECT_HEADER(ct.Structure):
-    _fields_ = [
-        ("Type", ct.c_ubyte),
-        ("Revision", ct.c_ubyte),
-        ("Size", ct.c_ushort),
-    ]
-
-
 class WLAN_CONNECTION_NOTIFICATION_DATA(ct.Structure):
     _fields_ = [
         ("wlanConnectionMode", DWORD),
@@ -537,12 +501,6 @@ class SHSTOCKICONINFO(ct.Structure):
         ("iIcon", ct.c_int),
         ("szPath", wintypes.WCHAR * MAX_PATH),
     ]
-
-
-class DISPLAY_BRIGHTNESS(ct.Structure):
-    """LCD brightness structure for DeviceIoControl."""
-
-    _fields_ = [("ucDisplayPolicy", BYTE), ("ucACBrightness", BYTE), ("ucDCBrightness", BYTE)]
 
 
 class MIB_IF_ROW2(ct.Structure):
@@ -674,10 +632,10 @@ class SYSTEM_POWER_STATUS(ct.Structure):
     """Basic battery info from GetSystemPowerStatus."""
 
     _fields_ = [
-        ("ACLineStatus", ct.c_byte),
-        ("BatteryFlag", ct.c_byte),
-        ("BatteryLifePercent", ct.c_byte),
-        ("SystemStatusFlag", ct.c_byte),
+        ("ACLineStatus", BYTE),
+        ("BatteryFlag", BYTE),
+        ("BatteryLifePercent", BYTE),
+        ("SystemStatusFlag", BYTE),
         ("BatteryLifeTime", DWORD),
         ("BatteryFullLifeTime", DWORD),
     ]
@@ -791,3 +749,250 @@ class SHELLEXECUTEINFO(ct.Structure):
         ("hIconOrMonitor", HANDLE),
         ("hProcess", HANDLE),
     ]
+
+
+class APPBARDATA(ct.Structure):
+    _fields_ = [
+        ("cbSize", DWORD),
+        ("hWnd", HWND),
+        ("uCallbackMessage", UINT),
+        ("uEdge", UINT),
+        ("rc", wintypes.RECT),
+        ("lParam", LPARAM),
+    ]
+
+
+class WIN32_FIND_DATAW(ct.Structure):
+    _fields_ = [
+        ("dwFileAttributes", DWORD),
+        ("ftCreationTime", FILETIME),
+        ("ftLastAccessTime", FILETIME),
+        ("ftLastWriteTime", FILETIME),
+        ("nFileSizeHigh", DWORD),
+        ("nFileSizeLow", DWORD),
+        ("dwReserved0", DWORD),
+        ("dwReserved1", DWORD),
+        ("cFileName", WCHAR * MAX_PATH),
+        ("cAlternateFileName", WCHAR * 14),
+    ]
+
+
+class MOUSEINPUT(ct.Structure):
+    _fields_ = [
+        ("dx", LONG),
+        ("dy", LONG),
+        ("mouseData", DWORD),
+        ("dwFlags", DWORD),
+        ("time", DWORD),
+        ("dwExtraInfo", c_size_t),
+    ]
+
+
+class KEYBDINPUT(ct.Structure):
+    _fields_ = [
+        ("wVk", WORD),
+        ("wScan", WORD),
+        ("dwFlags", DWORD),
+        ("time", DWORD),
+        ("dwExtraInfo", c_size_t),
+    ]
+
+
+class HARDWAREINPUT(ct.Structure):
+    _fields_ = [
+        ("uMsg", DWORD),
+        ("wParamL", WORD),
+        ("wParamH", WORD),
+    ]
+
+
+class INPUT_UNION(ct.Union):
+    _fields_ = [
+        ("mi", MOUSEINPUT),
+        ("ki", KEYBDINPUT),
+        ("hi", HARDWAREINPUT),
+    ]
+
+
+class INPUT(ct.Structure):
+    _anonymous_ = ("_input",)
+    _fields_ = [
+        ("type", DWORD),
+        ("_input", INPUT_UNION),
+    ]
+
+
+class PROPERTYKEY(ct.Structure):
+    _fields_ = [("fmtid", GUID), ("pid", DWORD)]
+
+
+class BLOB(ct.Structure):
+    _fields_ = [("cbSize", ULONG), ("pBlobData", POINTER(c_ubyte))]
+
+
+class PROPVARIANT_UNION(ct.Union):
+    _fields_ = [
+        ("pwszVal", wintypes.LPWSTR),
+        ("pszVal", wintypes.LPSTR),
+        ("ulVal", ULONG),
+        ("uhVal", c_ulonglong),
+        ("boolVal", wintypes.VARIANT_BOOL),
+        ("blob", BLOB),
+    ]
+
+
+class PROPVARIANT(ct.Structure):
+    _anonymous_ = ("data",)
+    _fields_ = [
+        ("vt", USHORT),
+        ("wReserved1", WORD),
+        ("wReserved2", WORD),
+        ("wReserved3", WORD),
+        ("data", PROPVARIANT_UNION),
+    ]
+
+
+class COORD(ct.Structure):
+    _fields_ = [("X", wintypes.SHORT), ("Y", wintypes.SHORT)]
+
+
+class STARTUPINFOW(ct.Structure):
+    _fields_ = [
+        ("cb", DWORD),
+        ("lpReserved", wintypes.LPWSTR),
+        ("lpDesktop", wintypes.LPWSTR),
+        ("lpTitle", wintypes.LPWSTR),
+        ("dwX", DWORD),
+        ("dwY", DWORD),
+        ("dwXSize", DWORD),
+        ("dwYSize", DWORD),
+        ("dwXCountChars", DWORD),
+        ("dwYCountChars", DWORD),
+        ("dwFillAttribute", DWORD),
+        ("dwFlags", DWORD),
+        ("wShowWindow", WORD),
+        ("cbReserved2", WORD),
+        ("lpReserved2", POINTER(c_ubyte)),
+        ("hStdInput", HANDLE),
+        ("hStdOutput", HANDLE),
+        ("hStdError", HANDLE),
+    ]
+
+
+class STARTUPINFOEXW(ct.Structure):
+    _fields_ = [("StartupInfo", STARTUPINFOW), ("lpAttributeList", LPVOID)]
+
+
+class PROCESS_INFORMATION(ct.Structure):
+    _fields_ = [
+        ("hProcess", HANDLE),
+        ("hThread", HANDLE),
+        ("dwProcessId", DWORD),
+        ("dwThreadId", DWORD),
+    ]
+
+
+class POWERBROADCAST_SETTING(ct.Structure):
+    _fields_ = [
+        ("PowerSetting", GUID),
+        ("DataLength", DWORD),
+        ("Data", c_ubyte * 1),
+    ]
+
+
+# mmreg.h packs the wave format structs to 1 byte: WAVEFORMATEX is 18 bytes with no trailing padding
+class WAVEFORMATEX(ct.Structure):
+    _pack_ = 1
+    _fields_ = [
+        ("wFormatTag", WORD),
+        ("nChannels", WORD),
+        ("nSamplesPerSec", DWORD),
+        ("nAvgBytesPerSec", DWORD),
+        ("nBlockAlign", WORD),
+        ("wBitsPerSample", WORD),
+        ("cbSize", WORD),
+    ]
+
+
+class WAVEFORMATEXTENSIBLE(ct.Structure):
+    _pack_ = 1
+    _fields_ = [
+        ("Format", WAVEFORMATEX),
+        ("wValidBitsPerSample", WORD),
+        ("dwChannelMask", DWORD),
+        ("SubFormat", GUID),
+    ]
+
+
+class LUID(ct.Structure):
+    _fields_ = [("LowPart", DWORD), ("HighPart", LONG)]
+
+
+class DXGI_ADAPTER_DESC(ct.Structure):
+    _fields_ = [
+        ("Description", WCHAR * 128),
+        ("VendorId", UINT),
+        ("DeviceId", UINT),
+        ("SubSysId", UINT),
+        ("Revision", UINT),
+        ("DedicatedVideoMemory", c_size_t),
+        ("DedicatedSystemMemory", c_size_t),
+        ("SharedSystemMemory", c_size_t),
+        ("AdapterLuid", LUID),
+    ]
+
+
+class PDH_FMT_COUNTERVALUE_ITEM_W(ct.Structure):
+    _fields_ = [("szName", wintypes.LPWSTR), ("FmtValue", PDH_FMT_COUNTERVALUE_DOUBLE)]
+
+
+class SYSTEMTIME(ct.Structure):
+    _fields_ = [
+        ("wYear", WORD),
+        ("wMonth", WORD),
+        ("wDayOfWeek", WORD),
+        ("wDay", WORD),
+        ("wHour", WORD),
+        ("wMinute", WORD),
+        ("wSecond", WORD),
+        ("wMilliseconds", WORD),
+    ]
+
+
+class BLUETOOTH_DEVICE_INFO(ct.Structure):
+    _fields_ = [
+        ("dwSize", DWORD),
+        ("Address", c_ulonglong),
+        ("ulClassofDevice", ULONG),
+        ("fConnected", BOOL),
+        ("fRemembered", BOOL),
+        ("fAuthenticated", BOOL),
+        ("stLastSeen", SYSTEMTIME),
+        ("stLastUsed", SYSTEMTIME),
+        ("szName", WCHAR * 248),
+    ]
+
+
+class BLUETOOTH_DEVICE_SEARCH_PARAMS(ct.Structure):
+    _fields_ = [
+        ("dwSize", DWORD),
+        ("fReturnAuthenticated", BOOL),
+        ("fReturnRemembered", BOOL),
+        ("fReturnUnknown", BOOL),
+        ("fReturnConnected", BOOL),
+        ("fIssueInquiry", BOOL),
+        ("cTimeoutMultiplier", c_ubyte),
+        ("hRadio", HANDLE),
+    ]
+
+
+class BLUETOOTH_FIND_RADIO_PARAMS(ct.Structure):
+    _fields_ = [("dwSize", DWORD)]
+
+
+class DEVPROPKEY(ct.Structure):
+    _fields_ = [("fmtid", GUID), ("pid", ULONG)]
+
+
+class KSPROPERTY(ct.Structure):
+    _fields_ = [("Set", GUID), ("Id", ULONG), ("Flags", ULONG)]

@@ -1,4 +1,3 @@
-import ctypes
 import io
 import logging
 import os
@@ -30,14 +29,7 @@ from core.utils.utilities import (
     ScrollingLabel,
     refresh_widget_style,
 )
-from core.utils.win32.aumid import (
-    ERROR_INSUFFICIENT_BUFFER,
-    PROCESS_QUERY_LIMITED_INFORMATION,
-    CloseHandle,
-    GetApplicationUserModelId,
-    OpenProcess,
-    activate_app_by_aumid,
-)
+from core.utils.win32.aumid import activate_app_by_aumid, get_aumid_for_process
 from core.utils.win32.aumid_process import get_process_name_for_aumid
 from core.validation.widgets.yasb.media import MediaWidgetConfig
 from core.widgets.base import BaseWidget
@@ -1059,30 +1051,6 @@ class MediaWidget(BaseWidget):
         if self.current_session:
             return self.current_session.app_id
 
-    def _get_process_aumid(self, pid: int) -> str | None:
-        """Get AUMID for a process using GetApplicationUserModelId."""
-        if GetApplicationUserModelId is None:
-            return None
-
-        try:
-            hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
-            if not hProcess:
-                return None
-
-            try:
-                length = ctypes.c_uint32(0)
-                # First call to get buffer size
-                if GetApplicationUserModelId(hProcess, ctypes.byref(length), None) == ERROR_INSUFFICIENT_BUFFER:
-                    buf = ctypes.create_unicode_buffer(length.value)
-                    if GetApplicationUserModelId(hProcess, ctypes.byref(length), buf) == 0:
-                        return buf.value
-            finally:
-                CloseHandle(hProcess)
-        except Exception:
-            pass
-
-        return None
-
     def _match_session_by_aumid(self, sessions: list[MediaSession], aumid: str):
         """Match session by process AUMID."""
         target_aumid = aumid.lower()
@@ -1090,7 +1058,7 @@ class MediaWidget(BaseWidget):
             try:
                 proc = getattr(session, "Process", None)
                 if proc and proc.pid:
-                    process_aumid = self._get_process_aumid(int(proc.pid))
+                    process_aumid = get_aumid_for_process(int(proc.pid))
                     if process_aumid and process_aumid.lower() == target_aumid:
                         return session
             except Exception:

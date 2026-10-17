@@ -5,7 +5,7 @@ import platform
 import winreg
 from collections.abc import Collection
 from contextlib import suppress
-from ctypes import GetLastError, byref, c_ulong, create_unicode_buffer
+from ctypes import byref, c_ulong, create_unicode_buffer
 from typing import Any, NotRequired, TypedDict, cast
 
 import win32api
@@ -18,40 +18,41 @@ from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowT
 from winrt.windows.management.deployment import PackageManager
 
 from core.utils.system import is_windows_10
-from core.utils.win32.bindings import (
+from core.utils.win32.bindings.dwmapi import DwmGetWindowAttribute
+from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
-    DwmGetWindowAttribute,
-    GetForegroundWindow,
-    GetWindowThreadProcessId,
+    GetCurrentProcess,
+    GetLastError,
+    GetPackageFullName,
+    IsWow64Process2,
     OpenProcess,
     QueryFullProcessImageNameW,
-    SetForegroundWindow,
 )
-from core.utils.win32.bindings.kernel32 import GetCurrentProcess, IsWow64Process2
+from core.utils.win32.bindings.user32 import GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow
 from core.utils.win32.constants import (
     ACCESS_DENIED,
     DWMWA_EXTENDED_FRAME_BOUNDS,
     ERROR_INVALID_HANDLE,
     ERROR_INVALID_PARAMETER,
+    IMAGE_FILE_MACHINE_AMD64,
+    IMAGE_FILE_MACHINE_ARM64,
+    IMAGE_FILE_MACHINE_I386,
+    IMAGE_FILE_MACHINE_UNKNOWN,
     PROCESS_QUERY_LIMITED_INFORMATION,
     SW_MAXIMIZE,
 )
+from core.utils.win32.registry_keys import RUN_KEY
 
 
 def get_windows_host_arch():
     """Returns the actual host machine architecture on Windows,
     bypassing emulation layers like Prism."""
 
-    PROCESS_MACHINE_UNKNOWN = 0
-    IMAGE_FILE_MACHINE_AMD64 = 0x8664
-    IMAGE_FILE_MACHINE_ARM64 = 0xAA64
-    IMAGE_FILE_MACHINE_I386 = 0x014C
-
     arch_map = {
         IMAGE_FILE_MACHINE_AMD64: "AMD64",
         IMAGE_FILE_MACHINE_ARM64: "ARM64",
         IMAGE_FILE_MACHINE_I386: "x86",
-        PROCESS_MACHINE_UNKNOWN: "Unknown",
+        IMAGE_FILE_MACHINE_UNKNOWN: "Unknown",
     }
 
     process_machine = ctypes.c_ushort(0)
@@ -241,26 +242,32 @@ def get_app_name_from_pid(pid: int) -> str | None:
 
         try:
             # Check if this is a UWP app and get its proper display name
-            length = c_ulong(0)
-            kernel32 = ctypes.windll.kernel32
-            ERROR_INSUFFICIENT_BUFFER = 0x7A
+            package_full_name = GetPackageFullName(h_process)
+            if package_full_name:
+                # Direct lookup by full name is much faster than iterating all packages, so try that first
+                try:
+                    package = PackageManager().find_package_by_user_security_id_package_full_name("", package_full_name)
+                    if package:
+                        try:
+                            app_entries = package.get_app_list_entries()
+                            if app_entries and len(app_entries) > 0:
+                                short_name = app_entries[0].display_info.display_name
+                                if short_name and short_name.strip():
+                                    return short_name.strip()
+                        except Exception:
+                            pass
+                        display_name = package.display_name
+                        if display_name and display_name.strip():
+                            return display_name.strip()
+                except Exception as e:
+                    logging.debug("Direct UWP lookup failed for %s: %s", package_full_name, e)
 
-            res = kernel32.GetPackageFullName(h_process, byref(length), None)
+                # Fallback: iterate all packages if direct lookup failed
+                try:
+                    package_manager = PackageManager()
 
-            if res == ERROR_INSUFFICIENT_BUFFER and length.value > 0:
-                # This is a UWP app - get its package display name
-                buf = create_unicode_buffer(length.value)
-                res = kernel32.GetPackageFullName(h_process, byref(length), buf)
-
-                if res == 0 and buf.value:
-                    package_full_name = buf.value
-
-                    # Direct lookup by full name is much faster than iterating all packages, so try that first
-                    try:
-                        package = PackageManager().find_package_by_user_security_id_package_full_name(
-                            "", package_full_name
-                        )
-                        if package:
+                    for package in package_manager.find_packages_by_user_security_id(""):
+                        if package.id.full_name == package_full_name:
                             try:
                                 app_entries = package.get_app_list_entries()
                                 if app_entries and len(app_entries) > 0:
@@ -269,36 +276,16 @@ def get_app_name_from_pid(pid: int) -> str | None:
                                         return short_name.strip()
                             except Exception:
                                 pass
+
                             display_name = package.display_name
                             if display_name and display_name.strip():
                                 return display_name.strip()
-                    except Exception as e:
-                        logging.debug("Direct UWP lookup failed for %s: %s", package_full_name, e)
+                            break
+                except Exception as e:
+                    logging.debug("Fallback UWP lookup failed for %s: %s", package_full_name, e)
 
-                    # Fallback: iterate all packages if direct lookup failed
-                    try:
-                        package_manager = PackageManager()
-
-                        for package in package_manager.find_packages_by_user_security_id(""):
-                            if package.id.full_name == package_full_name:
-                                try:
-                                    app_entries = package.get_app_list_entries()
-                                    if app_entries and len(app_entries) > 0:
-                                        short_name = app_entries[0].display_info.display_name
-                                        if short_name and short_name.strip():
-                                            return short_name.strip()
-                                except Exception:
-                                    pass
-
-                                display_name = package.display_name
-                                if display_name and display_name.strip():
-                                    return display_name.strip()
-                                break
-                    except Exception as e:
-                        logging.debug("Fallback UWP lookup failed for %s: %s", package_full_name, e)
-
-                    # If WinRT lookup failed there is nothing else to try for a packaged app
-                    return None
+                # If WinRT lookup failed there is nothing else to try for a packaged app
+                return None
 
             # This is a Win32 app - get FileDescription from executable
             size = c_ulong(1024)
@@ -545,8 +532,7 @@ def find_focused_screen(
 
 def _open_startup_registry(access_flag: int):
     """Helper function to open the startup registry key."""
-    registry_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
-    return winreg.OpenKey(winreg.HKEY_CURRENT_USER, registry_path, 0, access_flag)
+    return winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, access_flag)
 
 
 def enable_autostart(app_name: str, executable_path: str) -> bool:

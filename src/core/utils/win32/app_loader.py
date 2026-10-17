@@ -1,4 +1,3 @@
-import ctypes
 import glob
 import os
 import re
@@ -12,13 +11,14 @@ from PyQt6.QtCore import (
 )
 
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource
+from core.utils.win32.bindings.shlwapi import SHLoadIndirectString
+from core.utils.win32.registry_keys import CLSID_KEY, CONTROL_PANEL_NAMESPACE_KEY
 
 # (name, path, description) - path is a file, "UWP::<appid>" or "CPL::<clsid>::<canonical name>".
 type AppEntry = tuple[str, str, str | None]
 
 _apps_cache: list[AppEntry] | None = None
 
-_CPL_NS_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel\NameSpace"
 _APPS_FOLDER = "shell:::{4234d49b-0245-4df3-b780-3893943456e1}"
 
 
@@ -30,13 +30,6 @@ def app_icon_source(path: str) -> IconSource:
         clsid = path[5:].split("::", 1)[0]
         return FileIcon(f"shell:::{clsid}")
     return FileIcon(path)
-
-
-def _load_indirect_string(resource: str) -> str | None:
-    """Resolve a @resource.dll,-123 string to its localized value via SHLoadIndirectString."""
-    buf = ctypes.create_unicode_buffer(1024)
-    hr = ctypes.windll.shlwapi.SHLoadIndirectString(resource, buf, len(buf), None)
-    return buf.value if hr == 0 else None
 
 
 def _reg_value(key: winreg.HKEYType, name: str, default: Any = None) -> Any:
@@ -54,13 +47,13 @@ def _resolve_reg_string(key: winreg.HKEYType, value_name: str) -> str | None:
     if not raw:
         return None
     if raw.startswith("@"):
-        return _load_indirect_string(raw)
+        return SHLoadIndirectString(raw)
     return raw
 
 
 def _enumerate_control_panel_items() -> Iterator[tuple[str, str, str, str | None]]:
     """Yield (name, clsid, canonical_name, description) for each Control Panel item."""
-    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, _CPL_NS_KEY) as ns:
+    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, CONTROL_PANEL_NAMESPACE_KEY) as ns:
         i = 0
         while True:
             try:
@@ -69,7 +62,7 @@ def _enumerate_control_panel_items() -> Iterator[tuple[str, str, str, str | None
                 break
             i += 1
             try:
-                with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, f"CLSID\\{clsid}") as ck:
+                with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, f"{CLSID_KEY}\\{clsid}") as ck:
                     canonical = _reg_value(ck, "System.ApplicationName")
                     if not canonical:
                         continue

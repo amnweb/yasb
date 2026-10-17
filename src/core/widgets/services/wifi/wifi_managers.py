@@ -27,21 +27,19 @@ from winrt.windows.devices.wifi import (
 from winrt.windows.networking.connectivity import NetworkConnectivityLevel, NetworkInformation
 from winrt.windows.security.credentials import PasswordCredential
 
-from core.utils.win32.bindings import (
+from core.utils.win32.bindings.wlanapi import (
     WlanCloseHandle,
+    WlanDeleteProfile,
     WlanEnumInterfaces,
     WlanFreeMemory,
     WlanGetAvailableNetworkList,
+    WlanGetProfile,
     WlanOpenHandle,
     WlanQueryInterface,
     WlanReasonCodeToString,
+    WlanRegisterNotification,
     WlanScan,
     WlanSetProfile,
-)
-from core.utils.win32.bindings.wlanapi import (
-    WlanDeleteProfile,
-    WlanGetProfile,
-    WlanRegisterNotification,
 )
 from core.utils.win32.constants import (
     ACCESS_DENIED,

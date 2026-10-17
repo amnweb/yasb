@@ -7,6 +7,8 @@ import win32api
 import win32con
 import win32security
 
+from core.utils.win32.registry_keys import ACCOUNT_PICTURE_USERS_KEY, IDENTITY_USER_PROPERTIES_KEY
+
 if TYPE_CHECKING:
     from _win32typing import PySID  # pyright: ignore[reportMissingModuleSource]
 
@@ -50,7 +52,7 @@ def get_user_email() -> str | None:
     try:
         with winreg.OpenKey(
             winreg.HKEY_CURRENT_USER,
-            r"Software\Microsoft\IdentityCRL\UserExtendedProperties",
+            IDENTITY_USER_PROPERTIES_KEY,
         ) as key:
             if winreg.QueryInfoKey(key)[0] > 0:
                 return winreg.EnumKey(key, 0)
@@ -73,7 +75,7 @@ def get_user_avatar_path() -> str | None:
         sid = win32security.ConvertSidToStringSid(user[0])
         with winreg.OpenKey(
             winreg.HKEY_LOCAL_MACHINE,
-            f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AccountPicture\\Users\\{sid}",
+            f"{ACCOUNT_PICTURE_USERS_KEY}\\{sid}",
         ) as key:
             best_path, best_res = None, 0
             for i in range(winreg.QueryInfoKey(key)[1]):

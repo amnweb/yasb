@@ -4,26 +4,27 @@ import sys
 
 import PyQt6.sip as sip
 
-from core.utils.win32.bindings import (
-    DwmExtendFrameIntoClientArea,
-    DwmSetWindowAttribute,
-    SetWindowCompositionAttribute,
-)
+from core.utils.win32.bindings.dwmapi import DwmExtendFrameIntoClientArea, DwmSetWindowAttribute
+from core.utils.win32.bindings.kernel32 import GetLastError
+from core.utils.win32.bindings.user32 import SetWindowCompositionAttribute
 from core.utils.win32.constants import (
-    ACCENT_ENABLE_ACRYLICBLURBEHIND,
-    ACCENT_ENABLE_BLURBEHIND,
+    DWMSBT_MAINWINDOW,
     DWMWA_BORDER_COLOR,
     DWMWA_COLOR_DEFAULT,
     DWMWA_COLOR_NONE,
-    DWMWA_MICA_EFFECT,
     DWMWA_SYSTEMBACKDROP_TYPE,
     DWMWA_USE_IMMERSIVE_DARK_MODE,
     DWMWA_WINDOW_CORNER_PREFERENCE,
     DWMWCP_ROUND,
     DWMWCP_ROUNDSMALL,
-    WCA_ACCENT_POLICY,
 )
 from core.utils.win32.structs import ACCENTPOLICY, MARGINS, WINDOWCOMPOSITIONATTRIBDATA
+from core.utils.win32.undocumented import (
+    ACCENT_ENABLE_ACRYLICBLURBEHIND,
+    ACCENT_ENABLE_BLURBEHIND,
+    DWMWA_MICA_EFFECT,
+    WCA_ACCENT_POLICY,
+)
 
 
 def HEXtoRGBAint(HEX: str) -> int:
@@ -48,14 +49,14 @@ def set_accent_policy(hwnd: int, accent_state: int, gradient_color: int = 0, acc
 
     result = SetWindowCompositionAttribute(hwnd, ctypes.byref(data))
     if result == 0:
-        raise ctypes.WinError()
+        raise ctypes.WinError(GetLastError())
 
 
 def set_dark_mode(hwnd: int) -> None:
     value = ctypes.c_int(1)
     result = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(value), ctypes.sizeof(value))
     if result != 0:
-        raise ctypes.WinError()
+        raise ctypes.WinError(result)
 
 
 def set_window_corner_preference(hwnd: int, preference: int, border_color: str) -> None:
@@ -64,7 +65,7 @@ def set_window_corner_preference(hwnd: int, preference: int, border_color: str) 
         hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ctypes.byref(preference_value), ctypes.sizeof(preference_value)
     )
     if result != 0:
-        raise ctypes.WinError()
+        raise ctypes.WinError(result)
 
     if border_color == "None":
         border_color_value = ctypes.c_int(DWMWA_COLOR_NONE)
@@ -77,7 +78,7 @@ def set_window_corner_preference(hwnd: int, preference: int, border_color: str) 
         hwnd, DWMWA_BORDER_COLOR, ctypes.byref(border_color_value), ctypes.sizeof(border_color_value)
     )
     if result != 0:
-        raise ctypes.WinError()
+        raise ctypes.WinError(result)
 
 
 def enable_blur(
@@ -115,7 +116,7 @@ def enable_mica(hwnd: int) -> None:
         margins = MARGINS(-1, -1, -1, -1)
         DwmExtendFrameIntoClientArea(hwnd, margins)
         if build >= 22621:
-            value = ctypes.c_int(2)  # DWMSBT_MAINWINDOW
+            value = ctypes.c_int(DWMSBT_MAINWINDOW)
             DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ctypes.byref(value), ctypes.sizeof(value))
         else:
             value = ctypes.c_int(1)

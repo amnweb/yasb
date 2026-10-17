@@ -1,65 +1,40 @@
 import ctypes
-import ctypes.wintypes as wt
 import logging
 import struct
-from ctypes import POINTER, WINFUNCTYPE, byref, c_size_t, c_void_p
+from ctypes import byref, c_size_t
 from typing import cast
 
 import win32api
 import win32con
 import win32gui
+from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
 from PIL import Image
 
 from core.utils.icons.convert import hbitmap_to_image, hicon_to_image
-from core.utils.win32.aumid import GUID, ensure_com_initialized
-from core.utils.win32.bindings import (
+from core.utils.win32.bindings.kernel32 import (
     MAKEINTRESOURCE,
-    DestroyIcon,
     EnumResourceNames,
     FreeLibrary,
-    LoadImage,
     LoadLibraryEx,
     LoadResourceData,
-    SendMessageTimeoutW,
-    shell32,
 )
+from core.utils.win32.bindings.ole32 import CoInitialize
+from core.utils.win32.bindings.shell32 import SHCreateItemFromParsingName, shell32
+from core.utils.win32.bindings.user32 import DestroyIcon, LoadImage, SendMessageTimeoutW
 from core.utils.win32.constants import (
     LOAD_LIBRARY_AS_DATAFILE,
     LOAD_LIBRARY_AS_IMAGE_RESOURCE,
     RT_GROUP_ICON,
     SHGSI_ICON,
     SHGSI_LARGEICON,
+    SIIGBF_BIGGERSIZEOK,
+    SIIGBF_ICONONLY,
     SMTO_ABORTIFHUNG,
     SMTO_BLOCK,
 )
 from core.utils.win32.structs import SHSTOCKICONINFO, SIZE
 
-IID_IShellItemImageFactory = GUID("BCC18B79-BA16-442F-80C4-8A59C30C463B")
-
-# https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ishellitemimagefactory-getimage
-SIIGBF_BIGGERSIZEOK = 0x01
-SIIGBF_ICONONLY = 0x04
-
 WM_GETICON_TIMEOUT_MS = 200
-
-
-class IShellItemImageFactoryVtbl(ctypes.Structure):
-    _fields_ = [
-        ("QueryInterface", WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(GUID), POINTER(c_void_p))),
-        ("AddRef", WINFUNCTYPE(ctypes.c_ulong, c_void_p)),
-        ("Release", WINFUNCTYPE(ctypes.c_ulong, c_void_p)),
-        ("GetImage", WINFUNCTYPE(ctypes.c_long, c_void_p, SIZE, ctypes.c_int, POINTER(wt.HBITMAP))),
-    ]
-
-
-class IShellItemImageFactory(ctypes.Structure):
-    _fields_ = [("lpVtbl", POINTER(IShellItemImageFactoryVtbl))]
-
-
-_shell32 = ctypes.WinDLL("shell32", use_last_error=True)
-SHCreateItemFromParsingName = _shell32.SHCreateItemFromParsingName
-SHCreateItemFromParsingName.argtypes = [wt.LPCWSTR, c_void_p, POINTER(GUID), POINTER(c_void_p)]
-SHCreateItemFromParsingName.restype = ctypes.c_long
 
 
 def get_stock_icon(icon_id: int) -> Image.Image | None:
@@ -154,26 +129,15 @@ def get_shell_icon(parsing_name: str, size: int) -> Image.Image | None:
 
     Above 48 px, exe/ico icons without a 256 px picture come back small inside a frame.
     """
-    ensure_com_initialized()
-    ppv = c_void_p()
-    hr = SHCreateItemFromParsingName(parsing_name, None, byref(IID_IShellItemImageFactory), byref(ppv))
-    if hr != 0 or not ppv.value:
+    CoInitialize()
+    factory = SHCreateItemFromParsingName(parsing_name)
+    if factory is None:
         return None
-
-    factory = ctypes.cast(ppv, POINTER(IShellItemImageFactory))
-    hbmp = wt.HBITMAP()
     try:
-        sz = SIZE(size, size)
-        flags = SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK
-        hr = factory.contents.lpVtbl.contents.GetImage(factory, sz, flags, byref(hbmp))
-        if hr != 0 or not hbmp.value:
-            return None
-        return hbitmap_to_image(hbmp.value)
-    finally:
-        try:
-            factory.contents.lpVtbl.contents.Release(factory)
-        except Exception:
-            pass
+        hbmp = factory.GetImage(SIZE(size, size), SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK)
+    except COMError:
+        return None
+    return hbitmap_to_image(hbmp) if hbmp else None
 
 
 def get_own_icon(hwnd: int) -> tuple[Image.Image | None, bool]:

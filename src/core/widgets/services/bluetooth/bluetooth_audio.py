@@ -3,28 +3,31 @@
 import ctypes
 import threading
 import time
-from ctypes import HRESULT, POINTER, Structure, byref, c_ulong, c_void_p, c_wchar_p
-from typing import TYPE_CHECKING, Any
+from ctypes import POINTER, byref
 
 from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
     CLSCTX_ALL,
-    COMMETHOD,  # pyright: ignore[reportUnknownVariableType]
     GUID,
     CoCreateInstance,
-    IUnknown,
 )
 from pycaw.api.mmdeviceapi import PROPERTYKEY, IMMDevice, IMMDeviceEnumerator
 from pycaw.constants import AudioDeviceState, CLSID_MMDeviceEnumerator
 from pycaw.pycaw import AudioUtilities
 
-IID_IDeviceTopology = GUID("{2A07407E-6497-4A18-9787-32F79BD0D98F}")
-IID_IConnector = GUID("{9C2C4058-23F5-41DE-877A-DF3AF236A09E}")
-IID_IKsControl = GUID("{28F54685-06FD-11D2-B27A-00A0C9223196}")
-
-KSPROPSETID_BtAudio = GUID("{7FA06C40-B8F6-4C7E-8556-E8C33A12E54D}")
-KSPROPERTY_ONESHOT_RECONNECT = 0
-KSPROPERTY_ONESHOT_DISCONNECT = 1
-KSPROPERTY_TYPE_GET = 0x00000001
+from core.utils.win32.bindings.audioclient import (
+    IConnector,
+    IDeviceTopology,
+    IID_IDeviceTopology,
+    IID_IKsControl,
+    IKsControl,
+)
+from core.utils.win32.constants import (
+    KSPROPERTY_ONESHOT_DISCONNECT,
+    KSPROPERTY_ONESHOT_RECONNECT,
+    KSPROPERTY_TYPE_GET,
+    KSPROPSETID_BtAudio,
+)
+from core.utils.win32.structs import KSPROPERTY
 
 # PKEY_Device_ContainerId (group render/capture endpoints of one physical device)
 _PKEY_CONTAINER = PROPERTYKEY()
@@ -33,71 +36,6 @@ _PKEY_CONTAINER.pid = 2
 
 _SETTLE_TIMEOUT_S = 10.0
 _SETTLE_POLL_S = 0.25
-
-
-class KSPROPERTY(Structure):
-    _fields_ = [("Set", GUID), ("Id", c_ulong), ("Flags", c_ulong)]
-
-
-class IDeviceTopology(IUnknown):
-    _iid_ = IID_IDeviceTopology
-    _methods_ = [
-        COMMETHOD([], HRESULT, "GetConnectorCount", (["out"], POINTER(c_ulong))),
-        COMMETHOD(
-            [],
-            HRESULT,
-            "GetConnector",
-            (["in"], c_ulong),
-            (["out"], POINTER(POINTER(IUnknown))),
-        ),
-    ]
-    if TYPE_CHECKING:
-
-        def GetConnectorCount(self) -> int: ...
-        def GetConnector(self, nIndex: int) -> IUnknown: ...
-
-
-class IConnector(IUnknown):
-    _iid_ = IID_IConnector
-    _methods_ = [
-        COMMETHOD([], HRESULT, "GetType", (["out"], POINTER(c_ulong))),
-        COMMETHOD([], HRESULT, "GetDataFlow", (["out"], POINTER(c_ulong))),
-        COMMETHOD([], HRESULT, "ConnectTo", (["in"], POINTER(IUnknown))),
-        COMMETHOD([], HRESULT, "Disconnect"),
-        COMMETHOD([], HRESULT, "IsConnected", (["out"], POINTER(c_ulong))),
-        COMMETHOD([], HRESULT, "GetConnectedTo", (["out"], POINTER(POINTER(IUnknown)))),
-        COMMETHOD([], HRESULT, "GetConnectorIdConnectedTo", (["out"], POINTER(c_wchar_p))),
-        COMMETHOD([], HRESULT, "GetDeviceIdConnectedTo", (["out"], POINTER(c_wchar_p))),
-    ]
-    if TYPE_CHECKING:
-
-        def GetType(self) -> int: ...
-        def GetDataFlow(self) -> int: ...
-        def ConnectTo(self, pConnectTo: IUnknown) -> None: ...
-        def Disconnect(self) -> None: ...
-        def IsConnected(self) -> int: ...
-        def GetConnectedTo(self) -> IUnknown: ...
-        def GetConnectorIdConnectedTo(self) -> str: ...
-        def GetDeviceIdConnectedTo(self) -> str: ...
-
-
-class IKsControl(IUnknown):
-    _iid_ = IID_IKsControl
-    _methods_ = [
-        COMMETHOD(
-            [],
-            HRESULT,
-            "KsProperty",
-            (["in"], POINTER(KSPROPERTY), "Property"),
-            (["in"], c_ulong, "PropertyLength"),
-            (["in"], c_void_p, "PropertyData"),
-            (["in"], c_ulong, "DataLength"),
-            (["out"], POINTER(c_ulong), "BytesReturned"),
-        ),
-    ]
-    if TYPE_CHECKING:
-
-        def KsProperty(self, Property: Any, PropertyLength: int, PropertyData: Any, DataLength: int) -> int: ...
 
 
 def _mac_hex(address: str | int) -> str:

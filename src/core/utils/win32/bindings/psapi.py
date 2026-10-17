@@ -1,12 +1,12 @@
 """Wrappers for psapi (Process Status API) win32 API functions"""
 
-from ctypes import POINTER, Array, c_void_p, c_wchar, c_wchar_p, windll
+from ctypes import POINTER, Array, WinDLL, c_void_p, c_wchar, c_wchar_p
 from ctypes.wintypes import BOOL, DWORD, HANDLE, HMODULE
 
 from core.utils.win32.structs import PROCESS_MEMORY_COUNTERS
 from core.utils.win32.typecheck import CArgObject
 
-psapi = windll.psapi
+psapi = WinDLL("psapi", use_last_error=True)
 
 # Function signatures
 psapi.GetPerformanceInfo.argtypes = [c_void_p, DWORD]

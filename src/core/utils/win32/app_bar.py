@@ -1,14 +1,12 @@
-import ctypes
 import logging
-from ctypes import POINTER, Structure, c_ulong, sizeof, windll, wintypes
+from ctypes import sizeof
 
 import win32con
 from PyQt6.QtGui import QScreen
 
+from core.utils.win32.bindings.shell32 import SHAppBarMessage
 from core.utils.win32.bindings.user32 import GetWindowLongPtr, SetWindowLongPtr
-
-shell32 = windll.shell32
-user32 = windll.user32
+from core.utils.win32.structs import APPBARDATA
 
 # Custom callback message for AppBar notifications (WM_USER + 100)
 APPBAR_CALLBACK_MESSAGE = 0x0400 + 100  # WM_USER = 0x0400
@@ -65,30 +63,11 @@ class AppBarNotify:
     WindowArrange = 3  # ABN_WINDOWARRANGE
 
 
-class AppBarData(Structure):
-    """
-    AppBarData struct
-    Documentation: https://docs.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-appbardata#syntax
-    """
-
-    _fields_ = [
-        ("cbSize", wintypes.DWORD),
-        ("hWnd", wintypes.HWND),
-        ("uCallbackMessage", ctypes.c_ulong),
-        ("uEdge", c_ulong),
-        ("rc", wintypes.RECT),
-        ("lParam", wintypes.LPARAM),
-    ]
-
-
-P_APPBAR_DATA = POINTER(AppBarData)
-
-
 class Win32AppBar:
     def __init__(
         self,
     ):
-        self.app_bar_data: AppBarData | None = None
+        self.app_bar_data: APPBARDATA | None = None
         self.callback_message = APPBAR_CALLBACK_MESSAGE
 
     def create_appbar(
@@ -102,8 +81,8 @@ class Win32AppBar:
         reserve_space: bool = True,
         always_on_top: bool = False,
     ):
-        self.app_bar_data = AppBarData()
-        self.app_bar_data.cbSize = wintypes.DWORD(sizeof(self.app_bar_data))
+        self.app_bar_data = APPBARDATA()
+        self.app_bar_data.cbSize = sizeof(self.app_bar_data)
         self.app_bar_data.uEdge = edge
         self.app_bar_data.hWnd = hwnd
         self.register_new()
@@ -150,7 +129,7 @@ class Win32AppBar:
     def _send(self, message: int) -> None:
         if self.app_bar_data is None:
             return
-        shell32.SHAppBarMessage(message, P_APPBAR_DATA(self.app_bar_data))
+        SHAppBarMessage(message, self.app_bar_data)
 
     def register_new(self):
         if self.app_bar_data is not None:

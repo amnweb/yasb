@@ -53,82 +53,39 @@ from win32con import (
     WS_POPUP,
 )
 
+from core.utils.win32.bindings.user32 import (
+    MONITORENUMPROC,
+    EnumChildWindows,
+    EnumWindows,
+    FindWindow,
+    FindWindowEx,
+    GetClassName,
+    GetWindowLongPtr,
+    GetWindowRect,
+    SendMessageTimeout,
+    SetParent,
+    SetWindowLongPtr,
+    SetWindowPos,
+    ShowWindow,
+    user32,
+)
+from core.utils.win32.constants import HWND_TOP, SW_SHOW
+from core.utils.win32.registry_keys import COLORS_KEY, DESKTOP_KEY
+from core.utils.win32.structs import WNDENUMPROC
 from core.utils.win32.typecheck import CPointer
+from core.utils.win32.undocumented import WM_SPAWN_WORKER
 
 logger = logging.getLogger("wallpaper_engine")
-user32 = ctypes.WinDLL("user32", use_last_error=True)
-
-HWND = wintypes.HWND
-ULONG_PTR = ctypes.c_ulonglong
-LONG_PTR = ctypes.c_ssize_t
-
-WM_SPAWN_WORKER = 0x052C
 
 # (x, y, width, height, device pixel ratio) of one monitor, in logical pixels.
 type ScreenArea = tuple[int, int, int, int, float]
-HWND_TOP = HWND(0)
-
-EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, HWND, wintypes.LPARAM)
-EnumChildProc = ctypes.WINFUNCTYPE(wintypes.BOOL, HWND, wintypes.LPARAM)
-
-SetWindowLongPtr = user32.SetWindowLongPtrW
-GetWindowLongPtr = user32.GetWindowLongPtrW
-SetWindowLongPtr.restype = LONG_PTR
-SetWindowLongPtr.argtypes = [HWND, ctypes.c_int, LONG_PTR]
-GetWindowLongPtr.restype = LONG_PTR
-GetWindowLongPtr.argtypes = [HWND, ctypes.c_int]
-
-user32.FindWindowW.restype = HWND
-user32.FindWindowW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
-
-user32.FindWindowExW.restype = HWND
-user32.FindWindowExW.argtypes = [HWND, HWND, wintypes.LPCWSTR, wintypes.LPCWSTR]
-
-user32.SetWindowPos.restype = wintypes.BOOL
-user32.SetWindowPos.argtypes = [HWND, HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_uint]
-
-user32.EnumWindows.restype = wintypes.BOOL
-user32.EnumWindows.argtypes = [EnumWindowsProc, wintypes.LPARAM]
-
-user32.EnumChildWindows.restype = wintypes.BOOL
-user32.EnumChildWindows.argtypes = [HWND, EnumChildProc, wintypes.LPARAM]
-
-user32.SetParent.restype = HWND
-user32.SetParent.argtypes = [HWND, HWND]
-
-user32.GetClassNameW.restype = ctypes.c_int
-user32.GetClassNameW.argtypes = [HWND, wintypes.LPWSTR, ctypes.c_int]
-
-user32.SendMessageTimeoutW.restype = wintypes.LPARAM
-user32.SendMessageTimeoutW.argtypes = [
-    HWND,
-    wintypes.UINT,
-    wintypes.WPARAM,
-    wintypes.LPARAM,
-    wintypes.UINT,
-    wintypes.UINT,
-    ctypes.POINTER(ULONG_PTR),
-]
-
-user32.ShowWindow.restype = wintypes.BOOL
-user32.ShowWindow.argtypes = [HWND, ctypes.c_int]
-
-user32.GetWindowRect.restype = wintypes.BOOL
-user32.GetWindowRect.argtypes = [HWND, ctypes.POINTER(wintypes.RECT)]
-
-MonitorEnumProc = ctypes.WINFUNCTYPE(
-    wintypes.BOOL, wintypes.HANDLE, wintypes.HANDLE, ctypes.POINTER(wintypes.RECT), wintypes.LPARAM
-)
-
-user32.EnumDisplayMonitors.restype = wintypes.BOOL
-user32.EnumDisplayMonitors.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.RECT), MonitorEnumProc, wintypes.LPARAM]
 
 
 def _enum_physical_monitors() -> list[tuple[int, int, int, int]]:
     """Return physical-pixel rects (left, top, right, bottom) for every monitor."""
     rects: list[tuple[int, int, int, int]] = []
 
-    @MonitorEnumProc
+    @MONITORENUMPROC
     def _cb(hmon: int, hdc: int, lprect: CPointer[wintypes.RECT], _: int) -> bool:
         r = lprect.contents
         rects.append((r.left, r.top, r.right, r.bottom))
@@ -147,7 +104,7 @@ def _transcoded_wallpaper_path() -> str:
 def _read_fit_mode() -> str:
     """Read wallpaper fit mode from HKCU\\Control Panel\\Desktop (registry)."""
     try:
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop")
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, DESKTOP_KEY)
         try:
             tile = winreg.QueryValueEx(key, "TileWallpaper")[0]
             style = winreg.QueryValueEx(key, "WallpaperStyle")[0]
@@ -174,7 +131,7 @@ def _read_fit_mode() -> str:
 def _read_background_color() -> QColor:
     """Read the Windows desktop background color from the registry."""
     try:
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Colors")
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, COLORS_KEY)
         try:
             bg_str = winreg.QueryValueEx(key, "Background")[0]
         finally:
@@ -197,7 +154,7 @@ def _panorama_threshold(landscape: bool) -> float:
     default = 2.22 if landscape else 1.0
     name = "PanoramaThreshold" if landscape else "PanoramaPortraitThreshold"
     try:
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop")
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, DESKTOP_KEY)
         try:
             value = int(winreg.QueryValueEx(key, name)[0])
         finally:
@@ -268,7 +225,7 @@ def _transcode_limits() -> tuple[int, int] | None:
     what returning None means here.
     """
     try:
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop")
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, DESKTOP_KEY)
         try:
             max_virtual_desktop = int(winreg.QueryValueEx(key, "MaxVirtualDesktopDimension")[0])
             max_monitor = int(winreg.QueryValueEx(key, "MaxMonitorDimension")[0])
@@ -338,47 +295,45 @@ def _trunc_div(a: int, b: int) -> int:
 
 def _locate_workerw() -> int:
     """Find the WorkerW window that sits behind desktop icons."""
-    progman = user32.FindWindowW("Progman", None)
+    progman = FindWindow("Progman", None)
     if not progman:
         logger.warning("Could not locate Progman. Wallpaper animation skipped.")
         return 0
-    user32.SendMessageTimeoutW(progman, WM_SPAWN_WORKER, 0, 0, 0, 1000, ctypes.byref(ULONG_PTR()))
+    SendMessageTimeout(progman, WM_SPAWN_WORKER, 0, 0, 0, 1000, None)
     worker = 0
 
-    @EnumChildProc
+    @WNDENUMPROC
     def _child_proc(hwnd: int, _: int) -> bool:
         nonlocal worker
         if worker:
             return False
-        buf = ctypes.create_unicode_buffer(256)
-        user32.GetClassNameW(hwnd, buf, len(buf))
-        if buf.value == "WorkerW":
+        if GetClassName(hwnd) == "WorkerW":
             worker = hwnd
             return False
         return True
 
-    user32.EnumChildWindows(HWND(progman), _child_proc, 0)
+    EnumChildWindows(progman, _child_proc, 0)
 
     if not worker:
 
-        @EnumWindowsProc
+        @WNDENUMPROC
         def _enum_proc(hwnd: int, _: int) -> bool:
             nonlocal worker
             if worker:
                 return False
-            if user32.FindWindowExW(hwnd, None, "SHELLDLL_DefView", None):
-                candidate = user32.FindWindowExW(None, hwnd, "WorkerW", None)
+            if FindWindowEx(hwnd, 0, "SHELLDLL_DefView", None):
+                candidate = FindWindowEx(0, hwnd, "WorkerW", None)
                 if candidate:
                     worker = candidate
                     return False
             return True
 
-        user32.EnumWindows(_enum_proc, 0)
+        EnumWindows(_enum_proc, 0)
 
     if not worker:
         logger.warning("Could not locate WorkerW. Wallpaper animation skipped. (Windows OS animation must be enabled.)")
         return 0
-    user32.ShowWindow(worker, 5)
+    ShowWindow(worker, SW_SHOW)
     return worker
 
 
@@ -387,19 +342,19 @@ def _attach_to_workerw(widget: WallpaperEngine) -> bool:
     worker = _locate_workerw()
     if not worker:
         return False
-    hwnd = HWND(int(widget.winId()))
+    hwnd = int(widget.winId())
 
     exstyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE)
 
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, LONG_PTR(exstyle & ~WS_EX_LAYERED))
-    user32.SetParent(hwnd, worker)
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, LONG_PTR(exstyle))
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, exstyle & ~WS_EX_LAYERED)
+    SetParent(hwnd, worker)
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, exstyle)
 
     style = GetWindowLongPtr(hwnd, GWL_STYLE)
-    SetWindowLongPtr(hwnd, GWL_STYLE, LONG_PTR((style | WS_CHILD) & ~WS_POPUP))
+    SetWindowLongPtr(hwnd, GWL_STYLE, (style | WS_CHILD) & ~WS_POPUP)
 
     wr = wintypes.RECT()
-    user32.GetWindowRect(worker, ctypes.byref(wr))
+    GetWindowRect(worker, ctypes.byref(wr))
     ww, wh = wr.right - wr.left, wr.bottom - wr.top
     dpr = widget.devicePixelRatioF() or 1.0
 
@@ -416,7 +371,7 @@ def _attach_to_workerw(widget: WallpaperEngine) -> bool:
         )
     widget.set_screen_areas(areas)
 
-    user32.SetWindowPos(hwnd, HWND_TOP, 0, 0, ww, wh, SWP_NOACTIVATE | SWP_FRAMECHANGED)
+    SetWindowPos(hwnd, HWND_TOP, 0, 0, ww, wh, SWP_NOACTIVATE | SWP_FRAMECHANGED)
     return True
 
 

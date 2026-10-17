@@ -17,7 +17,7 @@ from core.ui.components.button import Button
 from core.ui.components.text_block import TextBlock
 from core.ui.theme import get_tokens, theme_key
 from core.utils.win32.backdrop import enable_dwm_frame
-from core.utils.win32.bindings import user32
+from core.utils.win32.bindings.user32 import user32
 
 _alert_dialogs: list[AlertDialog] = []
 

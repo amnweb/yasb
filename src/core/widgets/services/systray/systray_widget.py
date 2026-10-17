@@ -40,11 +40,11 @@ from win32con import (
     WM_RBUTTONUP,
 )
 
-import core.widgets.services.systray.utils as utils
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
-from core.utils.win32.bindings import (
+from core.utils.win32.bindings.user32 import (
     AllowSetForegroundWindow,
+    GetCursorPos,
     GetWindowThreadProcessId,
     IsWindow,
     SendNotifyMessage,
@@ -209,7 +209,7 @@ class IconWidget(QPushButton):
         if self.data is None or self.data.uCallbackMessage == 0:
             return
         if self.data.uVersion > 3:
-            cursor_pos = utils.cursor_position()
+            cursor_pos = GetCursorPos()
             wparam = pack_i32(cursor_pos[0], cursor_pos[1])
             lparam = pack_i32(message, self.data.uID)
         else:

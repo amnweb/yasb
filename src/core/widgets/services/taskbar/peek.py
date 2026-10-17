@@ -1,28 +1,16 @@
 import ctypes
 import logging
-from ctypes import POINTER, windll
-from ctypes.wintypes import BOOL, HWND, UINT
 
-from core.utils.win32.bindings.dwmapi import DwmSetWindowAttribute
-from core.utils.win32.constants import DWMWA_EXCLUDED_FROM_PEEK, LPT_SUPERBAR
-from core.utils.win32.structs import RECT
+from core.utils.win32.bindings.dwmapi import DwmpActivateLivePreview, DwmSetWindowAttribute, live_preview_exported
+from core.utils.win32.constants import DWMWA_EXCLUDED_FROM_PEEK
+from core.utils.win32.undocumented import LPT_SUPERBAR
 
 logger = logging.getLogger("taskbar_peek")
-
-# DwmpActivateLivePreview is exported by ordinal only and has never been documented, so it is
-# resolved here rather than in the dwmapi bindings: a build that stops exporting it leaves peek
-# unavailable instead of breaking the import for everything else that uses dwmapi
-try:
-    _activate_live_preview = windll.dwmapi[113]  # pyright: ignore[reportArgumentType]
-    _activate_live_preview.argtypes = [BOOL, HWND, HWND, UINT, POINTER(RECT)]
-    _activate_live_preview.restype = ctypes.c_long
-except Exception:
-    _activate_live_preview = None
 
 
 def is_live_preview_available() -> bool:
     """Whether this Windows build still exports the peek entry point."""
-    return _activate_live_preview is not None
+    return live_preview_exported()
 
 
 def activate_live_preview(activate: bool, hwnd_peek: int = 0, hwnd_caller: int = 0) -> bool:
@@ -30,10 +18,10 @@ def activate_live_preview(activate: bool, hwnd_peek: int = 0, hwnd_caller: int =
 
     Returns whether DWM accepted the call, rather than merely whether it was made.
     """
-    if _activate_live_preview is None:
+    if not live_preview_exported():
         return False
     try:
-        hresult = _activate_live_preview(bool(activate), hwnd_peek, hwnd_caller, LPT_SUPERBAR, None)
+        hresult = DwmpActivateLivePreview(bool(activate), hwnd_peek, hwnd_caller, LPT_SUPERBAR)
     except Exception:
         logger.exception("DwmpActivateLivePreview raised for activate=%s hwnd=%s", activate, hwnd_peek)
         return False

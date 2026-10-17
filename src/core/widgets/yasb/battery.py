@@ -6,10 +6,9 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QLabel
 
 from core.utils.utilities import build_progress_widget, refresh_widget_style
-from core.utils.win32.constants import POWER_TIME_UNKNOWN, POWER_TIME_UNLIMITED
 from core.validation.widgets.yasb.battery import BatteryConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.battery.battery_api import BatteryAPI, BatteryData
+from core.widgets.services.battery.battery_api import POWER_TIME_UNKNOWN, POWER_TIME_UNLIMITED, BatteryAPI, BatteryData
 
 
 class BatteryWidget(BaseWidget):

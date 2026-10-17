@@ -4,15 +4,22 @@ import logging
 import win32con
 import win32process
 
-from core.utils.win32.bindings import kernel32 as k32
-from core.utils.win32.bindings import user32 as u32
+from core.utils.win32.bindings.kernel32 import kernel32 as k32
 from core.utils.win32.bindings.user32 import GetWindowLong, IsHungAppWindow, IsWindowEnabled, PostMessage
+from core.utils.win32.bindings.user32 import user32 as u32
+from core.utils.win32.constants import (
+    GA_ROOT,
+    GA_ROOTOWNER,
+    PROCESS_TERMINATE,
+    SC_CLOSE,
+    SMTO_ABORTIFHUNG,
+    WM_CLOSE,
+    WM_SYSCOMMAND,
+)
 
 
 def resolve_base_and_focus(hwnd: int) -> tuple[int, int]:
     """Return (base_owner_root, focus_target). Focus target is the last active visible popup if any."""
-    GA_ROOT = 2
-    GA_ROOTOWNER = 3
     base = hwnd
     try:
         base = u32.GetAncestor(hwnd, GA_ROOTOWNER) or u32.GetAncestor(hwnd, GA_ROOT) or hwnd
@@ -31,8 +38,6 @@ def resolve_base_and_focus(hwnd: int) -> tuple[int, int]:
 
 def is_owner_root_active(base: int) -> bool:
     """Check if the owner-root of the current foreground window matches base."""
-    GA_ROOT = 2
-    GA_ROOTOWNER = 3
     fg = u32.GetForegroundWindow()
     if not fg:
         return False
@@ -133,8 +138,6 @@ def close_application(hwnd: int, force: bool = False):
             return
 
         # Resolve a better target: prefer GA_ROOTOWNER, then GA_ROOT
-        GA_ROOT = 2
-        GA_ROOTOWNER = 3
         try:
             root_owner = u32.GetAncestor(int(hwnd), GA_ROOTOWNER)
         except Exception:
@@ -170,7 +173,6 @@ def close_application(hwnd: int, force: bool = False):
                 logging.warning("Forced EndTask failed for HWND %s: %s", target_hwnd, et_ex)
 
             # Fallback: Direct process termination
-            PROCESS_TERMINATE = 0x0001
             try:
                 # Open process handle with terminate rights
                 process_handle = k32.OpenProcess(PROCESS_TERMINATE, False, process_id)
@@ -194,10 +196,6 @@ def close_application(hwnd: int, force: bool = False):
         else:
             # Graceful close path
             # First try: SC_CLOSE via SendMessageTimeout to avoid hangs
-            WM_SYSCOMMAND = 0x0112
-            SC_CLOSE = 0xF060
-            SMTO_ABORTIFHUNG = 0x0002
-
             lpdw_result = ctypes.c_size_t()
             sent = u32.SendMessageTimeoutW(
                 int(target_hwnd),
@@ -219,7 +217,6 @@ def close_application(hwnd: int, force: bool = False):
                 return
 
             # Fallback: WM_CLOSE via PostMessage
-            WM_CLOSE = 0x0010
             posted = PostMessage(int(target_hwnd), int(WM_CLOSE), 0, 0)
             if posted:
                 return

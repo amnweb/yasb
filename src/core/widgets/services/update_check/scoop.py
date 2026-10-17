@@ -13,9 +13,6 @@ import subprocess
 # Regex to strip ANSI escape sequences from scoop output.
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
-# Subprocess creation flag to hide the console window on Windows.
-_CREATE_NO_WINDOW = 0x08000000
-
 
 def _run_scoop(args: list[str], timeout: int = 120) -> subprocess.CompletedProcess[str]:
     """Execute a scoop command and return the result.
@@ -30,7 +27,7 @@ def _run_scoop(args: list[str], timeout: int = 120) -> subprocess.CompletedProce
         text=True,
         shell=True,
         timeout=timeout,
-        creationflags=_CREATE_NO_WINDOW,
+        creationflags=subprocess.CREATE_NO_WINDOW,
     )
 
 
@@ -180,4 +177,4 @@ def upgrade_packages(package_names: list[str]) -> None:
         command = f'start "Scoop Update" "{powershell}" -NoExit -Command "{script}"'
     else:
         command = f'start "Scoop Update" "{powershell}" -NoExit -Command "scoop update *"'
-    subprocess.Popen(command, shell=True, creationflags=_CREATE_NO_WINDOW)
+    subprocess.Popen(command, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)

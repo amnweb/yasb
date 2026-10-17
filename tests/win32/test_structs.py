@@ -50,7 +50,13 @@ def test_layout_matches_sdk(cls: type[ctypes.Structure | ctypes.Union], sdk: Pro
         if not offset_only:
             native_abi = abi.Abi.from_json(c_field["abi"])
             python_abi = abi.of(ctype, opaque=discovery.is_prefix_struct)
-            reason = abi.mismatch(python_abi, native_abi, check_sign=False)
+            reason = abi.mismatch(python_abi, native_abi, check_sign=True)
+            if f"{key}.{name}" in specs.FIELD_SIGN_EXCEPTIONS:
+                if reason is None:
+                    problems.append(f"{name}: its sign matches the SDK, delete it from specs.FIELD_SIGN_EXCEPTIONS")
+                    fields_match = False
+                if reason == abi.SIGN_MISMATCH:
+                    reason = None
             if reason:
                 problems.append(f"{name}: {abi.describe(ctype)} is {python_abi}, {member} is {native_abi}: {reason}")
                 fields_match = False
@@ -65,3 +71,13 @@ def test_layout_matches_sdk(cls: type[ctypes.Structure | ctypes.Union], sdk: Pro
 
     if problems:
         pytest.fail(f"{key} does not match {spec.c_type}:\n  " + "\n  ".join(problems), pytrace=False)
+
+
+def test_field_sign_exceptions_name_struct_fields():
+    fields = {
+        f"{discovery.type_id(cls)}.{name}"
+        for cls in discovery.ctypes_structs()
+        for name, _ in discovery.struct_fields(cls)
+    }
+    unknown = sorted(set(specs.FIELD_SIGN_EXCEPTIONS) - fields)
+    assert not unknown, f"specs.FIELD_SIGN_EXCEPTIONS lists fields that no longer exist: {', '.join(unknown)}"

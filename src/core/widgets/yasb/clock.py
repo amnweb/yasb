@@ -729,12 +729,13 @@ class ClockWidget(BaseWidget):
             return None
         import ctypes
 
+        from core.utils.win32.bindings.kernel32 import GetGeoInfo, GetUserGeoID
+        from core.utils.win32.constants import GEO_ISO2, GEOCLASS_NATION
+
         try:
-            GetUserGeoID = ctypes.windll.kernel32.GetUserGeoID
-            geo_id = GetUserGeoID(16)
+            geo_id = GetUserGeoID(GEOCLASS_NATION)
             buf = ctypes.create_unicode_buffer(3)
-            GetGeoInfoW = ctypes.windll.kernel32.GetGeoInfoW
-            result = GetGeoInfoW(geo_id, 4, buf, len(buf), 0)
+            result = GetGeoInfo(geo_id, GEO_ISO2, buf)
             country_code: str = buf.value if result else ""
             if country_code:
                 return country_code

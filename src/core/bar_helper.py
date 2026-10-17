@@ -1,5 +1,4 @@
 import ctypes
-import ctypes.wintypes
 import logging
 import os
 import winreg
@@ -39,9 +38,9 @@ from core.utils.controller import exit_application, reload_application
 from core.utils.shell_utils import shell_open
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
-from core.utils.win32.bindings import SetWindowPos
-from core.utils.win32.bindings.user32 import KillTimer, RegisterWindowMessage, SetTimer, user32
-from core.utils.win32.structs import MSG
+from core.utils.win32.bindings.user32 import KillTimer, RegisterWindowMessage, SetTimer, SetWindowPos, user32
+from core.utils.win32.registry_keys import PERSONALIZE_KEY
+from core.utils.win32.structs import MSG, WNDENUMPROC
 from core.utils.win32.utils import apply_qmenu_style
 
 if TYPE_CHECKING:
@@ -708,9 +707,7 @@ class MaximizedWindowWatcher(QObject):
                     pass
                 return True
 
-            WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.POINTER(ctypes.c_long))
-            callback = WNDENUMPROC(enum_callback)
-            user32.EnumWindows(callback, 0)
+            user32.EnumWindows(WNDENUMPROC(enum_callback), 0)
 
             if has_maximized and not self._is_autohide_active:
                 self._enable_autohide()
@@ -767,7 +764,7 @@ class OsThemeManager(QObject):
         """Detect if OS is using dark theme"""
         try:
             with winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER) as registry:
-                with winreg.OpenKey(registry, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
+                with winreg.OpenKey(registry, PERSONALIZE_KEY) as key:
                     value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
                     return value == 0
         except Exception as e:

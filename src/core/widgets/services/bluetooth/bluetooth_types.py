@@ -1,6 +1,3 @@
-import ctypes
-import uuid
-from ctypes import wintypes
 from dataclasses import dataclass, field
 from enum import IntEnum, StrEnum
 
@@ -23,74 +20,6 @@ LE_HID_JOYSTICK = int(BluetoothLEAppearanceSubcategories.joystick)
 LE_HID_GAMEPAD = int(BluetoothLEAppearanceSubcategories.gamepad)
 COD_COMPUTER_LAPTOP = int(BluetoothMinorClass.COMPUTER_LAPTOP)
 COD_COMPUTER_TABLET = int(BluetoothMinorClass.COMPUTER_TABLET)
-
-
-class GUID(ctypes.Structure):
-    _fields_ = [
-        ("Data1", wintypes.DWORD),
-        ("Data2", wintypes.WORD),
-        ("Data3", wintypes.WORD),
-        ("Data4", wintypes.BYTE * 8),
-    ]
-
-    @classmethod
-    def from_string(cls, guid_str: str) -> GUID:
-        u = uuid.UUID(guid_str)
-        g = cls()
-        g.Data1 = u.time_low
-        g.Data2 = u.time_mid
-        g.Data3 = u.time_hi_version
-        for i, b in enumerate(u.bytes[8:]):
-            g.Data4[i] = b
-        return g
-
-
-class SYSTEMTIME(ctypes.Structure):
-    _fields_ = [
-        ("wYear", wintypes.WORD),
-        ("wMonth", wintypes.WORD),
-        ("wDayOfWeek", wintypes.WORD),
-        ("wDay", wintypes.WORD),
-        ("wHour", wintypes.WORD),
-        ("wMinute", wintypes.WORD),
-        ("wSecond", wintypes.WORD),
-        ("wMilliseconds", wintypes.WORD),
-    ]
-
-
-class BLUETOOTH_DEVICE_INFO(ctypes.Structure):
-    _fields_ = [
-        ("dwSize", wintypes.DWORD),
-        ("Address", ctypes.c_ulonglong),
-        ("ulClassofDevice", wintypes.ULONG),
-        ("fConnected", wintypes.BOOL),
-        ("fRemembered", wintypes.BOOL),
-        ("fAuthenticated", wintypes.BOOL),
-        ("stLastSeen", SYSTEMTIME),
-        ("stLastUsed", SYSTEMTIME),
-        ("szName", ctypes.c_wchar * 248),
-    ]
-
-
-class BLUETOOTH_DEVICE_SEARCH_PARAMS(ctypes.Structure):
-    _fields_ = [
-        ("dwSize", wintypes.DWORD),
-        ("fReturnAuthenticated", wintypes.BOOL),
-        ("fReturnRemembered", wintypes.BOOL),
-        ("fReturnUnknown", wintypes.BOOL),
-        ("fReturnConnected", wintypes.BOOL),
-        ("fIssueInquiry", wintypes.BOOL),
-        ("cTimeoutMultiplier", ctypes.c_ubyte),
-        ("hRadio", wintypes.HANDLE),
-    ]
-
-
-class BLUETOOTH_FIND_RADIO_PARAMS(ctypes.Structure):
-    _fields_ = [("dwSize", wintypes.DWORD)]
-
-
-class DEVPROPKEY(ctypes.Structure):
-    _fields_ = [("fmtid", GUID), ("pid", wintypes.ULONG)]
 
 
 class DeviceType(StrEnum):

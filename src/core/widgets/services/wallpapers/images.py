@@ -1,4 +1,3 @@
-import ctypes
 import logging
 import math
 import os
@@ -12,11 +11,12 @@ from PyQt6.QtGui import QImageIOHandler, QImageReader, QPainter, QPixmap
 
 from core.utils.system import get_build_and_ubr
 from core.utils.win32.bindings.shell32 import CLSID_DesktopWallpaper, IDesktopWallpaper
+from core.utils.win32.bindings.shlwapi import StrCmpLogical
+from core.utils.win32.constants import EDD_GET_DEVICE_INTERFACE_NAME
 from core.widgets.services.wallpapers import thumbnails
 
 FILE_TYPES = ("png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff")
 WEBP_BUILDS = ((26220, 7653), (26100, 8037))
-EDD_GET_DEVICE_INTERFACE_NAME = 1
 
 
 def supported_types() -> tuple[str, ...]:
@@ -42,7 +42,7 @@ def collect_image_files(image_paths: str | list[str]) -> list[str]:
                 if name.lower().endswith(file_types):
                     files.append(os.path.join(root, name))
 
-    return sorted(files, key=cmp_to_key(ctypes.windll.shlwapi.StrCmpLogicalW))
+    return sorted(files, key=cmp_to_key(StrCmpLogical))
 
 
 def current_wallpapers(screens: dict[str, tuple[int, int, int, int]]) -> dict[str, str]:

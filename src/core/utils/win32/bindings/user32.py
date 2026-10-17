@@ -3,15 +3,19 @@
 from ctypes import (
     POINTER,
     WINFUNCTYPE,
+    Array,
+    WinDLL,
+    byref,
     c_int,
     c_long,
     c_size_t,
     c_ssize_t,
-    windll,
+    sizeof,
 )
 from ctypes.wintypes import (
     ATOM,
     BOOL,
+    BYTE,
     DWORD,
     HANDLE,
     HDC,
@@ -26,6 +30,7 @@ from ctypes.wintypes import (
     LPDWORD,
     LPVOID,
     MSG,
+    POINT,
     RECT,
     SHORT,
     UINT,
@@ -35,11 +40,12 @@ from ctypes.wintypes import (
 from core.utils.win32.structs import (
     GUID,
     ICONINFO,
+    INPUT,
     WNDCLASS,
 )
-from core.utils.win32.typecheck import CArgObject
+from core.utils.win32.typecheck import CArgObject, CFunctionType
 
-user32 = windll.user32
+user32 = WinDLL("user32", use_last_error=True)
 user32.GetForegroundWindow.argtypes = []
 user32.GetForegroundWindow.restype = HWND
 
@@ -52,10 +58,6 @@ user32.EnumDisplayMonitors.restype = BOOL
 user32.MonitorFromWindow.argtypes = [HWND, DWORD]
 user32.MonitorFromWindow.restype = HMONITOR
 
-# Monitor flags
-MONITOR_DEFAULTTONULL = 0
-MONITOR_DEFAULTTOPRIMARY = 1
-MONITOR_DEFAULTTONEAREST = 2
 
 user32.SetWinEventHook.argtypes = [
     DWORD,  # eventMin
@@ -150,8 +152,6 @@ user32.DeregisterShellHookWindow.restype = BOOL
 user32.SetPropW.argtypes = [HWND, LPCWSTR, HANDLE]
 user32.SetPropW.restype = BOOL
 
-user32.RemovePropW.argtypes = [HWND, LPCWSTR]
-user32.RemovePropW.restype = HANDLE
 
 user32.GetPropW.argtypes = [HWND, LPCWSTR]
 user32.GetPropW.restype = HANDLE
@@ -226,6 +226,15 @@ user32.ReleaseDC.restype = c_int
 user32.EnumWindows.argtypes = [LPVOID, LPARAM]
 user32.EnumWindows.restype = BOOL
 
+user32.EnumChildWindows.argtypes = [HWND, LPVOID, LPARAM]
+user32.EnumChildWindows.restype = BOOL
+
+user32.SetParent.argtypes = [HWND, HWND]
+user32.SetParent.restype = HWND
+
+user32.GetWindowRect.argtypes = [HWND, POINTER(RECT)]
+user32.GetWindowRect.restype = BOOL
+
 user32.GetClassNameW.argtypes = [HWND, LPCWSTR, INT]
 user32.GetClassNameW.restype = INT
 
@@ -248,6 +257,12 @@ user32.GetLastActivePopup.restype = HWND
 
 user32.IsWindowVisible.argtypes = [HWND]
 user32.IsWindowVisible.restype = BOOL
+
+user32.IsIconic.argtypes = [HWND]
+user32.IsIconic.restype = BOOL
+
+user32.GetWindowTextLengthW.argtypes = [HWND]
+user32.GetWindowTextLengthW.restype = c_int
 
 user32.GetKeyState.argtypes = [INT]
 user32.GetKeyState.restype = SHORT
@@ -301,9 +316,43 @@ user32.LoadKeyboardLayoutW.restype = HANDLE
 user32.GetKeyboardLayoutNameW.argtypes = [LPCWSTR]
 user32.GetKeyboardLayoutNameW.restype = BOOL
 
+user32.keybd_event.argtypes = [BYTE, BYTE, DWORD, c_size_t]
+user32.keybd_event.restype = None
+
+user32.SendInput.argtypes = [UINT, POINTER(INPUT), c_int]
+user32.SendInput.restype = UINT
+
+user32.GetCursorPos.argtypes = [POINTER(POINT)]
+user32.GetCursorPos.restype = BOOL
+
+user32.GetAsyncKeyState.argtypes = [c_int]
+user32.GetAsyncKeyState.restype = SHORT
+
+user32.MessageBeep.argtypes = [UINT]
+user32.MessageBeep.restype = BOOL
+
+user32.SetFocus.argtypes = [HWND]
+user32.SetFocus.restype = HWND
+
+user32.OpenClipboard.argtypes = [HWND]
+user32.OpenClipboard.restype = BOOL
+
+user32.EmptyClipboard.argtypes = []
+user32.EmptyClipboard.restype = BOOL
+
+user32.SetClipboardData.argtypes = [UINT, HANDLE]
+user32.SetClipboardData.restype = HANDLE
+
+user32.CloseClipboard.argtypes = []
+user32.CloseClipboard.restype = BOOL
+
 
 def DefWindowProc(hwnd: int, uMsg: int, wParam: int, lParam: int) -> int:
     return user32.DefWindowProcW(hwnd, uMsg, wParam, lParam)
+
+
+def PostQuitMessage(nExitCode: int) -> None:
+    user32.PostQuitMessage(nExitCode)
 
 
 def CreateWindowEx(
@@ -366,10 +415,6 @@ def DeregisterShellHookWindow(hwnd: int) -> bool:
 
 def SetProp(hwnd: int, lpString: str, hData: int | None = None) -> bool:
     return user32.SetPropW(hwnd, lpString, hData)
-
-
-def RemoveProp(hwnd: int, lpString: str) -> int | None:
-    return user32.RemovePropW(hwnd, lpString)
 
 
 def GetProp(hwnd: int, lpString: str) -> int | None:
@@ -486,7 +531,7 @@ def SetWinEventHook(
     eventMin: int,
     eventMax: int,
     hmodWinEventProc: int | None,
-    lpfnWinEventProc: LPVOID,
+    lpfnWinEventProc: CFunctionType | LPVOID,
     idProcess: int,
     idThread: int,
     dwFlags: int,
@@ -498,8 +543,20 @@ def UnhookWinEvent(hWinEventHook: int) -> bool:
     return bool(user32.UnhookWinEvent(hWinEventHook))
 
 
-def EnumWindows(lpEnumFunc: LPVOID, lParam: int) -> bool:
+def EnumWindows(lpEnumFunc: CFunctionType | LPVOID, lParam: int) -> bool:
     return bool(user32.EnumWindows(lpEnumFunc, lParam))
+
+
+def EnumChildWindows(hWndParent: int, lpEnumFunc: CFunctionType, lParam: int) -> bool:
+    return bool(user32.EnumChildWindows(hWndParent, lpEnumFunc, lParam))
+
+
+def SetParent(hWndChild: int, hWndNewParent: int) -> int | None:
+    return user32.SetParent(hWndChild, hWndNewParent)
+
+
+def GetWindowRect(hwnd: int, lpRect: CArgObject) -> bool:
+    return bool(user32.GetWindowRect(hwnd, lpRect))
 
 
 def GetClassName(hwnd: int, buf_size: int = 256) -> str:
@@ -537,6 +594,14 @@ def GetLastActivePopup(hwnd: int) -> int:
 
 def IsWindowVisible(hwnd: int) -> bool:
     return bool(user32.IsWindowVisible(hwnd))
+
+
+def IsIconic(hwnd: int) -> bool:
+    return bool(user32.IsIconic(hwnd))
+
+
+def GetWindowTextLength(hwnd: int) -> int:
+    return user32.GetWindowTextLengthW(hwnd)
 
 
 def GetWindowLong(hwnd: int, index: int) -> int:
@@ -608,3 +673,37 @@ def SendMessageTimeoutW(
 ) -> int:
     """Direct wrapper with the wide-character entrypoint name for robustness."""
     return user32.SendMessageTimeoutW(hwnd, msg, wParam, lParam, fuFlags, uTimeout, lpdwResult)
+
+
+def keybd_event(bVk: int, bScan: int, dwFlags: int, dwExtraInfo: int = 0) -> None:
+    user32.keybd_event(bVk, bScan, dwFlags, dwExtraInfo)
+
+
+def SendInput(inputs: Array[INPUT]) -> int:
+    return user32.SendInput(len(inputs), inputs, sizeof(INPUT))
+
+
+def GetCursorPos() -> tuple[int, int]:
+    point = POINT()
+    user32.GetCursorPos(byref(point))
+    return point.x, point.y
+
+
+def GetAsyncKeyState(vKey: int) -> int:
+    return user32.GetAsyncKeyState(vKey)
+
+
+def OpenClipboard(hWndNewOwner: int | None) -> bool:
+    return bool(user32.OpenClipboard(hWndNewOwner))
+
+
+def EmptyClipboard() -> bool:
+    return bool(user32.EmptyClipboard())
+
+
+def SetClipboardData(uFormat: int, hMem: int) -> int | None:
+    return user32.SetClipboardData(uFormat, hMem)
+
+
+def CloseClipboard() -> bool:
+    return bool(user32.CloseClipboard())

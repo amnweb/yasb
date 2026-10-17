@@ -7,12 +7,11 @@ import os
 import sys
 import time
 from collections.abc import Callable
-from ctypes import byref, windll
+from ctypes import byref
 from ctypes.wintypes import (
     DWORD,
     HMODULE,
     MSG,
-    POINT,
 )
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,17 +33,23 @@ from win32con import (
 )
 
 from core.utils.icons.convert import hicon_to_image
-from core.utils.win32.bindings import (
+from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
-    CreateWindowEx,
-    GetWindowThreadProcessId,
+    GetLastError,
+    GetModuleHandle,
+    GetSystemWindowsDirectoryW,
     OpenProcess,
-    PostMessage,
     QueryFullProcessImageNameW,
 )
-from core.utils.win32.bindings.kernel32 import GetLastError, GetSystemWindowsDirectoryW
 from core.utils.win32.bindings.psapi import EnumProcessModulesEx, GetModuleBaseNameW
-from core.utils.win32.bindings.user32 import FindWindowEx, GetShellWindow
+from core.utils.win32.bindings.user32 import (
+    CreateWindowEx,
+    FindWindowEx,
+    GetShellWindow,
+    GetWindowThreadProcessId,
+    PostMessage,
+    user32,
+)
 from core.utils.win32.constants import (
     LIST_MODULES_ALL,
     NIF_GUID,
@@ -60,10 +65,6 @@ from core.utils.win32.utils import get_windows_host_arch
 from settings import IS_FROZEN
 
 logger = logging.getLogger("systray_widget")
-
-user32 = windll.user32
-gdi32 = windll.gdi32
-kernel32 = windll.kernel32
 
 
 @dataclass
@@ -110,7 +111,7 @@ class NativeWindowEx:
 
         self.wc = WNDCLASS()
         self.wc.lpfnWndProc = WNDPROC(window_proc)
-        self.wc.hInstance = kernel32.GetModuleHandleW(None)
+        self.wc.hInstance = GetModuleHandle(None)
         self.wc.lpszClassName = class_name
 
         if not user32.RegisterClassW(byref(self.wc)):
@@ -151,12 +152,6 @@ class NativeWindowEx:
             logger.debug("Destroying window %s", self.hwnd)
             PostMessage(self.hwnd, WM_CLOSE, 0, 0)
             self.hwnd = 0
-
-
-def cursor_position():
-    point = POINT()
-    user32.GetCursorPos(byref(point))
-    return point.x, point.y
 
 
 def pack_i32(low: int, high: int) -> int:

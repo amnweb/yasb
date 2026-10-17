@@ -17,7 +17,7 @@ from core.utils.utilities import (
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.win32.bindings import user32
+from core.utils.win32.bindings.user32 import user32
 from core.utils.win32.utils import get_app_name_from_pid
 from core.validation.widgets.yasb.volume import VolumeConfig
 from core.widgets.base import BaseWidget

@@ -22,8 +22,10 @@ from typing import Any
 import comtypes  # pyright: ignore[reportMissingTypeStubs]
 from comtypes import GUID, COMError, IUnknown  # pyright: ignore[reportMissingTypeStubs]
 
+from core.utils.win32.bindings.combase import HSTRING
+from core.utils.win32.bindings.shell32 import IServiceProvider
 from core.utils.win32.bindings.user32 import AllowSetForegroundWindow
-from core.utils.win32.com_base import HSTRING, IServiceProvider
+from core.utils.win32.constants import ASFW_ANY
 from core.widgets.services.windows_desktops.interfaces import (
     TIER_21313,
     CLSID_ImmersiveShell,
@@ -40,11 +42,6 @@ from core.widgets.services.windows_desktops.interfaces import (
 )
 
 logger = logging.getLogger("windows_desktop_service")
-
-# Passing this to AllowSetForegroundWindow lets any process take the
-# foreground, which stops focus lingering on the old desktop after a switch.
-# See https://github.com/Ciantic/VirtualDesktopAccessor/issues/4
-ASFW_ANY = 0xFFFFFFFF
 
 
 class VirtualDesktopError(RuntimeError):
@@ -205,6 +202,8 @@ class VirtualDesktopApi:
     def switch_to(self, guid: str) -> None:
         """Switch to the desktop with this GUID."""
         com = self.ensure()
+        # Letting any process take the foreground stops focus lingering on the old desktop.
+        # See https://github.com/Ciantic/VirtualDesktopAccessor/issues/4
         AllowSetForegroundWindow(ASFW_ANY)
         com.manager.switch_desktop(self.find(guid))
 

@@ -4,23 +4,20 @@ import winreg
 from typing import Literal
 
 from core.utils.win32.bindings.user32 import SendNotifyMessage
+from core.utils.win32.constants import HWND_BROADCAST, WM_SETTINGCHANGE
+from core.utils.win32.registry_keys import PERSONALIZE_KEY
 
 ThemeMode = Literal["light", "dark"]
-
-_WM_SETTINGCHANGE = 0x001A
-_HWND_BROADCAST = 0xFFFF
 
 
 class ThemeService:
     """Helpers for reading and switching the Windows system theme."""
 
-    _PERSONALIZE_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-
     @classmethod
     def get_theme_mode(cls) -> ThemeMode:
         """Return the current Windows app theme mode."""
         try:
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, cls._PERSONALIZE_KEY) as key:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, PERSONALIZE_KEY) as key:
                 value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
                 return "light" if int(value) else "dark"
         except Exception as exc:
@@ -32,7 +29,7 @@ class ThemeService:
         """Broadcast WM_SETTINGCHANGE asynchronously to all top-level windows."""
         try:
             area = ctypes.create_unicode_buffer("ImmersiveColorSet")
-            result = SendNotifyMessage(_HWND_BROADCAST, _WM_SETTINGCHANGE, 0, ctypes.addressof(area))
+            result = SendNotifyMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, ctypes.addressof(area))
             return bool(result)
         except Exception as exc:
             logging.error("Failed to broadcast setting change: %s", exc)
@@ -43,7 +40,7 @@ class ThemeService:
         """Set Windows system theme mode."""
         value = 1 if mode == "light" else 0
         try:
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, cls._PERSONALIZE_KEY, access=winreg.KEY_SET_VALUE) as key:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, PERSONALIZE_KEY, access=winreg.KEY_SET_VALUE) as key:
                 winreg.SetValueEx(key, "AppsUseLightTheme", 0, winreg.REG_DWORD, value)
                 winreg.SetValueEx(key, "SystemUsesLightTheme", 0, winreg.REG_DWORD, value)
 

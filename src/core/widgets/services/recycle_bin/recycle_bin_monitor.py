@@ -10,7 +10,8 @@ from typing import TypedDict, override
 
 from PyQt6.QtCore import QObject, QThread, pyqtBoundSignal, pyqtSignal
 
-from core.utils.win32.bindings import kernel32, shell32
+from core.utils.win32.bindings.kernel32 import GetLastError, kernel32
+from core.utils.win32.bindings.shell32 import shell32
 from core.utils.win32.constants import (
     FILE_FLAG_BACKUP_SEMANTICS,
     FILE_LIST_DIRECTORY,
@@ -441,7 +442,7 @@ class Win32DirectoryWatcher:
         # Create stop event
         self._stop_event = kernel32.CreateEventW(None, True, False, None)
         if not self._stop_event:
-            logging.error("Watcher: failed to create stop event for %s: %s", self.path, ctypes.WinError())
+            logging.error("Watcher: failed to create stop event for %s: %s", self.path, ctypes.WinError(GetLastError()))
             self._stop_event = None
             return False
 
@@ -457,7 +458,7 @@ class Win32DirectoryWatcher:
         )
 
         if self._dir_handle == INVALID_HANDLE_VALUE:
-            logging.error("Watcher: failed to open dir handle for %s: %s", self.path, ctypes.WinError())
+            logging.error("Watcher: failed to open dir handle for %s: %s", self.path, ctypes.WinError(GetLastError()))
             if self._stop_event is not None:
                 kernel32.CloseHandle(self._stop_event)
                 self._stop_event = None
@@ -466,7 +467,9 @@ class Win32DirectoryWatcher:
         # Register change notification
         self._change_handle = kernel32.FindFirstChangeNotificationW(self.path, self.watch_subtree, self.flag)
         if self._change_handle == INVALID_HANDLE_VALUE:
-            logging.error("Watcher: failed to register change notification for %s: %s", self.path, ctypes.WinError())
+            logging.error(
+                "Watcher: failed to register change notification for %s: %s", self.path, ctypes.WinError(GetLastError())
+            )
             if self._dir_handle != INVALID_HANDLE_VALUE:
                 kernel32.CloseHandle(self._dir_handle)
                 self._dir_handle = INVALID_HANDLE_VALUE
@@ -489,7 +492,7 @@ class Win32DirectoryWatcher:
                 break
 
             if result == WAIT_FAILED:
-                logging.error("Watcher: wait failed for %s: %s", self.path, ctypes.WinError())
+                logging.error("Watcher: wait failed for %s: %s", self.path, ctypes.WinError(GetLastError()))
                 break
 
             if result == WAIT_OBJECT_0:
@@ -500,7 +503,9 @@ class Win32DirectoryWatcher:
 
                 # Reset change notification
                 if not kernel32.FindNextChangeNotification(self._change_handle):
-                    logging.error("Watcher: failed to reset notification for %s: %s", self.path, ctypes.WinError())
+                    logging.error(
+                        "Watcher: failed to reset notification for %s: %s", self.path, ctypes.WinError(GetLastError())
+                    )
                     break
             elif result == WAIT_OBJECT_0 + 1:
                 # Stop event signaled

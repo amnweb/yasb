@@ -14,11 +14,7 @@ from core.utils.win32.bindings.ntdll import (
     RtlUnsubscribeWnfStateChangeNotification,
     WnfCallbackType,
 )
-
-# Win11: Action Center toast total
-WNF_SHEL_NOTIFICATION_TOTAL = 0x0D83063EA3B8D035
-# Win10: unread/badge count
-WNF_SHEL_NOTIFICATIONS = 0x0D83063EA3BC1035
+from core.utils.win32.undocumented import WNF_SHEL_NOTIFICATION_TOTAL, WNF_SHEL_NOTIFICATIONS
 
 
 class WindowsNotificationEventListener(QThread):

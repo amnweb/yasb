@@ -4,11 +4,22 @@ import threading
 from ctypes import Array, byref, c_byte, c_char, wintypes
 from typing import NamedTuple, NotRequired, TypedDict
 
+from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
+from core.utils.win32.bindings.adl import (
+    ADL_MAIN_MALLOC_CALLBACK,
+    ADLFanSpeedValue,
+    AdlLibrary,
+    ADLODNFanControl,
+    ADLTemperature,
+)
+from core.utils.win32.bindings.dxgi import CreateDXGIFactory1
+from core.utils.win32.bindings.nvml import NVML_TEMPERATURE_GPU, NvmlLibrary, nvmlMemory_t
 from core.utils.win32.bindings.pdh import pdh
 from core.utils.win32.constants import PDH_FMT_DOUBLE
+from core.utils.win32.structs import PDH_FMT_COUNTERVALUE_ITEM_W
 
 logger = logging.getLogger("gpu_widget")
 
@@ -48,74 +59,6 @@ class _LuidInfo(TypedDict):
     adl_index: NotRequired[int]
 
 
-class _PdhItemW(ctypes.Structure):
-    _fields_ = [
-        ("szName", ctypes.c_void_p),
-        ("CStatus", wintypes.DWORD),
-        ("_pad", wintypes.DWORD),
-        ("doubleValue", ctypes.c_double),
-    ]
-
-
-class _DxgiLuid(ctypes.Structure):
-    _fields_ = [("LowPart", wintypes.DWORD), ("HighPart", ctypes.c_long)]
-
-
-class _DxgiAdapterDesc(ctypes.Structure):
-    _fields_ = [
-        ("Description", ctypes.c_wchar * 128),
-        ("VendorId", ctypes.c_uint),
-        ("DeviceId", ctypes.c_uint),
-        ("SubSysId", ctypes.c_uint),
-        ("Revision", ctypes.c_uint),
-        ("DedicatedVideoMemory", ctypes.c_size_t),
-        ("DedicatedSystemMemory", ctypes.c_size_t),
-        ("SharedSystemMemory", ctypes.c_size_t),
-        ("AdapterLuid", _DxgiLuid),
-    ]
-
-
-class _NvmlMemory(ctypes.Structure):
-    _fields_ = [
-        ("total", ctypes.c_ulonglong),
-        ("free", ctypes.c_ulonglong),
-        ("used", ctypes.c_ulonglong),
-    ]
-
-
-class _AdlTemperature(ctypes.Structure):
-    """ADLTemperature from AMD's adl_structures.h. Exactly two members: a third
-    field would inflate iSize past sizeof(ADLTemperature) and the driver may
-    reject the call."""
-
-    _fields_ = [("iSize", ctypes.c_int), ("iTemperature", ctypes.c_int)]
-
-
-class _AdlFanSpeedValue(ctypes.Structure):
-    _fields_ = [
-        ("iSize", ctypes.c_int),
-        ("iSpeedType", ctypes.c_int),
-        ("iFanSpeed", ctypes.c_int),
-        ("iFlags", ctypes.c_int),
-    ]
-
-
-class _AdlODNFanControl(ctypes.Structure):
-    _fields_ = [
-        ("iMode", ctypes.c_int),
-        ("iFanControlMode", ctypes.c_int),
-        ("iCurrentFanSpeedMode", ctypes.c_int),
-        ("iCurrentFanSpeed", ctypes.c_int),
-        ("iTargetFanSpeed", ctypes.c_int),
-        ("iTargetTemperature", ctypes.c_int),
-        ("iMinPerformanceClock", ctypes.c_int),
-        ("iMinFanLimit", ctypes.c_int),
-    ]
-
-
-_ADL_MALLOC = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_int)
-
-
 def _luid_str(name: str) -> str:
     idx = name.lower().find("luid_0x")
     if idx == -1:
@@ -125,91 +68,48 @@ def _luid_str(name: str) -> str:
 
 
 def _read_dxgi_gpus() -> list[_DxgiGpu]:
-    """Enumerate physical GPU adapters via DXGI COM vtable dispatch.
-
-    Skips Microsoft WARP software adapter.
-    """
+    """Enumerate physical GPU adapters via DXGI. Skips Microsoft WARP software adapter."""
     result: list[_DxgiGpu] = []
-    try:
-        dxgi = ctypes.WinDLL("dxgi.dll")
-        dxgi.CreateDXGIFactory1.restype = ctypes.c_long
-        # IDXGIFactory1 IID {770AAE78-F26F-4DBA-A829-253C83D1B387}
-        iid = (ctypes.c_byte * 16)(
-            0x78,
-            0xAE,
-            0x0A,
-            0x77,
-            0x6F,
-            0xF2,
-            0xBA,
-            0x4D,
-            0xA8,
-            0x29,
-            0x25,
-            0x3C,
-            0x83,
-            0xD1,
-            0xB3,
-            0x87,
+    factory = CreateDXGIFactory1()
+    if factory is None:
+        logger.debug("DXGI enumeration failed: CreateDXGIFactory1")
+        return result
+    index = 0
+    while True:
+        try:
+            adapter = factory.EnumAdapters(index)
+        except COMError:
+            break
+        if not adapter:
+            break
+        index += 1
+        try:
+            desc = adapter.GetDesc()
+        except COMError:
+            continue
+        if desc.VendorId == _VENDOR_WARP:
+            continue
+        high = desc.AdapterLuid.HighPart & 0xFFFFFFFF
+        result.append(
+            {
+                "name": desc.Description.strip(),
+                "vram_total": desc.DedicatedVideoMemory,
+                "shared_total": desc.SharedSystemMemory,
+                "luid_str": f"luid_0x{high:08x}_0x{desc.AdapterLuid.LowPart:08x}",
+                "vendor_id": desc.VendorId,
+            }
         )
-        factory = ctypes.c_void_p()
-        if dxgi.CreateDXGIFactory1(byref(iid), byref(factory)) != 0 or not factory.value:
-            return result
-        fvt = ctypes.cast(ctypes.cast(factory, ctypes.POINTER(ctypes.c_void_p))[0], ctypes.POINTER(ctypes.c_void_p))
-        EnumAdapters = ctypes.WINFUNCTYPE(
-            ctypes.c_long, ctypes.c_void_p, ctypes.c_uint, ctypes.POINTER(ctypes.c_void_p)
-        )(fvt[7])
-        FactoryRelease = ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)(fvt[2])
-
-        i = 0
-        while True:
-            adapter = ctypes.c_void_p()
-            if EnumAdapters(factory, i, byref(adapter)) != 0 or not adapter.value:
-                break
-            i += 1
-            avt = ctypes.cast(ctypes.cast(adapter, ctypes.POINTER(ctypes.c_void_p))[0], ctypes.POINTER(ctypes.c_void_p))
-            GetDesc = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.POINTER(_DxgiAdapterDesc))(avt[8])
-            AdapterRelease = ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)(avt[2])
-            desc = _DxgiAdapterDesc()
-            if GetDesc(adapter, byref(desc)) == 0 and desc.VendorId != _VENDOR_WARP:
-                high = desc.AdapterLuid.HighPart & 0xFFFFFFFF
-                result.append(
-                    {
-                        "name": desc.Description.strip(),
-                        "vram_total": desc.DedicatedVideoMemory,
-                        "shared_total": desc.SharedSystemMemory,
-                        "luid_str": f"luid_0x{high:08x}_0x{desc.AdapterLuid.LowPart:08x}",
-                        "vendor_id": desc.VendorId,
-                    }
-                )
-            AdapterRelease(adapter)
-        FactoryRelease(factory)
-    except OSError as e:
-        logger.debug("DXGI enumeration failed %s", e)
     return result
 
 
 class _NvmlState:
     def __init__(self) -> None:
-        self.dll = None
+        self.dll: NvmlLibrary | None = None
         self.name_map: dict[str, ctypes.c_void_p] = {}
 
     def load(self) -> None:
         try:
-            dll = ctypes.WinDLL("nvml.dll")
-            for fn in (
-                "nvmlInit_v2",
-                "nvmlDeviceGetCount_v2",
-                "nvmlDeviceGetHandleByIndex_v2",
-                "nvmlDeviceGetName",
-                "nvmlDeviceGetTemperature",
-                "nvmlDeviceGetFanSpeed",
-                "nvmlDeviceGetMemoryInfo",
-                "nvmlDeviceGetPowerUsage",
-                "nvmlShutdown",
-            ):
-                getattr(dll, fn).restype = ctypes.c_int
-
+            dll = NvmlLibrary()
             if dll.nvmlInit_v2() != 0:
                 return
 
@@ -230,7 +130,7 @@ class _NvmlState:
     def get_mem_total(self, handle: ctypes.c_void_p) -> int:
         if self.dll is None:
             return 0
-        mem = _NvmlMemory()
+        mem = nvmlMemory_t()
         return mem.total if self.dll.nvmlDeviceGetMemoryInfo(handle, byref(mem)) == 0 else 0
 
     def query(self, handle: ctypes.c_void_p) -> tuple[int, int, float]:
@@ -238,7 +138,7 @@ class _NvmlState:
         if self.dll is None:
             return 0, 0, 0.0
         temp, fan, power = ctypes.c_uint(), ctypes.c_uint(), ctypes.c_uint()
-        t = self.dll.nvmlDeviceGetTemperature(handle, 0, byref(temp))
+        t = self.dll.nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU, byref(temp))
         f = self.dll.nvmlDeviceGetFanSpeed(handle, byref(fan))
         p = self.dll.nvmlDeviceGetPowerUsage(handle, byref(power))
         return (
@@ -260,7 +160,7 @@ class _AdlState:
     """OverdriveN first (modern GPUs), Overdrive5 fallback (older GPUs)."""
 
     def __init__(self) -> None:
-        self.dll = None
+        self.dll: AdlLibrary | None = None
         self.ctx = ctypes.c_void_p()
         self.active_indices: list[int] = []
         self._odn_temp = False
@@ -268,7 +168,7 @@ class _AdlState:
         self._od5_temp = False
         self._od5_fan = False
         self._malloc_blocks: dict[int, Array[c_char]] = {}
-        self._malloc_cb = _ADL_MALLOC(self._malloc)
+        self._malloc_cb = ADL_MAIN_MALLOC_CALLBACK(self._malloc)
 
     def _malloc(self, size: int) -> int:
         """Allocation callback handed to ADL2_Main_Control_Create.
@@ -285,26 +185,11 @@ class _AdlState:
 
     def load(self) -> None:
         try:
-            dll = ctypes.WinDLL("atiadlxx.dll")
-            for fn in (
-                "ADL2_Main_Control_Create",
-                "ADL2_Main_Control_Destroy",
-                "ADL2_Adapter_NumberOfAdapters_Get",
-                "ADL2_Adapter_Active_Get",
-            ):
-                getattr(dll, fn).restype = ctypes.c_int
-
-            for attr, flag in (
-                ("ADL2_OverdriveN_Temperature_Get", "_odn_temp"),
-                ("ADL2_OverdriveN_FanControl_Get", "_odn_fan"),
-                ("ADL2_Overdrive5_Temperature_Get", "_od5_temp"),
-                ("ADL2_Overdrive5_FanSpeed_Get", "_od5_fan"),
-            ):
-                try:
-                    getattr(dll, attr).restype = ctypes.c_int
-                    setattr(self, flag, True)
-                except AttributeError:
-                    pass
+            dll = AdlLibrary()
+            self._odn_temp = dll.has_overdrive_n_temperature
+            self._odn_fan = dll.has_overdrive_n_fan_control
+            self._od5_temp = dll.has_overdrive5_temperature
+            self._od5_fan = dll.has_overdrive5_fan_speed
 
             ctx = ctypes.c_void_p()
             if dll.ADL2_Main_Control_Create(self._malloc_cb, 1, byref(ctx)) != 0:
@@ -333,17 +218,17 @@ class _AdlState:
             if self.dll.ADL2_OverdriveN_Temperature_Get(self.ctx, adapter_index, 1, byref(t_val)) == 0 and t_val.value:
                 temp = t_val.value // 1000
         if not temp and self._od5_temp:
-            temp_s = _AdlTemperature(iSize=ctypes.sizeof(_AdlTemperature))
+            temp_s = ADLTemperature(iSize=ctypes.sizeof(ADLTemperature))
             if self.dll.ADL2_Overdrive5_Temperature_Get(self.ctx, adapter_index, 0, byref(temp_s)) == 0:
                 temp = temp_s.iTemperature // 1000
 
         fan = 0
         if self._odn_fan:
-            fan_ctl = _AdlODNFanControl()
+            fan_ctl = ADLODNFanControl()
             if self.dll.ADL2_OverdriveN_FanControl_Get(self.ctx, adapter_index, byref(fan_ctl)) == 0:
                 fan = fan_ctl.iCurrentFanSpeed
         if not fan and self._od5_fan:
-            fan_s = _AdlFanSpeedValue(iSize=ctypes.sizeof(_AdlFanSpeedValue), iSpeedType=1)
+            fan_s = ADLFanSpeedValue(iSize=ctypes.sizeof(ADLFanSpeedValue), iSpeedType=1)
             if self.dll.ADL2_Overdrive5_FanSpeed_Get(self.ctx, adapter_index, 0, byref(fan_s)) == 0:
                 fan = fan_s.iFanSpeed
 
@@ -487,12 +372,10 @@ class GpuApi:
         buf_size.value = ctypes.sizeof(buf)
         if pdh.PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, byref(buf_size), byref(count), buf) != 0:
             return []
-        items = ctypes.cast(buf, ctypes.POINTER(_PdhItemW))
+        items = ctypes.cast(buf, ctypes.POINTER(PDH_FMT_COUNTERVALUE_ITEM_W))
         result: list[tuple[str, float]] = []
         for i in range(count.value):
-            ptr = items[i].szName
-            name = ctypes.wstring_at(ptr) if ptr else ""
-            result.append((name, items[i].doubleValue))
+            result.append((items[i].szName or "", items[i].FmtValue.doubleValue))
         return result
 
     def _build_luid_info(self, all_luids: list[str]) -> dict[str, _LuidInfo]:

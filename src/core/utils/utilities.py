@@ -44,6 +44,7 @@ from winrt.windows.ui.notifications import ToastNotification, ToastNotificationM
 from core.utils.qobject import is_valid_qobject
 from core.utils.system import is_windows_10
 from core.utils.win32.backdrop import enable_blur
+from core.utils.win32.registry_keys import APP_USER_MODEL_ID_KEY
 
 if TYPE_CHECKING:
     from core.utils.progress_bar import ProgressWidget
@@ -111,7 +112,7 @@ def get_app_identifier():
     from settings import APP_ID, IS_FROZEN
 
     try:
-        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, f"SOFTWARE\\Classes\\AppUserModelId\\{APP_ID}")
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, f"{APP_USER_MODEL_ID_KEY}\\{APP_ID}")
         winreg.CloseKey(key)
         return APP_ID
     except:

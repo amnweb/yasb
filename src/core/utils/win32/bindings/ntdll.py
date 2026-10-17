@@ -1,11 +1,11 @@
 """Wrappers for ntdll win32 API functions"""
 
-from ctypes import POINTER, WINFUNCTYPE, c_long, c_uint64, c_ulong, c_void_p, windll
+from ctypes import POINTER, WINFUNCTYPE, WinDLL, c_long, c_uint64, c_ulong, c_void_p
 from ctypes.wintypes import HANDLE, LONG, ULONG
 
 from core.utils.win32.typecheck import CArgObject, CFunctionType
 
-ntdll = windll.ntdll
+ntdll = WinDLL("ntdll", use_last_error=True)
 
 # NtQueryInformationProcess - used to get process command line, etc.
 ntdll.NtQueryInformationProcess.argtypes = [
