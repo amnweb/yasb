@@ -2,6 +2,7 @@
 
 import datetime
 from pathlib import Path
+from typing import Any
 
 from core.cloud.constants import TASK_INTERVAL_MINUTES, TASK_NAME
 from settings import SCRIPT_PATH
@@ -16,10 +17,10 @@ _IGNORE_NEW = 2
 """TASK_INSTANCES_IGNORE_NEW: a check firing mid-upload is dropped, not killed."""
 
 
-def _scheduler():
-    import win32com.client
+def _scheduler() -> Any:
+    import comtypes.client  # pyright: ignore[reportMissingTypeStubs]
 
-    scheduler = win32com.client.Dispatch("Schedule.Service")
+    scheduler: Any = comtypes.client.CreateObject("Schedule.Service", dynamic=True)
     scheduler.Connect()
     return scheduler
 
