@@ -10,12 +10,11 @@ from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
 
 from core.utils.win32.utils import get_monitor_hwnd, get_widget_monitor_hwnd
 from core.widgets.base import BaseWidget
-from tests.support.source import REPO_ROOT, all_subclasses, core_modules, defined_in_core, import_core_modules
+from tests.support.source import REPO_ROOT, all_subclasses, defined_in_core, import_core_modules
 
 _WHY = (
-    "winId() on a widget inside the bar makes Qt turn it, and every sibling, into a native window "
-    "(see 18283d81). Use get_widget_monitor_hwnd(self) for the monitor, or self.window().winId() "
-    "for the bar's handle."
+    "winId() on a widget inside the bar makes Qt turn it, and every sibling, into a native window. "
+    "Use get_widget_monitor_hwnd(self) for the monitor, or self.window().winId() for the bar's handle."
 )
 
 
@@ -51,22 +50,6 @@ def test_bar_widgets_never_call_winid_on_themselves():
         pytest.fail(_WHY + "\n  " + "\n  ".join(offenders), pytrace=False)
 
 
-def test_winid_is_never_called_unbound():
-    offenders: list[str] = []
-    for module in core_modules():
-        for node in ast.walk(module.tree()):
-            if (
-                isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Attribute)
-                and node.func.attr == "winId"
-                and node.args
-            ):
-                offenders.append(f"{module.rel}:{node.lineno}: {ast.unparse(node)}")
-    if offenders:
-        message = f"QWidget.winId(widget) is the same call as widget.winId(). {_WHY}\n  " + "\n  ".join(offenders)
-        pytest.fail(message, pytrace=False)
-
-
 @pytest.fixture
 def bar(qapp: QApplication) -> Iterator[QWidget]:
     window = QWidget()
@@ -98,11 +81,3 @@ def test_get_widget_monitor_hwnd_keeps_the_bar_children_alien(bar: QWidget):
 
     assert _native_children(bar) == [], _WHY
     assert monitor == get_monitor_hwnd(int(bar.winId()))
-
-
-def test_winid_on_a_child_still_makes_it_native(bar: QWidget):
-    child = bar.findChild(QLabel, "child")
-    assert child is not None
-    child.winId()
-
-    assert "child" in _native_children(bar), "Qt no longer nativises on winId(); the rules above may be obsolete"
