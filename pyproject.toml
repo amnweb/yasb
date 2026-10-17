@@ -17,7 +17,6 @@ dependencies = [
     "pydantic==2.13.5",
     "certifi==2026.7.22",
     "humanize==4.16.0",
-    "pywin32==312",
     "pyyaml==6.0.3",
     "holidays==0.105",
     "watchdog==6.0.0",
@@ -69,7 +68,6 @@ dev = [
     "pyqt6-stubs==20250824",
     "pycaw-stubs==20260927.20261008",
     "types-pillow==10.2.0.20240822",
-    "types-pywin32==312.0.0.20261006",
 ]
 test = [
     "pytest>=9.1",
