@@ -23,6 +23,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource
 from core.utils.system import app_data_path
+from core.utils.win32.constants import SW_SHOWNORMAL
 from core.utils.win32.utils import get_app_name_from_aumid
 from core.widgets.services.taskbar.pin_context import (
     WindowContext,
@@ -626,7 +627,6 @@ class PinManager:
             # Check if elevation is required (WinError 740)
             if e.winerror == 740:
                 import win32api
-                import win32con
 
                 try:
                     win32api.ShellExecute(  # pyright: ignore[reportUnknownMemberType]
@@ -635,7 +635,7 @@ class PinManager:
                         exe_path,
                         arguments,
                         working_dir,  # pyright: ignore[reportArgumentType]
-                        win32con.SW_SHOWNORMAL,
+                        SW_SHOWNORMAL,
                     )
                 except Exception as shell_error:
                     logging.error("Failed to launch with elevation: %s", shell_error)

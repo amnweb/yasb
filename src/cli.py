@@ -22,17 +22,13 @@ import time
 import winreg
 from typing import Any
 
-from win32con import (
-    GENERIC_READ,
-    GENERIC_WRITE,
-    OPEN_EXISTING,
-)
-
 from core.utils.process import is_process_running
 from core.utils.win32.bindings.kernel32 import CloseHandle, CreateFile, GetLastError, ReadFile, WriteFile
 from core.utils.win32.bindings.shell32 import IsUserAnAdmin
 from core.utils.win32.constants import (
     ERROR_NO_MORE_ITEMS,
+    GENERIC_READ,
+    GENERIC_WRITE,
     INVALID_HANDLE_VALUE,
     MAX_GUID_CHARS,
     MINIDUMP_WITH_DATA_SEGS,
@@ -42,6 +38,7 @@ from core.utils.win32.constants import (
     MINIDUMP_WITH_PROCESS_THREAD_DATA,
     MINIDUMP_WITH_THREAD_INFO,
     MINIDUMP_WITH_UNLOADED_MODULES,
+    OPEN_EXISTING,
 )
 from core.utils.win32.registry_keys import RUN_KEY, WER_LOCAL_DUMPS_KEY
 from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL, SCRIPT_PATH

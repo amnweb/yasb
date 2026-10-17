@@ -7,7 +7,6 @@ from collections.abc import Callable
 from functools import partial
 from typing import cast
 
-import win32con
 import win32gui
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
@@ -19,6 +18,15 @@ from core.utils.controller import exit_application, reload_application
 from core.utils.shell_utils import shell_open
 from core.utils.update_service import ReleaseInfo, register_update_callback
 from core.utils.win32.bindings.uxtheme import AllowDarkModeForWindow, FlushMenuThemes, SetPreferredAppMode
+from core.utils.win32.constants import (
+    MF_POPUP,
+    MF_SEPARATOR,
+    MF_STRING,
+    TPM_LEFTALIGN,
+    TPM_NONOTIFY,
+    TPM_RETURNCMD,
+    WM_NULL,
+)
 from core.utils.win32.undocumented import PREFERRED_APP_MODE_ALLOW_DARK
 from core.utils.win32.utils import disable_autostart, enable_autostart, is_autostart_enabled
 from settings import (
@@ -115,12 +123,12 @@ class SystemTrayManager(QSystemTrayIcon):
             cmd_id = [1]
 
             def add_item(menu: int, label: str, action: Callable[[], object]) -> None:
-                _append_menu(menu, win32con.MF_STRING, cmd_id[0], label)
+                _append_menu(menu, MF_STRING, cmd_id[0], label)
                 actions[cmd_id[0]] = action
                 cmd_id[0] += 1
 
             def add_sep(menu: int) -> None:
-                _append_menu(menu, win32con.MF_SEPARATOR, 0, "")
+                _append_menu(menu, MF_SEPARATOR, 0, "")
 
             if self._update_available:
                 add_item(hmenu, "Update Available", self._open_update_dialog)
@@ -142,7 +150,7 @@ class SystemTrayManager(QSystemTrayIcon):
                     add_item(km_sub, "Stop Komorebi", partial(self._run_wm_command, "Komorebi", self.komorebi_stop))
                 if self.komorebi_reload:
                     add_item(km_sub, "Reload Komorebi", partial(self._run_wm_command, "Komorebi", self.komorebi_reload))
-                _append_menu(hmenu, win32con.MF_POPUP, km_sub, "Komorebi")
+                _append_menu(hmenu, MF_POPUP, km_sub, "Komorebi")
                 add_sep(hmenu)
 
             if self.glazewm_enabled and self.is_wm_installed("glazewm"):
@@ -153,7 +161,7 @@ class SystemTrayManager(QSystemTrayIcon):
                     add_item(gw_sub, "Stop GlazeWM", partial(self._run_wm_command, "Glazewm", self.glazewm_stop))
                 if self.glazewm_reload:
                     add_item(gw_sub, "Reload GlazeWM", partial(self._run_wm_command, "Glazewm", self.glazewm_reload))
-                _append_menu(hmenu, win32con.MF_POPUP, gw_sub, "GlazeWM")
+                _append_menu(hmenu, MF_POPUP, gw_sub, "GlazeWM")
                 add_sep(hmenu)
 
             if AUTOSTART_FILE:
@@ -179,7 +187,7 @@ class SystemTrayManager(QSystemTrayIcon):
                 int,
                 win32gui.TrackPopupMenu(  # pyright: ignore[reportUnknownMemberType]
                     hmenu,
-                    win32con.TPM_LEFTALIGN | win32con.TPM_RETURNCMD | win32con.TPM_NONOTIFY,
+                    TPM_LEFTALIGN | TPM_RETURNCMD | TPM_NONOTIFY,
                     x,
                     y,
                     0,
@@ -189,7 +197,7 @@ class SystemTrayManager(QSystemTrayIcon):
             )
             selected_action = actions.get(cmd)
             try:
-                win32gui.PostMessage(hwnd, win32con.WM_NULL, 0, 0)
+                win32gui.PostMessage(hwnd, WM_NULL, 0, 0)
             except Exception:
                 logging.debug("Failed to post tray menu cleanup message", exc_info=True)
         except Exception:

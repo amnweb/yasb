@@ -1,7 +1,6 @@
 import ctypes
 import logging
 
-import win32con
 import win32process
 
 from core.utils.win32.bindings.kernel32 import kernel32 as k32
@@ -10,11 +9,25 @@ from core.utils.win32.bindings.user32 import user32 as u32
 from core.utils.win32.constants import (
     GA_ROOT,
     GA_ROOTOWNER,
+    GWL_STYLE,
+    HWND_TOP,
     PROCESS_TERMINATE,
     SC_CLOSE,
+    SC_MAXIMIZE,
+    SC_MINIMIZE,
+    SC_RESTORE,
     SMTO_ABORTIFHUNG,
+    SW_MAXIMIZE,
+    SW_MINIMIZE,
+    SW_RESTORE,
+    SW_SHOW,
+    SWP_ASYNCWINDOWPOS,
+    SWP_NOACTIVATE,
+    SWP_NOMOVE,
+    SWP_NOSIZE,
     WM_CLOSE,
     WM_SYSCOMMAND,
+    WS_MINIMIZEBOX,
 )
 
 
@@ -49,36 +62,36 @@ def is_owner_root_active(base: int) -> bool:
 
 
 def can_minimize(hwnd: int) -> bool:
-    style = GetWindowLong(int(hwnd), win32con.GWL_STYLE)
-    return bool(style & win32con.WS_MINIMIZEBOX) and bool(IsWindowEnabled(int(hwnd)))
+    style = GetWindowLong(int(hwnd), GWL_STYLE)
+    return bool(style & WS_MINIMIZEBOX) and bool(IsWindowEnabled(int(hwnd)))
 
 
 def _post_sys_command(hwnd: int, cmd: int, fallback_show_cmd: int) -> None:
     # elevated apps don't take posted messages (UIPI), ShowWindowAsync still works on them
-    if not PostMessage(int(hwnd), win32con.WM_SYSCOMMAND, cmd, 0):
+    if not PostMessage(int(hwnd), WM_SYSCOMMAND, cmd, 0):
         u32.ShowWindowAsync(int(hwnd), fallback_show_cmd)
 
 
 def restore_window(hwnd: int) -> None:
-    _post_sys_command(hwnd, win32con.SC_RESTORE, win32con.SW_RESTORE)
+    _post_sys_command(hwnd, SC_RESTORE, SW_RESTORE)
 
 
 def minimize_window(hwnd: int) -> None:
-    _post_sys_command(hwnd, win32con.SC_MINIMIZE, win32con.SW_MINIMIZE)
+    _post_sys_command(hwnd, SC_MINIMIZE, SW_MINIMIZE)
 
 
 def maximize_window(hwnd: int) -> None:
-    _post_sys_command(hwnd, win32con.SC_MAXIMIZE, win32con.SW_MAXIMIZE)
+    _post_sys_command(hwnd, SC_MAXIMIZE, SW_MAXIMIZE)
 
 
 def show_window(hwnd: int) -> None:
-    u32.ShowWindowAsync(int(hwnd), win32con.SW_SHOW)
+    u32.ShowWindowAsync(int(hwnd), SW_SHOW)
 
 
 def set_foreground(hwnd: int) -> None:
     """Bring the window to the front and focus it, without waiting for it."""
-    flags = win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE | win32con.SWP_ASYNCWINDOWPOS
-    u32.SetWindowPos(int(hwnd), win32con.HWND_TOP, 0, 0, 0, 0, flags)
+    flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS
+    u32.SetWindowPos(int(hwnd), HWND_TOP, 0, 0, 0, 0, flags)
     u32.SetForegroundWindow(int(hwnd))
 
 

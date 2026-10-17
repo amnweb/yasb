@@ -1,14 +1,24 @@
 import ctypes
 
 import win32api
-import win32con
 import win32gui
 
 from core.utils.win32.bindings.dwmapi import DwmGetWindowAttribute
 from core.utils.win32.bindings.ole32 import create_com_object
 from core.utils.win32.bindings.shell32 import CLSID_VirtualDesktopManager, IVirtualDesktopManager
 from core.utils.win32.bindings.user32 import GetProp, GetWindowLong, IsWindowEnabled
-from core.utils.win32.constants import CLSCTX_INPROC_SERVER, DWMWA_CLOAKED, GA_ROOT
+from core.utils.win32.constants import (
+    CLSCTX_INPROC_SERVER,
+    DWMWA_CLOAKED,
+    GA_ROOT,
+    GWL_EXSTYLE,
+    GWL_STYLE,
+    WS_EX_APPWINDOW,
+    WS_EX_NOACTIVATE,
+    WS_EX_TOOLWINDOW,
+    WS_EX_WINDOWEDGE,
+    WS_MINIMIZEBOX,
+)
 from core.utils.win32.utils import get_process_info
 
 
@@ -129,7 +139,7 @@ class ApplicationWindow:
             cls = self.class_name
             if not cls:
                 return False
-            ex_style = GetWindowLong(self.hwnd, win32con.GWL_EXSTYLE)
+            ex_style = GetWindowLong(self.hwnd, GWL_EXSTYLE)
 
             if cls in (
                 "ApplicationFrameWindow",
@@ -137,7 +147,7 @@ class ApplicationWindow:
                 "StartMenuSizingFrame",
                 "Shell_LightDismissOverlay",
             ):
-                if (ex_style & win32con.WS_EX_WINDOWEDGE) == 0:
+                if (ex_style & WS_EX_WINDOWEDGE) == 0:
                     return True
             elif cls in (
                 "ImmersiveBackgroundWindow",
@@ -159,12 +169,12 @@ class ApplicationWindow:
     def can_add_to_taskbar(self) -> bool:
         """Policy for showing the window on the taskbar (top-level, visible, app window, minimizable)."""
         try:
-            extended = GetWindowLong(self.hwnd, win32con.GWL_EXSTYLE)
+            extended = GetWindowLong(self.hwnd, GWL_EXSTYLE)
             is_window = bool(win32gui.IsWindow(self.hwnd))
             is_visible = bool(win32gui.IsWindowVisible(self.hwnd))
-            is_toolwindow = bool(extended & win32con.WS_EX_TOOLWINDOW)
-            is_appwindow = bool(extended & win32con.WS_EX_APPWINDOW)
-            is_noactivate = bool(extended & win32con.WS_EX_NOACTIVATE)
+            is_toolwindow = bool(extended & WS_EX_TOOLWINDOW)
+            is_appwindow = bool(extended & WS_EX_APPWINDOW)
+            is_noactivate = bool(extended & WS_EX_NOACTIVATE)
             owner = win32gui.GetWindow(self.hwnd, 4)  # GW_OWNER
             # ITaskList_Deleted property
             is_deleted = False
@@ -215,8 +225,8 @@ class ApplicationWindow:
     def can_minimize(self) -> bool:
         """Return True if the window has a minimize box and is enabled."""
         try:
-            styles = GetWindowLong(self.hwnd, win32con.GWL_STYLE)
-            has_minimize_box = bool(styles & win32con.WS_MINIMIZEBOX)
+            styles = GetWindowLong(self.hwnd, GWL_STYLE)
+            has_minimize_box = bool(styles & WS_MINIMIZEBOX)
             try:
                 is_enabled = bool(win32gui.IsWindowEnabled(self.hwnd))
             except AttributeError:

@@ -30,15 +30,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QWidget,
 )
-from win32con import (
-    WM_LBUTTONDBLCLK,
-    WM_LBUTTONDOWN,
-    WM_LBUTTONUP,
-    WM_MBUTTONDOWN,
-    WM_MBUTTONUP,
-    WM_RBUTTONDOWN,
-    WM_RBUTTONUP,
-)
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
@@ -52,6 +43,13 @@ from core.utils.win32.bindings.user32 import (
 from core.utils.win32.constants import (
     NIN_CONTEXTMENU,
     NIN_SELECT,
+    WM_LBUTTONDBLCLK,
+    WM_LBUTTONDOWN,
+    WM_LBUTTONUP,
+    WM_MBUTTONDOWN,
+    WM_MBUTTONUP,
+    WM_RBUTTONDOWN,
+    WM_RBUTTONUP,
 )
 from core.widgets.services.systray.systray_monitor import IconData
 from core.widgets.services.systray.utils import pack_i32

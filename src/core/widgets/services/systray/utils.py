@@ -21,16 +21,6 @@ from PIL import Image
 from PIL.ImageFilter import SHARPEN
 from PIL.ImageQt import ImageQt
 from PyQt6.QtGui import QImage
-from win32con import (
-    PROCESS_QUERY_INFORMATION,
-    PROCESS_VM_READ,
-    WM_CLOSE,
-    WS_CLIPCHILDREN,
-    WS_CLIPSIBLINGS,
-    WS_EX_TOOLWINDOW,
-    WS_EX_TOPMOST,
-    WS_POPUP,
-)
 
 from core.utils.icons.convert import hicon_to_image
 from core.utils.win32.bindings.kernel32 import (
@@ -58,7 +48,15 @@ from core.utils.win32.constants import (
     NIF_MESSAGE,
     NIF_STATE,
     NIF_TIP,
+    PROCESS_QUERY_INFORMATION,
     PROCESS_QUERY_LIMITED_INFORMATION,
+    PROCESS_VM_READ,
+    WM_CLOSE,
+    WS_CLIPCHILDREN,
+    WS_CLIPSIBLINGS,
+    WS_EX_TOOLWINDOW,
+    WS_EX_TOPMOST,
+    WS_POPUP,
 )
 from core.utils.win32.structs import NOTIFYICONDATA, WNDCLASS, WNDPROC
 from core.utils.win32.utils import get_windows_host_arch

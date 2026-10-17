@@ -7,7 +7,6 @@ from typing import TypedDict
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
-from win32con import WM_INPUTLANGCHANGEREQUEST
 
 from core.utils.shell_utils import shell_open
 from core.utils.utilities import PopupWidget, refresh_widget_style
@@ -23,6 +22,7 @@ from core.utils.win32.constants import (
     LOCALE_SNAME,
     LOCALE_SNATIVECTRYNAME,
     LOCALE_SNATIVELANGNAME,
+    WM_INPUTLANGCHANGEREQUEST,
 )
 from core.utils.win32.registry_keys import KEYBOARD_LAYOUTS_KEY
 from core.validation.widgets.yasb.language import LanguageConfig

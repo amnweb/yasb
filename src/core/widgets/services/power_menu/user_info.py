@@ -4,9 +4,9 @@ from functools import cache
 from typing import TYPE_CHECKING, cast
 
 import win32api
-import win32con
 import win32security
 
+from core.utils.win32.constants import TOKEN_QUERY
 from core.utils.win32.registry_keys import ACCOUNT_PICTURE_USERS_KEY, IDENTITY_USER_PROPERTIES_KEY
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ def get_account_type() -> str:
     """Get account type: Administrator or Standard User."""
     try:
         token = win32security.OpenProcessToken(  # pyright: ignore[reportUnknownMemberType]
-            win32api.GetCurrentProcess(), win32con.TOKEN_QUERY
+            win32api.GetCurrentProcess(), TOKEN_QUERY
         )
         admin_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
         groups = cast(
@@ -66,7 +66,7 @@ def get_user_avatar_path() -> str | None:
     """Get the current user's account picture from registry using the process token SID."""
     try:
         token = win32security.OpenProcessToken(  # pyright: ignore[reportUnknownMemberType]
-            win32api.GetCurrentProcess(), win32con.TOKEN_QUERY
+            win32api.GetCurrentProcess(), TOKEN_QUERY
         )
         user = cast(
             "tuple[PySID, int]",

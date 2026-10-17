@@ -4,14 +4,6 @@ import threading
 import time
 from collections.abc import Callable
 
-from win32con import (
-    FILE_FLAG_OVERLAPPED,
-    PIPE_ACCESS_DUPLEX,
-    PIPE_READMODE_MESSAGE,
-    PIPE_TYPE_MESSAGE,
-    PIPE_WAIT,
-)
-
 from core.log import CLI_LOG_DATETIME, CLI_LOG_FORMAT, ColoredFormatter
 from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
@@ -22,7 +14,14 @@ from core.utils.win32.bindings.kernel32 import (
     ReadFile,
     WriteFile,
 )
-from core.utils.win32.constants import INVALID_HANDLE_VALUE
+from core.utils.win32.constants import (
+    FILE_FLAG_OVERLAPPED,
+    INVALID_HANDLE_VALUE,
+    PIPE_ACCESS_DUPLEX,
+    PIPE_READMODE_MESSAGE,
+    PIPE_TYPE_MESSAGE,
+    PIPE_WAIT,
+)
 from settings import CLI_VERSION
 
 CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"

@@ -42,16 +42,6 @@ from PyQt6.QtGui import (
     QPolygonF,
 )
 from PyQt6.QtWidgets import QApplication, QWidget
-from win32con import (
-    GWL_EXSTYLE,
-    GWL_STYLE,
-    SWP_FRAMECHANGED,
-    SWP_NOACTIVATE,
-    WM_DESTROY,
-    WS_CHILD,
-    WS_EX_LAYERED,
-    WS_POPUP,
-)
 
 from core.utils.win32.bindings.user32 import (
     MONITORENUMPROC,
@@ -69,7 +59,18 @@ from core.utils.win32.bindings.user32 import (
     ShowWindow,
     user32,
 )
-from core.utils.win32.constants import HWND_TOP, SW_SHOW
+from core.utils.win32.constants import (
+    GWL_EXSTYLE,
+    GWL_STYLE,
+    HWND_TOP,
+    SW_SHOW,
+    SWP_FRAMECHANGED,
+    SWP_NOACTIVATE,
+    WM_DESTROY,
+    WS_CHILD,
+    WS_EX_LAYERED,
+    WS_POPUP,
+)
 from core.utils.win32.registry_keys import COLORS_KEY, DESKTOP_KEY
 from core.utils.win32.structs import WNDENUMPROC
 from core.utils.win32.typecheck import CPointer
