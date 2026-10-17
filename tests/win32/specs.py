@@ -218,6 +218,10 @@ CONSTANT_ALIASES: dict[str, str] = {
     "MINIDUMP_WITH_PROCESS_THREAD_DATA": "MiniDumpWithProcessThreadData",
     "MINIDUMP_WITH_FULL_MEMORY_INFO": "MiniDumpWithFullMemoryInfo",
     "MINIDUMP_WITH_THREAD_INFO": "MiniDumpWithThreadInfo",
+    "TOKEN_INFORMATION_USER": "TokenUser",
+    "TOKEN_INFORMATION_GROUPS": "TokenGroups",
+    "NAME_DISPLAY": "NameDisplay",
+    "NAME_USER_PRINCIPAL": "NameUserPrincipal",
 }
 
 # Struct fields whose sign differs from the SDK header on purpose, as "<struct>.<field>": reason.

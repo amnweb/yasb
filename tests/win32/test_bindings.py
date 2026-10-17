@@ -18,6 +18,15 @@ from comtypes.persist import IPersistFile  # pyright: ignore[reportMissingTypeSt
 from comtypes.shelllink import IShellLinkW, ShellLink  # pyright: ignore[reportMissingTypeStubs]
 
 from core.utils.win32.aumid import get_aumid_for_process, get_aumid_from_shortcut
+from core.utils.win32.bindings.advapi32 import (
+    GetUserName,
+    OpenProcessToken,
+    enable_token_privilege,
+    get_current_user_sid,
+    get_token_group_sids,
+    get_token_user_sid,
+    sid_to_string,
+)
 from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
     CreateFile,
@@ -25,6 +34,7 @@ from core.utils.win32.bindings.kernel32 import (
     FindFirstFileEx,
     FindNextFile,
     GetApplicationUserModelId,
+    GetCurrentProcess,
     GetCurrentThreadId,
     GetDiskFreeSpaceEx,
     GetLastError,
@@ -36,6 +46,7 @@ from core.utils.win32.bindings.kernel32 import (
     snapshot_processes,
 )
 from core.utils.win32.bindings.ole32 import CoInitialize
+from core.utils.win32.bindings.secur32 import GetUserNameEx
 from core.utils.win32.bindings.shell32 import SHGetPropertyStoreFromParsingName, get_string_property
 from core.utils.win32.bindings.shlwapi import SHLoadIndirectString, StrCmpLogical
 from core.utils.win32.bindings.user32 import (
@@ -68,7 +79,10 @@ from core.utils.win32.constants import (
     INVALID_HANDLE_VALUE,
     OPEN_EXISTING,
     PROCESS_QUERY_LIMITED_INFORMATION,
+    SE_SHUTDOWN_NAME,
     SM_CXICON,
+    TOKEN_ADJUST_PRIVILEGES,
+    TOKEN_QUERY,
     VT_LPWSTR,
     WS_CHILD,
     WS_POPUP,
@@ -82,6 +96,8 @@ ERROR_PATH_NOT_FOUND = 3
 ERROR_CLASS_ALREADY_EXISTS = 1410
 WS_MAXIMIZE = 0x01000000
 MONITOR_DEFAULTTONEAREST = 2
+NAME_SAM_COMPATIBLE = 2
+EVERYONE_SID = "S-1-1-0"
 KERNEL32_DLL = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "kernel32.dll")
 PKEY_SIZE = PROPERTYKEY(GUID.from_string("B725F130-47EF-101A-A5F1-02608C9EEBAC"), 12)
 
@@ -413,3 +429,49 @@ def test_display_devices_end_with_none():
 
 def test_system_metrics():
     assert GetSystemMetrics(SM_CXICON) > 0
+
+
+@pytest.fixture
+def token() -> Iterator[int]:
+    handle = OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES)
+    assert handle is not None
+    yield handle
+    CloseHandle(handle)
+
+
+def test_token_user_is_the_current_user(token: int):
+    sid = get_token_user_sid(token)
+
+    assert sid is not None
+    assert sid.startswith("S-1-5-")
+    assert get_current_user_sid() == sid
+
+
+def test_token_groups_include_everyone(token: int):
+    assert EVERYONE_SID in get_token_group_sids(token)
+
+
+def test_token_of_an_invalid_process_handle_is_none():
+    assert OpenProcessToken(0, TOKEN_QUERY) is None
+
+
+def test_sid_to_string_of_no_sid_is_none():
+    assert sid_to_string(None) is None
+
+
+def test_enable_token_privilege(token: int):
+    assert enable_token_privilege(token, SE_SHUTDOWN_NAME) is True
+    assert enable_token_privilege(token, "SeNoSuchPrivilege") is False
+
+
+def test_user_names_agree():
+    name = GetUserName()
+    sam_name = GetUserNameEx(NAME_SAM_COMPATIBLE)
+
+    assert name
+    assert sam_name is not None
+    assert sam_name.lower().endswith("\\" + name.lower())
+
+
+def test_user_name_in_an_unknown_format_is_none():
+    assert GetUserNameEx(99) is None

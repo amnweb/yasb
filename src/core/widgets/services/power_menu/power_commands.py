@@ -1,14 +1,16 @@
 import logging
 import subprocess
+from ctypes import WinError
 from typing import Protocol, runtime_checkable
 
-import win32api
-import win32security
 from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QWidget
 
 from core.utils.controller import exit_application
+from core.utils.win32.bindings.advapi32 import OpenProcessToken, enable_token_privilege
+from core.utils.win32.bindings.kernel32 import CloseHandle, GetCurrentProcess, GetLastError
 from core.utils.win32.bindings.powrprof import SetSuspendState
+from core.utils.win32.constants import SE_SHUTDOWN_NAME, TOKEN_ADJUST_PRIVILEGES, TOKEN_QUERY
 
 
 @runtime_checkable
@@ -69,26 +71,16 @@ class PowerOperations:
     def sleep(self) -> None:
         self.clear_widget()
         try:
-            access = win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY
-            htoken = win32security.OpenProcessToken(  # pyright: ignore[reportUnknownMemberType]
-                win32api.GetCurrentProcess(), access
-            )
+            htoken = OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY)
             if htoken:
                 try:
-                    priv_id = win32security.LookupPrivilegeValue(
-                        None,  # pyright: ignore[reportArgumentType]
-                        win32security.SE_SHUTDOWN_NAME,
-                    )
-                    win32security.AdjustTokenPrivileges(  # pyright: ignore[reportUnknownMemberType]
-                        htoken,
-                        0,
-                        [(priv_id, win32security.SE_PRIVILEGE_ENABLED)],  # pyright: ignore[reportArgumentType]
-                    )
+                    if not enable_token_privilege(htoken, SE_SHUTDOWN_NAME):
+                        raise WinError(GetLastError())
                     success = SetSuspendState(False, True, False)
                     if not success:
                         logging.error("Sleep operation failed")
                 finally:
-                    win32api.CloseHandle(htoken)
+                    CloseHandle(htoken)
             else:
                 logging.error("Sleep operation failed to open process token")
         except Exception:

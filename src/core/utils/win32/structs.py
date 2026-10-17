@@ -963,6 +963,26 @@ class LUID(ct.Structure):
     _fields_ = [("LowPart", DWORD), ("HighPart", LONG)]
 
 
+class LUID_AND_ATTRIBUTES(ct.Structure):
+    _fields_ = [("Luid", LUID), ("Attributes", DWORD)]
+
+
+class TOKEN_PRIVILEGES(ct.Structure):
+    _fields_ = [("PrivilegeCount", DWORD), ("Privileges", LUID_AND_ATTRIBUTES * 1)]
+
+
+class SID_AND_ATTRIBUTES(ct.Structure):
+    _fields_ = [("Sid", c_void_p), ("Attributes", DWORD)]
+
+
+class TOKEN_USER(ct.Structure):
+    _fields_ = [("User", SID_AND_ATTRIBUTES)]
+
+
+class TOKEN_GROUPS(ct.Structure):
+    _fields_ = [("GroupCount", DWORD), ("Groups", SID_AND_ATTRIBUTES * 1)]
+
+
 class DXGI_ADAPTER_DESC(ct.Structure):
     _fields_ = [
         ("Description", WCHAR * 128),

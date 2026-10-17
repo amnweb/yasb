@@ -12,7 +12,6 @@ tuna import_times.log
 import argparse
 import ctypes
 import datetime
-import getpass
 import json
 import os
 import subprocess
@@ -23,6 +22,7 @@ import winreg
 from typing import Any
 
 from core.utils.process import is_process_running
+from core.utils.win32.bindings.advapi32 import get_current_user_sid
 from core.utils.win32.bindings.kernel32 import CloseHandle, CreateFile, GetLastError, ReadFile, WriteFile
 from core.utils.win32.bindings.shell32 import IsUserAnAdmin
 from core.utils.win32.constants import (
@@ -850,12 +850,7 @@ class CLITaskHandler:
             return False
 
     def get_current_user_sid(self):
-        import win32security
-
-        username = getpass.getuser()
-        user, _, _ = win32security.LookupAccountName(None, username)
-        sid = win32security.ConvertSidToStringSid(user)
-        return sid
+        return get_current_user_sid()
 
     def create_task(self):
         import win32com.client
