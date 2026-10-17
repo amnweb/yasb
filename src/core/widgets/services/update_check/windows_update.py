@@ -10,10 +10,11 @@ threads (QThread workers).
 import logging
 from typing import Any
 
-import pywintypes
-import win32com.client
+from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
 
 from core.utils.shell_utils import shell_open
+from core.utils.win32.bindings.ole32 import create_dispatch
+from core.utils.win32.constants import DISP_E_EXCEPTION
 
 
 def check_updates() -> list[dict[str, str]]:
@@ -29,7 +30,7 @@ def check_updates() -> list[dict[str, str]]:
         Returns an empty list on error.
     """
     try:
-        update_session = win32com.client.Dispatch("Microsoft.Update.Session")
+        update_session = create_dispatch("Microsoft.Update.Session")
         update_searcher = update_session.CreateUpdateSearcher()
         search_result = update_searcher.Search("IsInstalled=0")
 
@@ -55,9 +56,8 @@ def check_updates() -> list[dict[str, str]]:
         return results
 
     except Exception as e:
-        # When offline, Search("IsInstalled=0") raises a COM Error
-        # e.g., pywintypes.com_error: (-2147352567, 'Exception occurred.', ...)
-        if isinstance(e, pywintypes.com_error) and e.args and e.args[0] == -2147352567:
+        # When offline, Search("IsInstalled=0") fails with DISP_E_EXCEPTION
+        if isinstance(e, COMError) and e.hresult == DISP_E_EXCEPTION:
             logging.warning("Offline or network issue while checking Windows updates.")
         else:
             logging.exception("Error checking Windows updates")

@@ -11,6 +11,8 @@ from PyQt6.QtCore import (
 )
 
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource
+from core.utils.win32.bindings.ole32 import CoInitialize, CoUninitialize, create_dispatch
+from core.utils.win32.bindings.shell32 import read_shortcut
 from core.utils.win32.bindings.shlwapi import SHLoadIndirectString
 from core.utils.win32.registry_keys import CLSID_KEY, CONTROL_PANEL_NAMESPACE_KEY
 
@@ -76,17 +78,12 @@ def _enumerate_control_panel_items() -> Iterator[tuple[str, str, str, str | None
 
 
 def _get_start_apps() -> list[tuple[str, str]]:
-    import pythoncom
-    import win32com.client
-
-    pythoncom.CoInitialize()
+    hr = CoInitialize()
     try:
-        apps = [
-            (item.Name, item.Path)
-            for item in win32com.client.Dispatch("Shell.Application").NameSpace(_APPS_FOLDER).Items()
-        ]
+        apps = [(item.Name, item.Path) for item in create_dispatch("Shell.Application").NameSpace(_APPS_FOLDER).Items()]
     finally:
-        pythoncom.CoUninitialize()
+        if hr >= 0:
+            CoUninitialize()
     return sorted(apps, key=lambda app: app[0].casefold())
 
 
@@ -212,21 +209,13 @@ class ShortcutResolver:
         If warning_callback is provided, it will be called with an error message on failure.
         Returns (full_command, app_name) or (None, None) on error.
         """
-        try:
-            import win32com.client
-
-            shell = win32com.client.Dispatch("WScript.Shell")
-            shortcut = shell.CreateShortcut(lnk_path)
-            target_path = shortcut.TargetPath
-            arguments = shortcut.Arguments
-            app_name = os.path.splitext(os.path.basename(lnk_path))[0]
-            # Combine target and arguments for the real launch command
-            if arguments:
-                full_command = f'"{target_path}" {arguments}'
-            else:
-                full_command = target_path
-            return full_command, app_name
-        except Exception:
+        shortcut = read_shortcut(lnk_path)
+        if shortcut is None:
             if warning_callback:
                 warning_callback(f"Failed to resolve shortcut: {lnk_path}")
             return None, None
+        app_name = os.path.splitext(os.path.basename(lnk_path))[0]
+        # Combine target and arguments for the real launch command
+        if shortcut.arguments:
+            return f'"{shortcut.target}" {shortcut.arguments}', app_name
+        return shortcut.target, app_name

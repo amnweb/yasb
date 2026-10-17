@@ -1352,6 +1352,9 @@ class LaunchpadWidget(BaseWidget):
 
         if ext == ".lnk":
             target_path, app_name = ShortcutResolver.resolve_lnk_target(file_path, self._warning_dialog)
+            if app_name and not target_path:
+                # Shortcuts to shell items such as File Explorer have no file target; the shortcut launches them
+                target_path = file_path
             if not app_name or not target_path:
                 self._warning_dialog(f"Failed to resolve shortcut: {file_path}")
                 return
@@ -1419,7 +1422,8 @@ class LaunchpadWidget(BaseWidget):
         self._hide_drop_overlay()
         mime_data = event.mimeData()
         if mime_data is not None and mime_data.hasUrls():
-            file_paths = [url.toLocalFile() for url in mime_data.urls()]
+            # Qt gives forward slashes, which the shell icon lookup does not accept
+            file_paths = [os.path.normpath(url.toLocalFile()) for url in mime_data.urls()]
             for file_path in file_paths:
                 self._handle_file_drop(file_path, refresh_grid=False)
 

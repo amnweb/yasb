@@ -23,7 +23,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource
 from core.utils.system import app_data_path
 from core.utils.win32.bindings.kernel32 import GetLastError
-from core.utils.win32.bindings.shell32 import shell_execute
+from core.utils.win32.bindings.shell32 import read_shortcut, shell_execute
 from core.utils.win32.bindings.user32 import FindWindowEx, get_window_thread_process_id
 from core.utils.win32.utils import get_app_name_from_aumid
 from core.widgets.services.taskbar.pin_context import (
@@ -37,7 +37,6 @@ from core.widgets.services.taskbar.shortcut_resolver import (
     find_app_shortcut,
     find_shortcut_by_aumid,
     find_shortcut_by_name,
-    get_wscript_shell,
     normalized_targets,
 )
 
@@ -686,11 +685,11 @@ class PinManager:
 
             if shortcut_path and os.path.exists(shortcut_path):
                 # Read shortcut properties to get target and args
-                wsh = get_wscript_shell()
-                shortcut = wsh.CreateShortcut(shortcut_path)
-                target = shortcut.Targetpath or ""
-                arguments = shortcut.Arguments or ""
-                working_dir = shortcut.WorkingDirectory or ""
+                shortcut = read_shortcut(shortcut_path)
+                if shortcut is not None:
+                    target = shortcut.target
+                    arguments = shortcut.arguments
+                    working_dir = shortcut.working_directory
 
             # Fallback to direct exe path if shortcut didn't provide target
             if not target and id_type == "path" and os.path.exists(value):

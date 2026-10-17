@@ -1,8 +1,10 @@
 """Wrappers for ole32 win32 API functions to make them easier to use and have proper types"""
 
 from ctypes import POINTER, WinDLL, byref, c_long, c_ulong, c_void_p
+from typing import Any
 
 import comtypes  # pyright: ignore[reportMissingTypeStubs]
+import comtypes.client  # pyright: ignore[reportMissingTypeStubs]
 
 from core.utils.win32.structs import GUID, PROPVARIANT
 from core.utils.win32.typecheck import CArgObject
@@ -59,3 +61,13 @@ def create_com_object[T: comtypes.IUnknown](clsid: comtypes.GUID, interface: typ
         return comtypes.CoCreateInstance(clsid, interface, clsctx)
     except comtypes.COMError, OSError:
         return None
+
+
+def create_dispatch(progid: str) -> Any:
+    """A late-bound automation object, the way script hosts create one (Shell.Application, ADODB.Connection)."""
+    return comtypes.client.CreateObject(progid, dynamic=True)
+
+
+def get_dispatch(display_name: str) -> Any:
+    """The late-bound object a moniker display name names, such as "winmgmts:"."""
+    return comtypes.client.CoGetObject(display_name, dynamic=True)

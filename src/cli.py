@@ -24,6 +24,7 @@ from typing import Any
 from core.utils.process import is_process_running
 from core.utils.win32.bindings.advapi32 import get_current_user_sid
 from core.utils.win32.bindings.kernel32 import CloseHandle, CreateFile, GetLastError, ReadFile, WriteFile
+from core.utils.win32.bindings.ole32 import create_dispatch
 from core.utils.win32.bindings.shell32 import IsUserAnAdmin
 from core.utils.win32.constants import (
     ERROR_NO_MORE_ITEMS,
@@ -853,9 +854,7 @@ class CLITaskHandler:
         return get_current_user_sid()
 
     def create_task(self):
-        import win32com.client
-
-        scheduler = win32com.client.Dispatch("Schedule.Service")
+        scheduler = create_dispatch("Schedule.Service")
         scheduler.Connect()
         root_folder = scheduler.GetFolder("\\")
         task_def = scheduler.NewTask(0)
@@ -896,9 +895,7 @@ class CLITaskHandler:
             print(f"Failed to create task YASB Reborn. Error: {e}")
 
     def delete_task(self):
-        import win32com.client
-
-        scheduler = win32com.client.Dispatch("Schedule.Service")
+        scheduler = create_dispatch("Schedule.Service")
         scheduler.Connect()
         root_folder = scheduler.GetFolder("\\")
         try:

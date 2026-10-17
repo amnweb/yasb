@@ -45,7 +45,7 @@ from core.utils.win32.bindings.kernel32 import (
     get_volume_label,
     snapshot_processes,
 )
-from core.utils.win32.bindings.ole32 import CoInitialize
+from core.utils.win32.bindings.ole32 import CoInitialize, create_dispatch, get_dispatch
 from core.utils.win32.bindings.secur32 import GetUserNameEx
 from core.utils.win32.bindings.shell32 import (
     SHGetPropertyStoreFromParsingName,
@@ -491,6 +491,7 @@ def test_read_shortcut(tmp_path: Path):
     link.SetArguments("--flag value")
     link.SetDescription("YASB test shortcut")
     link.SetIconLocation(KERNEL32_DLL, 3)
+    link.SetWorkingDirectory(str(tmp_path))
     link.QueryInterface(IPersistFile).Save(str(path), True)
 
     shortcut = read_shortcut(str(path))
@@ -500,6 +501,7 @@ def test_read_shortcut(tmp_path: Path):
     assert shortcut.arguments == "--flag value"
     assert shortcut.description == "YASB test shortcut"
     assert (shortcut.icon_file, shortcut.icon_index) == (KERNEL32_DLL, 3)
+    assert shortcut.working_directory == str(tmp_path)
 
 
 def test_read_shortcut_of_a_missing_file(tmp_path: Path):
@@ -527,3 +529,28 @@ def test_shell_item_icon_location_of_a_file_without_its_own_icon(tmp_path: Path)
     text_file.write_text("no icon of its own")
 
     assert get_shell_item_icon_location(str(text_file)) is None
+
+
+def test_create_dispatch_lists_a_folder(tmp_path: Path):
+    CoInitialize()
+    for name in ("a.txt", "b.txt"):
+        (tmp_path / name).write_text(name)
+
+    folder = create_dispatch("Shell.Application").NameSpace(str(tmp_path))
+
+    assert sorted(Path(item.Path).name for item in folder.Items()) == ["a.txt", "b.txt"]
+
+
+def test_create_dispatch_of_an_unknown_progid():
+    CoInitialize()
+    with pytest.raises(OSError):
+        create_dispatch("Yasb.NoSuchObject")
+
+
+def test_get_dispatch_queries_wmi():
+    CoInitialize()
+    processes = get_dispatch("winmgmts:").ExecQuery(
+        f"SELECT ProcessId FROM Win32_Process WHERE ProcessId = {os.getpid()}"
+    )
+
+    assert [process.Properties_.Item("ProcessId").Value for process in processes] == [os.getpid()]

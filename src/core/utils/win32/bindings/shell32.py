@@ -289,6 +289,7 @@ class Shortcut(NamedTuple):
     description: str
     icon_file: str
     icon_index: int
+    working_directory: str
 
 
 def read_shortcut(path: str) -> Shortcut | None:
@@ -298,7 +299,7 @@ def read_shortcut(path: str) -> Shortcut | None:
     try:
         link.QueryInterface(IPersistFile).Load(path, STGM_READ)
         icon_file, icon_index = link.GetIconLocation()
-        target, arguments = link.GetPath(0), link.GetArguments()
+        target, arguments, working_directory = link.GetPath(0), link.GetArguments(), link.GetWorkingDirectory()
     except COMError, OSError:
         return None
     try:
@@ -306,7 +307,7 @@ def read_shortcut(path: str) -> Shortcut | None:
     except COMError:
         # E_FAIL for system shortcuts whose description is a resource string ("@shell32.dll,-22531").
         description = ""
-    return Shortcut(target, arguments, description, icon_file, icon_index)
+    return Shortcut(target, arguments, description, icon_file, icon_index, working_directory)
 
 
 # https://learn.microsoft.com/en-us/windows/win32/api/servprov/nn-servprov-iserviceprovider

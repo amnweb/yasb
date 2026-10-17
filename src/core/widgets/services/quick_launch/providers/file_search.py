@@ -143,6 +143,7 @@ def _get_file_icon(name: str, is_folder: bool) -> str:
     return _EXT_ICON_MAP.get(ext, ICON_FILE)
 
 
+from core.utils.win32.bindings.ole32 import create_dispatch
 from settings import IS_FROZEN
 
 # Loaded into YASB's own process, so it follows the Python build's architecture, not the host's.
@@ -522,9 +523,7 @@ class _WindowsSearchBackend:
         if self._available is not None:
             return self._available
         try:
-            import win32com.client
-
-            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn = create_dispatch("ADODB.Connection")
             conn.Open("Provider=Search.CollatorDSO;Extended Properties='Application=Windows';")
             conn.Close()
             self._available = True
@@ -534,9 +533,7 @@ class _WindowsSearchBackend:
 
     def search(self, query: str, max_results: int = 20) -> list[dict[str, Any]]:
         try:
-            import win32com.client
-
-            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn = create_dispatch("ADODB.Connection")
             conn.Open("Provider=Search.CollatorDSO;Extended Properties='Application=Windows';")
             # Strip to safe filename characters only, ADODB doesn't support parameterized queries
             # Convert glob wildcards (* ?) to SQL LIKE equivalents (% _)
@@ -556,7 +553,7 @@ class _WindowsSearchBackend:
                 f"AND SCOPE='file:' "
                 f"ORDER BY System.Search.Rank DESC"
             )
-            rs, _ = conn.Execute(sql)
+            rs = conn.Execute(sql)
             results: list[dict[str, Any]] = []
             while not rs.EOF:
                 path = rs.Fields("System.ItemPathDisplay").Value

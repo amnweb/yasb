@@ -12,23 +12,18 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
-import pythoncom
 from humanize import naturalsize
 from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QAction, QCursor
 from PyQt6.QtWidgets import QMenu
-from win32comext.shell import shell, shellcon
 
+from core.utils.win32.bindings.ole32 import CoInitialize, CoUninitialize, create_dispatch
 from core.utils.win32.bindings.user32 import IsWindow
 from core.utils.win32.constants import KnownCLSID
 from core.utils.win32.utils import apply_qmenu_style
 from core.utils.win32.window_actions import close_application
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-    from _win32typing import PyIDL  # pyright: ignore[reportMissingModuleSource]
-
     from core.widgets.services.recycle_bin.recycle_bin_monitor import EmptyBinThread
     from core.widgets.yasb.taskbar import TaskbarWidget
 
@@ -81,59 +76,18 @@ def get_explorer_pinned_folders() -> list[tuple[str, str]]:
     Get pinned folders from Windows Quick Access using Shell COM API.
     Returns list of (folder_name, folder_path) tuples.
     """
+    hr = CoInitialize()
     try:
-        pythoncom.CoInitialize()
-
         pinned_folders: list[tuple[str, str]] = []
 
         try:
-            # Get desktop folder first
-            desktop = shell.SHGetDesktopFolder()
-
-            # Parse Quick Access using its GUID
-            quick_access_path = f"shell:::{{{KnownCLSID.QUICK_ACCESS}}}"
-            pidl = shell.SHParseDisplayName(quick_access_path, 0)  # pyright: ignore[reportUnknownMemberType]
-
-            # Bind to Quick Access folder
-            quick_access_folder = desktop.BindToObject(
-                pidl[0],  # pyright: ignore[reportArgumentType]
-                None,  # pyright: ignore[reportArgumentType]
-                shell.IID_IShellFolder,
-            )
-
-            # Enumerate folders in Quick Access
-            enum_objects = quick_access_folder.EnumObjects(  # pyright: ignore[reportUnknownMemberType]
-                0, shellcon.SHCONTF_FOLDERS | shellcon.SHCONTF_INCLUDEHIDDEN
-            )
-
-            # Iterate through all items
-            for pidl_item in cast("Iterable[PyIDL]", enum_objects):
+            quick_access = create_dispatch("Shell.Application").NameSpace(f"shell:::{{{KnownCLSID.QUICK_ACCESS}}}")
+            for item in quick_access.Items():
                 try:
-                    # Get display name
-                    display_name = cast(
-                        str,
-                        quick_access_folder.GetDisplayNameOf(  # pyright: ignore[reportUnknownMemberType]
-                            pidl_item, shellcon.SHGDN_NORMAL
-                        ),
-                    )
-
-                    # Get file system path using FORPARSING flag
-                    fs_path = cast(
-                        str,
-                        quick_access_folder.GetDisplayNameOf(  # pyright: ignore[reportUnknownMemberType]
-                            pidl_item, shellcon.SHGDN_FORPARSING
-                        ),
-                    )
-
-                    # Check attributes to ensure it's a folder
-                    attrs = cast(
-                        int,
-                        quick_access_folder.GetAttributesOf(  # pyright: ignore[reportUnknownMemberType]
-                            (pidl_item,), shellcon.SFGAO_FOLDER | shellcon.SFGAO_FILESYSTEM
-                        ),
-                    )
-                    is_folder = bool(attrs & shellcon.SFGAO_FOLDER)
-                    is_filesystem = bool(attrs & shellcon.SFGAO_FILESYSTEM)
+                    display_name: str = item.Name
+                    fs_path: str = item.Path
+                    is_folder = bool(item.IsFolder)
+                    is_filesystem = bool(item.IsFileSystem)
 
                     # Only include filesystem folders (skip virtual folders except Recycle Bin)
                     if not fs_path:
@@ -152,12 +106,14 @@ def get_explorer_pinned_folders() -> list[tuple[str, str]]:
         except Exception as e:
             logging.debug("Error accessing Quick Access folder: %s", e)
 
-        pythoncom.CoUninitialize()
         return pinned_folders[:10]  # Limit to 10 items
 
     except Exception as e:
         logging.debug("Error reading Quick Access pinned folders: %s", e)
         return []
+    finally:
+        if hr >= 0:
+            CoUninitialize()
 
 
 def get_windows_terminal_profiles(identifier: str | None = None) -> list[tuple[str, str]]:
