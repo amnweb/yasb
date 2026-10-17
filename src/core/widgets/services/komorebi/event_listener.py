@@ -2,16 +2,34 @@ import json
 import logging
 import threading
 import uuid
+from ctypes import WinError
 from typing import Any, override
 
-import pywintypes
-import win32file
-import win32pipe
 from PyQt6.QtCore import QThread
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
 from core.utils.process import is_process_running
+from core.utils.win32.bindings.kernel32 import (
+    CloseHandle,
+    ConnectNamedPipe,
+    CreateFile,
+    CreateNamedPipe,
+    GetLastError,
+    PeekNamedPipe,
+    ReadFile,
+)
+from core.utils.win32.constants import (
+    ERROR_BROKEN_PIPE,
+    ERROR_PIPE_CONNECTED,
+    GENERIC_READ,
+    INVALID_HANDLE_VALUE,
+    OPEN_EXISTING,
+    PIPE_ACCESS_DUPLEX,
+    PIPE_READMODE_MESSAGE,
+    PIPE_TYPE_MESSAGE,
+    PIPE_WAIT,
+)
 from core.widgets.services.komorebi.client import KomorebiClient
 
 KOMOREBI_PIPE_BUFF_SIZE = 64 * 1024 * 8
@@ -36,14 +54,14 @@ class KomorebiEventListener(QThread):
         return not self._stop_event.is_set()
 
     def _create_pipe(self) -> None:
-        open_mode = win32pipe.PIPE_ACCESS_DUPLEX
-        pipe_mode = win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_READMODE_MESSAGE | win32pipe.PIPE_WAIT
+        open_mode = PIPE_ACCESS_DUPLEX
+        pipe_mode = PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT
         max_instances = 1
         buffer_size_in = self.buffer_size
         buffer_size_out = self.buffer_size
         default_timeout_ms = 0
         security_attributes = None
-        self.pipe = win32pipe.CreateNamedPipe(  # pyright: ignore[reportUnknownMemberType]
+        pipe = CreateNamedPipe(
             f"\\\\.\\pipe\\{self.pipe_name}",
             open_mode,
             pipe_mode,
@@ -51,16 +69,16 @@ class KomorebiEventListener(QThread):
             buffer_size_in,
             buffer_size_out,
             default_timeout_ms,
-            security_attributes,  # pyright: ignore[reportArgumentType]
+            security_attributes,
         )
+        if pipe == INVALID_HANDLE_VALUE:
+            raise WinError(GetLastError())
+        self.pipe = pipe
         logging.info("Created named pipe %s", self.pipe_name)
 
     def _close_pipe(self):
         if self.pipe:
-            try:
-                win32file.CloseHandle(self.pipe)
-            except Exception:
-                pass
+            CloseHandle(self.pipe)
             self.pipe = None
 
     @override
@@ -73,33 +91,35 @@ class KomorebiEventListener(QThread):
                 pipe = self.pipe
 
                 while self._app_running and pipe is not None:
-                    try:
-                        _, bytes_to_read, _ = win32pipe.PeekNamedPipe(pipe, 1)
-                        if not bytes_to_read:
-                            if self._stop_event.wait(0.05):
-                                break
-                            continue
-
-                        _, data = win32file.ReadFile(pipe, bytes_to_read, None)
-
-                        if not data.strip():
-                            continue
-
-                        try:
-                            event_message = json.loads(data.decode("utf-8"))
-                            event = event_message["event"]
-                            state = event_message["state"]
-
-                            if event and state:
-                                self._emit_event(event, state)
-                        except KeyError, ValueError:
-                            logging.exception("Failed to parse komorebi state. Received data: %s", data)
-                    except pywintypes.error as e:
-                        if e.winerror == 109:  # ERROR_BROKEN_PIPE
-                            logging.warning("Pipe has been ended: %s", e)
+                    ok, _, bytes_to_read = PeekNamedPipe(pipe)
+                    if ok and not bytes_to_read:
+                        if self._stop_event.wait(0.05):
                             break
-                        else:
-                            logging.exception("Unexpected error occurred: %s", e)
+                        continue
+
+                    data = b""
+                    if ok:
+                        ok, data = ReadFile(pipe, bytes_to_read)
+                    if not ok:
+                        error = WinError(GetLastError())
+                        if error.winerror == ERROR_BROKEN_PIPE:
+                            logging.warning("Pipe has been ended: %s", error)
+                            break
+                        logging.error("Unexpected error occurred: %s", error)
+                        continue
+
+                    if not data.strip():
+                        continue
+
+                    try:
+                        event_message = json.loads(data.decode("utf-8"))
+                        event = event_message["event"]
+                        state = event_message["state"]
+
+                        if event and state:
+                            self._emit_event(event, state)
+                    except KeyError, ValueError:
+                        logging.exception("Failed to parse komorebi state. Received data: %s", data)
             except BaseException, Exception:
                 logging.exception("Komorebi has disconnected from the named pipe %s", self.pipe_name)
             finally:
@@ -116,13 +136,9 @@ class KomorebiEventListener(QThread):
 
     def stop(self):
         self._stop_event.set()
-        try:
-            client = win32file.CreateFile(
-                f"\\\\.\\pipe\\{self.pipe_name}", win32file.GENERIC_READ, 0, None, win32file.OPEN_EXISTING, 0, None
-            )
-            client.Close()
-        except pywintypes.error:
-            pass
+        client = CreateFile(f"\\\\.\\pipe\\{self.pipe_name}", GENERIC_READ, 0, None, OPEN_EXISTING, 0, None)
+        if client != INVALID_HANDLE_VALUE:
+            CloseHandle(client)
 
     def _emit_event(self, event: dict[str, Any] | str, state: dict[str, Any]) -> None:
         if isinstance(event, str):
@@ -153,11 +169,10 @@ class KomorebiEventListener(QThread):
         if not self._app_running or self.pipe is None:
             return
 
-        try:
-            win32pipe.ConnectNamedPipe(self.pipe, None)  # pyright: ignore[reportUnknownMemberType]
-        except pywintypes.error:
-            if self._app_running:
-                raise
+        if not ConnectNamedPipe(self.pipe):
+            error = GetLastError()
+            if error != ERROR_PIPE_CONNECTED and self._app_running:
+                raise WinError(error)
         if not self._app_running:
             return
 

@@ -5,6 +5,7 @@ from threading import Event
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from core.utils.win32.bindings.ole32 import CoInitialize, CoUninitialize
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 
 
@@ -57,6 +58,14 @@ class QueryWorker(QThread):
         self._queue.put(None)
 
     def run(self):
+        hr = CoInitialize()
+        try:
+            self._process_queue()
+        finally:
+            if hr >= 0:
+                CoUninitialize()
+
+    def _process_queue(self):
         while True:
             item = self._queue.get()
             if item is None:

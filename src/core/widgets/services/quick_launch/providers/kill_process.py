@@ -2,9 +2,10 @@ import ctypes
 import logging
 from typing import Any, TypedDict
 
+from core.utils.process import terminate_process
 from core.utils.win32.bindings.kernel32 import kernel32, snapshot_processes
 from core.utils.win32.bindings.psapi import psapi
-from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_TERMINATE
+from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION
 from core.utils.win32.structs import PROCESS_MEMORY_COUNTERS
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_KILL_PROCESS
@@ -44,17 +45,6 @@ def _get_process_memory(pid: int) -> int:
         if psapi.GetProcessMemoryInfo(h, ctypes.byref(pmc), pmc.cb):
             return pmc.WorkingSetSize
         return 0
-    finally:
-        kernel32.CloseHandle(h)
-
-
-def _terminate_process(pid: int) -> bool:
-    """Terminate a process by PID. Returns True on success."""
-    h = kernel32.OpenProcess(PROCESS_TERMINATE, False, pid)
-    if not h:
-        return False
-    try:
-        return bool(kernel32.TerminateProcess(h, 1))
     finally:
         kernel32.CloseHandle(h)
 
@@ -139,7 +129,7 @@ class KillProcessProvider(BaseProvider):
         killed = 0
         for pid in pids:
             try:
-                if _terminate_process(pid):
+                if terminate_process(pid):
                     killed += 1
                 else:
                     logging.debug("Failed to terminate PID %s (%s)", pid, name)

@@ -14,15 +14,17 @@ import logging
 import os
 import shlex
 import subprocess
+from ctypes import WinError
 from pathlib import Path
 from typing import Any, TypedDict
 
-import win32gui
-import win32process
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource
 from core.utils.system import app_data_path
+from core.utils.win32.bindings.kernel32 import GetLastError
+from core.utils.win32.bindings.shell32 import read_shortcut, shell_execute
+from core.utils.win32.bindings.user32 import FindWindowEx, get_window_thread_process_id
 from core.utils.win32.utils import get_app_name_from_aumid
 from core.widgets.services.taskbar.pin_context import (
     WindowContext,
@@ -35,7 +37,6 @@ from core.widgets.services.taskbar.shortcut_resolver import (
     find_app_shortcut,
     find_shortcut_by_aumid,
     find_shortcut_by_name,
-    get_wscript_shell,
     normalized_targets,
 )
 
@@ -507,9 +508,9 @@ class PinManager:
         pid = context.base_pid
         if pid and context.exe_path and "ApplicationFrameHost.exe" in context.exe_path:
             try:
-                child = win32gui.FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
+                child = FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
                 if child:
-                    _, child_pid = win32process.GetWindowThreadProcessId(child)
+                    _, child_pid = get_window_thread_process_id(child)
                     if child_pid:
                         return child_pid
             except Exception:
@@ -625,21 +626,10 @@ class PinManager:
         except OSError as e:
             # Check if elevation is required (WinError 740)
             if e.winerror == 740:
-                import win32api
-                import win32con
-
-                try:
-                    win32api.ShellExecute(  # pyright: ignore[reportUnknownMemberType]
-                        0,
-                        "runas",
-                        exe_path,
-                        arguments,
-                        working_dir,  # pyright: ignore[reportArgumentType]
-                        win32con.SW_SHOWNORMAL,
-                    )
-                except Exception as shell_error:
+                if shell_execute(exe_path, "runas", arguments, working_dir) <= 32:
+                    shell_error = WinError(GetLastError())
                     logging.error("Failed to launch with elevation: %s", shell_error)
-                    raise
+                    raise shell_error
             else:
                 raise
 
@@ -695,11 +685,11 @@ class PinManager:
 
             if shortcut_path and os.path.exists(shortcut_path):
                 # Read shortcut properties to get target and args
-                wsh = get_wscript_shell()
-                shortcut = wsh.CreateShortcut(shortcut_path)
-                target = shortcut.Targetpath or ""
-                arguments = shortcut.Arguments or ""
-                working_dir = shortcut.WorkingDirectory or ""
+                shortcut = read_shortcut(shortcut_path)
+                if shortcut is not None:
+                    target = shortcut.target
+                    arguments = shortcut.arguments
+                    working_dir = shortcut.working_directory
 
             # Fallback to direct exe path if shortcut didn't provide target
             if not target and id_type == "path" and os.path.exists(value):

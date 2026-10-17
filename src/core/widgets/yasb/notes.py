@@ -24,7 +24,8 @@ from core.config import HOME_CONFIGURATION_DIR
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import ElidedLabel
-from core.utils.win32.utils import find_focused_screen, get_foreground_hwnd, set_foreground_hwnd  # type: ignore
+from core.utils.win32.bindings.user32 import GetForegroundWindow, SetForegroundWindow
+from core.utils.win32.utils import find_focused_screen
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.notes import NotesConfig
 from core.widgets.base import BaseWidget
@@ -175,7 +176,7 @@ class NotesWidget(BaseWidget):
         # Restore focus
         if self.previous_hwnd:
             try:
-                set_foreground_hwnd(self.previous_hwnd)
+                SetForegroundWindow(self.previous_hwnd)
             finally:
                 self.previous_hwnd = 0
 
@@ -325,7 +326,7 @@ class NotesWidget(BaseWidget):
 
     def _show_menu(self) -> None:
         # Remember the current foreground window so we can restore focus when closing
-        self.previous_hwnd = get_foreground_hwnd()
+        self.previous_hwnd = GetForegroundWindow()
 
         # Capture current position to restore after recreation if floating
         current_pos = self.menu.pos() if self.is_menu_active() and self.menu else None

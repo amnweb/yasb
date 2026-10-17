@@ -6,7 +6,7 @@ import tempfile
 import time
 from collections.abc import Callable
 from functools import lru_cache, partial
-from typing import Any, cast, override
+from typing import Any, override
 
 from PyQt6.QtCore import (
     QAbstractAnimation,
@@ -68,7 +68,9 @@ from core.utils.shell_utils import shell_open
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_loader import AppEntry, AppListLoader, ShortcutResolver, app_icon_source
 from core.utils.win32.backdrop import enable_blur
-from core.utils.win32.utils import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
+from core.utils.win32.bindings.user32 import GetForegroundWindow, SetForegroundWindow
+from core.utils.win32.bindings.version import get_version_strings
+from core.utils.win32.utils import apply_qmenu_style
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.launchpad import LaunchpadConfig
 from core.widgets.base import BaseWidget
@@ -884,7 +886,7 @@ class LaunchpadWidget(BaseWidget):
             self._dpr = screen.devicePixelRatio()
 
         # Save current foreground window before showing popup
-        self._previous_hwnd = get_foreground_hwnd()
+        self._previous_hwnd = GetForegroundWindow()
 
         if not self._launchpad_popup:
             self._launchpad_popup = self._create_launchpad_popup()
@@ -1343,17 +1345,7 @@ class LaunchpadWidget(BaseWidget):
 
     def _get_file_description(self, path: str) -> str:
         """Get the file description from Windows file properties."""
-        import win32api
-
-        try:
-            translations = cast(list[tuple[int, int]], win32api.GetFileVersionInfo(path, "\\VarFileInfo\\Translation"))
-            language, codepage = translations[0]
-            stringFileInfo = f"\\StringFileInfo\\{language:04X}{codepage:04X}\\FileDescription"
-            description = cast(str, win32api.GetFileVersionInfo(path, stringFileInfo))
-        except:
-            description = "unknown"
-
-        return description
+        return get_version_strings(path, ("FileDescription",)).get("FileDescription", "unknown")
 
     def _handle_file_drop(self, file_path: str, refresh_grid: bool = True):
         ext = os.path.splitext(file_path)[1].lower()
@@ -1361,6 +1353,9 @@ class LaunchpadWidget(BaseWidget):
 
         if ext == ".lnk":
             target_path, app_name = ShortcutResolver.resolve_lnk_target(file_path, self._warning_dialog)
+            if app_name and not target_path:
+                # Shortcuts to shell items such as File Explorer have no file target; the shortcut launches them
+                target_path = file_path
             if not app_name or not target_path:
                 self._warning_dialog(f"Failed to resolve shortcut: {file_path}")
                 return
@@ -1428,7 +1423,8 @@ class LaunchpadWidget(BaseWidget):
         self._hide_drop_overlay()
         mime_data = event.mimeData()
         if mime_data is not None and mime_data.hasUrls():
-            file_paths = [url.toLocalFile() for url in mime_data.urls()]
+            # Qt gives forward slashes, which the shell icon lookup does not accept
+            file_paths = [os.path.normpath(url.toLocalFile()) for url in mime_data.urls()]
             for file_path in file_paths:
                 self._handle_file_drop(file_path, refresh_grid=False)
 
@@ -1952,7 +1948,7 @@ class LaunchpadWidget(BaseWidget):
 
             # Restore focus to previous window
             if self._previous_hwnd:
-                set_foreground_hwnd(self._previous_hwnd)
+                SetForegroundWindow(self._previous_hwnd)
                 self._previous_hwnd = 0
 
     def _cleanup_overlay(self):

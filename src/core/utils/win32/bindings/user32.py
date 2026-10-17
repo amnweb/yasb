@@ -10,6 +10,7 @@ from ctypes import (
     c_long,
     c_size_t,
     c_ssize_t,
+    create_unicode_buffer,
     sizeof,
 )
 from ctypes.wintypes import (
@@ -29,6 +30,7 @@ from ctypes.wintypes import (
     LPCWSTR,
     LPDWORD,
     LPVOID,
+    LPWSTR,
     MSG,
     POINT,
     RECT,
@@ -38,12 +40,17 @@ from ctypes.wintypes import (
 )
 
 from core.utils.win32.structs import (
+    DISPLAY_DEVICEW,
     GUID,
     ICONINFO,
     INPUT,
+    MONITORINFO,
+    MONITORINFOEXW,
+    WINDOWPLACEMENT,
     WNDCLASS,
+    WNDENUMPROC,
 )
-from core.utils.win32.typecheck import CArgObject, CFunctionType
+from core.utils.win32.typecheck import CArgObject, CFunctionType, CPointer
 
 user32 = WinDLL("user32", use_last_error=True)
 user32.GetForegroundWindow.argtypes = []
@@ -57,6 +64,18 @@ user32.EnumDisplayMonitors.restype = BOOL
 
 user32.MonitorFromWindow.argtypes = [HWND, DWORD]
 user32.MonitorFromWindow.restype = HMONITOR
+
+user32.MonitorFromRect.argtypes = [POINTER(RECT), DWORD]
+user32.MonitorFromRect.restype = HMONITOR
+
+user32.GetMonitorInfoW.argtypes = [HMONITOR, POINTER(MONITORINFO)]
+user32.GetMonitorInfoW.restype = BOOL
+
+user32.EnumDisplayDevicesW.argtypes = [LPCWSTR, DWORD, POINTER(DISPLAY_DEVICEW), DWORD]
+user32.EnumDisplayDevicesW.restype = BOOL
+
+user32.GetSystemMetrics.argtypes = [INT]
+user32.GetSystemMetrics.restype = INT
 
 
 user32.SetWinEventHook.argtypes = [
@@ -264,6 +283,33 @@ user32.IsIconic.restype = BOOL
 user32.GetWindowTextLengthW.argtypes = [HWND]
 user32.GetWindowTextLengthW.restype = c_int
 
+user32.GetWindowTextW.argtypes = [HWND, LPWSTR, INT]
+user32.GetWindowTextW.restype = INT
+
+user32.GetClassLongPtrW.argtypes = [HWND, INT]
+user32.GetClassLongPtrW.restype = c_size_t
+
+user32.GetParent.argtypes = [HWND]
+user32.GetParent.restype = HWND
+
+user32.GetWindow.argtypes = [HWND, UINT]
+user32.GetWindow.restype = HWND
+
+user32.GetWindowPlacement.argtypes = [HWND, POINTER(WINDOWPLACEMENT)]
+user32.GetWindowPlacement.restype = BOOL
+
+user32.CreatePopupMenu.argtypes = []
+user32.CreatePopupMenu.restype = HMENU
+
+user32.AppendMenuW.argtypes = [HMENU, UINT, c_size_t, LPCWSTR]
+user32.AppendMenuW.restype = BOOL
+
+user32.TrackPopupMenu.argtypes = [HMENU, UINT, INT, INT, INT, HWND, POINTER(RECT)]
+user32.TrackPopupMenu.restype = BOOL
+
+user32.DestroyMenu.argtypes = [HMENU]
+user32.DestroyMenu.restype = BOOL
+
 user32.GetKeyState.argtypes = [INT]
 user32.GetKeyState.restype = SHORT
 
@@ -345,6 +391,40 @@ user32.SetClipboardData.restype = HANDLE
 
 user32.CloseClipboard.argtypes = []
 user32.CloseClipboard.restype = BOOL
+
+
+def MonitorFromWindow(hwnd: int, dwFlags: int = 0) -> int | None:
+    return user32.MonitorFromWindow(hwnd, dwFlags)
+
+
+def MonitorFromRect(rect: tuple[int, int, int, int], dwFlags: int = 0) -> int | None:
+    return user32.MonitorFromRect(byref(RECT(*rect)), dwFlags)
+
+
+def GetMonitorInfo(hMonitor: int) -> MONITORINFOEXW | None:
+    info = MONITORINFOEXW(cbSize=sizeof(MONITORINFOEXW))
+    return info if user32.GetMonitorInfoW(hMonitor, byref(info)) else None
+
+
+def enum_display_monitors() -> list[tuple[int, tuple[int, int, int, int]]]:
+    monitors: list[tuple[int, tuple[int, int, int, int]]] = []
+
+    def collect(hmonitor: int, _hdc: int, rect: CPointer[RECT], _: int) -> bool:
+        r = rect.contents
+        monitors.append((hmonitor, (r.left, r.top, r.right, r.bottom)))
+        return True
+
+    user32.EnumDisplayMonitors(None, None, MONITORENUMPROC(collect), 0)
+    return monitors
+
+
+def EnumDisplayDevices(lpDevice: str | None, iDevNum: int, dwFlags: int = 0) -> DISPLAY_DEVICEW | None:
+    device = DISPLAY_DEVICEW(cb=sizeof(DISPLAY_DEVICEW))
+    return device if user32.EnumDisplayDevicesW(lpDevice, iDevNum, byref(device), dwFlags) else None
+
+
+def GetSystemMetrics(nIndex: int) -> int:
+    return user32.GetSystemMetrics(nIndex)
 
 
 def DefWindowProc(hwnd: int, uMsg: int, wParam: int, lParam: int) -> int:
@@ -470,8 +550,8 @@ def FindWindowEx(
     hwndChildAfter: int,
     lpszClass: str | None,
     lpszWindow: str | None,
-):
-    return user32.FindWindowExW(hwndParent, hwndChildAfter, lpszClass, lpszWindow)
+) -> int:
+    return user32.FindWindowExW(hwndParent, hwndChildAfter, lpszClass, lpszWindow) or 0
 
 
 def SendMessage(
@@ -499,6 +579,12 @@ def GetWindowThreadProcessId(hwnd: int, lpdwProcessId: CArgObject | None) -> int
     return user32.GetWindowThreadProcessId(hwnd, lpdwProcessId)
 
 
+def get_window_thread_process_id(hwnd: int) -> tuple[int, int]:
+    pid = DWORD()
+    tid = user32.GetWindowThreadProcessId(hwnd, byref(pid))
+    return tid, pid.value
+
+
 def AllowSetForegroundWindow(dwProcessId: int) -> int:
     return user32.AllowSetForegroundWindow(dwProcessId)
 
@@ -524,7 +610,7 @@ def ReleaseDC(hwnd: int | None, hdc: int) -> int:
 
 
 def GetForegroundWindow() -> int:
-    return user32.GetForegroundWindow()
+    return user32.GetForegroundWindow() or 0
 
 
 def SetWinEventHook(
@@ -549,6 +635,28 @@ def EnumWindows(lpEnumFunc: CFunctionType | LPVOID, lParam: int) -> bool:
 
 def EnumChildWindows(hWndParent: int, lpEnumFunc: CFunctionType, lParam: int) -> bool:
     return bool(user32.EnumChildWindows(hWndParent, lpEnumFunc, lParam))
+
+
+def enum_windows() -> list[int]:
+    hwnds: list[int] = []
+
+    def collect(hwnd: int, _: int) -> bool:
+        hwnds.append(hwnd)
+        return True
+
+    user32.EnumWindows(WNDENUMPROC(collect), 0)
+    return hwnds
+
+
+def enum_child_windows(parent: int) -> list[int]:
+    hwnds: list[int] = []
+
+    def collect(hwnd: int, _: int) -> bool:
+        hwnds.append(hwnd)
+        return True
+
+    user32.EnumChildWindows(parent, WNDENUMPROC(collect), 0)
+    return hwnds
 
 
 def SetParent(hWndChild: int, hWndNewParent: int) -> int | None:
@@ -602,6 +710,31 @@ def IsIconic(hwnd: int) -> bool:
 
 def GetWindowTextLength(hwnd: int) -> int:
     return user32.GetWindowTextLengthW(hwnd)
+
+
+def GetWindowText(hwnd: int) -> str:
+    length = user32.GetWindowTextLengthW(hwnd)
+    if length <= 0:
+        return ""
+    buf = create_unicode_buffer(length + 1)
+    user32.GetWindowTextW(hwnd, buf, length + 1)
+    return buf.value
+
+
+def GetClassLongPtr(hwnd: int, index: int) -> int:
+    return user32.GetClassLongPtrW(hwnd, index)
+
+
+def GetParent(hwnd: int) -> int:
+    return user32.GetParent(hwnd) or 0
+
+
+def GetWindow(hwnd: int, cmd: int) -> int:
+    return user32.GetWindow(hwnd, cmd) or 0
+
+
+def GetWindowPlacement(hwnd: int, lpwndpl: CArgObject) -> bool:
+    return bool(user32.GetWindowPlacement(hwnd, lpwndpl))
 
 
 def GetWindowLong(hwnd: int, index: int) -> int:
@@ -707,3 +840,19 @@ def SetClipboardData(uFormat: int, hMem: int) -> int | None:
 
 def CloseClipboard() -> bool:
     return bool(user32.CloseClipboard())
+
+
+def CreatePopupMenu() -> int:
+    return user32.CreatePopupMenu() or 0
+
+
+def AppendMenu(hMenu: int, uFlags: int, uIDNewItem: int, lpNewItem: str | None) -> bool:
+    return bool(user32.AppendMenuW(hMenu, uFlags, uIDNewItem, lpNewItem))
+
+
+def TrackPopupMenu(hMenu: int, uFlags: int, x: int, y: int, hWnd: int) -> int:
+    return user32.TrackPopupMenu(hMenu, uFlags, x, y, 0, hWnd, None)
+
+
+def DestroyMenu(hMenu: int) -> bool:
+    return bool(user32.DestroyMenu(hMenu))

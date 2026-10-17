@@ -3,7 +3,6 @@ import logging
 from functools import partial
 from typing import TYPE_CHECKING, Any, override
 
-import win32gui
 from PIL import Image
 from PyQt6.QtCore import QEasingCurve, QEvent, QMimeData, QObject, QPoint, QPropertyAnimation, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
@@ -26,6 +25,7 @@ from core.utils.icons.service import IconService, WindowIcon
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
+from core.utils.win32.bindings.user32 import GetForegroundWindow, IsIconic, IsWindow
 from core.utils.win32.constants import KnownCLSID
 from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.utils.win32.window_actions import (
@@ -1413,7 +1413,7 @@ class TaskbarWidget(BaseWidget):
         if hwnd in self.window_buttons:
             return
         # Apps already minimized when the button appears, minimize events keep it current after
-        if win32gui.IsIconic(hwnd):
+        if IsIconic(hwnd):
             self._minimized_hwnds.add(hwnd)
 
         # Check if this is a pinned app
@@ -1832,7 +1832,7 @@ class TaskbarWidget(BaseWidget):
             return
 
         # Check if the window is valid before attempting to close it
-        if win32gui.IsWindow(hwnd):
+        if IsWindow(hwnd):
             close_application(hwnd)
         else:
             logging.warning("Invalid window handle: %s, removing stale UI.", hwnd)
@@ -1921,7 +1921,7 @@ class TaskbarWidget(BaseWidget):
             # managers keep focus on a window they just minimized, and is_active would then
             # hold the title open for a window that is not on screen.
             try:
-                if win32gui.IsIconic(base):
+                if IsIconic(base):
                     continue
             except Exception:
                 pass
@@ -1943,7 +1943,7 @@ class TaskbarWidget(BaseWidget):
 
             # Final fallback to foreground equality using the base window
             try:
-                if base == win32gui.GetForegroundWindow():
+                if base == GetForegroundWindow():
                     return True
             except Exception:
                 pass
@@ -2060,7 +2060,7 @@ class TaskbarWidget(BaseWidget):
             return f"{base_class} running minimized"
 
         is_active = any(getattr(windows.get(m), "is_active", False) for m in members)
-        if is_active or win32gui.GetForegroundWindow() in members:
+        if is_active or GetForegroundWindow() in members:
             return f"{base_class} foreground"
 
         return f"{base_class} running"
@@ -2079,7 +2079,7 @@ class TaskbarWidget(BaseWidget):
             return False
         for m in members:
             try:
-                if not win32gui.IsIconic(m):
+                if not IsIconic(m):
                     return False
             except Exception:
                 if m not in self._minimized_hwnds:
@@ -2112,7 +2112,7 @@ class TaskbarWidget(BaseWidget):
             return
 
         hwnd = widget.property("hwnd")
-        if not hwnd or not win32gui.IsWindow(hwnd):
+        if not hwnd or not IsWindow(hwnd):
             return
 
         if action == "toggle":
@@ -2140,7 +2140,7 @@ class TaskbarWidget(BaseWidget):
             self.launch_pinned_app(hwnd)
             return
 
-        if not win32gui.IsWindow(hwnd):
+        if not IsWindow(hwnd):
             return
         try:
             self.hide_preview()
@@ -2156,7 +2156,7 @@ class TaskbarWidget(BaseWidget):
             if not is_active:
                 is_active = is_owner_root_active(base)
 
-            if win32gui.IsIconic(base):
+            if IsIconic(base):
                 restore_window(base)
                 set_foreground(base)
                 try:
@@ -2176,7 +2176,7 @@ class TaskbarWidget(BaseWidget):
         except Exception as e:
             logging.debug("Could not bring window %s to foreground: %s", hwnd, e)
             try:
-                if win32gui.IsIconic(hwnd):
+                if IsIconic(hwnd):
                     restore_window(hwnd)
                 else:
                     show_window(hwnd)
@@ -2205,11 +2205,11 @@ class TaskbarWidget(BaseWidget):
 
     def ensure_foreground(self, hwnd: int) -> None:
         """When we use dragging file ensure the window is in foreground."""
-        if not win32gui.IsWindow(hwnd):
+        if not IsWindow(hwnd):
             return
         try:
             base, focus_target = resolve_base_and_focus(hwnd)
-            if win32gui.IsIconic(base):
+            if IsIconic(base):
                 restore_window(base)
             set_foreground(focus_target)
             # After successful raise, reflect expected focus immediately
@@ -2219,7 +2219,7 @@ class TaskbarWidget(BaseWidget):
                 pass
         except Exception:
             try:
-                if win32gui.IsIconic(hwnd):
+                if IsIconic(hwnd):
                     restore_window(hwnd)
                 else:
                     show_window(hwnd)

@@ -8,19 +8,6 @@ from ctypes import (
 )
 
 from PyQt6.QtCore import QObject, pyqtSignal
-from win32con import (
-    HWND_TOPMOST,
-    SWP_NOACTIVATE,
-    SWP_NOMOVE,
-    SWP_NOSIZE,
-    WM_ACTIVATEAPP,
-    WM_CLOSE,
-    WM_COMMAND,
-    WM_COPYDATA,
-    WM_DESTROY,
-    WM_TIMER,
-    WM_USER,
-)
 
 from core.utils.win32.bindings.user32 import (
     DefWindowProc,
@@ -36,11 +23,22 @@ from core.utils.win32.bindings.user32 import (
     SetWindowPos,
 )
 from core.utils.win32.constants import (
+    HWND_TOPMOST,
     NIF_GUID,
     NIM_ADD,
     NIM_DELETE,
     NIM_MODIFY,
     NIM_SETVERSION,
+    SWP_NOACTIVATE,
+    SWP_NOMOVE,
+    SWP_NOSIZE,
+    WM_ACTIVATEAPP,
+    WM_CLOSE,
+    WM_COMMAND,
+    WM_COPYDATA,
+    WM_DESTROY,
+    WM_TIMER,
+    WM_USER,
 )
 from core.utils.win32.structs import (
     COPYDATASTRUCT,

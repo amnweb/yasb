@@ -5,10 +5,10 @@ import subprocess
 import threading
 
 import comtypes.client  # pyright: ignore[reportMissingTypeStubs]
-import pythoncom
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from core.events.service import EventService
+from core.utils.win32.bindings.ole32 import CoInitialize
 from core.utils.win32.bindings.shell32 import CLSID_DesktopWallpaper, IDesktopWallpaper
 from core.validation.widgets.yasb.wallpapers import EngineConfig
 from core.widgets.services.wallpapers.engine import WallpaperEngine
@@ -93,7 +93,7 @@ class WallpaperManager(QObject):
             except Exception as e:
                 logging.error("Wallpaper engine failed, falling back: %s", e)
 
-        pythoncom.CoInitialize()
+        CoInitialize()
         try:
             dwp = comtypes.client.CreateObject(CLSID_DesktopWallpaper, interface=IDesktopWallpaper)
             dwp.SetWallpaper(monitor_id, os.path.abspath(image_path))
@@ -105,7 +105,7 @@ class WallpaperManager(QObject):
 
     def get_monitor_ids(self) -> list[str]:
         """Return COM monitor device paths for all connected monitors."""
-        pythoncom.CoInitialize()
+        CoInitialize()
         try:
             dwp = comtypes.client.CreateObject(CLSID_DesktopWallpaper, interface=IDesktopWallpaper)
             count = dwp.GetMonitorDevicePathCount()

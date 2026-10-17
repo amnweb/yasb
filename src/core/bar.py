@@ -20,7 +20,7 @@ from core.events.service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32 import app_bar
 from core.utils.win32.backdrop import enable_blur
-from core.utils.win32.utils import get_monitor_hwnd
+from core.utils.win32.bindings.user32 import MonitorFromWindow
 from core.validation.bar import BarConfig
 from settings import APP_BAR_TITLE
 
@@ -109,7 +109,7 @@ class Bar(QWidget):
         self._hide_on_fullscreen = self.window_flags["hide_on_fullscreen"] and self.window_flags["always_on_top"]
 
         self.position_bar(init)
-        self.monitor_hwnd = get_monitor_hwnd(int(self.winId()))
+        self.monitor_hwnd = MonitorFromWindow(int(self.winId()))
 
         self._add_widgets(widgets)
 

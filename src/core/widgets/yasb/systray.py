@@ -20,13 +20,13 @@ from PyQt6.QtWidgets import (
     QMenu,
     QPushButton,
 )
-from win32con import HWND_BROADCAST
 
 from core.bar_helper import AppBarManager
 from core.utils.system import app_data_path
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.bindings.user32 import IsWindow, RegisterWindowMessage, SendNotifyMessage
 from core.utils.win32.constants import (
+    HWND_BROADCAST,
     NIF_GUID,
     NIF_ICON,
     NIF_INFO,

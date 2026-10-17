@@ -12,8 +12,6 @@ tuna import_times.log
 import argparse
 import ctypes
 import datetime
-import getpass
-import json
 import os
 import subprocess
 import sys
@@ -22,17 +20,16 @@ import time
 import winreg
 from typing import Any
 
-from win32con import (
-    GENERIC_READ,
-    GENERIC_WRITE,
-    OPEN_EXISTING,
-)
-
+from core.cli.pipe import CLI_SERVER_PIPE_NAME, LOG_SERVER_PIPE_NAME, read_message, write_message
 from core.utils.process import is_process_running
+from core.utils.win32.bindings.advapi32 import get_current_user_sid
 from core.utils.win32.bindings.kernel32 import CloseHandle, CreateFile, GetLastError, ReadFile, WriteFile
+from core.utils.win32.bindings.ole32 import create_dispatch
 from core.utils.win32.bindings.shell32 import IsUserAnAdmin
 from core.utils.win32.constants import (
     ERROR_NO_MORE_ITEMS,
+    GENERIC_READ,
+    GENERIC_WRITE,
     INVALID_HANDLE_VALUE,
     MAX_GUID_CHARS,
     MINIDUMP_WITH_DATA_SEGS,
@@ -42,54 +39,17 @@ from core.utils.win32.constants import (
     MINIDUMP_WITH_PROCESS_THREAD_DATA,
     MINIDUMP_WITH_THREAD_INFO,
     MINIDUMP_WITH_UNLOADED_MODULES,
+    OPEN_EXISTING,
 )
 from core.utils.win32.registry_keys import RUN_KEY, WER_LOCAL_DUMPS_KEY
 from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL, SCRIPT_PATH
 
-BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION
 YASB_CLI_VERSION = CLI_VERSION
 YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
 
 EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
-
-CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"
-LOG_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_log"
-
-
-def write_message(handle: int, msg_dict: dict[str, str]):
-    try:
-        data = json.dumps(msg_dict).encode("utf-8")
-    except Exception as e:
-        print(f"JSON encode error: {e}")
-        print(f"Data: {msg_dict}")
-        return False
-    success = WriteFile(handle, data)
-    return success
-
-
-def read_message(handle: int) -> dict[str, str] | None:
-    success, data = ReadFile(handle, BUFSIZE)
-    if not success or len(data) == 0:
-        return None
-    try:
-        messages: list[str] = []
-        # This is needed in case there are multiple json objects in one data block
-        for line in data.split(b"\0"):
-            if not line.strip():
-                continue
-            json_object = json.loads(line.decode().strip())
-            if json_object.get("type") == "DATA":
-                messages.append(json_object.get("data"))
-            else:
-                # If it's ping/pong, just return the object as is
-                return json_object
-        return {"type": "DATA", "data": "\n".join(messages)}
-    except json.JSONDecodeError as e:
-        print(f"JSON decode error: {e}")
-        print(f"Data: {data}")
-        return None
 
 
 class Format:
@@ -853,17 +813,10 @@ class CLITaskHandler:
             return False
 
     def get_current_user_sid(self):
-        import win32security
-
-        username = getpass.getuser()
-        user, _, _ = win32security.LookupAccountName(None, username)
-        sid = win32security.ConvertSidToStringSid(user)
-        return sid
+        return get_current_user_sid()
 
     def create_task(self):
-        import win32com.client
-
-        scheduler = win32com.client.Dispatch("Schedule.Service")
+        scheduler = create_dispatch("Schedule.Service")
         scheduler.Connect()
         root_folder = scheduler.GetFolder("\\")
         task_def = scheduler.NewTask(0)
@@ -904,9 +857,7 @@ class CLITaskHandler:
             print(f"Failed to create task YASB Reborn. Error: {e}")
 
     def delete_task(self):
-        import win32com.client
-
-        scheduler = win32com.client.Dispatch("Schedule.Service")
+        scheduler = create_dispatch("Schedule.Service")
         scheduler.Connect()
         root_folder = scheduler.GetFolder("\\")
         try:

@@ -18,21 +18,33 @@ from ctypes import (
     c_void_p,
     c_wchar,
     c_wchar_p,
+    sizeof,
     wstring_at,
 )
-from ctypes.wintypes import BOOL, DWORD, HANDLE, HBITMAP, HWND, LPCWSTR, LPVOID, UINT
-from typing import TYPE_CHECKING, Any, cast
+from ctypes.wintypes import BOOL, DWORD, HANDLE, HBITMAP, HWND, LPCWSTR, LPVOID, UINT, ULONG
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 import comtypes  # pyright: ignore[reportMissingTypeStubs]
 from comtypes import COMMETHOD, GUID, STDMETHOD, COMError  # pyright: ignore[reportUnknownVariableType, reportMissingTypeStubs]
+from comtypes.persist import IPersistFile  # pyright: ignore[reportMissingTypeStubs]
+from comtypes.shelllink import IShellLinkW  # pyright: ignore[reportMissingTypeStubs]
 
-from core.utils.win32.bindings.ole32 import CoTaskMemFree, PropVariantClear
-from core.utils.win32.constants import GPS_DEFAULT, SW_SHOWNORMAL, VT_LPWSTR
+from core.utils.win32.bindings.ole32 import CoTaskMemFree, PropVariantClear, create_com_object
+from core.utils.win32.constants import (
+    CLSCTX_INPROC_SERVER,
+    GPS_DEFAULT,
+    SHGFI_ICONLOCATION,
+    SHGFI_PIDL,
+    STGM_READ,
+    SW_SHOWNORMAL,
+    VT_LPWSTR,
+)
 from core.utils.win32.structs import (
     APPBARDATA,
     PROPERTYKEY,
     PROPVARIANT,
     SHELLEXECUTEINFO,
+    SHFILEINFOW,
     SHQUERYRBINFO,
     SHSTOCKICONINFO,
     SIZE,
@@ -231,6 +243,8 @@ class IShellItemImageFactory(comtypes.IUnknown):
         def GetImage(self, size: SIZE, flags: int) -> int | None: ...
 
 
+CLSID_ShellLink = GUID("{00021401-0000-0000-C000-000000000046}")
+
 shell32.SHCreateItemFromParsingName.argtypes = [
     LPCWSTR,
     c_void_p,
@@ -246,6 +260,54 @@ def SHCreateItemFromParsingName(path: str) -> IShellItemImageFactory | None:
     if hr != 0 or not factory:
         return None
     return cast(IShellItemImageFactory, factory)
+
+
+shell32.SHParseDisplayName.argtypes = [LPCWSTR, c_void_p, POINTER(c_void_p), ULONG, POINTER(ULONG)]
+shell32.SHParseDisplayName.restype = c_long
+
+shell32.SHGetFileInfoW.argtypes = [c_void_p, DWORD, POINTER(SHFILEINFOW), UINT, UINT]
+shell32.SHGetFileInfoW.restype = c_size_t
+
+
+def get_shell_item_icon_location(path: str) -> tuple[str, int] | None:
+    """The icon file and index the shell item's IExtractIcon names, or None when it names no file."""
+    pidl = c_void_p()
+    if shell32.SHParseDisplayName(path, None, byref(pidl), 0, None) != 0:
+        return None
+    info = SHFILEINFOW()
+    try:
+        if not shell32.SHGetFileInfoW(pidl, 0, byref(info), sizeof(info), SHGFI_PIDL | SHGFI_ICONLOCATION):
+            return None
+    finally:
+        CoTaskMemFree(pidl)
+    return (info.szDisplayName, info.iIcon) if info.szDisplayName else None
+
+
+class Shortcut(NamedTuple):
+    target: str
+    arguments: str
+    description: str
+    icon_file: str
+    icon_index: int
+    working_directory: str
+
+
+def read_shortcut(path: str) -> Shortcut | None:
+    link = create_com_object(CLSID_ShellLink, IShellLinkW, CLSCTX_INPROC_SERVER)
+    if link is None:
+        return None
+    try:
+        link.QueryInterface(IPersistFile).Load(path, STGM_READ)
+        icon_file, icon_index = link.GetIconLocation()
+        target, arguments, working_directory = link.GetPath(0), link.GetArguments(), link.GetWorkingDirectory()
+    except COMError, OSError:
+        return None
+    try:
+        description = link.GetDescription()
+    except COMError:
+        # E_FAIL for system shortcuts whose description is a resource string ("@shell32.dll,-22531").
+        description = ""
+    return Shortcut(target, arguments, description, icon_file, icon_index, working_directory)
 
 
 # https://learn.microsoft.com/en-us/windows/win32/api/servprov/nn-servprov-iserviceprovider
