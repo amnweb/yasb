@@ -3,7 +3,6 @@ import os
 from collections.abc import Callable
 from typing import override
 
-import win32api
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QPushButton
@@ -14,7 +13,9 @@ from core.utils.win32.bindings.user32 import (
     FindWindowEx,
     GetClassName,
     GetForegroundWindow,
+    GetMonitorInfo,
     GetWindowText,
+    MonitorFromWindow,
     get_window_thread_process_id,
 )
 from core.utils.win32.utils import get_app_name_from_pid, get_widget_monitor_hwnd, is_window_maximized
@@ -117,7 +118,7 @@ class _ForegroundPoller:
             if hwnd == self._last_hwnd and self._last_result is not None and self._last_result.valid:
                 try:
                     maximized = is_window_maximized(hwnd)
-                    fg_monitor_hwnd = int(win32api.MonitorFromWindow(hwnd))
+                    fg_monitor_hwnd = MonitorFromWindow(hwnd) or 0
                 except Exception:
                     # Window was likely destroyed
                     self._last_hwnd = 0
@@ -142,7 +143,7 @@ class _ForegroundPoller:
                 return
 
             maximized = is_window_maximized(hwnd)
-            fg_monitor_hwnd = int(win32api.MonitorFromWindow(hwnd))
+            fg_monitor_hwnd = MonitorFromWindow(hwnd) or 0
 
             # For UWP apps, ApplicationFrameHost.exe owns the window find the real child PID
             pid_for_name = pid
@@ -297,9 +298,9 @@ class WindowControlsWidget(BaseWidget):
             try:
                 widget_monitor = get_widget_monitor_hwnd(self)
                 if result.fg_monitor_hwnd != widget_monitor:
-                    mon_info = win32api.GetMonitorInfo(result.fg_monitor_hwnd)
+                    mon_info = GetMonitorInfo(result.fg_monitor_hwnd)
                     screen = self.screen()
-                    if screen is not None and screen.name() != mon_info.get("Device"):
+                    if screen is not None and mon_info is not None and screen.name() != mon_info.szDevice:
                         if self._is_visible:
                             self._tracked_hwnd = None
                             self._tracked_maximized = False

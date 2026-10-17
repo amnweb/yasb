@@ -3,7 +3,6 @@ import logging
 import struct
 from ctypes import byref, c_size_t
 
-import win32api
 from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
 from PIL import Image
 
@@ -17,7 +16,13 @@ from core.utils.win32.bindings.kernel32 import (
 )
 from core.utils.win32.bindings.ole32 import CoInitialize
 from core.utils.win32.bindings.shell32 import SHCreateItemFromParsingName, shell32
-from core.utils.win32.bindings.user32 import DestroyIcon, GetClassLongPtr, LoadImage, SendMessageTimeoutW
+from core.utils.win32.bindings.user32 import (
+    DestroyIcon,
+    GetClassLongPtr,
+    GetSystemMetrics,
+    LoadImage,
+    SendMessageTimeoutW,
+)
 from core.utils.win32.constants import (
     GCLP_HICON,
     GCLP_HICONSM,
@@ -56,7 +61,7 @@ def get_stock_icon(icon_id: int) -> Image.Image | None:
 def get_default_app_icon() -> Image.Image | None:
     """The generic app icon (IDI_APPLICATION)."""
     try:
-        size = win32api.GetSystemMetrics(SM_CXICON)
+        size = GetSystemMetrics(SM_CXICON)
         default_hicon = LoadImage(0, MAKEINTRESOURCE(IDI_APPLICATION), IMAGE_ICON, size, size, LR_SHARED)
     except Exception as e:
         logging.debug("Failed to get default icon: %s", e)

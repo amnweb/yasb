@@ -1,5 +1,3 @@
-import ctypes
-import ctypes.wintypes
 import json
 import logging
 import os
@@ -14,7 +12,7 @@ from win32comext.shell import shell
 from core.utils.shell_utils import shell_open
 from core.utils.system import app_data_path
 from core.utils.win32.app_loader import AppEntry, app_icon_source
-from core.utils.win32.bindings.version import GetFileVersionInfo, VerQueryValue
+from core.utils.win32.bindings.version import get_version_strings
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
@@ -127,25 +125,7 @@ class LaunchHistory:
 
 def _get_exe_description(exe_path: str) -> str | None:
     """Extract FileDescription + CompanyName from an exe's version info."""
-    try:
-        block = GetFileVersionInfo(exe_path)
-        if block is None:
-            return None
-        translation = VerQueryValue(block, r"\VarFileInfo\Translation")
-        if translation is None:
-            return None
-        lang, codepage = ctypes.cast(translation[0], ctypes.POINTER(ctypes.wintypes.WORD * 2)).contents
-        prefix = rf"\StringFileInfo\{lang:04x}{codepage:04x}"
-        parts: list[str] = []
-        for field in ("FileDescription", "CompanyName"):
-            value = VerQueryValue(block, f"{prefix}\\{field}")
-            if value is not None:
-                val = ctypes.wstring_at(value[0])
-                if val:
-                    parts.append(val.strip())
-        return " - ".join(parts) if parts else None
-    except Exception:
-        return None
+    return " - ".join(get_version_strings(exe_path, ("FileDescription", "CompanyName")).values()) or None
 
 
 def _resolve_squirrel_target(target: str, args: str) -> str | None:

@@ -1,7 +1,8 @@
 """Wrappers for version.dll (file version information) win32 API functions"""
 
-from ctypes import POINTER, Array, WinDLL, byref, c_char, c_void_p, create_string_buffer
-from ctypes.wintypes import BOOL, DWORD, LPCVOID, LPCWSTR, LPDWORD, LPVOID, UINT
+from collections.abc import Iterable
+from ctypes import POINTER, Array, WinDLL, byref, c_char, c_void_p, cast, create_string_buffer, wstring_at
+from ctypes.wintypes import BOOL, DWORD, LPCVOID, LPCWSTR, LPDWORD, LPVOID, UINT, WORD
 
 version = WinDLL("version", use_last_error=True)
 
@@ -34,3 +35,21 @@ def VerQueryValue(block: Array[c_char], sub_block: str) -> tuple[int, int] | Non
     if not address.value or not length.value:
         return None
     return address.value, length.value
+
+
+def get_version_strings(filename: str, names: Iterable[str]) -> dict[str, str]:
+    """Non-empty string values for the first language in the file's version info, keyed by name."""
+    block = GetFileVersionInfo(filename)
+    if block is None:
+        return {}
+    translation = VerQueryValue(block, r"\VarFileInfo\Translation")
+    if translation is None:
+        return {}
+    language, codepage = cast(translation[0], POINTER(WORD * 2)).contents
+    prefix = rf"\StringFileInfo\{language:04X}{codepage:04X}"
+    values: dict[str, str] = {}
+    for name in names:
+        value = VerQueryValue(block, f"{prefix}\\{name}")
+        if value is not None and (text := wstring_at(value[0]).strip()):
+            values[name] = text
+    return values

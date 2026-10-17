@@ -474,6 +474,30 @@ class WINDOWPLACEMENT(ct.Structure):
     ]
 
 
+class MONITORINFO(ct.Structure):
+    _fields_ = [
+        ("cbSize", DWORD),
+        ("rcMonitor", RECT),
+        ("rcWork", RECT),
+        ("dwFlags", DWORD),
+    ]
+
+
+class MONITORINFOEXW(MONITORINFO):
+    _fields_ = [("szDevice", WCHAR * 32)]
+
+
+class DISPLAY_DEVICEW(ct.Structure):
+    _fields_ = [
+        ("cb", DWORD),
+        ("DeviceName", WCHAR * 32),
+        ("DeviceString", WCHAR * 128),
+        ("StateFlags", DWORD),
+        ("DeviceID", WCHAR * 128),
+        ("DeviceKey", WCHAR * 128),
+    ]
+
+
 class DWM_THUMBNAIL_PROPERTIES(ct.Structure):
     _pack_ = 1
     _fields_ = [

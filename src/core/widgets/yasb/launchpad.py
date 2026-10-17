@@ -6,7 +6,7 @@ import tempfile
 import time
 from collections.abc import Callable
 from functools import lru_cache, partial
-from typing import Any, cast, override
+from typing import Any, override
 
 from PyQt6.QtCore import (
     QAbstractAnimation,
@@ -68,6 +68,7 @@ from core.utils.shell_utils import shell_open
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_loader import AppEntry, AppListLoader, ShortcutResolver, app_icon_source
 from core.utils.win32.backdrop import enable_blur
+from core.utils.win32.bindings.version import get_version_strings
 from core.utils.win32.utils import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.launchpad import LaunchpadConfig
@@ -1343,17 +1344,7 @@ class LaunchpadWidget(BaseWidget):
 
     def _get_file_description(self, path: str) -> str:
         """Get the file description from Windows file properties."""
-        import win32api
-
-        try:
-            translations = cast(list[tuple[int, int]], win32api.GetFileVersionInfo(path, "\\VarFileInfo\\Translation"))
-            language, codepage = translations[0]
-            stringFileInfo = f"\\StringFileInfo\\{language:04X}{codepage:04X}\\FileDescription"
-            description = cast(str, win32api.GetFileVersionInfo(path, stringFileInfo))
-        except:
-            description = "unknown"
-
-        return description
+        return get_version_strings(path, ("FileDescription",)).get("FileDescription", "unknown")
 
     def _handle_file_drop(self, file_path: str, refresh_grid: bool = True):
         ext = os.path.splitext(file_path)[1].lower()

@@ -26,11 +26,13 @@ from core.utils.win32.bindings.kernel32 import (
     FindNextFile,
     GetApplicationUserModelId,
     GetCurrentThreadId,
+    GetDiskFreeSpaceEx,
     GetLastError,
     GetModuleHandle,
     GetPackageFullName,
     OpenProcess,
     _query_process_string,
+    get_volume_label,
     snapshot_processes,
 )
 from core.utils.win32.bindings.ole32 import CoInitialize
@@ -40,17 +42,23 @@ from core.utils.win32.bindings.user32 import (
     CreateWindowEx,
     DefWindowProc,
     DestroyWindow,
+    EnumDisplayDevices,
     FindWindowEx,
+    GetMonitorInfo,
     GetParent,
+    GetSystemMetrics,
     GetWindow,
     GetWindowText,
     IsWindow,
+    MonitorFromRect,
+    MonitorFromWindow,
     enum_child_windows,
+    enum_display_monitors,
     enum_windows,
     get_window_thread_process_id,
     user32,
 )
-from core.utils.win32.bindings.version import GetFileVersionInfo, VerQueryValue
+from core.utils.win32.bindings.version import GetFileVersionInfo, VerQueryValue, get_version_strings
 from core.utils.win32.constants import (
     ERROR_INSUFFICIENT_BUFFER,
     FIND_EX_INFO_BASIC,
@@ -60,6 +68,7 @@ from core.utils.win32.constants import (
     INVALID_HANDLE_VALUE,
     OPEN_EXISTING,
     PROCESS_QUERY_LIMITED_INFORMATION,
+    SM_CXICON,
     VT_LPWSTR,
     WS_CHILD,
     WS_POPUP,
@@ -72,6 +81,7 @@ APPMODEL_ERROR_NO_PACKAGE = 15700
 ERROR_PATH_NOT_FOUND = 3
 ERROR_CLASS_ALREADY_EXISTS = 1410
 WS_MAXIMIZE = 0x01000000
+MONITOR_DEFAULTTONEAREST = 2
 KERNEL32_DLL = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "kernel32.dll")
 PKEY_SIZE = PROPERTYKEY(GUID.from_string("B725F130-47EF-101A-A5F1-02608C9EEBAC"), 12)
 
@@ -330,3 +340,76 @@ def test_closed_window(make_window: Callable[..., int]):
 
 def test_find_window_ex_without_a_match_is_zero():
     assert FindWindowEx(0, 0, "YasbNoSuchWindowClass", None) == 0
+
+
+def test_version_strings_of_a_system_dll():
+    values = get_version_strings(KERNEL32_DLL, ("FileDescription", "ProductName", "NoSuchVersionString"))
+
+    assert values["FileDescription"]
+    assert values["ProductName"]
+    assert "NoSuchVersionString" not in values
+
+
+def test_version_strings_of_a_file_without_version_info(tmp_path: Path):
+    plain = tmp_path / "plain.txt"
+    plain.write_text("no version info")
+
+    assert get_version_strings(str(plain), ("FileDescription",)) == {}
+
+
+def test_disk_free_space_of_a_folder(tmp_path: Path):
+    space = GetDiskFreeSpaceEx(str(tmp_path))
+
+    assert space is not None
+    free_to_caller, total, free = space
+    assert 0 < free_to_caller <= total
+    assert 0 < free <= total
+
+
+def test_disk_free_space_and_label_of_a_missing_folder(tmp_path: Path):
+    missing = str(tmp_path / "missing" / "")
+
+    assert GetDiskFreeSpaceEx(missing) is None
+    assert get_volume_label(missing) is None
+
+
+def test_volume_label_of_the_system_drive():
+    assert isinstance(get_volume_label(os.environ.get("SystemDrive", "C:") + "\\"), str)
+
+
+def test_monitors_describe_themselves():
+    for hmonitor, rect in enum_display_monitors():
+        info = GetMonitorInfo(hmonitor)
+
+        assert info is not None
+        assert (info.rcMonitor.left, info.rcMonitor.top, info.rcMonitor.right, info.rcMonitor.bottom) == rect
+        assert info.szDevice
+        assert MonitorFromRect(rect) == hmonitor
+
+
+def test_missing_monitor():
+    assert GetMonitorInfo(0) is None
+    assert MonitorFromRect((-99999, -99999, -99990, -99990)) is None
+
+
+def test_window_is_on_its_nearest_monitor(make_window: Callable[..., int]):
+    if not enum_display_monitors():
+        pytest.skip("no monitors")
+    hmonitor = MonitorFromWindow(make_window(), MONITOR_DEFAULTTONEAREST)
+
+    assert hmonitor in [monitor for monitor, _ in enum_display_monitors()]
+
+
+def test_display_devices_end_with_none():
+    devices = [EnumDisplayDevices(None, index) for index in range(64)]
+
+    assert devices[0] is not None
+    assert devices[-1] is None
+    for device in devices:
+        if device is None:
+            break
+        assert device.DeviceName.startswith("\\\\.\\")
+
+
+def test_system_metrics():
+    assert GetSystemMetrics(SM_CXICON) > 0

@@ -1,7 +1,5 @@
 import ctypes
 
-import win32api
-
 from core.utils.win32.bindings.dwmapi import DwmGetWindowAttribute
 from core.utils.win32.bindings.ole32 import create_com_object
 from core.utils.win32.bindings.shell32 import CLSID_VirtualDesktopManager, IVirtualDesktopManager
@@ -15,6 +13,7 @@ from core.utils.win32.bindings.user32 import (
     IsWindow,
     IsWindowEnabled,
     IsWindowVisible,
+    MonitorFromWindow,
 )
 from core.utils.win32.constants import (
     CLSCTX_INPROC_SERVER,
@@ -81,12 +80,7 @@ class ApplicationWindow:
 
     def as_dict(self):
         # Get monitor handle for this window
-        monitor_handle = None
-        try:
-            mh = win32api.MonitorFromWindow(self.hwnd, 0)
-            monitor_handle = int(mh) if mh is not None else None  # pyright: ignore[reportUnnecessaryComparison]
-        except Exception:
-            pass
+        monitor_handle = MonitorFromWindow(self.hwnd)
 
         self._refresh_process_info()
 

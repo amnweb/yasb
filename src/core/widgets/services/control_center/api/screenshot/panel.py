@@ -2,12 +2,11 @@
 
 from typing import TYPE_CHECKING, override
 
-import win32api
 from PyQt6.QtCore import QPoint, QRect, Qt
 from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QWidget
 
-from core.utils.win32.bindings.user32 import SetWindowPos
+from core.utils.win32.bindings.user32 import GetWindowLongPtr, SetWindowLongPtr, SetWindowPos
 from core.utils.win32.constants import (
     GWL_EXSTYLE,
     HWND_TOPMOST,
@@ -40,8 +39,8 @@ class ScreenPanel(QWidget):
     def _pin(self) -> None:
         try:
             hwnd = int(self.winId())
-            ex = win32api.GetWindowLong(hwnd, GWL_EXSTYLE)
-            win32api.SetWindowLong(hwnd, GWL_EXSTYLE, ex | WS_EX_TOOLWINDOW)
+            ex = GetWindowLongPtr(hwnd, GWL_EXSTYLE)
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, ex | WS_EX_TOOLWINDOW)
             SetWindowPos(
                 hwnd,
                 HWND_TOPMOST,

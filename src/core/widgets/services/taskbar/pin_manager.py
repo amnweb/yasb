@@ -14,6 +14,7 @@ import logging
 import os
 import shlex
 import subprocess
+from ctypes import WinError
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -21,8 +22,9 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource
 from core.utils.system import app_data_path
+from core.utils.win32.bindings.kernel32 import GetLastError
+from core.utils.win32.bindings.shell32 import shell_execute
 from core.utils.win32.bindings.user32 import FindWindowEx, get_window_thread_process_id
-from core.utils.win32.constants import SW_SHOWNORMAL
 from core.utils.win32.utils import get_app_name_from_aumid
 from core.widgets.services.taskbar.pin_context import (
     WindowContext,
@@ -625,20 +627,10 @@ class PinManager:
         except OSError as e:
             # Check if elevation is required (WinError 740)
             if e.winerror == 740:
-                import win32api
-
-                try:
-                    win32api.ShellExecute(  # pyright: ignore[reportUnknownMemberType]
-                        0,
-                        "runas",
-                        exe_path,
-                        arguments,
-                        working_dir,  # pyright: ignore[reportArgumentType]
-                        SW_SHOWNORMAL,
-                    )
-                except Exception as shell_error:
+                if shell_execute(exe_path, "runas", arguments, working_dir) <= 32:
+                    shell_error = WinError(GetLastError())
                     logging.error("Failed to launch with elevation: %s", shell_error)
-                    raise
+                    raise shell_error
             else:
                 raise
 

@@ -6,12 +6,10 @@ import winreg
 from collections.abc import Collection
 from contextlib import suppress
 from ctypes import byref, c_ulong, create_unicode_buffer
-from typing import Any, NotRequired, TypedDict, cast
+from typing import Any, NotRequired, TypedDict
 
-import win32api
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QApplication, QMenu, QWidget
-from win32api import GetMonitorInfo, MonitorFromWindow
 from winrt.windows.management.deployment import PackageManager
 
 from core.utils.system import is_windows_10
@@ -28,15 +26,19 @@ from core.utils.win32.bindings.kernel32 import (
 from core.utils.win32.bindings.user32 import (
     GetClassName,
     GetForegroundWindow,
+    GetMonitorInfo,
     GetWindowPlacement,
     GetWindowRect,
     GetWindowText,
     GetWindowThreadProcessId,
     IsWindowVisible,
+    MonitorFromRect,
+    MonitorFromWindow,
     SetForegroundWindow,
     enum_windows,
     get_window_thread_process_id,
 )
+from core.utils.win32.bindings.version import get_version_strings
 from core.utils.win32.constants import (
     ACCESS_DENIED,
     DWMWA_EXTENDED_FRAME_BOUNDS,
@@ -101,10 +103,7 @@ def is_running_under_emulation():
 
 
 def get_monitor_hwnd(window_hwnd: int) -> int | None:
-    monitor = MonitorFromWindow(window_hwnd)
-    if monitor is None:  # pyright: ignore[reportUnnecessaryComparison]
-        return None
-    return int(monitor)
+    return MonitorFromWindow(window_hwnd)
 
 
 def get_widget_monitor_hwnd(widget: QWidget) -> int | None:
@@ -131,22 +130,25 @@ class MonitorInfo(TypedDict):
 
 
 def get_monitor_info(monitor_hwnd: int) -> MonitorInfo:
-    monitor_info = GetMonitorInfo(monitor_hwnd)
+    info = GetMonitorInfo(monitor_hwnd)
+    if info is None:
+        raise ctypes.WinError(GetLastError())
+    monitor, work = info.rcMonitor, info.rcWork
     return {
         "rect": {
-            "x": monitor_info["Monitor"][0],
-            "y": monitor_info["Monitor"][1],
-            "width": monitor_info["Monitor"][2],
-            "height": monitor_info["Monitor"][3],
+            "x": monitor.left,
+            "y": monitor.top,
+            "width": monitor.right - monitor.left,
+            "height": monitor.bottom - monitor.top,
         },
         "rect_work_area": {
-            "x": monitor_info["Work"][0],
-            "y": monitor_info["Work"][1],
-            "width": monitor_info["Work"][2],
-            "height": monitor_info["Work"][3],
+            "x": work.left,
+            "y": work.top,
+            "width": work.right - work.left,
+            "height": work.bottom - work.top,
         },
-        "flags": monitor_info["Flags"],
-        "device": monitor_info["Device"],
+        "flags": info.dwFlags,
+        "device": info.szDevice,
     }
 
 
@@ -289,31 +291,10 @@ def get_app_name_from_pid(pid: int) -> str | None:
             if QueryFullProcessImageNameW(h_process, 0, buf, byref(size)):
                 exe_path = buf.value
 
-                # Get ProductName or FileDescription from executable version info
-                try:
-                    translations = cast(
-                        list[tuple[int, int]],
-                        win32api.GetFileVersionInfo(exe_path, "\\VarFileInfo\\Translation"),
-                    )
-                    lang, codepage = translations[0]
-                    string_file_info = f"\\StringFileInfo\\{lang:04X}{codepage:04X}\\"
-
-                    try:
-                        app_name = cast(
-                            str, win32api.GetFileVersionInfo(exe_path, string_file_info + "FileDescription")
-                        )
-                        if app_name and app_name.strip():
-                            return app_name.strip()
-                    except:
-                        pass
-                    try:
-                        app_name = cast(str, win32api.GetFileVersionInfo(exe_path, string_file_info + "ProductName"))
-                        if app_name and app_name.strip():
-                            return app_name.strip()
-                    except:
-                        pass
-                except Exception as e:
-                    logging.debug("Failed to get version info for %s: %s", exe_path, e)
+                names = get_version_strings(exe_path, ("FileDescription", "ProductName"))
+                app_name = names.get("FileDescription") or names.get("ProductName")
+                if app_name:
+                    return app_name
         finally:
             CloseHandle(h_process)
     except Exception as e:
@@ -472,6 +453,11 @@ def set_foreground_hwnd(hwnd: int | None) -> None:
         SetForegroundWindow(int(hwnd))
 
 
+def _monitor_device(monitor: int | None) -> str | None:
+    info = GetMonitorInfo(monitor) if monitor else None
+    return info.szDevice if info else None
+
+
 def find_focused_screen(
     follow_mouse: bool, follow_window: bool, follow_primary: bool = False, screens: Collection[str] | None = None
 ) -> str | None:
@@ -485,9 +471,7 @@ def find_focused_screen(
 
     # Map device names to Qt screen names for window focus
     device_to_screen = {
-        win32api.GetMonitorInfo(win32api.MonitorFromRect((geo.left(), geo.top(), geo.right(), geo.bottom()))).get(
-            "Device"
-        ): screen.name()
+        _monitor_device(MonitorFromRect((geo.left(), geo.top(), geo.right(), geo.bottom()))): screen.name()
         for screen in qt_screens
         for geo in [screen.geometry()]
     }
@@ -510,7 +494,7 @@ def find_focused_screen(
         if hwnd:
             monitor = get_monitor_hwnd(hwnd)
             if monitor is not None:
-                device_name = win32api.GetMonitorInfo(monitor).get("Device")
+                device_name = _monitor_device(monitor)
                 screen_name = device_to_screen.get(device_name)
                 if screen_name and is_valid(screen_name):
                     return screen_name

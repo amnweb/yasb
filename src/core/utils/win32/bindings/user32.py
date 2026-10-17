@@ -40,14 +40,17 @@ from ctypes.wintypes import (
 )
 
 from core.utils.win32.structs import (
+    DISPLAY_DEVICEW,
     GUID,
     ICONINFO,
     INPUT,
+    MONITORINFO,
+    MONITORINFOEXW,
     WINDOWPLACEMENT,
     WNDCLASS,
     WNDENUMPROC,
 )
-from core.utils.win32.typecheck import CArgObject, CFunctionType
+from core.utils.win32.typecheck import CArgObject, CFunctionType, CPointer
 
 user32 = WinDLL("user32", use_last_error=True)
 user32.GetForegroundWindow.argtypes = []
@@ -61,6 +64,18 @@ user32.EnumDisplayMonitors.restype = BOOL
 
 user32.MonitorFromWindow.argtypes = [HWND, DWORD]
 user32.MonitorFromWindow.restype = HMONITOR
+
+user32.MonitorFromRect.argtypes = [POINTER(RECT), DWORD]
+user32.MonitorFromRect.restype = HMONITOR
+
+user32.GetMonitorInfoW.argtypes = [HMONITOR, POINTER(MONITORINFO)]
+user32.GetMonitorInfoW.restype = BOOL
+
+user32.EnumDisplayDevicesW.argtypes = [LPCWSTR, DWORD, POINTER(DISPLAY_DEVICEW), DWORD]
+user32.EnumDisplayDevicesW.restype = BOOL
+
+user32.GetSystemMetrics.argtypes = [INT]
+user32.GetSystemMetrics.restype = INT
 
 
 user32.SetWinEventHook.argtypes = [
@@ -376,6 +391,40 @@ user32.SetClipboardData.restype = HANDLE
 
 user32.CloseClipboard.argtypes = []
 user32.CloseClipboard.restype = BOOL
+
+
+def MonitorFromWindow(hwnd: int, dwFlags: int = 0) -> int | None:
+    return user32.MonitorFromWindow(hwnd, dwFlags)
+
+
+def MonitorFromRect(rect: tuple[int, int, int, int], dwFlags: int = 0) -> int | None:
+    return user32.MonitorFromRect(byref(RECT(*rect)), dwFlags)
+
+
+def GetMonitorInfo(hMonitor: int) -> MONITORINFOEXW | None:
+    info = MONITORINFOEXW(cbSize=sizeof(MONITORINFOEXW))
+    return info if user32.GetMonitorInfoW(hMonitor, byref(info)) else None
+
+
+def enum_display_monitors() -> list[tuple[int, tuple[int, int, int, int]]]:
+    monitors: list[tuple[int, tuple[int, int, int, int]]] = []
+
+    def collect(hmonitor: int, _hdc: int, rect: CPointer[RECT], _: int) -> bool:
+        r = rect.contents
+        monitors.append((hmonitor, (r.left, r.top, r.right, r.bottom)))
+        return True
+
+    user32.EnumDisplayMonitors(None, None, MONITORENUMPROC(collect), 0)
+    return monitors
+
+
+def EnumDisplayDevices(lpDevice: str | None, iDevNum: int, dwFlags: int = 0) -> DISPLAY_DEVICEW | None:
+    device = DISPLAY_DEVICEW(cb=sizeof(DISPLAY_DEVICEW))
+    return device if user32.EnumDisplayDevicesW(lpDevice, iDevNum, byref(device), dwFlags) else None
+
+
+def GetSystemMetrics(nIndex: int) -> int:
+    return user32.GetSystemMetrics(nIndex)
 
 
 def DefWindowProc(hwnd: int, uMsg: int, wParam: int, lParam: int) -> int:

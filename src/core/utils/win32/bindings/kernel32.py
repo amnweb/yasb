@@ -305,6 +305,12 @@ kernel32.GetLogicalDrives.restype = DWORD
 kernel32.GetDriveTypeW.argtypes = [LPCWSTR]
 kernel32.GetDriveTypeW.restype = UINT
 
+kernel32.GetDiskFreeSpaceExW.argtypes = [LPCWSTR, POINTER(c_ulonglong), POINTER(c_ulonglong), POINTER(c_ulonglong)]
+kernel32.GetDiskFreeSpaceExW.restype = BOOL
+
+kernel32.GetVolumeInformationW.argtypes = [LPCWSTR, LPWSTR, DWORD, LPDWORD, LPDWORD, LPDWORD, LPWSTR, DWORD]
+kernel32.GetVolumeInformationW.restype = BOOL
+
 kernel32.FindFirstFileExW.argtypes = [LPCWSTR, c_int, POINTER(WIN32_FIND_DATAW), c_int, LPVOID, DWORD]
 kernel32.FindFirstFileExW.restype = HANDLE
 
@@ -720,6 +726,21 @@ def GetLogicalDrives() -> int:
 
 def GetDriveType(lpRootPathName: str) -> int:
     return kernel32.GetDriveTypeW(lpRootPathName)
+
+
+def GetDiskFreeSpaceEx(lpDirectoryName: str) -> tuple[int, int, int] | None:
+    """(free bytes for the caller, total bytes, free bytes), or None."""
+    free_to_caller, total, free = c_ulonglong(), c_ulonglong(), c_ulonglong()
+    if not kernel32.GetDiskFreeSpaceExW(lpDirectoryName, byref(free_to_caller), byref(total), byref(free)):
+        return None
+    return free_to_caller.value, total.value, free.value
+
+
+def get_volume_label(root_path: str) -> str | None:
+    label = create_unicode_buffer(261)
+    if not kernel32.GetVolumeInformationW(root_path, label, len(label), None, None, None, None, 0):
+        return None
+    return label.value
 
 
 def FindFirstFileEx(
