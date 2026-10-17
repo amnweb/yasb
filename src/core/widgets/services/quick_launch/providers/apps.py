@@ -14,6 +14,7 @@ from win32comext.shell import shell
 from core.utils.shell_utils import shell_open
 from core.utils.system import app_data_path
 from core.utils.win32.app_loader import AppEntry, app_icon_source
+from core.utils.win32.bindings.version import GetFileVersionInfo, VerQueryValue
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
@@ -127,29 +128,19 @@ class LaunchHistory:
 def _get_exe_description(exe_path: str) -> str | None:
     """Extract FileDescription + CompanyName from an exe's version info."""
     try:
-        size = ctypes.windll.version.GetFileVersionInfoSizeW(exe_path, None)
-        if not size:
+        block = GetFileVersionInfo(exe_path)
+        if block is None:
             return None
-        buf = ctypes.create_string_buffer(size)
-        if not ctypes.windll.version.GetFileVersionInfoW(exe_path, 0, size, buf):
+        translation = VerQueryValue(block, r"\VarFileInfo\Translation")
+        if translation is None:
             return None
-        lp_translate = ctypes.c_void_p()
-        u_len = ctypes.c_uint()
-        ctypes.windll.version.VerQueryValueW(
-            buf, r"\VarFileInfo\Translation", ctypes.byref(lp_translate), ctypes.byref(u_len)
-        )
-        if not u_len.value:
-            return None
-        lang, codepage = ctypes.cast(lp_translate, ctypes.POINTER(ctypes.wintypes.WORD * 2)).contents
+        lang, codepage = ctypes.cast(translation[0], ctypes.POINTER(ctypes.wintypes.WORD * 2)).contents
         prefix = rf"\StringFileInfo\{lang:04x}{codepage:04x}"
         parts: list[str] = []
         for field in ("FileDescription", "CompanyName"):
-            lp_buf = ctypes.c_wchar_p()
-            u_len2 = ctypes.c_uint()
-            if ctypes.windll.version.VerQueryValueW(
-                buf, f"{prefix}\\{field}", ctypes.byref(lp_buf), ctypes.byref(u_len2)
-            ):
-                val = lp_buf.value
+            value = VerQueryValue(block, f"{prefix}\\{field}")
+            if value is not None:
+                val = ctypes.wstring_at(value[0])
                 if val:
                     parts.append(val.strip())
         return " - ".join(parts) if parts else None

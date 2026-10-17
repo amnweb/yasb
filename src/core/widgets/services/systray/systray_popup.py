@@ -1,4 +1,3 @@
-import ctypes
 from typing import override
 
 from PyQt6.QtCore import QEvent, QPoint, QPropertyAnimation, QRect, Qt, QTimer, pyqtSignal
@@ -6,21 +5,16 @@ from PyQt6.QtGui import QCloseEvent, QCursor, QHideEvent, QResizeEvent, QShowEve
 from PyQt6.QtWidgets import QApplication, QFrame, QPushButton, QVBoxLayout, QWidget
 
 from core.utils.win32.backdrop import enable_blur
-from core.utils.win32.bindings import user32
+from core.utils.win32.bindings.user32 import GetAsyncKeyState
 from core.validation.widgets.yasb.systray import SystrayPopupConfig
 from core.widgets.services.systray.systray_widget import DropWidget, IconWidget
-
-# Win32 detect physical mouse button state
-_GetAsyncKeyState = user32.GetAsyncKeyState
-_GetAsyncKeyState.argtypes = [ctypes.c_int]
-_GetAsyncKeyState.restype = ctypes.c_short
 
 
 def _is_mouse_pressed() -> bool:
     return bool(
-        (_GetAsyncKeyState(0x01) & 0x8000)  # VK_LBUTTON
-        or (_GetAsyncKeyState(0x02) & 0x8000)  # VK_RBUTTON
-        or (_GetAsyncKeyState(0x04) & 0x8000)  # VK_MBUTTON
+        (GetAsyncKeyState(0x01) & 0x8000)  # VK_LBUTTON
+        or (GetAsyncKeyState(0x02) & 0x8000)  # VK_RBUTTON
+        or (GetAsyncKeyState(0x04) & 0x8000)  # VK_MBUTTON
     )
 
 

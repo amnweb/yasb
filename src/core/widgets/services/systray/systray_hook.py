@@ -3,7 +3,7 @@ import logging
 import os
 import struct
 import time
-from ctypes.wintypes import BOOL, DWORD, HWND, LPARAM
+from ctypes.wintypes import DWORD
 from threading import Event, Lock
 
 from PIL import Image
@@ -56,7 +56,7 @@ from core.utils.win32.constants import (
     WAIT_OBJECT_0,
     WH_GETMESSAGE,
 )
-from core.utils.win32.structs import NOTIFYICONDATA, OVERLAPPED, SHELLTRAYDATA
+from core.utils.win32.structs import NOTIFYICONDATA, OVERLAPPED, SHELLTRAYDATA, WNDENUMPROC
 from core.widgets.services.systray.utils import (
     IconData,
     get_dll_path,
@@ -70,10 +70,9 @@ logger = logging.getLogger("systray_hook")
 
 def _find_shell_tray_hwnd(explorer_pid: int) -> int:
     """Find the Shell_TrayWnd belonging to a specific Explorer PID. Returns 0 if not found."""
-    _WNDENUMPROC = ctypes.WINFUNCTYPE(BOOL, HWND, LPARAM)
     result = 0
 
-    @_WNDENUMPROC
+    @WNDENUMPROC
     def _cb(hwnd: int, _: int) -> bool:
         nonlocal result
         if GetClassName(hwnd) != "Shell_TrayWnd":
@@ -85,7 +84,7 @@ def _find_shell_tray_hwnd(explorer_pid: int) -> int:
             return False  # stop enumeration
         return True
 
-    EnumWindows(ctypes.cast(_cb, ctypes.c_void_p), 0)
+    EnumWindows(_cb, 0)
     return result
 
 

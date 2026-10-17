@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import cast
 from winreg import HKEY_LOCAL_MACHINE, KEY_QUERY_VALUE, OpenKey, QueryValueEx
 
+from core.utils.win32.registry_keys import WINDOWS_NT_CURRENT_VERSION_KEY
+
 
 def app_data_path(filename: str | None = None) -> Path:
     """
@@ -32,7 +34,7 @@ def get_build_and_ubr() -> tuple[int, int]:
     build = sys.getwindowsversion().build
     ubr: int
     try:
-        with OpenKey(HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion", KEY_QUERY_VALUE) as key:
+        with OpenKey(HKEY_LOCAL_MACHINE, WINDOWS_NT_CURRENT_VERSION_KEY, KEY_QUERY_VALUE) as key:
             ubr = QueryValueEx(key, "UBR")[0]
     except Exception:
         ubr = 0

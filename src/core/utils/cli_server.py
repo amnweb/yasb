@@ -3,7 +3,6 @@ import logging
 import threading
 import time
 from collections.abc import Callable
-from ctypes import GetLastError
 
 from win32con import (
     FILE_FLAG_OVERLAPPED,
@@ -14,11 +13,12 @@ from win32con import (
 )
 
 from core.log import CLI_LOG_DATETIME, CLI_LOG_FORMAT, ColoredFormatter
-from core.utils.win32.bindings import (
+from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
     ConnectNamedPipe,
     CreateNamedPipe,
     DisconnectNamedPipe,
+    GetLastError,
     ReadFile,
     WriteFile,
 )

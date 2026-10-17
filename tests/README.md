@@ -73,16 +73,26 @@ Without it these checks are skipped on your PC; set `YASB_REQUIRE_SDK=1` to make
 which is what CI does. The answers are cached in `.pytest_cache`, and the last lines of the output say
 which compiler and SDK were used.
 
-Two checks in `win32/` don't need the compiler. Every function we use must exist in its DLL
-(`user32.dll` has `GetWindowLongW` but no `GetWindowLong`), and `test_window_actions.py` tries the
-window helpers on real windows.
+Some checks in `win32/` don't need the compiler:
+
+- Every function we use must exist in its DLL (`user32.dll` has `GetWindowLongW` but no `GetWindowLong`).
+- Every function we call has `argtypes` and `restype`.
+- Only the modules in `src/core/utils/win32/bindings` load DLLs, each with its own `WinDLL`. Nothing uses
+  `ctypes.windll`, `oledll` or `cdll`.
+- Structs live in `structs.py` and COM interfaces in the bindings. `OWN_CTYPES_MODULES` in `specs.py` lists
+  the modules that keep their own ctypes code.
+- Errors are read with `GetLastError()` from `core.utils.win32.bindings.kernel32`.
+- `test_bindings.py` and `test_window_actions.py` run the bindings and the window helpers on real Windows.
+
+With the compiler, one more check fails on an integer constant outside `constants.py`, `undocumented.py`
+and the bindings when the Windows SDK declares its name.
 
 ### The files
 
 | File | What it does | Do you edit it? |
 |---|---|---|
 | `test_*.py` | The checks themselves | Only to add a new kind of check |
-| `specs.py` | Python names that differ from the SDK (`WNDCLASS` for `WNDCLASSW`), and things that aren't in the SDK at all (undocumented functions, AMD, NVIDIA) | Yes, when a check asks for it |
+| `specs.py` | Python names that differ from the SDK (`WNDCLASS` for `WNDCLASSW`), and things that aren't in the SDK at all (undocumented functions, vendor SDK constants, AMD, NVIDIA) | Yes, when a check asks for it |
 | `known_issues.py` | Problems we know about but haven't fixed yet | Only to delete entries |
 | `probe.py` | Writes, compiles and runs the C++ program | Only its `HEADERS` list, when a check asks for it |
 | `msvc.py` | Finds Visual Studio's compiler | No |
@@ -95,11 +105,12 @@ window helpers on real windows.
 | Message | What to do |
 |---|---|
 | `sizeof is 1344, the SDK's MIB_IF_ROW2 is 1352` | The struct doesn't match Windows. Fix its fields. |
+| `BatteryLifePercent: c_byte is signed int(1), BatteryLifePercent is unsigned int(1): signedness differs` | Use a type with the SDK's sign (`BYTE` here), or 255 reads back as -1. Enum fields may use either sign. |
 | `argtypes has 4 entries, the SDK takes 5 parameters` | Fix the function's `argtypes`. |
 | `restype c_int is signed int(4), the SDK returns signed int(8)` | Fix the function's `restype`. |
 | `X returns pointer(8) but has no restype` | Declare `restype` and `argtypes`, like the files in `src/core/utils/win32/bindings` do. |
 | `user32.dll does not export GetWindowLong` | Call the name the DLL really has, here `GetWindowLongW`. |
-| `X is not declared by the SDK headers` | Check the spelling. If it's right, add its header to `HEADERS` in `win32/probe.py` (Microsoft Learn lists the header under Requirements). Only undocumented names belong in `NOT_IN_SDK` in `specs.py`. |
+| `X is not declared by the SDK headers` | Check the spelling. If it's right, add its header to `HEADERS` in `win32/probe.py` (Microsoft Learn lists the header under Requirements). An undocumented Windows value goes in `src/core/utils/win32/undocumented.py`. Only undocumented functions (`NOT_IN_SDK`) and vendor SDK constants (`CONSTANTS_NOT_IN_SDK`) go in `specs.py`. |
 
 ### Known issues
 

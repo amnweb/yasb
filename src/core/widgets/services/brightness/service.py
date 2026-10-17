@@ -3,7 +3,7 @@ import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from ctypes import POINTER, Structure, addressof, byref, c_byte, cast, string_at
+from ctypes import POINTER, addressof, byref, cast, string_at
 from ctypes.wintypes import BYTE, DWORD, HWND, MSG, RECT
 from typing import ClassVar
 
@@ -12,9 +12,10 @@ from PyQt6.QtWidgets import QApplication
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.win32.bindings.dxva2 import PHYSICAL_MONITOR, VCP_BRIGHTNESS, VCP_CONTRAST, dxva2
-from core.utils.win32.bindings.kernel32 import kernel32
+from core.utils.win32.bindings.kernel32 import GetLastError, kernel32
 from core.utils.win32.bindings.user32 import MONITORENUMPROC, user32
-from core.utils.win32.structs import GUID, WNDCLASS, WNDPROC
+from core.utils.win32.constants import DEVICE_NOTIFY_WINDOW_HANDLE, PBT_POWERSETTINGCHANGE, WM_POWERBROADCAST, WM_QUIT
+from core.utils.win32.structs import POWERBROADCAST_SETTING, WNDCLASS, WNDPROC
 from core.utils.win32.typecheck import CPointer
 from core.utils.win32.utils import get_monitor_info
 from core.widgets.services.brightness.displays import query_display
@@ -24,21 +25,9 @@ from core.widgets.services.brightness.scheme import (
     set_scheme_brightness,
 )
 
-WM_POWERBROADCAST = 0x0218
-WM_QUIT = 0x0012
-PBT_POWERSETTINGCHANGE = 0x8013
-DEVICE_NOTIFY_WINDOW_HANDLE = 0
 HWND_MESSAGE = HWND(-3)
 DDC_ATTEMPTS = 5
 DDC_RETRY_SLEEP = 0.1
-
-
-class POWERBROADCAST_SETTING(Structure):
-    _fields_ = [
-        ("PowerSetting", GUID),
-        ("DataLength", DWORD),
-        ("Data", c_byte * 1),
-    ]
 
 
 class _MonitorInfo:
@@ -291,7 +280,7 @@ class BrightnessService(QObject):
         wc.lpfnWndProc = self._wndproc_ref
         wc.hInstance = kernel32.GetModuleHandleW(None)
         wc.lpszClassName = class_name
-        if not user32.RegisterClassW(byref(wc)) and kernel32.GetLastError() not in (0, 1410):
+        if not user32.RegisterClassW(byref(wc)) and GetLastError() not in (0, 1410):
             logging.debug("BrightnessService: RegisterClassW failed")
             return
 

@@ -22,6 +22,7 @@ if not arch_info:
 display_arch, msi_arch_suffix = arch_info
 
 hook_dll_name = "YASBTrayHook_arm64.dll" if display_arch == "ARM64" else "YASBTrayHook.dll"
+everything_dll_name = "EverythingARM64.dll" if display_arch == "ARM64" else "Everything64.dll"
 
 build_options = {
     "packages": [
@@ -51,7 +52,7 @@ build_options = {
         ("assets/images/media.png", "assets/images/media.png"),
         ("assets/sound/notification01.wav", "assets/sound/notification01.wav"),
         ("assets/sound/notification02.wav", "assets/sound/notification02.wav"),
-        ("core/widgets/services/quick_launch/providers/resources/Everything64.dll", "lib/Everything64.dll"),
+        (f"core/widgets/services/quick_launch/providers/resources/{everything_dll_name}", f"lib/{everything_dll_name}"),
         (f"core/widgets/services/systray/hook/{hook_dll_name}", f"lib/{hook_dll_name}"),
         ("core/widgets/services/quick_launch/providers/resources/emoji.json", "lib/emoji.json"),
     ],

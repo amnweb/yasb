@@ -2,14 +2,15 @@
 
 from ctypes import (
     POINTER,
+    WinDLL,
     c_int,
-    windll,
 )
 from ctypes.wintypes import (
     BOOL,
     DWORD,
     HANDLE,
     HDC,
+    LPCWSTR,
     LPVOID,
 )
 
@@ -19,7 +20,7 @@ from core.utils.win32.structs import (
 )
 from core.utils.win32.typecheck import CArgObject
 
-gdi32 = windll.gdi32
+gdi32 = WinDLL("gdi32", use_last_error=True)
 
 gdi32.GetObjectW.argtypes = [HANDLE, c_int, LPVOID]
 gdi32.GetObjectW.restype = c_int
@@ -29,6 +30,9 @@ gdi32.GetDIBits.restype = c_int
 
 gdi32.DeleteObject.argtypes = [HANDLE]
 gdi32.DeleteObject.restype = BOOL
+
+gdi32.AddFontResourceExW.argtypes = [LPCWSTR, DWORD, LPVOID]
+gdi32.AddFontResourceExW.restype = c_int
 
 
 def GetDIBits(
@@ -49,3 +53,7 @@ def DeleteObject(hObject: int) -> bool:
 
 def GetObject(hgdiobj: int, cbBuffer: int, lpvObject: CArgObject) -> int:
     return gdi32.GetObjectW(hgdiobj, cbBuffer, lpvObject)
+
+
+def AddFontResourceEx(name: str, fl: int = 0) -> int:
+    return gdi32.AddFontResourceExW(name, fl, None)

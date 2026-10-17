@@ -5,8 +5,7 @@ from dataclasses import dataclass
 import win32api
 from winrt.windows.devices.display import DisplayMonitor, DisplayMonitorConnectionKind
 
-EDD_GET_DEVICE_INTERFACE_NAME = 1
-DISPLAY_DEVICE_ACTIVE = 0x00000001
+from core.utils.win32.constants import DISPLAY_DEVICE_ACTIVE, EDD_GET_DEVICE_INTERFACE_NAME
 
 
 @dataclass(frozen=True)

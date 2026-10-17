@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
 from core.bar_helper import GlobalState
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
-from core.utils.win32.bindings import user32
+from core.utils.win32.bindings.user32 import user32
 from core.utils.win32.utils import apply_qmenu_style
 from core.validation.widgets.yasb.control_center import ControlCenterSliderConfig, SlidersSectionConfig
 from core.widgets.services.brightness.service import BrightnessService

@@ -37,9 +37,7 @@ from ctypes.wintypes import MSG
 from typing import Any
 
 from core.utils.win32.bindings.user32 import user32
-
-# PeekMessage removes the message from the queue after retrieving it.
-PM_REMOVE = 0x0001
+from core.utils.win32.constants import PM_REMOVE
 
 results: list[tuple[str, bool, str]] = []
 

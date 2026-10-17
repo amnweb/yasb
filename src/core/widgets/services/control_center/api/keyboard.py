@@ -1,36 +1,38 @@
 import ctypes
 import logging
+from contextlib import suppress
 from ctypes import wintypes
 
+from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
+
 from core.utils.win32.bindings.kernel32 import CloseHandle
-from core.utils.win32.bindings.ole32 import CoCreateInstance, CoInitialize
-from core.utils.win32.bindings.shell32 import ShellExecuteEx, SHGetFolderPath
+from core.utils.win32.bindings.ole32 import CoInitialize, create_com_object
+from core.utils.win32.bindings.shell32 import CLSID_UIHostNoLaunch, ITipInvocation, ShellExecuteEx, SHGetFolderPath
 from core.utils.win32.bindings.user32 import GetDesktopWindow, WaitForInputIdle
-from core.utils.win32.structs import GUID, SHELLEXECUTEINFO
-
-_CLSID = GUID(0x4CE576FA, 0x83DC, 0x4F88, (0x95, 0x1C, 0x9D, 0x07, 0x82, 0xB4, 0xE3, 0x76))
-_IID = GUID(0x37C994E7, 0x432B, 0x4834, (0xA2, 0xF7, 0xDC, 0xE1, 0xF1, 0x3B, 0x83, 0x4B))
-
-_SEE_MASK_NOCLOSEPROCESS = 0x00000040
-_SEE_MASK_FLAG_NO_UI = 0x00000400
+from core.utils.win32.constants import (
+    CLSCTX_INPROC_HANDLER,
+    CLSCTX_LOCAL_SERVER,
+    CSIDL_PROGRAM_FILES_COMMON,
+    SEE_MASK_FLAG_NO_UI,
+    SEE_MASK_NOCLOSEPROCESS,
+    SW_SHOWNORMAL,
+)
+from core.utils.win32.structs import SHELLEXECUTEINFO
 
 
 def _try_toggle_via_com() -> bool:
     """Connect to the TabTip COM server and send the Toggle call. Returns True on success."""
-    ppv = ctypes.c_void_p()
-    hr = CoCreateInstance(ctypes.byref(_CLSID), None, 2 | 4, ctypes.byref(_IID), ctypes.byref(ppv))
-    if hr < 0:
+    tip = create_com_object(CLSID_UIHostNoLaunch, ITipInvocation, CLSCTX_INPROC_HANDLER | CLSCTX_LOCAL_SERVER)
+    if tip is None:
         return False
-    vtable = ctypes.cast(ppv, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p)))
-    toggle_fn = ctypes.WINFUNCTYPE(wintypes.HRESULT, ctypes.c_void_p, ctypes.c_void_p)(vtable[0][3])
-    toggle_fn(ppv, GetDesktopWindow())
-    ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)(vtable[0][2])(ppv)  # Release
+    with suppress(COMError):
+        tip.Toggle(GetDesktopWindow())
     return True
 
 
 def _tabtip_path() -> str:
     buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
-    SHGetFolderPath(0x002B, buf)  # 0x002B = CSIDL_PROGRAM_FILES_COMMON
+    SHGetFolderPath(CSIDL_PROGRAM_FILES_COMMON, buf)
     return buf.value + r"\microsoft shared\ink\TabTip.exe"
 
 
@@ -49,9 +51,9 @@ class TouchKeyboardService:
             if not _try_toggle_via_com():
                 sei = SHELLEXECUTEINFO()
                 sei.cbSize = ctypes.sizeof(SHELLEXECUTEINFO)
-                sei.fMask = _SEE_MASK_NOCLOSEPROCESS | _SEE_MASK_FLAG_NO_UI
+                sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI
                 sei.lpFile = _tabtip_path()
-                sei.nShow = 1  # SW_SHOWNORMAL
+                sei.nShow = SW_SHOWNORMAL
                 if ShellExecuteEx(ctypes.byref(sei)) and sei.hProcess:
                     WaitForInputIdle(sei.hProcess, 5000)
                     CloseHandle(sei.hProcess)

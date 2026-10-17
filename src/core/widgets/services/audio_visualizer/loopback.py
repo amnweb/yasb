@@ -4,17 +4,14 @@ import logging
 import threading
 import time
 from array import array
-from ctypes import POINTER, Structure, c_ubyte, c_uint16, c_uint32, c_uint64, c_void_p, cast
-from typing import TYPE_CHECKING, Any
+from ctypes import POINTER, c_ubyte, c_void_p, cast
+from typing import Any
 
 import win32event
 from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
     CLSCTX_ALL,
-    COMMETHOD,  # pyright: ignore[reportUnknownVariableType]
     GUID,
-    HRESULT,
     COMError,
-    IUnknown,
 )
 from pycaw.api.mmdeviceapi import PROPERTYKEY, IMMDevice, IMMDeviceEnumerator
 from pycaw.callbacks import MMNotificationClient
@@ -23,7 +20,22 @@ from pycaw.pycaw import AudioUtilities, EDataFlow, ERole, IAudioClient
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
-from core.utils.win32.bindings.ole32 import COINIT_MULTITHREADED, RPC_E_CHANGED_MODE, ole32
+from core.utils.win32.bindings.audioclient import IAudioCaptureClient, IID_IAudioCaptureClient, IID_IAudioClient
+from core.utils.win32.bindings.ole32 import ole32
+from core.utils.win32.constants import (
+    AUDCLNT_BUFFERFLAGS_SILENT,
+    AUDCLNT_SHAREMODE_SHARED,
+    AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+    AUDCLNT_STREAMFLAGS_LOOPBACK,
+    COINIT_MULTITHREADED,
+    KSDATAFORMAT_SUBTYPE_IEEE_FLOAT,
+    KSDATAFORMAT_SUBTYPE_PCM,
+    RPC_E_CHANGED_MODE,
+    WAVE_FORMAT_EXTENSIBLE,
+    WAVE_FORMAT_IEEE_FLOAT,
+    WAVE_FORMAT_PCM,
+)
+from core.utils.win32.structs import WAVEFORMATEX, WAVEFORMATEXTENSIBLE
 from core.widgets.services.audio_visualizer.spectrum import FFT_SIZE, SpectrumSource
 
 # Channel selectors a widget can ask for.
@@ -39,19 +51,7 @@ _PKEY_DEVICE_FRIENDLY_NAME.pid = 14
 # Returned by magnitudes() before the first frame and while the stream is idle.
 _SILENT_SPECTRUM: list[float] = [0.0] * (FFT_SIZE // 2)
 
-IID_IAudioClient = GUID("{1CB9AD4C-DBFA-4C32-B178-C2F568A703B2}")
-IID_IAudioCaptureClient = GUID("{C8ADBD64-E71E-48A0-A4DE-185C395CD317}")
-KSDATAFORMAT_SUBTYPE_IEEE_FLOAT = GUID("{00000003-0000-0010-8000-00AA00389B71}")
-KSDATAFORMAT_SUBTYPE_PCM = GUID("{00000001-0000-0010-8000-00AA00389B71}")
-
-AUDCLNT_STREAMFLAGS_LOOPBACK = 0x00020000
-AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000
-AUDCLNT_SHAREMODE_SHARED = 0
-AUDCLNT_BUFFERFLAGS_SILENT = 0x2
 REFTIMES_PER_SEC = 10_000_000
-WAVE_FORMAT_PCM = 0x0001
-WAVE_FORMAT_IEEE_FLOAT = 0x0003
-WAVE_FORMAT_EXTENSIBLE = 0xFFFE
 
 # cbSize of a WAVEFORMATEXTENSIBLE payload (2 + 4 + sizeof(GUID)).
 _WFX_EXTENSIBLE_CBSIZE = 22
@@ -77,66 +77,6 @@ _SILENCE_FLOOR = 1e-5
 _STOP = 0
 _WAKE = 1
 _AUDIO = 2
-
-
-class _WAVEFORMATEX(Structure):
-    """Windows ABI layout: 18 bytes, no trailing padding.
-
-    ``_pack_`` matters. The default ctypes alignment pads this to 20 bytes,
-    which would put every WAVEFORMATEXTENSIBLE field at the wrong offset.
-    """
-
-    _pack_ = 1
-    _fields_ = [
-        ("wFormatTag", c_uint16),
-        ("nChannels", c_uint16),
-        ("nSamplesPerSec", c_uint32),
-        ("nAvgBytesPerSec", c_uint32),
-        ("nBlockAlign", c_uint16),
-        ("wBitsPerSample", c_uint16),
-        ("cbSize", c_uint16),
-    ]
-
-
-class _WAVEFORMATEXTENSIBLE(Structure):
-    """Windows ABI layout: 40 bytes, SubFormat at offset 24."""
-
-    _pack_ = 1
-    _fields_ = [
-        ("Format", _WAVEFORMATEX),
-        ("wValidBitsPerSample", c_uint16),
-        ("dwChannelMask", c_uint32),
-        ("SubFormat", GUID),
-    ]
-
-
-class IAudioCaptureClient(IUnknown):
-    _iid_ = IID_IAudioCaptureClient
-    _methods_ = [
-        COMMETHOD(
-            [],
-            HRESULT,
-            "GetBuffer",
-            (["out"], POINTER(POINTER(c_ubyte)), "ppData"),
-            (["out"], POINTER(c_uint32), "pNumFramesToRead"),
-            (["out"], POINTER(c_uint32), "pdwFlags"),
-            (["out"], POINTER(c_uint64), "pu64DevicePosition"),
-            (["out"], POINTER(c_uint64), "pu64QPCPosition"),
-        ),
-        COMMETHOD([], HRESULT, "ReleaseBuffer", (["in"], c_uint32, "NumFramesRead")),
-        COMMETHOD(
-            [],
-            HRESULT,
-            "GetNextPacketSize",
-            (["out"], POINTER(c_uint32), "pNumFramesInNextPacket"),
-        ),
-    ]
-
-    if TYPE_CHECKING:
-
-        def GetBuffer(self) -> tuple[Any, int, int, int, int]: ...
-        def ReleaseBuffer(self, NumFramesRead: int) -> None: ...
-        def GetNextPacketSize(self) -> int: ...
 
 
 class UnsupportedFormatError(RuntimeError):
@@ -233,7 +173,7 @@ class _WasapiLoopbackClient:
         self.capture = capture
 
     def _read_format(self, wfx: Any) -> None:
-        fmt = cast(wfx, POINTER(_WAVEFORMATEX)).contents
+        fmt = cast(wfx, POINTER(WAVEFORMATEX)).contents
         self.sample_rate = max(1, int(fmt.nSamplesPerSec))
         self.channels = max(1, int(fmt.nChannels))
         self.bits = int(fmt.wBitsPerSample)
@@ -245,9 +185,9 @@ class _WasapiLoopbackClient:
         if tag == WAVE_FORMAT_EXTENSIBLE:
             if int(fmt.cbSize) < _WFX_EXTENSIBLE_CBSIZE:
                 raise UnsupportedFormatError(f"WAVE_FORMAT_EXTENSIBLE with truncated cbSize {int(fmt.cbSize)}")
-            subtype = cast(wfx, POINTER(_WAVEFORMATEXTENSIBLE)).contents.SubFormat
-            is_float = subtype == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
-            if not is_float and subtype != KSDATAFORMAT_SUBTYPE_PCM:
+            subtype = cast(wfx, POINTER(WAVEFORMATEXTENSIBLE)).contents.SubFormat
+            is_float = bytes(subtype) == bytes(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT)
+            if not is_float and bytes(subtype) != bytes(KSDATAFORMAT_SUBTYPE_PCM):
                 raise UnsupportedFormatError(f"unsupported loopback subformat {subtype}")
         else:
             is_float = tag == WAVE_FORMAT_IEEE_FLOAT

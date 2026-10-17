@@ -25,8 +25,7 @@ from win32con import HWND_BROADCAST
 from core.bar_helper import AppBarManager
 from core.utils.system import app_data_path
 from core.utils.utilities import refresh_widget_style
-from core.utils.win32.bindings import IsWindow
-from core.utils.win32.bindings.user32 import RegisterWindowMessage, SendNotifyMessage
+from core.utils.win32.bindings.user32 import IsWindow, RegisterWindowMessage, SendNotifyMessage
 from core.utils.win32.constants import (
     NIF_GUID,
     NIF_ICON,
@@ -35,6 +34,7 @@ from core.utils.win32.constants import (
     NIF_STATE,
     NIF_TIP,
 )
+from core.utils.win32.undocumented import TRAY_BATTERY_ICON_GUID, TRAY_NETWORK_ICON_GUID, TRAY_VOLUME_ICON_GUID
 from core.utils.win32.utils import apply_qmenu_style, get_windows_host_arch, is_running_under_emulation
 from core.validation.widgets.yasb.systray import SystrayWidgetConfig
 from core.widgets.base import BaseWidget
@@ -45,10 +45,6 @@ from core.widgets.services.systray.systray_widget import DropWidget, IconState, 
 from core.widgets.services.systray.utils import hook_dll_exists
 
 logger = logging.getLogger("systray_widget")
-
-BATTERY_ICON_GUID = UUID("7820ae75-23e3-4229-82c1-e41cb67d5b9c")
-VOLUME_ICON_GUID = UUID("7820ae73-23e3-4229-82c1-e41cb67d5b9c")
-NETWORK_GUID = UUID("7820ae74-23e3-4229-82c1-e41cb67d5b9c")
 
 
 class SystrayMonitorThread(QThread):
@@ -118,11 +114,11 @@ class SystrayWidget(BaseWidget):
 
         self.filtered_guids: set[UUID] = set()
         if not self.config.show_battery:
-            self.filtered_guids.add(BATTERY_ICON_GUID)
+            self.filtered_guids.add(TRAY_BATTERY_ICON_GUID)
         if not self.config.show_volume:
-            self.filtered_guids.add(VOLUME_ICON_GUID)
+            self.filtered_guids.add(TRAY_VOLUME_ICON_GUID)
         if not self.config.show_network:
-            self.filtered_guids.add(NETWORK_GUID)
+            self.filtered_guids.add(TRAY_NETWORK_ICON_GUID)
 
         self.hidden_icons_lower: list[str] = [h.lower() for h in self.config.hide_icons]
 

@@ -1,4 +1,3 @@
-import ctypes
 import logging
 import os
 import shutil
@@ -19,6 +18,8 @@ from core.ui.views.about import AboutDialog
 from core.utils.controller import exit_application, reload_application
 from core.utils.shell_utils import shell_open
 from core.utils.update_service import ReleaseInfo, register_update_callback
+from core.utils.win32.bindings.uxtheme import AllowDarkModeForWindow, FlushMenuThemes, SetPreferredAppMode
+from core.utils.win32.undocumented import PREFERRED_APP_MODE_ALLOW_DARK
 from core.utils.win32.utils import disable_autostart, enable_autostart, is_autostart_enabled
 from settings import (
     APP_NAME,
@@ -98,10 +99,9 @@ class SystemTrayManager(QSystemTrayIcon):
 
     def _try_enable_dark_menu(self, hwnd: int):
         try:
-            uxtheme = ctypes.WinDLL("uxtheme.dll")
-            uxtheme[135](1)  # pyright: ignore[reportArgumentType]  # undocumented SetPreferredAppMode(AllowDark)
-            uxtheme[133](hwnd, True)  # pyright: ignore[reportArgumentType]  # undocumented AllowDarkModeForWindow
-            uxtheme[136]()  # pyright: ignore[reportArgumentType]  # undocumented FlushMenuThemes
+            SetPreferredAppMode(PREFERRED_APP_MODE_ALLOW_DARK)
+            AllowDarkModeForWindow(hwnd, True)
+            FlushMenuThemes()
         except Exception:
             logging.debug("Native dark tray menu unavailable", exc_info=True)
 

@@ -11,10 +11,8 @@ from win32con import WM_INPUTLANGCHANGEREQUEST
 
 from core.utils.shell_utils import shell_open
 from core.utils.utilities import PopupWidget, refresh_widget_style
-from core.utils.win32.bindings import (
-    kernel32,
-    user32,
-)
+from core.utils.win32.bindings.kernel32 import kernel32
+from core.utils.win32.bindings.user32 import user32
 from core.utils.win32.constants import (
     LOCALE_NAME_MAX_LENGTH,
     LOCALE_SCOUNTRY,
@@ -26,6 +24,7 @@ from core.utils.win32.constants import (
     LOCALE_SNATIVECTRYNAME,
     LOCALE_SNATIVELANGNAME,
 )
+from core.utils.win32.registry_keys import KEYBOARD_LAYOUTS_KEY
 from core.validation.widgets.yasb.language import LanguageConfig
 from core.widgets.base import BaseWidget
 
@@ -274,7 +273,7 @@ class LanguageWidget(BaseWidget):
                         klid = klid_buf.value.upper()
 
                         # Look up in registry
-                        reg_path = rf"SYSTEM\CurrentControlSet\Control\Keyboard Layouts\{klid}"
+                        reg_path = f"{KEYBOARD_LAYOUTS_KEY}\\{klid}"
                         try:
                             with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path) as key:
                                 # Try Layout Text first

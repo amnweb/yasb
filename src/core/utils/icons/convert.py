@@ -5,7 +5,8 @@ from ctypes.wintypes import HBITMAP
 from PIL import Image
 from win32con import DIB_RGB_COLORS
 
-from core.utils.win32.bindings import DeleteObject, GetDC, GetDIBits, GetIconInfo, GetObject, ReleaseDC
+from core.utils.win32.bindings.gdi32 import DeleteObject, GetDIBits, GetObject
+from core.utils.win32.bindings.user32 import GetDC, GetIconInfo, ReleaseDC
 from core.utils.win32.structs import BITMAP, BITMAPINFO, BITMAPINFOHEADER, ICONINFO
 
 pil_logger = logging.getLogger("PIL")

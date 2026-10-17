@@ -25,7 +25,7 @@ from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource, ProcessIcon, WindowIcon, load_icon
-from core.utils.win32.aumid import ensure_com_initialized
+from core.utils.win32.bindings.ole32 import CoInitialize
 from core.utils.win32.bindings.user32 import GetClassName, GetWindowThreadProcessId, InternalGetWindowText, IsWindow
 from core.utils.win32.utils import get_process_path
 
@@ -171,7 +171,7 @@ class IconService(QObject):
         self.icons_changed.emit()
 
     def _run_icon_thread(self) -> None:
-        ensure_com_initialized()
+        CoInitialize()
         while (key := self._load_queue.get()[2]) is not None:
             with self._lock:
                 if key not in self._waiting:

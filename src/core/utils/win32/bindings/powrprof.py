@@ -1,11 +1,11 @@
 """Wrappers for powerprof win32 API functions to make them easier to use and have proper types"""
 
-from ctypes import POINTER, Array, c_ubyte, windll, wintypes
+from ctypes import POINTER, Array, WinDLL, byref, c_ubyte, wintypes
 
 from core.utils.win32.structs import GUID
 from core.utils.win32.typecheck import CArgObject
 
-powrprof = windll.powrprof
+powrprof = WinDLL("powrprof", use_last_error=True)
 
 # -- Power management function prototypes -- #
 powrprof.PowerEnumerate.argtypes = [
@@ -73,6 +73,17 @@ powrprof.PowerWriteDCValueIndex.restype = wintypes.DWORD
 
 powrprof.SetSuspendState.argtypes = [wintypes.BOOLEAN, wintypes.BOOLEAN, wintypes.BOOLEAN]
 powrprof.SetSuspendState.restype = wintypes.BOOLEAN
+
+# Power mode overlay exports: undocumented and missing on older Windows 10 builds
+try:
+    powrprof.PowerGetUserConfiguredACPowerMode.argtypes = [POINTER(GUID)]
+    powrprof.PowerGetUserConfiguredACPowerMode.restype = wintypes.DWORD
+    powrprof.PowerSetUserConfiguredACPowerMode.argtypes = [POINTER(GUID)]
+    powrprof.PowerSetUserConfiguredACPowerMode.restype = wintypes.DWORD
+    powrprof.PowerSetUserConfiguredDCPowerMode.argtypes = [POINTER(GUID)]
+    powrprof.PowerSetUserConfiguredDCPowerMode.restype = wintypes.DWORD
+except AttributeError:
+    pass
 
 
 # -- Power management function wrappers -- #
@@ -170,3 +181,15 @@ def PowerWriteDCValueIndex(
 
 def SetSuspendState(bHibernate: bool, bForce: bool, bWakeupEventsDisabled: bool) -> int:
     return powrprof.SetSuspendState(bHibernate, bForce, bWakeupEventsDisabled)
+
+
+def PowerGetUserConfiguredACPowerMode(PowerModeGuid: GUID) -> int:
+    return powrprof.PowerGetUserConfiguredACPowerMode(byref(PowerModeGuid))
+
+
+def PowerSetUserConfiguredACPowerMode(PowerModeGuid: GUID) -> int:
+    return powrprof.PowerSetUserConfiguredACPowerMode(byref(PowerModeGuid))
+
+
+def PowerSetUserConfiguredDCPowerMode(PowerModeGuid: GUID) -> int:
+    return powrprof.PowerSetUserConfiguredDCPowerMode(byref(PowerModeGuid))

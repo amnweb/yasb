@@ -1,16 +1,13 @@
-import ctypes
 import logging
 import subprocess
-from ctypes import wintypes
 from dataclasses import dataclass
 from typing import Any
 
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.icons.service import ProcessIcon
-from core.utils.win32.bindings.kernel32 import kernel32
-from core.utils.win32.constants import PROCESS_TERMINATE, TH32CS_SNAPPROCESS
-from core.utils.win32.structs import PROCESSENTRY32
+from core.utils.win32.bindings.kernel32 import kernel32, snapshot_processes
+from core.utils.win32.constants import PROCESS_TERMINATE
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_PORT
 
@@ -34,27 +31,6 @@ def _terminate_process(pid: int) -> bool:
         return bool(kernel32.TerminateProcess(h, 1))
     finally:
         kernel32.CloseHandle(h)
-
-
-def _enumerate_processes() -> dict[int, str]:
-    """Return {pid: exe_name} for all running processes."""
-
-    proc_map: dict[int, str] = {}
-    snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-    if snapshot == wintypes.HANDLE(-1).value:
-        return proc_map
-    try:
-        entry = PROCESSENTRY32()
-        entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
-        if not kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
-            return proc_map
-        while True:
-            proc_map[int(entry.th32ProcessID)] = str(entry.szExeFile)
-            if not kernel32.Process32NextW(snapshot, ctypes.byref(entry)):
-                break
-    finally:
-        kernel32.CloseHandle(snapshot)
-    return proc_map
 
 
 def _parse_host_port(endpoint: str) -> tuple[str, int | None]:
@@ -219,7 +195,7 @@ class PortViewerProvider(BaseProvider):
             name_filter = " ".join(tokens_lower).strip()
 
         try:
-            pid_to_name = _enumerate_processes()
+            pid_to_name = {process.pid: process.exe for process in snapshot_processes()}
         except Exception as e:
             logging.debug("Port Viewer: process enumeration failed: %s", e)
             pid_to_name = {}

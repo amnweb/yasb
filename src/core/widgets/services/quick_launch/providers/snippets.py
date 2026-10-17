@@ -1,5 +1,3 @@
-import ctypes
-import ctypes.wintypes
 import json
 import logging
 import os
@@ -13,6 +11,9 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.system import app_data_path
+from core.utils.win32.bindings.user32 import SendInput
+from core.utils.win32.constants import INPUT_KEYBOARD, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, VK_RETURN
+from core.utils.win32.structs import INPUT
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
@@ -61,78 +62,21 @@ def _resolve_variables(text: str) -> str:
     return _VAR_PATTERN.sub(_replace, text)
 
 
-# SendInput constants
-INPUT_KEYBOARD = 1
-KEYEVENTF_UNICODE = 0x0004
-KEYEVENTF_KEYUP = 0x0002
-
-
-class _MOUSEINPUT(ctypes.Structure):
-    _fields_ = [
-        ("dx", ctypes.c_long),
-        ("dy", ctypes.c_long),
-        ("mouseData", ctypes.wintypes.DWORD),
-        ("dwFlags", ctypes.wintypes.DWORD),
-        ("time", ctypes.wintypes.DWORD),
-        ("dwExtraInfo", ctypes.POINTER(ctypes.c_size_t)),
-    ]
-
-
-class _KEYBDINPUT(ctypes.Structure):
-    _fields_ = [
-        ("wVk", ctypes.wintypes.WORD),
-        ("wScan", ctypes.wintypes.WORD),
-        ("dwFlags", ctypes.wintypes.DWORD),
-        ("time", ctypes.wintypes.DWORD),
-        ("dwExtraInfo", ctypes.POINTER(ctypes.c_size_t)),
-    ]
-
-
-class _HARDWAREINPUT(ctypes.Structure):
-    _fields_ = [
-        ("uMsg", ctypes.wintypes.DWORD),
-        ("wParamL", ctypes.wintypes.WORD),
-        ("wParamH", ctypes.wintypes.WORD),
-    ]
-
-
-class _INPUT_UNION(ctypes.Union):
-    _fields_ = [
-        ("mi", _MOUSEINPUT),
-        ("ki", _KEYBDINPUT),
-        ("hi", _HARDWAREINPUT),
-    ]
-
-
-class _INPUT(ctypes.Structure):
-    _fields_ = [
-        ("type", ctypes.wintypes.DWORD),
-        ("_input", _INPUT_UNION),
-    ]
-    _anonymous_ = ("_input",)
-
-
-_SendInput = ctypes.windll.user32.SendInput
-_SendInput.argtypes = [ctypes.wintypes.UINT, ctypes.POINTER(_INPUT), ctypes.c_int]
-_SendInput.restype = ctypes.wintypes.UINT
-
-
 def _send_unicode_string(text: str):
     """Type a string into the focused window using SendInput with KEYEVENTF_UNICODE."""
-    VK_RETURN = 0x0D
-    inputs: list[_INPUT] = []
+    inputs: list[INPUT] = []
     for char in text:
         if char == "\r":
             continue  # skip \r, handle \n as Enter
         if char == "\n":
             # Send a virtual Enter key press for line breaks
-            down = _INPUT(type=INPUT_KEYBOARD)
+            down = INPUT(type=INPUT_KEYBOARD)
             down.ki.wVk = VK_RETURN
             down.ki.wScan = 0
             down.ki.dwFlags = 0
             inputs.append(down)
 
-            up = _INPUT(type=INPUT_KEYBOARD)
+            up = INPUT(type=INPUT_KEYBOARD)
             up.ki.wVk = VK_RETURN
             up.ki.wScan = 0
             up.ki.dwFlags = KEYEVENTF_KEYUP
@@ -140,13 +84,13 @@ def _send_unicode_string(text: str):
             continue
 
         code = ord(char)
-        down = _INPUT(type=INPUT_KEYBOARD)
+        down = INPUT(type=INPUT_KEYBOARD)
         down.ki.wVk = 0
         down.ki.wScan = code
         down.ki.dwFlags = KEYEVENTF_UNICODE
         inputs.append(down)
 
-        up = _INPUT(type=INPUT_KEYBOARD)
+        up = INPUT(type=INPUT_KEYBOARD)
         up.ki.wVk = 0
         up.ki.wScan = code
         up.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP
@@ -154,8 +98,7 @@ def _send_unicode_string(text: str):
 
     if inputs:
         n = len(inputs)
-        arr = (_INPUT * n)(*inputs)
-        _SendInput(n, arr, ctypes.sizeof(_INPUT))
+        SendInput((INPUT * n)(*inputs))
 
 
 class SnippetsProvider(BaseProvider):

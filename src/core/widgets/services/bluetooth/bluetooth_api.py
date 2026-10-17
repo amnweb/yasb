@@ -1,7 +1,6 @@
 import asyncio
 import ctypes
 import logging
-import os
 from collections.abc import Callable
 from ctypes import wintypes
 from typing import Any
@@ -20,13 +19,25 @@ from winrt.windows.devices.enumeration import (
 )
 from winrt.windows.devices.radios import Radio, RadioAccessStatus, RadioKind, RadioState
 
-from core.widgets.services.bluetooth.bluetooth_types import (
+from core.utils.win32.bindings.bluetoothapis import BluetoothApis
+from core.utils.win32.bindings.cfgmgr32 import cfgmgr32
+from core.utils.win32.bindings.kernel32 import CloseHandle
+from core.utils.win32.constants import (
+    CM_GETIDLIST_FILTER_ENUMERATOR,
+    CM_GETIDLIST_FILTER_PRESENT,
+    CR_BUFFER_SMALL,
+    CR_SUCCESS,
+    DEVPROP_MASK_TYPE,
+    DEVPROP_TYPE_BYTE,
+)
+from core.utils.win32.structs import (
     BLUETOOTH_DEVICE_INFO,
     BLUETOOTH_DEVICE_SEARCH_PARAMS,
     BLUETOOTH_FIND_RADIO_PARAMS,
+)
+from core.utils.win32.undocumented import DEVPKEY_Bluetooth_Battery
+from core.widgets.services.bluetooth.bluetooth_types import (
     BT_ADAPTER_IFACE,
-    DEVPROPKEY,
-    GUID,
     BluetoothMajorClass,
     DeviceInfo,
     DeviceType,
@@ -42,63 +53,20 @@ logger = logging.getLogger("bluetooth_widget")
 
 _ENRICH_CONCURRENCY = 6
 
-_CM_GETIDLIST_FILTER_ENUMERATOR = 0x00000001
-_CM_GETIDLIST_FILTER_PRESENT = 0x00000100
-_CR_SUCCESS = 0
-_CR_BUFFER_SMALL = 26
-_DEVPROP_TYPE_BYTE = 0x00000003
-_DEVPROP_TYPE_MASK = 0x00000FFF
 _BATTERY_ID_LIST_MAX = 256 * 1024
-_BATTERY_PROPKEY = DEVPROPKEY()
-_BATTERY_PROPKEY.fmtid = GUID.from_string("{104EA319-6EE2-4701-BD47-8DDBF425BBE5}")
-_BATTERY_PROPKEY.pid = 2
 # Prefer HFP battery node, then LE.
 _BATTERY_FILTERS = ("BthHFEnum", "BTHENUM", "BTHLE")
-_BATTERY_LIST_FLAGS = _CM_GETIDLIST_FILTER_ENUMERATOR | _CM_GETIDLIST_FILTER_PRESENT
-_cfgmgr: Any | None = None
-_cfgmgr_ready = False
-
-
-def get_bluetooth_api() -> Any:
-    system_root = os.environ.get("SystemRoot", r"C:\Windows")
-    paths = [
-        "BluetoothAPIs.dll",
-        os.path.join(system_root, "System32", "BluetoothAPIs.dll"),
-        os.path.join(system_root, "SysWOW64", "BluetoothAPIs.dll"),
-    ]
-    last_error: OSError | None = None
-    for path in paths:
-        try:
-            return ctypes.WinDLL(path)
-        except OSError as e:
-            last_error = e
-    raise RuntimeError(f"Failed to load BluetoothAPIs.dll. Error: {last_error}")
+_BATTERY_LIST_FLAGS = CM_GETIDLIST_FILTER_ENUMERATOR | CM_GETIDLIST_FILTER_PRESENT
 
 
 class BluetoothNativeApi:
     """Thin wrapper around BluetoothAPIs.dll."""
 
     def __init__(self) -> None:
-        self._api = get_bluetooth_api()
-        api = self._api
-        api.BluetoothFindFirstRadio.argtypes = [
-            ctypes.POINTER(BLUETOOTH_FIND_RADIO_PARAMS),
-            ctypes.POINTER(wintypes.HANDLE),
-        ]
-        api.BluetoothFindFirstRadio.restype = wintypes.HANDLE
-        api.BluetoothFindNextRadio.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.HANDLE)]
-        api.BluetoothFindNextRadio.restype = wintypes.BOOL
-        api.BluetoothFindRadioClose.argtypes = [wintypes.HANDLE]
-        api.BluetoothFindRadioClose.restype = wintypes.BOOL
-        api.BluetoothFindFirstDevice.argtypes = [
-            ctypes.POINTER(BLUETOOTH_DEVICE_SEARCH_PARAMS),
-            ctypes.POINTER(BLUETOOTH_DEVICE_INFO),
-        ]
-        api.BluetoothFindFirstDevice.restype = wintypes.HANDLE
-        api.BluetoothFindNextDevice.argtypes = [wintypes.HANDLE, ctypes.POINTER(BLUETOOTH_DEVICE_INFO)]
-        api.BluetoothFindNextDevice.restype = wintypes.BOOL
-        api.BluetoothFindDeviceClose.argtypes = [wintypes.HANDLE]
-        api.BluetoothFindDeviceClose.restype = wintypes.BOOL
+        try:
+            self._api = BluetoothApis()
+        except OSError as e:
+            raise RuntimeError(f"Failed to load BluetoothAPIs.dll. Error: {e}") from e
 
     def _iter_radios(self):
         """Yield each radio HANDLE, closed when the caller's loop advances past it."""
@@ -115,7 +83,7 @@ class BluetoothNativeApi:
                 try:
                     yield handle
                 finally:
-                    ctypes.windll.kernel32.CloseHandle(handle)
+                    CloseHandle(handle)
                 if not self._api.BluetoothFindNextRadio(finder, ctypes.byref(radio_handle)):
                     break
         finally:
@@ -342,63 +310,19 @@ async def open_device_watch(device: DeviceInfo, on_changed: Callable[[Any, Any],
         return None
 
 
-def _get_cfgmgr() -> Any | None:
-    """Load cfgmgr32 once and bind CM_* prototypes."""
-    global _cfgmgr, _cfgmgr_ready
-    if _cfgmgr_ready:
-        return _cfgmgr
-    _cfgmgr_ready = True
-    try:
-        cfg = ctypes.WinDLL("cfgmgr32.dll")
-    except OSError:
-        _cfgmgr = None
-        return None
-
-    cfg.CM_Get_Device_ID_List_SizeW.argtypes = [
-        ctypes.POINTER(wintypes.ULONG),
-        wintypes.LPCWSTR,
-        wintypes.ULONG,
-    ]
-    cfg.CM_Get_Device_ID_List_SizeW.restype = wintypes.DWORD
-    cfg.CM_Get_Device_ID_ListW.argtypes = [
-        wintypes.LPCWSTR,
-        wintypes.LPWSTR,
-        wintypes.ULONG,
-        wintypes.ULONG,
-    ]
-    cfg.CM_Get_Device_ID_ListW.restype = wintypes.DWORD
-    cfg.CM_Locate_DevNodeW.argtypes = [
-        ctypes.POINTER(wintypes.DWORD),
-        wintypes.LPCWSTR,
-        wintypes.ULONG,
-    ]
-    cfg.CM_Locate_DevNodeW.restype = wintypes.DWORD
-    cfg.CM_Get_DevNode_PropertyW.argtypes = [
-        wintypes.DWORD,
-        ctypes.POINTER(DEVPROPKEY),
-        ctypes.POINTER(wintypes.ULONG),
-        ctypes.c_void_p,
-        ctypes.POINTER(wintypes.ULONG),
-        wintypes.ULONG,
-    ]
-    cfg.CM_Get_DevNode_PropertyW.restype = wintypes.DWORD
-    _cfgmgr = cfg
-    return _cfgmgr
-
-
-def _device_id_list(cfg: Any, filt: str) -> list[str]:
+def _device_id_list(filt: str) -> list[str]:
     """List present device IDs under a PnP enumerator. Retries once on CR_BUFFER_SMALL."""
     for _ in range(2):
         length = wintypes.ULONG(0)
-        if cfg.CM_Get_Device_ID_List_SizeW(ctypes.byref(length), filt, _BATTERY_LIST_FLAGS) != _CR_SUCCESS:
+        if cfgmgr32.CM_Get_Device_ID_List_SizeW(ctypes.byref(length), filt, _BATTERY_LIST_FLAGS) != CR_SUCCESS:
             return []
         if length.value <= 1 or length.value > _BATTERY_ID_LIST_MAX:
             return []
         buf = ctypes.create_unicode_buffer(length.value)
-        status = int(cfg.CM_Get_Device_ID_ListW(filt, buf, length.value, _BATTERY_LIST_FLAGS))
-        if status == _CR_BUFFER_SMALL:
+        status = int(cfgmgr32.CM_Get_Device_ID_ListW(filt, buf, length.value, _BATTERY_LIST_FLAGS))
+        if status == CR_BUFFER_SMALL:
             continue
-        if status != _CR_SUCCESS:
+        if status != CR_SUCCESS:
             return []
         blob = ctypes.wstring_at(ctypes.addressof(buf), length.value)
         return [part for part in blob.split("\x00") if part]
@@ -411,35 +335,31 @@ def read_battery(address_int: int) -> int | None:
     Prefers BthHFEnum. If an HFP node exists for this MAC but has no level yet,
     return None instead of a stale BTHENUM/BTHLE value.
     """
-    cfg = _get_cfgmgr()
-    if cfg is None:
-        return None
-
     addr_hex = f"{address_int:012X}"
     hfp_present = False
     hfp_level: int | None = None
     fallback: int | None = None
 
     for filt in _BATTERY_FILTERS:
-        for device_id in _device_id_list(cfg, filt):
+        for device_id in _device_id_list(filt):
             if addr_hex not in device_id.upper():
                 continue
             devinst = wintypes.DWORD(0)
-            if cfg.CM_Locate_DevNodeW(ctypes.byref(devinst), device_id, 0) != _CR_SUCCESS:
+            if cfgmgr32.CM_Locate_DevNodeW(ctypes.byref(devinst), device_id, 0) != CR_SUCCESS:
                 continue
             prop_type = wintypes.ULONG(0)
             prop_size = wintypes.ULONG(1)
             value = ctypes.c_ubyte(0)
-            status = cfg.CM_Get_DevNode_PropertyW(
+            status = cfgmgr32.CM_Get_DevNode_PropertyW(
                 devinst,
-                ctypes.byref(_BATTERY_PROPKEY),
+                ctypes.byref(DEVPKEY_Bluetooth_Battery),
                 ctypes.byref(prop_type),
                 ctypes.byref(value),
                 ctypes.byref(prop_size),
                 0,
             )
             level = None
-            if status == _CR_SUCCESS and (prop_type.value & _DEVPROP_TYPE_MASK) == _DEVPROP_TYPE_BYTE:
+            if status == CR_SUCCESS and (prop_type.value & DEVPROP_MASK_TYPE) == DEVPROP_TYPE_BYTE:
                 n = int(value.value)
                 if 0 <= n <= 100:
                     level = n

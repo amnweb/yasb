@@ -1,19 +1,25 @@
 """Wrappers for kernel32 win32 API functions to make them easier to use and have proper types"""
 
+from collections.abc import Callable
 from ctypes import (
     POINTER,
     WINFUNCTYPE,
     Array,
+    WinDLL,
     byref,
     c_char,
+    c_int,
+    c_long,
     c_size_t,
     c_ulonglong,
     c_void_p,
     c_wchar,
     cast,
     create_string_buffer,
+    create_unicode_buffer,
+    get_last_error,
+    sizeof,
     string_at,
-    windll,
     wstring_at,
 )
 from ctypes.wintypes import (
@@ -21,6 +27,7 @@ from ctypes.wintypes import (
     DWORD,
     HANDLE,
     HMODULE,
+    LONG,
     LPCSTR,
     LPCVOID,
     LPCWSTR,
@@ -30,12 +37,23 @@ from ctypes.wintypes import (
     UINT,
     ULONG,
     USHORT,
+    WORD,
 )
+from typing import NamedTuple
 
-from core.utils.win32.structs import OVERLAPPED, SYSTEM_POWER_STATUS
+from core.utils.win32.constants import ERROR_INSUFFICIENT_BUFFER, INVALID_HANDLE_VALUE, TH32CS_SNAPPROCESS
+from core.utils.win32.structs import (
+    COORD,
+    MEMORYSTATUSEX,
+    OVERLAPPED,
+    PROCESS_INFORMATION,
+    PROCESSENTRY32,
+    SYSTEM_POWER_STATUS,
+    WIN32_FIND_DATAW,
+)
 from core.utils.win32.typecheck import CArgObject
 
-kernel32 = windll.kernel32
+kernel32 = WinDLL("kernel32", use_last_error=True)
 
 kernel32.OpenProcess.argtypes = [DWORD, BOOL, DWORD]
 kernel32.OpenProcess.restype = HANDLE
@@ -91,8 +109,6 @@ kernel32.SetEvent.restype = BOOL
 kernel32.ResetEvent.argtypes = [HANDLE]
 kernel32.ResetEvent.restype = BOOL
 
-kernel32.OpenEventW.argtypes = [DWORD, BOOL, LPCWSTR]
-kernel32.OpenEventW.restype = HANDLE
 
 kernel32.WaitForSingleObject.argtypes = [HANDLE, DWORD]
 kernel32.WaitForSingleObject.restype = DWORD
@@ -213,9 +229,6 @@ kernel32.GetTickCount64.restype = c_ulonglong
 kernel32.GetModuleHandleW.argtypes = [LPCWSTR]
 kernel32.GetModuleHandleW.restype = HANDLE
 
-kernel32.GetLastError.argtypes = []
-kernel32.GetLastError.restype = DWORD
-
 # GetSystemPowerStatus - Battery/power status
 kernel32.GetSystemPowerStatus.argtypes = [POINTER(SYSTEM_POWER_STATUS)]
 kernel32.GetSystemPowerStatus.restype = BOOL
@@ -279,6 +292,87 @@ kernel32.EnumResourceNamesW.restype = BOOL
 
 kernel32.LoadLibraryW.argtypes = [LPCWSTR]
 kernel32.LoadLibraryW.restype = HANDLE
+
+kernel32.GetPackageFullName.argtypes = [HANDLE, POINTER(UINT), LPWSTR]
+kernel32.GetPackageFullName.restype = LONG
+
+kernel32.GetApplicationUserModelId.argtypes = [HANDLE, POINTER(UINT), LPWSTR]
+kernel32.GetApplicationUserModelId.restype = LONG
+
+kernel32.GetLogicalDrives.argtypes = []
+kernel32.GetLogicalDrives.restype = DWORD
+
+kernel32.GetDriveTypeW.argtypes = [LPCWSTR]
+kernel32.GetDriveTypeW.restype = UINT
+
+kernel32.FindFirstFileExW.argtypes = [LPCWSTR, c_int, POINTER(WIN32_FIND_DATAW), c_int, LPVOID, DWORD]
+kernel32.FindFirstFileExW.restype = HANDLE
+
+kernel32.FindNextFileW.argtypes = [HANDLE, POINTER(WIN32_FIND_DATAW)]
+kernel32.FindNextFileW.restype = BOOL
+
+kernel32.FindClose.argtypes = [HANDLE]
+kernel32.FindClose.restype = BOOL
+
+kernel32.GetUserGeoID.argtypes = [DWORD]
+kernel32.GetUserGeoID.restype = LONG
+
+kernel32.GetGeoInfoW.argtypes = [LONG, DWORD, LPWSTR, c_int, WORD]
+kernel32.GetGeoInfoW.restype = c_int
+
+kernel32.GlobalAlloc.argtypes = [UINT, c_size_t]
+kernel32.GlobalAlloc.restype = HANDLE
+
+kernel32.GlobalLock.argtypes = [HANDLE]
+kernel32.GlobalLock.restype = LPVOID
+
+kernel32.GlobalUnlock.argtypes = [HANDLE]
+kernel32.GlobalUnlock.restype = BOOL
+
+kernel32.GlobalFree.argtypes = [HANDLE]
+kernel32.GlobalFree.restype = HANDLE
+
+kernel32.GlobalMemoryStatusEx.argtypes = [POINTER(MEMORYSTATUSEX)]
+kernel32.GlobalMemoryStatusEx.restype = BOOL
+
+kernel32.GetLocaleInfoW.argtypes = [DWORD, DWORD, LPWSTR, c_int]
+kernel32.GetLocaleInfoW.restype = c_int
+
+kernel32.CreatePipe.argtypes = [POINTER(HANDLE), POINTER(HANDLE), LPVOID, DWORD]
+kernel32.CreatePipe.restype = BOOL
+
+kernel32.InitializeProcThreadAttributeList.argtypes = [LPVOID, DWORD, DWORD, POINTER(c_size_t)]
+kernel32.InitializeProcThreadAttributeList.restype = BOOL
+
+kernel32.UpdateProcThreadAttribute.argtypes = [LPVOID, DWORD, c_size_t, LPVOID, c_size_t, LPVOID, POINTER(c_size_t)]
+kernel32.UpdateProcThreadAttribute.restype = BOOL
+
+kernel32.DeleteProcThreadAttributeList.argtypes = [LPVOID]
+kernel32.DeleteProcThreadAttributeList.restype = None
+
+# lpStartupInfo is LPVOID: with EXTENDED_STARTUPINFO_PRESENT it points to a STARTUPINFOEXW
+kernel32.CreateProcessW.argtypes = [
+    LPCWSTR,
+    LPWSTR,
+    LPVOID,
+    LPVOID,
+    BOOL,
+    DWORD,
+    LPVOID,
+    LPCWSTR,
+    LPVOID,
+    POINTER(PROCESS_INFORMATION),
+]
+kernel32.CreateProcessW.restype = BOOL
+
+# ConPTY, Windows 10 1809 and later
+try:
+    kernel32.CreatePseudoConsole.argtypes = [COORD, HANDLE, HANDLE, DWORD, POINTER(HANDLE)]
+    kernel32.CreatePseudoConsole.restype = c_long
+    kernel32.ClosePseudoConsole.argtypes = [HANDLE]
+    kernel32.ClosePseudoConsole.restype = None
+except AttributeError:
+    pass
 
 
 # --- Python-friendly typed wrapper functions ---
@@ -366,10 +460,6 @@ def SetEvent(hEvent: int) -> bool:
 
 def ResetEvent(hEvent: int) -> bool:
     return bool(kernel32.ResetEvent(hEvent))
-
-
-def OpenEvent(dwDesiredAccess: int, bInheritHandle: bool, lpName: str) -> int:
-    return kernel32.OpenEventW(dwDesiredAccess, bInheritHandle, lpName)
 
 
 def WaitForSingleObject(hHandle: int, dwMilliseconds: int) -> int:
@@ -476,6 +566,28 @@ def CreateRemoteThread(
     )
 
 
+class ProcessEntry(NamedTuple):
+    pid: int
+    parent_pid: int
+    exe: str
+
+
+def snapshot_processes() -> list[ProcessEntry]:
+    snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+    if snapshot in (None, INVALID_HANDLE_VALUE):
+        return []
+    try:
+        entry = PROCESSENTRY32(dwSize=sizeof(PROCESSENTRY32))
+        found: list[ProcessEntry] = []
+        more = kernel32.Process32FirstW(snapshot, byref(entry))
+        while more:
+            found.append(ProcessEntry(entry.th32ProcessID, entry.th32ParentProcessID, entry.szExeFile))
+            more = kernel32.Process32NextW(snapshot, byref(entry))
+        return found
+    finally:
+        kernel32.CloseHandle(snapshot)
+
+
 def CreateToolhelp32Snapshot(dwFlags: int, th32ProcessID: int) -> int:
     return kernel32.CreateToolhelp32Snapshot(dwFlags, th32ProcessID)
 
@@ -521,7 +633,7 @@ def GetModuleHandle(lpModuleName: str | None) -> int:
 
 
 def GetLastError() -> int:
-    return int(kernel32.GetLastError())
+    return get_last_error()
 
 
 def LoadLibraryW(lpLibFileName: str) -> int:
@@ -574,3 +686,76 @@ def GetCurrentProcess() -> int:
 
 def GetSystemWindowsDirectoryW(lpBuffer: Array[c_wchar], uSize: int) -> int:
     return kernel32.GetSystemWindowsDirectoryW(lpBuffer, uSize)
+
+
+def LocalFree(hMem: object) -> None:
+    kernel32.LocalFree(hMem)
+
+
+def WaitForMultipleObjects(nCount: int, lpHandles: Array[HANDLE], bWaitAll: bool, dwMilliseconds: int) -> int:
+    return kernel32.WaitForMultipleObjects(nCount, lpHandles, bWaitAll, dwMilliseconds)
+
+
+def _query_process_string(query: Callable[..., int], hProcess: int) -> str | None:
+    length = UINT(0)
+    if query(hProcess, byref(length), None) != ERROR_INSUFFICIENT_BUFFER or not length.value:
+        return None
+    buf = create_unicode_buffer(length.value)
+    if query(hProcess, byref(length), buf) != 0:
+        return None
+    return buf.value or None
+
+
+def GetPackageFullName(hProcess: int) -> str | None:
+    return _query_process_string(kernel32.GetPackageFullName, hProcess)
+
+
+def GetApplicationUserModelId(hProcess: int) -> str | None:
+    return _query_process_string(kernel32.GetApplicationUserModelId, hProcess)
+
+
+def GetLogicalDrives() -> int:
+    return kernel32.GetLogicalDrives()
+
+
+def GetDriveType(lpRootPathName: str) -> int:
+    return kernel32.GetDriveTypeW(lpRootPathName)
+
+
+def FindFirstFileEx(
+    lpFileName: str, fInfoLevelId: int, lpFindFileData: CArgObject, fSearchOp: int, dwAdditionalFlags: int
+) -> int | None:
+    handle = kernel32.FindFirstFileExW(lpFileName, fInfoLevelId, lpFindFileData, fSearchOp, None, dwAdditionalFlags)
+    return None if handle in (None, INVALID_HANDLE_VALUE) else handle
+
+
+def FindNextFile(hFindFile: int, lpFindFileData: CArgObject) -> bool:
+    return bool(kernel32.FindNextFileW(hFindFile, lpFindFileData))
+
+
+def FindClose(hFindFile: int) -> bool:
+    return bool(kernel32.FindClose(hFindFile))
+
+
+def GetUserGeoID(GeoClass: int) -> int:
+    return kernel32.GetUserGeoID(GeoClass)
+
+
+def GetGeoInfo(Location: int, GeoType: int, lpGeoData: Array[c_wchar], LangId: int = 0) -> int:
+    return kernel32.GetGeoInfoW(Location, GeoType, lpGeoData, len(lpGeoData), LangId)
+
+
+def GlobalAlloc(uFlags: int, dwBytes: int) -> int | None:
+    return kernel32.GlobalAlloc(uFlags, dwBytes)
+
+
+def GlobalLock(hMem: int) -> int | None:
+    return kernel32.GlobalLock(hMem)
+
+
+def GlobalUnlock(hMem: int) -> bool:
+    return bool(kernel32.GlobalUnlock(hMem))
+
+
+def GlobalFree(hMem: int) -> int | None:
+    return kernel32.GlobalFree(hMem)

@@ -1,7 +1,7 @@
 """Wrappers for dxva2 win32 API functions for monitor brightness control via DDC/CI"""
 
 import ctypes.wintypes as wintypes
-from ctypes import POINTER, Structure, windll
+from ctypes import POINTER, Structure, WinDLL
 from ctypes.wintypes import BOOL, BYTE, DWORD, HANDLE, WCHAR
 
 
@@ -14,7 +14,7 @@ class PHYSICAL_MONITOR(Structure):
     ]
 
 
-dxva2 = windll.dxva2
+dxva2 = WinDLL("dxva2", use_last_error=True)
 
 # GetNumberOfPhysicalMonitorsFromHMONITOR
 dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR.argtypes = [wintypes.HMONITOR, POINTER(DWORD)]

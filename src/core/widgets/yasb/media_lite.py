@@ -1,4 +1,3 @@
-import ctypes
 import logging
 import os
 from collections.abc import Callable
@@ -29,19 +28,8 @@ from core.utils.icons.service import AppIcon, IconService, ProcessIcon
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import ElidedLabel, PopupWidget, ScrollingLabel, refresh_widget_style
-from core.utils.win32.aumid import (
-    ERROR_INSUFFICIENT_BUFFER,
-    PROCESS_QUERY_LIMITED_INFORMATION,
-    CloseHandle,
-    GetApplicationUserModelId,
-    OpenProcess,
-    activate_app_by_aumid,
-)
-from core.utils.win32.aumid_process import (
-    get_pid_for_window_aumid,
-    get_process_name_for_aumid,
-    resolve_shell_app,
-)
+from core.utils.win32.aumid import activate_app_by_aumid, get_aumid_for_process, get_pid_for_window_aumid
+from core.utils.win32.aumid_process import get_process_name_for_aumid, resolve_shell_app
 from core.validation.widgets.yasb.media_lite import MediaLiteWidgetConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.media.media import SessionState, WindowsMedia
@@ -885,25 +873,6 @@ class MediaWidget(BaseWidget):
         if is_valid_qobject(self._popup_current_time_label):
             self._popup_current_time_label.setText(self._format_time((value / 1000.0) * self.current_session.duration))
 
-    def _get_process_aumid(self, pid: int) -> str | None:
-        if GetApplicationUserModelId is None:
-            return None
-        try:
-            h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
-            if not h_process:
-                return None
-            try:
-                length = ctypes.c_uint32(0)
-                if GetApplicationUserModelId(h_process, ctypes.byref(length), None) == ERROR_INSUFFICIENT_BUFFER:
-                    buf = ctypes.create_unicode_buffer(length.value)
-                    if GetApplicationUserModelId(h_process, ctypes.byref(length), buf) == 0:
-                        return buf.value
-            finally:
-                CloseHandle(h_process)
-        except Exception:
-            pass
-        return None
-
     def _bind_app_volume_session(self):
         self._app_volume_session = None
         aumid = self.current_session.app_id if self.current_session else None
@@ -916,7 +885,7 @@ class MediaWidget(BaseWidget):
                 try:
                     proc = getattr(session, "Process", None)
                     if proc and proc.pid:
-                        process_aumid = self._get_process_aumid(int(proc.pid))
+                        process_aumid = get_aumid_for_process(int(proc.pid))
                         if process_aumid and process_aumid.lower() == target:
                             self._app_volume_session = session
                             return

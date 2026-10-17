@@ -3,10 +3,10 @@
 from ctypes import (
     POINTER,
     Array,
+    WinDLL,
     c_void_p,
     c_wchar,
     c_wchar_p,
-    windll,
 )
 from ctypes.wintypes import (
     BOOL,
@@ -25,8 +25,7 @@ from core.utils.win32.structs import (
 )
 from core.utils.win32.typecheck import CArgObject, CFunctionType, CPointer
 
-wlanapi = windll.wlanapi
-iphlpapi = windll.iphlpapi
+wlanapi = WinDLL("wlanapi", use_last_error=True)
 
 wlanapi.WlanOpenHandle.argtypes = [
     DWORD,
@@ -104,9 +103,11 @@ wlanapi.WlanReasonCodeToString.argtypes = [
 wlanapi.WlanReasonCodeToString.restype = DWORD
 
 
+wlanapi.WlanDeleteProfile.argtypes = [HANDLE, POINTER(GUID), LPCWSTR, c_void_p]
 wlanapi.WlanDeleteProfile.restype = DWORD
 
 wlanapi.WlanFreeMemory.argtypes = [c_void_p]
+wlanapi.WlanFreeMemory.restype = None
 
 wlanapi.WlanCloseHandle.argtypes = [HANDLE, c_void_p]
 wlanapi.WlanCloseHandle.restype = DWORD

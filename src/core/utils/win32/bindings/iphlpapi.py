@@ -1,9 +1,9 @@
 """Wrappers for iphlpapi (IP Helper API) win32 API functions"""
 
-from ctypes import c_void_p, windll
+from ctypes import WinDLL, c_void_p
 from ctypes.wintypes import DWORD, PULONG, ULONG
 
-iphlpapi = windll.iphlpapi
+iphlpapi = WinDLL("iphlpapi", use_last_error=True)
 
 # GetIfEntry2 - Get interface statistics
 iphlpapi.GetIfEntry2.argtypes = [c_void_p]  # Pointer to MIB_IF_ROW2

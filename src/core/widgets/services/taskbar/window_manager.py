@@ -1,14 +1,14 @@
 import ctypes
 import logging
 from collections.abc import Callable
-from ctypes import wintypes
 from typing import Any, override
 
 import PyQt6.sip as sip
 from PyQt6.QtCore import QAbstractNativeEventFilter, QCoreApplication, QObject, QTimer, pyqtSignal
 
 from core.utils.win32 import constants as WCONST
-from core.utils.win32.bindings import (
+from core.utils.win32.bindings.ole32 import ole32
+from core.utils.win32.bindings.user32 import (
     DeregisterShellHookWindow,
     EnumWindows,
     GetForegroundWindow,
@@ -18,9 +18,8 @@ from core.utils.win32.bindings import (
     SetWinEventHook,
     UnhookWinEvent,
 )
-from core.utils.win32.bindings import user32 as _user32_raw
-from core.utils.win32.bindings.ole32 import ole32
-from core.utils.win32.structs import MSG
+from core.utils.win32.bindings.user32 import user32 as _user32_raw
+from core.utils.win32.structs import MSG, WINEVENTPROC, WNDENUMPROC
 from core.widgets.services.taskbar.application_window import ApplicationWindow
 
 logger = logging.getLogger("taskbar_window_manager")
@@ -247,16 +246,6 @@ class TaskbarWindowManager(QObject):
     def _set_win_event_hooks(self):
         """Install WinEvent hooks for cloak/uncloak, show/hide and minimize/restore."""
         try:
-            WinEventProcType = ctypes.WINFUNCTYPE(
-                None,
-                wintypes.HANDLE,
-                wintypes.DWORD,
-                wintypes.HWND,
-                wintypes.LONG,
-                wintypes.LONG,
-                wintypes.DWORD,
-                wintypes.DWORD,
-            )
 
             def win_event_callback(
                 hWinEventHook: int | None,
@@ -291,8 +280,8 @@ class TaskbarWindowManager(QObject):
                 except Exception:
                     return
 
-            self._win_event_callback = WinEventProcType(win_event_callback)
-            callback_ptr = ctypes.cast(self._win_event_callback, ctypes.c_void_p)
+            self._win_event_callback = WINEVENTPROC(win_event_callback)
+            callback_ptr = self._win_event_callback
 
             flags = WCONST.WINEVENT_OUTOFCONTEXT | WCONST.WINEVENT_SKIPOWNPROCESS
 
@@ -738,10 +727,7 @@ class TaskbarWindowManager(QObject):
                     pass
                 return True
 
-            EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, ctypes.POINTER(ctypes.c_long))
-            enum_callback = EnumWindowsProc(enum_proc)
-
-            EnumWindows(ctypes.cast(enum_callback, ctypes.c_void_p), 0)
+            EnumWindows(WNDENUMPROC(enum_proc), 0)
 
             foreground_hwnd = GetForegroundWindow()
             if foreground_hwnd and foreground_hwnd in self._windows:

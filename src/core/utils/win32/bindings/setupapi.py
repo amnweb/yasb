@@ -1,11 +1,11 @@
 """Bindings for SetupAPI functions (device enumeration)."""
 
-from ctypes import POINTER, c_void_p, windll
+from ctypes import POINTER, WinDLL, c_void_p
 from ctypes.wintypes import BOOL, DWORD, HANDLE, HWND, LPCWSTR
 
 from core.utils.win32.structs import GUID, SP_DEVICE_INTERFACE_DATA
 
-setupapi = windll.setupapi
+setupapi = WinDLL("setupapi", use_last_error=True)
 
 # SetupDiGetClassDevsW - Get device information set
 setupapi.SetupDiGetClassDevsW.argtypes = [POINTER(GUID), LPCWSTR, HWND, DWORD]

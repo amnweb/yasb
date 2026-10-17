@@ -1,23 +1,25 @@
 import logging
-import uuid
 from ctypes import POINTER, byref, wintypes
 
-from core.utils.win32.bindings import powrprof
 from core.utils.win32.bindings.kernel32 import kernel32
-from core.utils.win32.constants import ERROR_SUCCESS
+from core.utils.win32.bindings.powrprof import powrprof
+from core.utils.win32.constants import (
+    AC_LINE_OFFLINE,
+    AC_LINE_ONLINE,
+    ERROR_SUCCESS,
+    GUID_DEVICE_POWER_POLICY_VIDEO_BRIGHTNESS,
+    GUID_VIDEO_SUBGROUP,
+)
 from core.utils.win32.structs import GUID, SYSTEM_POWER_STATUS
-
-_VIDEO_SUBGROUP = GUID.from_buffer_copy(uuid.UUID("7516b95f-f776-4464-8c53-06167f40cc99").bytes_le)
-_POLICY_BRIGHTNESS = GUID.from_buffer_copy(uuid.UUID("aded5e82-b909-4619-9949-f5d71dac0bcb").bytes_le)
 
 
 def _is_online() -> bool | None:
     status = SYSTEM_POWER_STATUS()
     if not kernel32.GetSystemPowerStatus(byref(status)):
         return None
-    if status.ACLineStatus == 1:
+    if status.ACLineStatus == AC_LINE_ONLINE:
         return True
-    if status.ACLineStatus == 0:
+    if status.ACLineStatus == AC_LINE_OFFLINE:
         return False
     return None
 
@@ -33,7 +35,16 @@ def get_scheme_brightness() -> int | None:
     try:
         value = wintypes.DWORD()
         reader = powrprof.PowerReadACValueIndex if online else powrprof.PowerReadDCValueIndex
-        if reader(None, scheme_ptr, byref(_VIDEO_SUBGROUP), byref(_POLICY_BRIGHTNESS), byref(value)) != ERROR_SUCCESS:
+        if (
+            reader(
+                None,
+                scheme_ptr,
+                byref(GUID_VIDEO_SUBGROUP),
+                byref(GUID_DEVICE_POWER_POLICY_VIDEO_BRIGHTNESS),
+                byref(value),
+            )
+            != ERROR_SUCCESS
+        ):
             return None
         return max(0, min(100, int(value.value)))
     finally:
@@ -49,7 +60,16 @@ def set_scheme_brightness(value: int) -> bool:
         return False
     try:
         for writer in (powrprof.PowerWriteACValueIndex, powrprof.PowerWriteDCValueIndex):
-            if writer(None, scheme_ptr, byref(_VIDEO_SUBGROUP), byref(_POLICY_BRIGHTNESS), value) != ERROR_SUCCESS:
+            if (
+                writer(
+                    None,
+                    scheme_ptr,
+                    byref(GUID_VIDEO_SUBGROUP),
+                    byref(GUID_DEVICE_POWER_POLICY_VIDEO_BRIGHTNESS),
+                    value,
+                )
+                != ERROR_SUCCESS
+            ):
                 logging.debug("set_scheme_brightness: PowerWrite failed")
                 return False
         if powrprof.PowerSetActiveScheme(None, scheme_ptr) != ERROR_SUCCESS:
@@ -62,4 +82,4 @@ def set_scheme_brightness(value: int) -> bool:
 
 def policy_brightness_guid() -> GUID:
     """GUID struct for RegisterPowerSettingNotification."""
-    return GUID.from_buffer_copy(_POLICY_BRIGHTNESS)
+    return GUID.from_buffer_copy(GUID_DEVICE_POWER_POLICY_VIDEO_BRIGHTNESS)

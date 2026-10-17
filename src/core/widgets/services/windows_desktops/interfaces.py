@@ -31,7 +31,8 @@ from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
     IUnknown,
 )
 
-from core.utils.win32.com_base import HSTRING, PWSTR, REFGUID, REFIID, IObjectArray, IServiceProvider
+from core.utils.win32.bindings.combase import HSTRING, PWSTR, REFGUID, REFIID
+from core.utils.win32.bindings.shell32 import IObjectArray, IServiceProvider
 
 logger = logging.getLogger("virtual_desktop")
 

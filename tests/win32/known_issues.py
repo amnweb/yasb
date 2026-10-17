@@ -26,6 +26,12 @@ EXPORTS: dict[str, dict[str, str]] = {}
 # Calls without restype whose result ctypes reads with the wrong size, by module.
 UNDECLARED: dict[str, tuple[str, ...]] = {}
 
+# Foreign calls without argtypes or restype, by module.
+MISSING_DECLARATIONS: dict[str, tuple[str, ...]] = {}
+
+# References to ctypes.windll/oledll/cdll instead of a bindings module, by module.
+SHARED_LOADERS: dict[str, tuple[str, ...]] = {}
+
 
 def xfail_if_known(table: dict[str, str], key: str) -> tuple[pytest.MarkDecorator, ...]:
     if key not in table:

@@ -1,4 +1,3 @@
-import ctypes
 import functools
 import io
 import json
@@ -12,12 +11,10 @@ import ssl
 import struct
 import subprocess
 import sys
-import time
 import urllib.request
 import zipfile
 from collections import Counter, OrderedDict
 from collections.abc import Callable
-from ctypes import wintypes
 from datetime import datetime
 from html import escape as html_escape
 from importlib import import_module
@@ -109,6 +106,7 @@ from core.ui.views.view_base import ViewBase
 from core.utils.alert_dialog import raise_info_alert
 from core.utils.markdown import md_to_html, preprocess_readme
 from core.utils.shell_utils import shell_open
+from core.utils.single_instance import wait_for_bar_exit
 from core.utils.system import get_architecture
 from core.utils.validation_errors import format_pydantic_errors_to_yaml
 from core.validation.config import YasbConfig
@@ -117,12 +115,6 @@ from core.widgets.services.quick_launch.icon_utils import svg_to_pixmap
 from settings import BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL
 
 QNetworkProxyFactory.setUseSystemConfiguration(True)
-
-_kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-_kernel32.OpenMutexW.restype = wintypes.HANDLE
-_kernel32.OpenMutexW.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR)
-_kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
-
 
 DEFAULT_THEME_INDEX_URLS = [
     "https://api.yasb.dev/yasb-themes/themes.json",
@@ -134,10 +126,7 @@ DEFAULT_THEME_INSTALL_URLS = [
     "https://raw.githubusercontent.com/amnweb/yasb-themes/main/themes/{theme_id}",
 ]
 
-# The running bar holds this mutex until it exits (single_instance_lock in main.py).
-BAR_MUTEX_NAME = "yasb_reborn"
 BAR_EXIT_TIMEOUT = 10.0
-SYNCHRONIZE = 0x00100000
 
 DEFAULT_FEATURED_URLS = [
     "https://api.yasb.dev/yasb-themes/featured.json",
@@ -618,22 +607,10 @@ def _run_yasbc(cmd: str):
     )
 
 
-def _wait_for_bar_exit(timeout: float = BAR_EXIT_TIMEOUT) -> bool:
-    deadline = time.monotonic() + timeout
-    while True:
-        handle = _kernel32.OpenMutexW(SYNCHRONIZE, False, BAR_MUTEX_NAME)
-        if not handle:
-            return True
-        _kernel32.CloseHandle(handle)
-        if time.monotonic() >= deadline:
-            return False
-        time.sleep(0.1)
-
-
 def _stop_bar() -> None:
     # yasbc stop returns once the bar acknowledges, while it is still running and watching its files.
     _run_yasbc("stop")
-    if not _wait_for_bar_exit():
+    if not wait_for_bar_exit(BAR_EXIT_TIMEOUT):
         raise RuntimeError("YASB did not exit in time, so nothing was changed.")
 
 

@@ -19,10 +19,9 @@ import shutil
 import subprocess
 import threading
 
-from core.utils.win32.bindings import kernel32
-
-# Subprocess creation flag to hide the console window on Windows.
-_CREATE_NO_WINDOW = 0x08000000
+from core.utils.win32.bindings.kernel32 import kernel32
+from core.utils.win32.constants import EXTENDED_STARTUPINFO_PRESENT, PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE
+from core.utils.win32.structs import COORD, PROCESS_INFORMATION, STARTUPINFOEXW
 
 # PowerShell executable (prefer pwsh, fall back to powershell)
 _PWSH = shutil.which("pwsh") or shutil.which("powershell") or "powershell.exe"
@@ -47,9 +46,6 @@ def _capture_with_conpty(cmd: str, timeout: int = 120, cols: int = 500) -> str |
         kernel32.CloseHandle(in_w)
         return None
 
-    class COORD(ctypes.Structure):
-        _fields_ = [("X", ctypes.c_short), ("Y", ctypes.c_short)]
-
     hpc = h()
     if kernel32.CreatePseudoConsole(COORD(cols, 30), in_r, out_w, 0, ctypes.byref(hpc)) != 0:
         for p in (in_r, in_w, out_r, out_w):
@@ -58,17 +54,6 @@ def _capture_with_conpty(cmd: str, timeout: int = 120, cols: int = 500) -> str |
     kernel32.CloseHandle(out_w)
     kernel32.CloseHandle(in_r)
 
-    SIEX = type(
-        "SIEX",
-        (ctypes.Structure,),
-        {
-            "_fields_": [
-                ("cb", ctypes.wintypes.DWORD),
-                ("_pad", ctypes.c_byte * 100),
-                ("lpAttr", ctypes.c_void_p),
-            ]
-        },
-    )
     sz = ctypes.c_size_t()
     kernel32.InitializeProcThreadAttributeList(None, 1, 0, ctypes.byref(sz))
     attr = (ctypes.c_byte * sz.value)()
@@ -76,35 +61,23 @@ def _capture_with_conpty(cmd: str, timeout: int = 120, cols: int = 500) -> str |
     kernel32.UpdateProcThreadAttribute(
         ctypes.byref(attr),
         0,
-        0x00020016,
+        PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
         hpc,
         ctypes.sizeof(h),
         None,
         None,
     )
-    si = SIEX(cb=112, lpAttr=ctypes.addressof(attr))
+    si = STARTUPINFOEXW(lpAttributeList=ctypes.addressof(attr))
+    si.StartupInfo.cb = ctypes.sizeof(STARTUPINFOEXW)
 
-    # create process
-    PI = type(
-        "PI",
-        (ctypes.Structure,),
-        {
-            "_fields_": [
-                ("hProcess", h),
-                ("hThread", h),
-                ("dwPid", ctypes.wintypes.DWORD),
-                ("dwTid", ctypes.wintypes.DWORD),
-            ]
-        },
-    )
-    pi = PI()
+    pi = PROCESS_INFORMATION()
     ok = kernel32.CreateProcessW(
         None,
         cmd,
         None,
         None,
         False,
-        0x00080000,
+        EXTENDED_STARTUPINFO_PRESENT,
         None,
         None,
         ctypes.byref(si),
@@ -324,4 +297,4 @@ def upgrade_packages(package_ids: list[str]) -> None:
         command = f'start "Winget Upgrade" "{powershell}" -NoExit -Command "{script}"'
     else:
         command = f'start "Winget Upgrade" "{powershell}" -NoExit -Command "winget upgrade --all"'
-    subprocess.Popen(command, shell=True, creationflags=_CREATE_NO_WINDOW)
+    subprocess.Popen(command, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)

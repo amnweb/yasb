@@ -12,6 +12,7 @@ _KIND_NAMES = {
     "v": "void",
     "i": "signed int",
     "u": "unsigned int",
+    "e": "enum",
     "f": "float",
     "p": "pointer",
     "s": "struct",
@@ -19,6 +20,7 @@ _KIND_NAMES = {
     "fn": "function",
     "?": "incomplete type",
 }
+SIGN_MISMATCH = "signedness differs"
 _SIGNED_CODES = set("cbhilqv")
 _FLOAT_CODES = set("fdg")
 _POINTER_CODES = {"z": ("i", 1), "Z": ("u", 2), "X": ("u", 2), "P": None, "O": None}
@@ -37,7 +39,7 @@ class Abi:
 
     @property
     def is_integer(self) -> bool:
-        return self.kind in ("i", "u")
+        return self.kind in ("i", "u", "e")
 
     def __str__(self) -> str:
         text = f"{_KIND_NAMES.get(self.kind, self.kind)}({self.size})"
@@ -117,8 +119,8 @@ def mismatch(python: Abi, native: Abi, *, check_sign: bool) -> str | None:
             if python.pointee.size != native.pointee.size and native.pointee.kind != "?":
                 return f"array element size {python.pointee.size} != {native.pointee.size}"
         return None
-    if pair <= {"i", "u"}:
-        return "signedness differs" if check_sign else None
+    if pair <= {"i", "u", "e"}:
+        return SIGN_MISMATCH if check_sign and "e" not in pair else None
     if "f" in pair:
         return f"{_KIND_NAMES[python.kind]} vs {_KIND_NAMES[native.kind]}"
     if "p" in pair:

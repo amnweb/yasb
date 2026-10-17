@@ -1,4 +1,3 @@
-import ctypes
 import logging
 import os
 import tempfile
@@ -52,6 +51,10 @@ from core.ui.components.text_block import TextBlock
 from core.ui.components.toggle_switch import ToggleSwitchWithLabel
 from core.ui.theme import get_tokens
 from core.ui.views.view_base import ViewBase
+from core.utils.win32.bindings.gdi32 import AddFontResourceEx
+from core.utils.win32.bindings.user32 import SendNotifyMessage
+from core.utils.win32.constants import HWND_BROADCAST, WM_FONTCHANGE
+from core.utils.win32.registry_keys import USER_FONTS_KEY
 from settings import (
     APP_NAME,
     DEFAULT_CONFIG_DIRECTORY,
@@ -162,7 +165,7 @@ class FontInstallWorker(QThread):
 
             self.progress.emit("Finalizing installation...")
             try:
-                ctypes.windll.user32.SendNotifyMessageW(0xFFFF, 0x001D, 0, 0)
+                SendNotifyMessage(HWND_BROADCAST, WM_FONTCHANGE, 0, 0)
             except Exception:
                 pass
             self.finished.emit(True, "All fonts installed successfully.", installed)
@@ -249,14 +252,12 @@ class FontInstallWorker(QThread):
     @staticmethod
     def _register(font_name: str, dest: str) -> None:
         try:
-            with winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts", 0, winreg.KEY_SET_VALUE
-            ) as reg_key:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, USER_FONTS_KEY, 0, winreg.KEY_SET_VALUE) as reg_key:
                 winreg.SetValueEx(reg_key, os.path.splitext(font_name)[0] + " (TrueType)", 0, winreg.REG_SZ, dest)
         except OSError:
             pass
         try:
-            ctypes.windll.gdi32.AddFontResourceExW(dest, 0, None)
+            AddFontResourceEx(dest)
         except Exception:
             pass
 

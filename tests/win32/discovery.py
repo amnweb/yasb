@@ -11,12 +11,23 @@ from typing import TypedDict
 
 import comtypes  # pyright: ignore[reportMissingTypeStubs]
 
-from tests.support.source import all_subclasses, core_modules, defined_in_core, import_core_modules
+from tests.support.source import (
+    SRC_ROOT,
+    SourceModule,
+    all_subclasses,
+    core_modules,
+    defined_in_core,
+    import_core_modules,
+)
 from tests.win32 import foreign, specs
 from tests.win32.probe import StructRequest, VtableRequest
 
 CONSTANT_MODULES = re.compile(r"^core\.utils\.win32\.(constants|bindings(\..+)?)$")
 _CONSTANT_NAME = re.compile(r"^[A-Z][A-Z0-9_]+$")
+DECLARATION_MODULES = re.compile(
+    r"^core\.utils\.win32\.(constants|undocumented|registry_keys|structs|bindings(\..+)?)$"
+)
+_ENUM_BASES = frozenset({"Enum", "IntEnum", "Flag", "IntFlag", "StrEnum"})
 
 
 def type_id(cls: type) -> str:
@@ -195,8 +206,53 @@ class ProbeRequests(TypedDict):
     vendored: str
 
 
+def source_modules() -> tuple[SourceModule, ...]:
+    return (*(SourceModule(path.stem, path) for path in sorted(SRC_ROOT.glob("*.py"))), *core_modules())
+
+
+@dataclass(frozen=True)
+class LocalConstant:
+    path: str
+    line: int
+    name: str
+
+
+def _is_int_literal(node: ast.expr) -> bool:
+    if isinstance(node, ast.Constant):
+        return isinstance(node.value, int) and not isinstance(node.value, bool)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.Invert)):
+        return _is_int_literal(node.operand)
+    if isinstance(node, ast.BinOp):
+        return _is_int_literal(node.left) and _is_int_literal(node.right)
+    return False
+
+
+def _collect_int_constants(path: str, node: ast.AST, found: list[LocalConstant]) -> None:
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, ast.ClassDef) and any(ast.unparse(b).split(".")[-1] in _ENUM_BASES for b in child.bases):
+            continue
+        if isinstance(child, ast.Assign) and _is_int_literal(child.value):
+            for target in child.targets:
+                if isinstance(target, ast.Name) and _CONSTANT_NAME.match(target.id.lstrip("_")):
+                    found.append(LocalConstant(path, child.lineno, target.id))
+        _collect_int_constants(path, child, found)
+
+
+@cache
+def local_constants() -> tuple[LocalConstant, ...]:
+    """Integer constants defined outside the declaration modules; some may be copies of Windows constants."""
+    found: list[LocalConstant] = []
+    for module in source_modules():
+        if not DECLARATION_MODULES.match(module.name) and not specs.keeps_own_ctypes(module.name):
+            _collect_int_constants(module.rel, module.tree(), found)
+    return tuple(found)
+
+
 def probe_requests() -> ProbeRequests:
-    constants = sorted({sdk_constant_name(name) for names in win32_constants().values() for name in names})
+    constants = sorted(
+        {sdk_constant_name(name) for names in win32_constants().values() for name in names}
+        | {sdk_constant_name(constant.name.lstrip("_")) for constant in local_constants()}
+    )
     return {
         "structs": struct_requests(),
         "functions": sdk_function_names(),
