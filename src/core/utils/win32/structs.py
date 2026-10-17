@@ -463,6 +463,17 @@ class SIZE(ct.Structure):
     _fields_ = [("cx", LONG), ("cy", LONG)]
 
 
+class WINDOWPLACEMENT(ct.Structure):
+    _fields_ = [
+        ("length", UINT),
+        ("flags", UINT),
+        ("showCmd", UINT),
+        ("ptMinPosition", wintypes.POINT),
+        ("ptMaxPosition", wintypes.POINT),
+        ("rcNormalPosition", RECT),
+    ]
+
+
 class DWM_THUMBNAIL_PROPERTIES(ct.Structure):
     _pack_ = 1
     _fields_ = [

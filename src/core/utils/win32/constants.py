@@ -300,9 +300,10 @@ WS_EX_APPWINDOW = 0x00040000
 WS_EX_LAYERED = 0x00080000
 WS_EX_NOACTIVATE = 0x08000000
 
-# GetAncestor
+# GetAncestor and GetWindow
 GA_ROOT = 2
 GA_ROOTOWNER = 3
+GW_OWNER = 4
 
 # Window messages
 WM_NULL = 0x0000

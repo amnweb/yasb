@@ -17,12 +17,11 @@ import subprocess
 from pathlib import Path
 from typing import Any, TypedDict
 
-import win32gui
-import win32process
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource
 from core.utils.system import app_data_path
+from core.utils.win32.bindings.user32 import FindWindowEx, get_window_thread_process_id
 from core.utils.win32.constants import SW_SHOWNORMAL
 from core.utils.win32.utils import get_app_name_from_aumid
 from core.widgets.services.taskbar.pin_context import (
@@ -508,9 +507,9 @@ class PinManager:
         pid = context.base_pid
         if pid and context.exe_path and "ApplicationFrameHost.exe" in context.exe_path:
             try:
-                child = win32gui.FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
+                child = FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
                 if child:
-                    _, child_pid = win32process.GetWindowThreadProcessId(child)
+                    _, child_pid = get_window_thread_process_id(child)
                     if child_pid:
                         return child_pid
             except Exception:

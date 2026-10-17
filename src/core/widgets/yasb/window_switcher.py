@@ -1,8 +1,7 @@
 import logging
-from typing import Any, override
+from typing import override
 
 import PyQt6.QtCore as QtCore
-import win32gui
 from PyQt6.QtCore import QEvent, QObject, Qt, QTimer
 from PyQt6.QtGui import QKeyEvent, QMouseEvent, QPixmap, QScreen, QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import (
@@ -18,6 +17,7 @@ from PyQt6.QtWidgets import (
 from core.utils.icons.service import IconService, WindowIcon
 from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import PopupWidget, refresh_widget_style
+from core.utils.win32.bindings.user32 import GetWindowText, IsIconic, IsWindow, enum_windows
 from core.utils.win32.utils import find_focused_screen
 from core.utils.win32.window_actions import (
     close_application,
@@ -146,16 +146,7 @@ class WindowSwitcherWidget(BaseWidget):
             return []
         windows = list(self._task_manager.get_windows().values())
         taskbar_windows = [w for w in windows if w.is_taskbar_window()]
-        z_order: list[int] = []
-
-        def collect(hwnd: int, _: Any) -> bool:
-            z_order.append(hwnd)
-            return True
-
-        try:
-            win32gui.EnumWindows(collect, 0)
-        except Exception:
-            pass
+        z_order = enum_windows()
         z_order_map = {hwnd: i for i, hwnd in enumerate(z_order)}
         taskbar_windows.sort(key=lambda w: z_order_map.get(w.hwnd, 99999))
         return taskbar_windows
@@ -193,7 +184,7 @@ class WindowSwitcherWidget(BaseWidget):
 
         self.buttons_list = []
         for win in taskbar_windows:
-            btn = _SwitcherItem(container, win.hwnd, win32gui.GetWindowText(win.hwnd) or win.title or "")
+            btn = _SwitcherItem(container, win.hwnd, GetWindowText(win.hwnd) or win.title or "")
             btn.setProperty("class", "item")
             btn_layout = QVBoxLayout(btn)
             btn_layout.setSpacing(0)
@@ -255,14 +246,14 @@ class WindowSwitcherWidget(BaseWidget):
     def _switch_to_window(self, hwnd: int):
         if self._popup:
             self._popup.hide_animated()
-        if not win32gui.IsWindow(hwnd):
+        if not IsWindow(hwnd):
             return
 
         def _do_focus():
             try:
                 base, focus_target = resolve_base_and_focus(hwnd)
 
-                if win32gui.IsIconic(base) or win32gui.IsIconic(hwnd):
+                if IsIconic(base) or IsIconic(hwnd):
                     restore_window(base)
                     if base != hwnd:
                         restore_window(hwnd)
@@ -277,7 +268,7 @@ class WindowSwitcherWidget(BaseWidget):
 
             except Exception:
                 try:
-                    if win32gui.IsIconic(hwnd):
+                    if IsIconic(hwnd):
                         restore_window(hwnd)
                     else:
                         show_window(hwnd)
@@ -287,7 +278,7 @@ class WindowSwitcherWidget(BaseWidget):
         QTimer.singleShot(0, _do_focus)
 
     def _close_window(self, hwnd: int):
-        if not win32gui.IsWindow(hwnd):
+        if not IsWindow(hwnd):
             return
 
         try:

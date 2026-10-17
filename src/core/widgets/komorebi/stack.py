@@ -3,7 +3,6 @@ import re
 from contextlib import suppress
 from typing import Any, Literal, override
 
-import win32gui
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
@@ -12,6 +11,7 @@ from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
 from core.utils.icons.service import IconService, WindowIcon
 from core.utils.utilities import refresh_widget_style
+from core.utils.win32.bindings.user32 import GetForegroundWindow
 from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.utils.win32.window_actions import close_application
 from core.validation.widgets.komorebi.stack import StackConfig
@@ -357,7 +357,7 @@ class StackWidget(BaseWidget):
                 if focused_workspace["layer"] == "Floating":
                     floating_windows = self._komorebic.get_floating_windows(focused_workspace)
                     for window in floating_windows:
-                        if window["hwnd"] == win32gui.GetForegroundWindow():
+                        if window["hwnd"] == GetForegroundWindow():
                             self.komorebi_windows = [window]
                 self._prev_num_windows = self._curr_num_windows
                 self._curr_num_windows = len(self.komorebi_windows)

@@ -13,13 +13,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import pythoncom
-import win32gui
 from humanize import naturalsize
 from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QAction, QCursor
 from PyQt6.QtWidgets import QMenu
 from win32comext.shell import shell, shellcon
 
+from core.utils.win32.bindings.user32 import IsWindow
 from core.utils.win32.constants import KnownCLSID
 from core.utils.win32.utils import apply_qmenu_style
 from core.utils.win32.window_actions import close_application
@@ -349,7 +349,7 @@ def show_context_menu(taskbar_widget: TaskbarWidget, hwnd: int, pos: QPoint) -> 
             menu.addSeparator()
 
         # End task and Close window (only for running apps)
-        if not is_pinned_only and win32gui.IsWindow(hwnd):
+        if not is_pinned_only and IsWindow(hwnd):
             end_task_action = QAction("End task", menu)
             menu.addAction(end_task_action)
             end_task_action.triggered.connect(lambda: close_application(hwnd, force=True))

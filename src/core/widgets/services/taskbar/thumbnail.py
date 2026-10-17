@@ -2,7 +2,6 @@ import logging
 from ctypes import byref, wintypes
 from typing import TYPE_CHECKING, override
 
-import win32gui
 from PyQt6.QtCore import QEasingCurve, QEvent, QPoint, QPropertyAnimation, QRect, Qt, QTimer
 from PyQt6.QtGui import (
     QCursor,
@@ -25,6 +24,7 @@ from core.utils.win32.bindings.dwmapi import (
     DwmUnregisterThumbnail,
     DwmUpdateThumbnailProperties,
 )
+from core.utils.win32.bindings.user32 import GetWindowRect, GetWindowText, IsWindow
 from core.utils.win32.constants import (
     DWM_TNP_OPACITY,
     DWM_TNP_RECTDESTINATION,
@@ -159,7 +159,7 @@ class PreviewItem(QFrame):
         self.setProperty("class", "preview-item flashing" if flashing else "preview-item")
         self._popup = popup
         self.hwnd = hwnd
-        self.title = title if title is not None else (win32gui.GetWindowText(hwnd) or "")
+        self.title = title if title is not None else (GetWindowText(hwnd) or "")
         self.thumb = wintypes.HANDLE(0)
         self.thumb_rect = QRect()
 
@@ -405,7 +405,7 @@ class PreviewPopup(QFrame):
 
     def show_for(self, entries: list[tuple[int, str | None, QPixmap | None, bool]], anchor_widget: QWidget) -> bool:
         """Build preview item per (hwnd, title, icon) entry and lay the popup out."""
-        entries = [entry for entry in entries if win32gui.IsWindow(entry[0])]
+        entries = [entry for entry in entries if IsWindow(entry[0])]
         if not entries:
             return False
 
@@ -590,11 +590,10 @@ class PreviewPopup(QFrame):
                 logger.debug("DwmQueryThumbnailSourceSize failed", exc_info=True)
 
         # Fallback to window rect
-        try:
-            l, t, r, b = win32gui.GetWindowRect(item.hwnd)
-            return max(1, r - l), max(1, b - t)
-        except Exception:
-            logger.debug("GetWindowRect failed for hwnd %s", item.hwnd, exc_info=True)
+        rect = wintypes.RECT()
+        if GetWindowRect(item.hwnd, byref(rect)):
+            return max(1, rect.right - rect.left), max(1, rect.bottom - rect.top)
+        logger.debug("GetWindowRect failed for hwnd %s", item.hwnd)
 
         # Default fallback
         return 800, 600
@@ -602,7 +601,7 @@ class PreviewPopup(QFrame):
     def close_window(self, hwnd: int):
         """Close one previewed window, keeping the popup open for the remaining ones."""
         try:
-            if win32gui.IsWindow(hwnd):
+            if IsWindow(hwnd):
                 close_application(hwnd)
             if not self.thumbnail_manager:
                 return
@@ -618,7 +617,7 @@ class PreviewPopup(QFrame):
     def activate_window(self, hwnd: int):
         """Bring one previewed window to the foreground using the taskbar's method."""
         try:
-            if win32gui.IsWindow(hwnd) and self.thumbnail_manager:
+            if IsWindow(hwnd) and self.thumbnail_manager:
                 self.thumbnail_manager.taskbar.bring_to_foreground(hwnd)
                 self.thumbnail_manager.hide_preview()
         except Exception:

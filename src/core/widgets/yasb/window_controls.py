@@ -4,14 +4,19 @@ from collections.abc import Callable
 from typing import override
 
 import win32api
-import win32gui
-import win32process
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QPushButton
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
+from core.utils.win32.bindings.user32 import (
+    FindWindowEx,
+    GetClassName,
+    GetForegroundWindow,
+    GetWindowText,
+    get_window_thread_process_id,
+)
 from core.utils.win32.utils import get_app_name_from_pid, get_widget_monitor_hwnd, is_window_maximized
 from core.utils.win32.window_actions import (
     close_application,
@@ -97,14 +102,14 @@ class _ForegroundPoller:
 
     def _poll(self):
         try:
-            hwnd = win32gui.GetForegroundWindow()
+            hwnd = GetForegroundWindow()
             if not hwnd:
                 self._last_hwnd = 0
                 self._broadcast(_ForegroundPollResult(0, False, False, 0, ""))
                 return
 
             # If foreground is our own process (bar), all widgets keep current state
-            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            _, pid = get_window_thread_process_id(hwnd)
             if pid == CURRENT_PROCESS_ID:
                 return
 
@@ -126,12 +131,12 @@ class _ForegroundPoller:
 
             self._last_hwnd = hwnd
 
-            title = win32gui.GetWindowText(hwnd)
+            title = GetWindowText(hwnd)
             if not title or title in IGNORED_TITLES or title in IGNORED_YASB_TITLES:
                 self._broadcast(_ForegroundPollResult(hwnd, False, False, 0, ""))
                 return
 
-            class_name = win32gui.GetClassName(hwnd)
+            class_name = GetClassName(hwnd)
             if class_name in IGNORED_CLASSES:
                 self._broadcast(_ForegroundPollResult(hwnd, False, False, 0, ""))
                 return
@@ -144,9 +149,9 @@ class _ForegroundPoller:
             is_uwp = class_name == "ApplicationFrameWindow"
             if is_uwp:
                 try:
-                    child_hwnd = win32gui.FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
+                    child_hwnd = FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
                     if child_hwnd:
-                        _, child_pid = win32process.GetWindowThreadProcessId(child_hwnd)
+                        _, child_pid = get_window_thread_process_id(child_hwnd)
                         if child_pid:
                             pid_for_name = child_pid
                 except Exception:

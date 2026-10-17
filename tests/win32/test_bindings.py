@@ -4,7 +4,7 @@ import ctypes
 import os
 import sys
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from ctypes import POINTER, byref
 from ctypes.wintypes import UINT, WORD
 from functools import cmp_to_key
@@ -25,7 +25,9 @@ from core.utils.win32.bindings.kernel32 import (
     FindFirstFileEx,
     FindNextFile,
     GetApplicationUserModelId,
+    GetCurrentThreadId,
     GetLastError,
+    GetModuleHandle,
     GetPackageFullName,
     OpenProcess,
     _query_process_string,
@@ -34,23 +36,42 @@ from core.utils.win32.bindings.kernel32 import (
 from core.utils.win32.bindings.ole32 import CoInitialize
 from core.utils.win32.bindings.shell32 import SHGetPropertyStoreFromParsingName, get_string_property
 from core.utils.win32.bindings.shlwapi import SHLoadIndirectString, StrCmpLogical
+from core.utils.win32.bindings.user32 import (
+    CreateWindowEx,
+    DefWindowProc,
+    DestroyWindow,
+    FindWindowEx,
+    GetParent,
+    GetWindow,
+    GetWindowText,
+    IsWindow,
+    enum_child_windows,
+    enum_windows,
+    get_window_thread_process_id,
+    user32,
+)
 from core.utils.win32.bindings.version import GetFileVersionInfo, VerQueryValue
 from core.utils.win32.constants import (
     ERROR_INSUFFICIENT_BUFFER,
     FIND_EX_INFO_BASIC,
     FIND_FIRST_EX_LARGE_FETCH,
     GPS_READWRITE,
+    GW_OWNER,
     INVALID_HANDLE_VALUE,
     OPEN_EXISTING,
     PROCESS_QUERY_LIMITED_INFORMATION,
     VT_LPWSTR,
+    WS_CHILD,
+    WS_POPUP,
     PKEY_AppUserModel_ID,
 )
-from core.utils.win32.structs import GUID, PROPERTYKEY, PROPVARIANT, WIN32_FIND_DATAW
-from core.utils.win32.utils import get_process_path
+from core.utils.win32.structs import GUID, PROPERTYKEY, PROPVARIANT, WIN32_FIND_DATAW, WNDCLASS, WNDPROC
+from core.utils.win32.utils import get_process_path, get_window_rect, is_window_maximized
 
 APPMODEL_ERROR_NO_PACKAGE = 15700
 ERROR_PATH_NOT_FOUND = 3
+ERROR_CLASS_ALREADY_EXISTS = 1410
+WS_MAXIMIZE = 0x01000000
 KERNEL32_DLL = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "kernel32.dll")
 PKEY_SIZE = PROPERTYKEY(GUID.from_string("B725F130-47EF-101A-A5F1-02608C9EEBAC"), 12)
 
@@ -225,3 +246,87 @@ def test_property_store_of_a_missing_file_is_none(tmp_path: Path):
     CoInitialize()
     assert SHGetPropertyStoreFromParsingName(str(tmp_path / "missing.lnk")) is None
     assert get_aumid_from_shortcut(str(tmp_path / "missing.lnk")) is None
+
+
+@pytest.fixture(scope="module")
+def window_class() -> Iterator[str]:
+    name = "YasbBindingsTestWindow"
+    proc = WNDPROC(DefWindowProc)
+    wc = WNDCLASS()
+    wc.lpfnWndProc = proc
+    wc.hInstance = GetModuleHandle(None)
+    wc.lpszClassName = name
+    assert user32.RegisterClassW(byref(wc)) or GetLastError() == ERROR_CLASS_ALREADY_EXISTS
+    yield name
+
+
+@pytest.fixture
+def make_window(window_class: str) -> Iterator[Callable[..., int]]:
+    created: list[int] = []
+
+    def make(style: int = WS_POPUP, title: str = "YASB bindings test", parent: int | None = None) -> int:
+        hwnd = CreateWindowEx(
+            0, window_class, title, style, 10, 20, 300, 200, parent, None, GetModuleHandle(None), None
+        )
+        assert hwnd
+        created.append(hwnd)
+        return hwnd
+
+    yield make
+    for hwnd in reversed(created):
+        if IsWindow(hwnd):
+            DestroyWindow(hwnd)
+
+
+def test_window_text_is_read_in_full(make_window: Callable[..., int]):
+    title = "YASB " + "x" * 600
+    assert GetWindowText(make_window(title=title)) == title
+
+
+def test_window_thread_and_process_are_this_one(make_window: Callable[..., int]):
+    assert get_window_thread_process_id(make_window()) == (GetCurrentThreadId(), os.getpid())
+
+
+def test_enum_windows_lists_top_level_windows_and_their_children(make_window: Callable[..., int]):
+    parent = make_window()
+    child = make_window(style=WS_CHILD, parent=parent)
+
+    assert parent in enum_windows()
+    assert child not in enum_windows()
+    assert enum_child_windows(parent) == [child]
+    assert GetParent(child) == parent
+    assert GetParent(parent) == 0
+
+
+def test_owned_window_reports_its_owner(make_window: Callable[..., int]):
+    owner = make_window()
+    owned = make_window(parent=owner)
+
+    assert GetWindow(owned, GW_OWNER) == owner
+    assert GetWindow(owner, GW_OWNER) == 0
+
+
+@pytest.mark.parametrize(("style", "maximized"), [(WS_POPUP, False), (WS_POPUP | WS_MAXIMIZE, True)])
+def test_window_maximized_state(make_window: Callable[..., int], style: int, maximized: bool):
+    assert is_window_maximized(make_window(style=style)) is maximized
+
+
+def test_window_rect(make_window: Callable[..., int]):
+    assert get_window_rect(make_window()) == {"x": 10, "y": 20, "width": 300, "height": 200}
+
+
+def test_closed_window(make_window: Callable[..., int]):
+    hwnd = make_window()
+    DestroyWindow(hwnd)
+
+    assert GetWindowText(hwnd) == ""
+    assert get_window_thread_process_id(hwnd) == (0, 0)
+    assert GetParent(hwnd) == 0
+    with pytest.raises(OSError):
+        is_window_maximized(hwnd)
+    with pytest.raises(OSError):
+        get_window_rect(hwnd)
+
+
+def test_find_window_ex_without_a_match_is_zero():
+    assert FindWindowEx(0, 0, "YasbNoSuchWindowClass", None) == 0

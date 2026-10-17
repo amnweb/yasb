@@ -7,8 +7,6 @@ from datetime import datetime
 from functools import partial
 from typing import TYPE_CHECKING, Any, cast, override
 
-import win32gui
-import win32process
 from PyQt6.QtCore import (
     QAbstractNativeEventFilter,
     QEasingCurve,
@@ -37,7 +35,18 @@ from core.utils.controller import exit_application, reload_application
 from core.utils.shell_utils import shell_open
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
-from core.utils.win32.bindings.user32 import KillTimer, RegisterWindowMessage, SetTimer, SetWindowPos, user32
+from core.utils.win32.bindings.user32 import (
+    GetClassName,
+    GetForegroundWindow,
+    GetWindowText,
+    IsWindowVisible,
+    KillTimer,
+    RegisterWindowMessage,
+    SetTimer,
+    SetWindowPos,
+    get_window_thread_process_id,
+    user32,
+)
 from core.utils.win32.constants import HWND_BOTTOM, HWND_NOTOPMOST, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE
 from core.utils.win32.registry_keys import PERSONALIZE_KEY
 from core.utils.win32.structs import MSG, WNDENUMPROC
@@ -614,14 +623,14 @@ class AppBarManager(QAbstractNativeEventFilter):
     def _is_foreground_excluded(self) -> bool:
         """Check if the foreground window should be excluded from fullscreen detection."""
         try:
-            hwnd = win32gui.GetForegroundWindow()
+            hwnd = GetForegroundWindow()
             if not hwnd:
                 return False
             # Exclude our own process windows , overlays, modal dialogs and etc.
-            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            _, pid = get_window_thread_process_id(hwnd)
             if pid == os.getpid():
                 return True
-            window_class = win32gui.GetClassName(hwnd) or ""
+            window_class = GetClassName(hwnd) or ""
             if window_class in self.EXCLUDED_WINDOW_CLASSES or window_class.endswith(
                 self.EXCLUDED_WINDOW_CLASS_SUFFIXES
             ):
@@ -688,11 +697,11 @@ class MaximizedWindowWatcher(QObject):
                 if has_maximized:
                     return False
                 try:
-                    if not win32gui.IsWindowVisible(hwnd):
+                    if not IsWindowVisible(hwnd):
                         return True
-                    if not win32gui.GetWindowText(hwnd):
+                    if not GetWindowText(hwnd):
                         return True
-                    cls_name = win32gui.GetClassName(hwnd) or ""
+                    cls_name = GetClassName(hwnd) or ""
                     if cls_name in AppBarManager.EXCLUDED_WINDOW_CLASSES:
                         return True
                     if cls_name.endswith(AppBarManager.EXCLUDED_WINDOW_CLASS_SUFFIXES):

@@ -3,10 +3,10 @@ import os
 import time
 from typing import Any
 
-import win32gui
 from PyQt6.QtCore import QTimer
 
 from core.utils.icons.service import WindowIcon
+from core.utils.win32.bindings.user32 import IsIconic, IsWindow, enum_windows
 from core.utils.win32.window_actions import (
     resolve_base_and_focus,
     restore_window,
@@ -53,16 +53,7 @@ class WindowSwitcherProvider(BaseProvider):
         windows = list(self._task_manager.get_windows().values())
         taskbar_windows = [w for w in windows if w.is_taskbar_window()]
 
-        z_order: list[int] = []
-        try:
-
-            def enum_cb(hwnd: int, lParam: object) -> bool:
-                z_order.append(hwnd)
-                return True
-
-            win32gui.EnumWindows(enum_cb, 0)
-        except Exception as e:
-            logging.debug("EnumWindows failed in Window Switcher: %s", e)
+        z_order = enum_windows()
 
         z_order_map = {hwnd: i for i, hwnd in enumerate(z_order)}
 
@@ -113,7 +104,7 @@ class WindowSwitcherProvider(BaseProvider):
     def execute(self, result: ProviderResult) -> bool:
         hwnd = result.action_data.get("hwnd")
         if hwnd:
-            if not win32gui.IsWindow(hwnd):
+            if not IsWindow(hwnd):
                 return False
 
             try:
@@ -121,7 +112,7 @@ class WindowSwitcherProvider(BaseProvider):
                 def _do_focus():
                     try:
                         base, focus_target = resolve_base_and_focus(hwnd)
-                        if win32gui.IsIconic(base):
+                        if IsIconic(base):
                             restore_window(base)
                         else:
                             show_window(base)
@@ -129,7 +120,7 @@ class WindowSwitcherProvider(BaseProvider):
                         set_foreground(focus_target or base)
                     except Exception:
                         try:
-                            if win32gui.IsIconic(hwnd):
+                            if IsIconic(hwnd):
                                 restore_window(hwnd)
                             else:
                                 show_window(hwnd)

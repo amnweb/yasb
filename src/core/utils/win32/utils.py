@@ -9,12 +9,9 @@ from ctypes import byref, c_ulong, create_unicode_buffer
 from typing import Any, NotRequired, TypedDict, cast
 
 import win32api
-import win32gui
-import win32process
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QApplication, QMenu, QWidget
 from win32api import GetMonitorInfo, MonitorFromWindow
-from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowText
 from winrt.windows.management.deployment import PackageManager
 
 from core.utils.system import is_windows_10
@@ -28,7 +25,18 @@ from core.utils.win32.bindings.kernel32 import (
     OpenProcess,
     QueryFullProcessImageNameW,
 )
-from core.utils.win32.bindings.user32 import GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow
+from core.utils.win32.bindings.user32 import (
+    GetClassName,
+    GetForegroundWindow,
+    GetWindowPlacement,
+    GetWindowRect,
+    GetWindowText,
+    GetWindowThreadProcessId,
+    IsWindowVisible,
+    SetForegroundWindow,
+    enum_windows,
+    get_window_thread_process_id,
+)
 from core.utils.win32.constants import (
     ACCESS_DENIED,
     DWMWA_EXTENDED_FRAME_BOUNDS,
@@ -42,6 +50,7 @@ from core.utils.win32.constants import (
     SW_MAXIMIZE,
 )
 from core.utils.win32.registry_keys import RUN_KEY
+from core.utils.win32.structs import WINDOWPLACEMENT
 
 
 def get_windows_host_arch():
@@ -212,23 +221,10 @@ def get_process_path(pid: int) -> str | None:
 
 def get_process_window(pid: int) -> int:
     """A visible, titled top-level window of a process, or 0."""
-    found: list[int] = []
-
-    def collect(hwnd: int, _: None) -> bool:
-        if (
-            win32process.GetWindowThreadProcessId(hwnd)[1] == pid
-            and win32gui.IsWindowVisible(hwnd)
-            and GetWindowText(hwnd)
-        ):
-            found.append(hwnd)
-            return False
-        return True
-
-    try:
-        win32gui.EnumWindows(collect, None)
-    except Exception:
-        pass  # EnumWindows reports an error when the callback stops it early
-    return found[0] if found else 0
+    for hwnd in enum_windows():
+        if get_window_thread_process_id(hwnd)[1] == pid and IsWindowVisible(hwnd) and GetWindowText(hwnd):
+            return hwnd
+    return 0
 
 
 def get_app_name_from_pid(pid: int) -> str | None:
@@ -389,18 +385,17 @@ class WindowRect(TypedDict):
 
 
 def get_window_rect(hwnd: int) -> WindowRect:
-    window_rect = GetWindowRect(hwnd)
-    return {
-        "x": window_rect[0],
-        "y": window_rect[1],
-        "width": window_rect[2] - window_rect[0],
-        "height": window_rect[3] - window_rect[1],
-    }
+    rect = ctypes.wintypes.RECT()
+    if not GetWindowRect(hwnd, byref(rect)):
+        raise ctypes.WinError(GetLastError())
+    return {"x": rect.left, "y": rect.top, "width": rect.right - rect.left, "height": rect.bottom - rect.top}
 
 
 def is_window_maximized(hwnd: int) -> bool:
-    window_placement = GetWindowPlacement(hwnd)
-    return window_placement[1] == SW_MAXIMIZE
+    placement = WINDOWPLACEMENT(length=ctypes.sizeof(WINDOWPLACEMENT))
+    if not GetWindowPlacement(hwnd, byref(placement)):
+        raise ctypes.WinError(GetLastError())
+    return placement.showCmd == SW_MAXIMIZE
 
 
 class WindowInfo(TypedDict):
@@ -511,7 +506,7 @@ def find_focused_screen(
             logging.error("Exception in follow_mouse: %s", e)
 
     if follow_window:
-        hwnd = win32gui.GetForegroundWindow()
+        hwnd = GetForegroundWindow()
         if hwnd:
             monitor = get_monitor_hwnd(hwnd)
             if monitor is not None:

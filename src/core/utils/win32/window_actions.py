@@ -1,10 +1,14 @@
 import ctypes
 import logging
 
-import win32process
-
 from core.utils.win32.bindings.kernel32 import kernel32 as k32
-from core.utils.win32.bindings.user32 import GetWindowLong, IsHungAppWindow, IsWindowEnabled, PostMessage
+from core.utils.win32.bindings.user32 import (
+    GetWindowLong,
+    IsHungAppWindow,
+    IsWindowEnabled,
+    PostMessage,
+    get_window_thread_process_id,
+)
 from core.utils.win32.bindings.user32 import user32 as u32
 from core.utils.win32.constants import (
     GA_ROOT,
@@ -110,7 +114,7 @@ def force_foreground_focus(hwnd: int) -> None:
         fg_hwnd = u32.GetForegroundWindow()
 
         if fg_hwnd:
-            fg_tid, _ = win32process.GetWindowThreadProcessId(fg_hwnd)
+            fg_tid, _ = get_window_thread_process_id(fg_hwnd)
             my_tid = k32.GetCurrentThreadId()
             if fg_tid and my_tid and fg_tid != my_tid:
                 u32.AttachThreadInput(my_tid, fg_tid, True)
@@ -165,7 +169,7 @@ def close_application(hwnd: int, force: bool = False):
             # Forced termination path
             # Get process ID for direct termination
             try:
-                _, process_id = win32process.GetWindowThreadProcessId(hwnd)
+                _, process_id = get_window_thread_process_id(hwnd)
             except Exception as e:
                 logging.error("Failed to get process ID for HWND %s: %s", hwnd, e)
                 return

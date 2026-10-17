@@ -10,6 +10,7 @@ from ctypes import (
     c_long,
     c_size_t,
     c_ssize_t,
+    create_unicode_buffer,
     sizeof,
 )
 from ctypes.wintypes import (
@@ -29,6 +30,7 @@ from ctypes.wintypes import (
     LPCWSTR,
     LPDWORD,
     LPVOID,
+    LPWSTR,
     MSG,
     POINT,
     RECT,
@@ -41,7 +43,9 @@ from core.utils.win32.structs import (
     GUID,
     ICONINFO,
     INPUT,
+    WINDOWPLACEMENT,
     WNDCLASS,
+    WNDENUMPROC,
 )
 from core.utils.win32.typecheck import CArgObject, CFunctionType
 
@@ -264,6 +268,33 @@ user32.IsIconic.restype = BOOL
 user32.GetWindowTextLengthW.argtypes = [HWND]
 user32.GetWindowTextLengthW.restype = c_int
 
+user32.GetWindowTextW.argtypes = [HWND, LPWSTR, INT]
+user32.GetWindowTextW.restype = INT
+
+user32.GetClassLongPtrW.argtypes = [HWND, INT]
+user32.GetClassLongPtrW.restype = c_size_t
+
+user32.GetParent.argtypes = [HWND]
+user32.GetParent.restype = HWND
+
+user32.GetWindow.argtypes = [HWND, UINT]
+user32.GetWindow.restype = HWND
+
+user32.GetWindowPlacement.argtypes = [HWND, POINTER(WINDOWPLACEMENT)]
+user32.GetWindowPlacement.restype = BOOL
+
+user32.CreatePopupMenu.argtypes = []
+user32.CreatePopupMenu.restype = HMENU
+
+user32.AppendMenuW.argtypes = [HMENU, UINT, c_size_t, LPCWSTR]
+user32.AppendMenuW.restype = BOOL
+
+user32.TrackPopupMenu.argtypes = [HMENU, UINT, INT, INT, INT, HWND, POINTER(RECT)]
+user32.TrackPopupMenu.restype = BOOL
+
+user32.DestroyMenu.argtypes = [HMENU]
+user32.DestroyMenu.restype = BOOL
+
 user32.GetKeyState.argtypes = [INT]
 user32.GetKeyState.restype = SHORT
 
@@ -470,8 +501,8 @@ def FindWindowEx(
     hwndChildAfter: int,
     lpszClass: str | None,
     lpszWindow: str | None,
-):
-    return user32.FindWindowExW(hwndParent, hwndChildAfter, lpszClass, lpszWindow)
+) -> int:
+    return user32.FindWindowExW(hwndParent, hwndChildAfter, lpszClass, lpszWindow) or 0
 
 
 def SendMessage(
@@ -499,6 +530,12 @@ def GetWindowThreadProcessId(hwnd: int, lpdwProcessId: CArgObject | None) -> int
     return user32.GetWindowThreadProcessId(hwnd, lpdwProcessId)
 
 
+def get_window_thread_process_id(hwnd: int) -> tuple[int, int]:
+    pid = DWORD()
+    tid = user32.GetWindowThreadProcessId(hwnd, byref(pid))
+    return tid, pid.value
+
+
 def AllowSetForegroundWindow(dwProcessId: int) -> int:
     return user32.AllowSetForegroundWindow(dwProcessId)
 
@@ -524,7 +561,7 @@ def ReleaseDC(hwnd: int | None, hdc: int) -> int:
 
 
 def GetForegroundWindow() -> int:
-    return user32.GetForegroundWindow()
+    return user32.GetForegroundWindow() or 0
 
 
 def SetWinEventHook(
@@ -549,6 +586,28 @@ def EnumWindows(lpEnumFunc: CFunctionType | LPVOID, lParam: int) -> bool:
 
 def EnumChildWindows(hWndParent: int, lpEnumFunc: CFunctionType, lParam: int) -> bool:
     return bool(user32.EnumChildWindows(hWndParent, lpEnumFunc, lParam))
+
+
+def enum_windows() -> list[int]:
+    hwnds: list[int] = []
+
+    def collect(hwnd: int, _: int) -> bool:
+        hwnds.append(hwnd)
+        return True
+
+    user32.EnumWindows(WNDENUMPROC(collect), 0)
+    return hwnds
+
+
+def enum_child_windows(parent: int) -> list[int]:
+    hwnds: list[int] = []
+
+    def collect(hwnd: int, _: int) -> bool:
+        hwnds.append(hwnd)
+        return True
+
+    user32.EnumChildWindows(parent, WNDENUMPROC(collect), 0)
+    return hwnds
 
 
 def SetParent(hWndChild: int, hWndNewParent: int) -> int | None:
@@ -602,6 +661,31 @@ def IsIconic(hwnd: int) -> bool:
 
 def GetWindowTextLength(hwnd: int) -> int:
     return user32.GetWindowTextLengthW(hwnd)
+
+
+def GetWindowText(hwnd: int) -> str:
+    length = user32.GetWindowTextLengthW(hwnd)
+    if length <= 0:
+        return ""
+    buf = create_unicode_buffer(length + 1)
+    user32.GetWindowTextW(hwnd, buf, length + 1)
+    return buf.value
+
+
+def GetClassLongPtr(hwnd: int, index: int) -> int:
+    return user32.GetClassLongPtrW(hwnd, index)
+
+
+def GetParent(hwnd: int) -> int:
+    return user32.GetParent(hwnd) or 0
+
+
+def GetWindow(hwnd: int, cmd: int) -> int:
+    return user32.GetWindow(hwnd, cmd) or 0
+
+
+def GetWindowPlacement(hwnd: int, lpwndpl: CArgObject) -> bool:
+    return bool(user32.GetWindowPlacement(hwnd, lpwndpl))
 
 
 def GetWindowLong(hwnd: int, index: int) -> int:
@@ -707,3 +791,19 @@ def SetClipboardData(uFormat: int, hMem: int) -> int | None:
 
 def CloseClipboard() -> bool:
     return bool(user32.CloseClipboard())
+
+
+def CreatePopupMenu() -> int:
+    return user32.CreatePopupMenu() or 0
+
+
+def AppendMenu(hMenu: int, uFlags: int, uIDNewItem: int, lpNewItem: str | None) -> bool:
+    return bool(user32.AppendMenuW(hMenu, uFlags, uIDNewItem, lpNewItem))
+
+
+def TrackPopupMenu(hMenu: int, uFlags: int, x: int, y: int, hWnd: int) -> int:
+    return user32.TrackPopupMenu(hMenu, uFlags, x, y, 0, hWnd, None)
+
+
+def DestroyMenu(hMenu: int) -> bool:
+    return bool(user32.DestroyMenu(hMenu))
