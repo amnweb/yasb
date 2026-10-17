@@ -19,7 +19,7 @@ dependencies = [
     "humanize==4.16.0",
     "pywin32==312",
     "pyyaml==6.0.3",
-    "holidays==0.105",
+    "holidays==0.106",
     "watchdog==6.0.0",
     "pycaw==20260927",
     "pillow==12.3.0",
