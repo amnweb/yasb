@@ -528,6 +528,16 @@ class SHQUERYRBINFO(ct.Structure):
     _fields_ = [("cbSize", wintypes.DWORD), ("i64Size", ct.c_longlong), ("i64NumItems", ct.c_longlong)]
 
 
+class SHFILEINFOW(ct.Structure):
+    _fields_ = [
+        ("hIcon", HICON),
+        ("iIcon", INT),
+        ("dwAttributes", DWORD),
+        ("szDisplayName", WCHAR * MAX_PATH),
+        ("szTypeName", WCHAR * 80),
+    ]
+
+
 class SHSTOCKICONINFO(ct.Structure):
     _fields_ = [
         ("cbSize", wintypes.DWORD),

@@ -2,16 +2,15 @@ import json
 import logging
 import os
 import time
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, cast
 
-import pythoncom
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication
-from win32comext.shell import shell
 
 from core.utils.shell_utils import shell_open
 from core.utils.system import app_data_path
 from core.utils.win32.app_loader import AppEntry, app_icon_source
+from core.utils.win32.bindings.shell32 import read_shortcut
 from core.utils.win32.bindings.version import get_version_strings
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
@@ -24,17 +23,6 @@ from core.widgets.services.quick_launch.providers.resources.icons import ICON_AP
 
 if TYPE_CHECKING:
     from core.widgets.services.quick_launch.service import QuickLaunchService
-
-
-class _PersistFile(Protocol):
-    def Load(self, filename: str, /) -> None: ...
-
-
-class _ShellLink(Protocol):
-    def QueryInterface(self, iid: object, /) -> _PersistFile: ...
-    def GetPath(self, flags: int, /) -> tuple[str, object]: ...
-    def GetArguments(self) -> str: ...
-    def GetDescription(self) -> str: ...
 
 
 class LaunchHistory:
@@ -157,18 +145,14 @@ def _resolve_squirrel_target(target: str, args: str) -> str | None:
 def _get_lnk_description(lnk_path: str) -> str | None:
     """Resolve a .lnk shortcut and return description from its target exe,
     falling back to the shortcut's own Description property, then target path."""
-    try:
-        link = cast(
-            _ShellLink,
-            pythoncom.CoCreateInstance(
-                shell.CLSID_ShellLink, None, pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
-            ),
-        )
-        link.QueryInterface(pythoncom.IID_IPersistFile).Load(lnk_path)
-        target = link.GetPath(0)[0]
-        args = link.GetArguments()
-        # Squirrel/Electron apps point to Update.exe --processStart RealApp.exe
-        resolved = _resolve_squirrel_target(target, args)
+    shortcut = read_shortcut(lnk_path)
+    if shortcut is not None:
+        target = shortcut.target
+        try:
+            # Squirrel/Electron apps point to Update.exe --processStart RealApp.exe
+            resolved = _resolve_squirrel_target(target, shortcut.arguments)
+        except OSError:
+            resolved = None
         if resolved and os.path.isfile(resolved):
             desc = _get_exe_description(resolved)
             if desc:
@@ -177,15 +161,12 @@ def _get_lnk_description(lnk_path: str) -> str | None:
             desc = _get_exe_description(target)
             if desc:
                 return desc
-        shortcut_desc = link.GetDescription()
-        if shortcut_desc and shortcut_desc.strip():
-            return shortcut_desc.strip()
+        if shortcut.description.strip():
+            return shortcut.description.strip()
         if resolved and os.path.isfile(resolved):
             return resolved
         if target and os.path.isfile(target):
             return target
-    except Exception:
-        pass
     # Fallback: use subfolder name under Start Menu\Programs (e.g. "System Tools")
     lnk_lower = lnk_path.lower()
     marker = r"\start menu\programs" + "\\"
@@ -494,21 +475,14 @@ class AppsProvider(BaseProvider):
     def _resolve_app_target(path: str) -> str:
         """Resolve .lnk shortcut to its target executable path."""
         if path.lower().endswith(".lnk") and os.path.isfile(path):
-            try:
-                link = cast(
-                    _ShellLink,
-                    pythoncom.CoCreateInstance(
-                        shell.CLSID_ShellLink, None, pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
-                    ),
-                )
-                link.QueryInterface(pythoncom.IID_IPersistFile).Load(path)
-                target = link.GetPath(0)[0]
-                args = link.GetArguments()
-                resolved = _resolve_squirrel_target(target, args)
+            shortcut = read_shortcut(path)
+            if shortcut is not None:
+                try:
+                    resolved = _resolve_squirrel_target(shortcut.target, shortcut.arguments)
+                except OSError:
+                    resolved = None
                 if resolved and os.path.isfile(resolved):
                     return resolved
-                if target and os.path.isfile(target):
-                    return target
-            except Exception:
-                pass
+                if shortcut.target and os.path.isfile(shortcut.target):
+                    return shortcut.target
         return path

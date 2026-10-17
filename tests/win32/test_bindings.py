@@ -47,7 +47,12 @@ from core.utils.win32.bindings.kernel32 import (
 )
 from core.utils.win32.bindings.ole32 import CoInitialize
 from core.utils.win32.bindings.secur32 import GetUserNameEx
-from core.utils.win32.bindings.shell32 import SHGetPropertyStoreFromParsingName, get_string_property
+from core.utils.win32.bindings.shell32 import (
+    SHGetPropertyStoreFromParsingName,
+    get_shell_item_icon_location,
+    get_string_property,
+    read_shortcut,
+)
 from core.utils.win32.bindings.shlwapi import SHLoadIndirectString, StrCmpLogical
 from core.utils.win32.bindings.user32 import (
     CreateWindowEx,
@@ -98,6 +103,7 @@ WS_MAXIMIZE = 0x01000000
 MONITOR_DEFAULTTONEAREST = 2
 NAME_SAM_COMPATIBLE = 2
 EVERYONE_SID = "S-1-1-0"
+CONTROL_PANEL = "shell:::{21EC2020-3AEA-1069-A2DD-08002B30309D}"
 KERNEL32_DLL = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "kernel32.dll")
 PKEY_SIZE = PROPERTYKEY(GUID.from_string("B725F130-47EF-101A-A5F1-02608C9EEBAC"), 12)
 
@@ -475,3 +481,49 @@ def test_user_names_agree():
 
 def test_user_name_in_an_unknown_format_is_none():
     assert GetUserNameEx(99) is None
+
+
+def test_read_shortcut(tmp_path: Path):
+    CoInitialize()
+    path = tmp_path / "app.lnk"
+    link = CreateObject(ShellLink, interface=IShellLinkW)
+    link.SetPath(sys.executable)
+    link.SetArguments("--flag value")
+    link.SetDescription("YASB test shortcut")
+    link.SetIconLocation(KERNEL32_DLL, 3)
+    link.QueryInterface(IPersistFile).Save(str(path), True)
+
+    shortcut = read_shortcut(str(path))
+
+    assert shortcut is not None
+    assert Path(shortcut.target) == Path(sys.executable)
+    assert shortcut.arguments == "--flag value"
+    assert shortcut.description == "YASB test shortcut"
+    assert (shortcut.icon_file, shortcut.icon_index) == (KERNEL32_DLL, 3)
+
+
+def test_read_shortcut_of_a_missing_file(tmp_path: Path):
+    CoInitialize()
+    assert read_shortcut(str(tmp_path / "missing.lnk")) is None
+
+
+def test_shell_item_icon_location():
+    CoInitialize()
+    location = get_shell_item_icon_location(CONTROL_PANEL)
+
+    assert location is not None
+    icon_file, _ = location
+    assert icon_file.lower().endswith(".dll")
+
+
+def test_shell_item_icon_location_of_a_missing_item(tmp_path: Path):
+    CoInitialize()
+    assert get_shell_item_icon_location(str(tmp_path / "missing")) is None
+
+
+def test_shell_item_icon_location_of_a_file_without_its_own_icon(tmp_path: Path):
+    CoInitialize()
+    text_file = tmp_path / "notes.txt"
+    text_file.write_text("no icon of its own")
+
+    assert get_shell_item_icon_location(str(text_file)) is None
