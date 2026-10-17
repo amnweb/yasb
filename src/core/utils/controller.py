@@ -7,8 +7,8 @@ from PyQt6.QtCore import QMetaObject, QProcess, Qt
 from PyQt6.QtWidgets import QApplication
 
 from core.application import YASBApplication
+from core.cli.server import CliPipeHandler
 from core.events.service import EventService
-from core.utils.cli_server import CliPipeHandler
 
 _reload_lock = threading.Lock()
 _cli_pipe_handler: CliPipeHandler | None = None

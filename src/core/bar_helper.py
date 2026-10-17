@@ -41,6 +41,7 @@ from core.utils.win32.bindings.user32 import (
     GetWindowText,
     IsWindowVisible,
     KillTimer,
+    MonitorFromWindow,
     RegisterWindowMessage,
     SetTimer,
     SetWindowPos,
@@ -684,7 +685,7 @@ class MaximizedWindowWatcher(QObject):
     def _check_maximized_windows(self):
         """Check if any top-level window is maximized on the bar's monitor."""
         try:
-            from core.utils.win32.utils import get_monitor_hwnd, is_window_maximized
+            from core.utils.win32.utils import is_window_maximized
 
             bar_monitor = self.bar_widget.monitor_hwnd
             if not bar_monitor:
@@ -706,7 +707,7 @@ class MaximizedWindowWatcher(QObject):
                         return True
                     if cls_name.endswith(AppBarManager.EXCLUDED_WINDOW_CLASS_SUFFIXES):
                         return True
-                    window_monitor = get_monitor_hwnd(hwnd)
+                    window_monitor = MonitorFromWindow(hwnd)
                     if window_monitor != bar_monitor:
                         return True
                     if is_window_maximized(hwnd):

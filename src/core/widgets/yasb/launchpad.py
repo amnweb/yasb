@@ -68,8 +68,9 @@ from core.utils.shell_utils import shell_open
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_loader import AppEntry, AppListLoader, ShortcutResolver, app_icon_source
 from core.utils.win32.backdrop import enable_blur
+from core.utils.win32.bindings.user32 import GetForegroundWindow, SetForegroundWindow
 from core.utils.win32.bindings.version import get_version_strings
-from core.utils.win32.utils import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
+from core.utils.win32.utils import apply_qmenu_style
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.launchpad import LaunchpadConfig
 from core.widgets.base import BaseWidget
@@ -885,7 +886,7 @@ class LaunchpadWidget(BaseWidget):
             self._dpr = screen.devicePixelRatio()
 
         # Save current foreground window before showing popup
-        self._previous_hwnd = get_foreground_hwnd()
+        self._previous_hwnd = GetForegroundWindow()
 
         if not self._launchpad_popup:
             self._launchpad_popup = self._create_launchpad_popup()
@@ -1947,7 +1948,7 @@ class LaunchpadWidget(BaseWidget):
 
             # Restore focus to previous window
             if self._previous_hwnd:
-                set_foreground_hwnd(self._previous_hwnd)
+                SetForegroundWindow(self._previous_hwnd)
                 self._previous_hwnd = 0
 
     def _cleanup_overlay(self):

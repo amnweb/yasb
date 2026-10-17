@@ -388,13 +388,12 @@ def OpenProcess(dwDesiredAccess: int, bInheritHandle: bool, dwProcessId: int) ->
     return kernel32.OpenProcess(dwDesiredAccess, bInheritHandle, dwProcessId)
 
 
-def QueryFullProcessImageNameW(
-    hProcess: int,
-    dwFlags: int,
-    lpExeName: Array[c_wchar],
-    lpdwSize: CArgObject,
-) -> int:
-    return kernel32.QueryFullProcessImageNameW(hProcess, dwFlags, lpExeName, lpdwSize)
+def QueryFullProcessImageName(hProcess: int) -> str | None:
+    size = DWORD(1024)
+    buf = create_unicode_buffer(size.value)
+    if not kernel32.QueryFullProcessImageNameW(hProcess, 0, buf, byref(size)):
+        return None
+    return buf.value
 
 
 def CloseHandle(hObject: int):

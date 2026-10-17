@@ -8,7 +8,8 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
 
-from core.utils.win32.utils import get_monitor_hwnd, get_widget_monitor_hwnd
+from core.utils.win32.bindings.user32 import MonitorFromWindow
+from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.widgets.base import BaseWidget
 from tests.support.source import REPO_ROOT, all_subclasses, defined_in_core, import_core_modules
 
@@ -80,4 +81,4 @@ def test_get_widget_monitor_hwnd_keeps_the_bar_children_alien(bar: QWidget):
     monitor = get_widget_monitor_hwnd(child)
 
     assert _native_children(bar) == [], _WHY
-    assert monitor == get_monitor_hwnd(int(bar.winId()))
+    assert monitor == MonitorFromWindow(int(bar.winId()))

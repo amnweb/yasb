@@ -5,15 +5,15 @@ import platform
 import winreg
 from collections.abc import Collection
 from contextlib import suppress
-from ctypes import byref, c_ulong, create_unicode_buffer
-from typing import Any, NotRequired, TypedDict
+from ctypes import byref
+from typing import NotRequired, TypedDict
 
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QApplication, QMenu, QWidget
+from winrt.windows.applicationmodel import Package
 from winrt.windows.management.deployment import PackageManager
 
 from core.utils.system import is_windows_10
-from core.utils.win32.bindings.dwmapi import DwmGetWindowAttribute
 from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
     GetCurrentProcess,
@@ -21,7 +21,7 @@ from core.utils.win32.bindings.kernel32 import (
     GetPackageFullName,
     IsWow64Process2,
     OpenProcess,
-    QueryFullProcessImageNameW,
+    QueryFullProcessImageName,
 )
 from core.utils.win32.bindings.user32 import (
     GetClassName,
@@ -30,18 +30,14 @@ from core.utils.win32.bindings.user32 import (
     GetWindowPlacement,
     GetWindowRect,
     GetWindowText,
-    GetWindowThreadProcessId,
     IsWindowVisible,
     MonitorFromRect,
     MonitorFromWindow,
-    SetForegroundWindow,
     enum_windows,
     get_window_thread_process_id,
 )
 from core.utils.win32.bindings.version import get_version_strings
 from core.utils.win32.constants import (
-    ACCESS_DENIED,
-    DWMWA_EXTENDED_FRAME_BOUNDS,
     ERROR_INVALID_HANDLE,
     ERROR_INVALID_PARAMETER,
     IMAGE_FILE_MACHINE_AMD64,
@@ -69,19 +65,8 @@ def get_windows_host_arch():
     process_machine = ctypes.c_ushort(0)
     native_machine = ctypes.c_ushort(0)
 
-    # IsWow64Process2 available since Windows 10 1511 / Server 2016
-    try:
-        result = IsWow64Process2(
-            GetCurrentProcess(),
-            ctypes.byref(process_machine),
-            ctypes.byref(native_machine),
-        )
-        if result:
-            return arch_map.get(native_machine.value, f"Unknown(0x{native_machine.value:04X})")
-    except AttributeError:
-        pass  # API not available
-
-    # Fallback: trust platform.machine() - old enough Windows = definitely x64
+    if IsWow64Process2(GetCurrentProcess(), ctypes.byref(process_machine), ctypes.byref(native_machine)):
+        return arch_map.get(native_machine.value, f"Unknown(0x{native_machine.value:04X})")
     return platform.machine()
 
 
@@ -92,18 +77,10 @@ def is_running_under_emulation():
     process_machine = ctypes.c_ushort(0)
     native_machine = ctypes.c_ushort(0)
 
-    try:
-        if IsWow64Process2(GetCurrentProcess(), ctypes.byref(process_machine), ctypes.byref(native_machine)):
-            # If process_machine is not 0, it's running under emulation
-            return process_machine.value != 0
-    except AttributeError, Exception:
-        pass
-
+    if IsWow64Process2(GetCurrentProcess(), ctypes.byref(process_machine), ctypes.byref(native_machine)):
+        # If process_machine is not 0, it's running under emulation
+        return process_machine.value != 0
     return False
-
-
-def get_monitor_hwnd(window_hwnd: int) -> int | None:
-    return MonitorFromWindow(window_hwnd)
 
 
 def get_widget_monitor_hwnd(widget: QWidget) -> int | None:
@@ -112,7 +89,7 @@ def get_widget_monitor_hwnd(widget: QWidget) -> int | None:
     top = widget.window()
     if top is None:
         return None
-    return get_monitor_hwnd(int(top.winId()))
+    return MonitorFromWindow(int(top.winId()))
 
 
 class MonitorRect(TypedDict):
@@ -165,47 +142,21 @@ def get_process_info(hwnd: int) -> ProcessInfo:
     - Returns name=None when access is denied or name can't be resolved.
     - Returns path=None when access is denied or path can't be resolved.
     """
-    try:
-        pid_c = ctypes.c_ulong(0)
-        GetWindowThreadProcessId(hwnd, ctypes.byref(pid_c))
-        pid = int(pid_c.value)
-    except Exception:
+    pid = get_window_thread_process_id(hwnd)[1]
+    if not pid:
         return {"name": None, "pid": 0, "path": None}
 
-    if pid <= 0:
-        return {"name": None, "pid": 0, "path": None}
-
-    # Try to get the full path first (includes name extraction as bonus)
     h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
     if not h_process:
-        # Determine why it failed
-        err = GetLastError()
-        if err in (ERROR_INVALID_PARAMETER, ERROR_INVALID_HANDLE, 0):
-            # Process likely no longer exists
-            return {"name": None, "pid": 0, "path": None}
-        if err == ACCESS_DENIED:
-            # Access denied: process exists but protected
-            return {"name": None, "pid": pid, "path": None}
-        # Unknown: keep pid but no name/path
-        return {"name": None, "pid": pid, "path": None}
+        # These errors mean the process is gone; any other means it exists but cannot be opened
+        gone = GetLastError() in (ERROR_INVALID_PARAMETER, ERROR_INVALID_HANDLE, 0)
+        return {"name": None, "pid": 0 if gone else pid, "path": None}
 
     try:
-        # Get full path
-        size = c_ulong(1024)
-        buf = create_unicode_buffer(size.value)
-        path = None
-        if QueryFullProcessImageNameW(h_process, 0, buf, byref(size)):
-            path = buf.value
-
-        # Extract name from path if we got it
-        name = None
-        if path:
-            i = path.rfind("\\")
-            name = path[i + 1 :] if i != -1 else path
-
-        return {"name": name, "pid": pid, "path": path}
+        path = QueryFullProcessImageName(h_process)
     finally:
         CloseHandle(h_process)
+    return {"name": path.rsplit("\\", 1)[-1] if path else None, "pid": pid, "path": path}
 
 
 def get_process_path(pid: int) -> str | None:
@@ -214,9 +165,7 @@ def get_process_path(pid: int) -> str | None:
     if not h_process:
         return None
     try:
-        size = c_ulong(1024)
-        buf = create_unicode_buffer(size.value)
-        return buf.value if QueryFullProcessImageNameW(h_process, 0, buf, byref(size)) else None
+        return QueryFullProcessImageName(h_process)
     finally:
         CloseHandle(h_process)
 
@@ -229,133 +178,74 @@ def get_process_window(pid: int) -> int:
     return 0
 
 
+def _find_package(full_name: str) -> Package | None:
+    # The direct lookup is much faster; listing every package is the fallback when it fails
+    try:
+        package = PackageManager().find_package_by_user_security_id_package_full_name("", full_name)
+        if package:
+            return package
+    except Exception as e:
+        logging.debug("Direct UWP lookup failed for %s: %s", full_name, e)
+    try:
+        for package in PackageManager().find_packages_by_user_security_id(""):
+            if package.id.full_name == full_name:
+                return package
+    except Exception as e:
+        logging.debug("Fallback UWP lookup failed for %s: %s", full_name, e)
+    return None
+
+
+def _package_app_name(package: Package, aumid: str | None = None) -> str | None:
+    """The app list name of aumid, or of the package's first app, else the package display name."""
+    with suppress(Exception):
+        for entry in package.get_app_list_entries():
+            if aumid is None or entry.app_user_model_id == aumid:
+                name = entry.display_info.display_name
+                if name and name.strip():
+                    return name.strip()
+                if aumid is None:
+                    break
+    with suppress(Exception):
+        name = package.display_name
+        if name and name.strip():
+            return name.strip()
+    return None
+
+
 def get_app_name_from_pid(pid: int) -> str | None:
-    """
-    Get the actual application name - handles both UWP and Win32 apps properly.
-    """
+    """The Store app name of a packaged process, else the FileDescription or ProductName of its exe."""
     try:
         h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
         if not h_process:
             return None
-
         try:
-            # Check if this is a UWP app and get its proper display name
             package_full_name = GetPackageFullName(h_process)
-            if package_full_name:
-                # Direct lookup by full name is much faster than iterating all packages, so try that first
-                try:
-                    package = PackageManager().find_package_by_user_security_id_package_full_name("", package_full_name)
-                    if package:
-                        try:
-                            app_entries = package.get_app_list_entries()
-                            if app_entries and len(app_entries) > 0:
-                                short_name = app_entries[0].display_info.display_name
-                                if short_name and short_name.strip():
-                                    return short_name.strip()
-                        except Exception:
-                            pass
-                        display_name = package.display_name
-                        if display_name and display_name.strip():
-                            return display_name.strip()
-                except Exception as e:
-                    logging.debug("Direct UWP lookup failed for %s: %s", package_full_name, e)
-
-                # Fallback: iterate all packages if direct lookup failed
-                try:
-                    package_manager = PackageManager()
-
-                    for package in package_manager.find_packages_by_user_security_id(""):
-                        if package.id.full_name == package_full_name:
-                            try:
-                                app_entries = package.get_app_list_entries()
-                                if app_entries and len(app_entries) > 0:
-                                    short_name = app_entries[0].display_info.display_name
-                                    if short_name and short_name.strip():
-                                        return short_name.strip()
-                            except Exception:
-                                pass
-
-                            display_name = package.display_name
-                            if display_name and display_name.strip():
-                                return display_name.strip()
-                            break
-                except Exception as e:
-                    logging.debug("Fallback UWP lookup failed for %s: %s", package_full_name, e)
-
-                # If WinRT lookup failed there is nothing else to try for a packaged app
-                return None
-
-            # This is a Win32 app - get FileDescription from executable
-            size = c_ulong(1024)
-            buf = create_unicode_buffer(size.value)
-            if QueryFullProcessImageNameW(h_process, 0, buf, byref(size)):
-                exe_path = buf.value
-
-                names = get_version_strings(exe_path, ("FileDescription", "ProductName"))
-                app_name = names.get("FileDescription") or names.get("ProductName")
-                if app_name:
-                    return app_name
+            exe_path = None if package_full_name else QueryFullProcessImageName(h_process)
         finally:
             CloseHandle(h_process)
+
+        if package_full_name:
+            package = _find_package(package_full_name)
+            return _package_app_name(package) if package else None
+        if exe_path:
+            names = get_version_strings(exe_path, ("FileDescription", "ProductName"))
+            return names.get("FileDescription") or names.get("ProductName")
     except Exception as e:
         logging.debug("Failed to get app name for PID %s: %s", pid, e)
-
     return None
 
 
 def get_app_name_from_aumid(aumid: str) -> str | None:
-    """
-    Get the real app name from AUMID using Windows Package Manager API.
-    Works for any UWP app (Edge PWAs, Microsoft Store apps, etc.).
-    """
+    """The Store app name of an AUMID, such as a Microsoft Store app or an Edge PWA."""
+    family = aumid.split("!")[0]
     try:
-        if "!" in aumid:
-            package_family = aumid.split("!")[0]
-        else:
-            package_family = aumid
-
-        package_manager = PackageManager()
-        for package in package_manager.find_packages_by_user_security_id(""):
-            try:
-                family_name = package.id.family_name
-                if family_name and package_family == family_name:
-                    # Try to get the SHORT name from app list entries
-                    try:
-                        app_entries = package.get_app_list_entries()
-                        for app_entry in app_entries:
-                            if app_entry.app_user_model_id == aumid:
-                                short_name = app_entry.display_info.display_name
-                                if short_name and short_name.strip():
-                                    return short_name.strip()
-                    except Exception:
-                        pass
-
-                    # Fallback to package display name if app list entry method fails
-                    display_name = package.display_name
-                    if display_name:
-                        return display_name
-            except Exception:
-                continue
-
-    except ImportError:
-        logging.debug("winrt module not available, cannot resolve UWP app names")
+        for package in PackageManager().find_packages_by_user_security_id(""):
+            with suppress(Exception):
+                if package.id.family_name == family and (name := _package_app_name(package, aumid)):
+                    return name
     except Exception as e:
         logging.debug("Failed to get UWP app name from PackageManager: %s", e)
-
     return None
-
-
-def get_window_extended_frame_bounds(hwnd: int) -> dict[str, Any]:
-    rect = ctypes.wintypes.RECT()
-
-    DwmGetWindowAttribute(
-        hwnd,
-        DWMWA_EXTENDED_FRAME_BOUNDS,
-        ctypes.byref(rect),
-        ctypes.sizeof(rect),
-    )
-
-    return {"x": rect.left, "y": rect.top, "width": rect.right - rect.left, "height": rect.bottom - rect.top}
 
 
 class WindowRect(TypedDict):
@@ -392,7 +282,7 @@ class WindowInfo(TypedDict):
 
 def get_hwnd_info(hwnd: int) -> WindowInfo | None:
     with suppress(Exception):
-        monitor_hwnd = get_monitor_hwnd(hwnd)
+        monitor_hwnd = MonitorFromWindow(hwnd)
         if monitor_hwnd is None:
             return None
         monitor_info = get_monitor_info(monitor_hwnd)
@@ -442,17 +332,6 @@ def apply_qmenu_style(qwidget: QMenu):
         pass
 
 
-def get_foreground_hwnd():
-    """Get HWND of the current foreground window"""
-    return GetForegroundWindow()
-
-
-def set_foreground_hwnd(hwnd: int | None) -> None:
-    """Set focus to the given HWND"""
-    if hwnd and hwnd != 0:
-        SetForegroundWindow(int(hwnd))
-
-
 def _monitor_device(monitor: int | None) -> str | None:
     info = GetMonitorInfo(monitor) if monitor else None
     return info.szDevice if info else None
@@ -492,7 +371,7 @@ def find_focused_screen(
     if follow_window:
         hwnd = GetForegroundWindow()
         if hwnd:
-            monitor = get_monitor_hwnd(hwnd)
+            monitor = MonitorFromWindow(hwnd)
             if monitor is not None:
                 device_name = _monitor_device(monitor)
                 screen_name = device_to_screen.get(device_name)
