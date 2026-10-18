@@ -13,6 +13,7 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">= 3.14"
 dependencies = [
+    "pyside6==6.12.0",
     "pydantic==2.13.5",
     "certifi==2026.7.22",
     "humanize==4.16.0",
@@ -49,7 +50,6 @@ dependencies = [
     "winrt.windows.security.credentials==3.2.1",
     "winrt.windows.ui.viewmanagement==3.2.1",
     "qt-css-engine @ git+https://github.com/Video-Nomad/qt-css-engine@dev",
-    "pyside6>=6.12.0",
 ]
 
 [project.urls]
