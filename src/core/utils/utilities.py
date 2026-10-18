@@ -451,7 +451,9 @@ class PopupWidget(QWidget):
 
         super().showEvent(a0)
 
-        self.activateWindow()
+        # Do not call activateWindow() here. Qt activates Popup windows on show(),
+        # and the explicit call blocks the GUI thread for seconds with some
+        # third-party IMEs (see #1175): the popup stays invisible until it returns.
         self._fade_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
         self._fade_animation.setStartValue(0.0)
         self._fade_animation.setEndValue(1.0)
