@@ -128,6 +128,9 @@ class VirtualDesktopApi:
         logger.info("Virtual desktop COM ready (tier %d, build %d)", interfaces.tier, sys.getwindowsversion().build)
         return com
 
+    def reset(self) -> None:
+        self._com = _ComObjects()
+
     @property
     def interfaces(self) -> DesktopInterfaces:
         interfaces = self.ensure().interfaces

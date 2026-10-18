@@ -1,14 +1,21 @@
 import ctypes
 import logging
 import os
+from collections.abc import Callable
 from ctypes import wintypes
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+from PyQt6.QtCore import QAbstractNativeEventFilter, QCoreApplication, QObject, QTimer, pyqtSignal
 
-from core.utils.win32.bindings.user32 import GetClassName, GetForegroundWindow, GetWindowThreadProcessId
+from core.utils.win32.bindings.user32 import (
+    GetClassName,
+    GetForegroundWindow,
+    GetWindowThreadProcessId,
+    RegisterWindowMessage,
+)
+from core.utils.win32.structs import MSG
 from core.widgets.services.windows_desktops.com import (
     DesktopInfo,
     VirtualDesktopApi,
@@ -19,6 +26,8 @@ from core.widgets.services.windows_desktops.interfaces import VirtualDesktopUnsu
 from core.widgets.services.windows_desktops.notification import DesktopEvent, DesktopNotificationListener
 
 if TYPE_CHECKING:
+    import PyQt6.sip as sip
+
     from core.widgets.yasb.windows_desktops import WorkspaceWidget
 
 logger = logging.getLogger("windows_desktop_service")
@@ -47,6 +56,8 @@ POLL_INTERVAL_MS = 500
 # Events that change which desktops exist or how they are ordered.
 SET_CHANGED_EVENTS = frozenset({DesktopEvent.CREATED, DesktopEvent.DESTROYED, DesktopEvent.MOVED})
 
+WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
+
 
 def _is_own_window(hwnd: int) -> bool:
     """Does this window belong to us?
@@ -57,6 +68,23 @@ def _is_own_window(hwnd: int) -> bool:
     pid = wintypes.DWORD()
     GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
     return pid.value == os.getpid()
+
+
+class _TaskbarCreatedFilter(QAbstractNativeEventFilter):
+    def __init__(self, on_taskbar_created: Callable[[], None]):
+        super().__init__()
+        self._on_taskbar_created = on_taskbar_created
+
+    @override
+    def nativeEventFilter(self, eventType: Any, message: sip.voidptr | None) -> tuple[bool, sip.voidptr | None]:
+        try:
+            if eventType == b"windows_generic_MSG" and message is not None:
+                msg = ctypes.cast(int(message), ctypes.POINTER(MSG)).contents
+                if msg.message == WM_TASKBARCREATED:
+                    self._on_taskbar_created()
+        except Exception:
+            pass
+        return False, 0  # pyright: ignore[reportReturnType]
 
 
 @dataclass(frozen=True)
@@ -114,6 +142,12 @@ class WindowsDesktopService(QObject):
         self._listener: DesktopNotificationListener | None = None
 
         self._com_event.connect(self._on_com_event)
+
+        self._shell_check_queued = False
+        self._taskbar_filter = _TaskbarCreatedFilter(self._on_taskbar_created)
+        app = QCoreApplication.instance()
+        if app is not None:
+            app.installNativeEventFilter(self._taskbar_filter)
 
         # Cached snapshot, dropped whenever the shell reports a change.
         self._desktops: list[DesktopInfo] | None = None
@@ -240,12 +274,42 @@ class WindowsDesktopService(QObject):
             self._listener = DesktopNotificationListener(self._com_event.emit, self._api)
 
         # Fall back to polling only if the shell will not push to us.
-        if not self._listener.active and not self._listener.start() and self._timer is None:
-            logger.warning("Falling back to polling for virtual desktop changes")
-            self._timer = QTimer(self)
-            self._timer.setInterval(POLL_INTERVAL_MS)
-            self._timer.timeout.connect(self._poll)
-            self._timer.start()
+        if not self._listener.active and not self._listener.start():
+            self._start_polling()
+
+    def _start_polling(self) -> None:
+        if self._timer is not None:
+            return
+        logger.warning("Falling back to polling for virtual desktop changes")
+        self._timer = QTimer(self)
+        self._timer.setInterval(POLL_INTERVAL_MS)
+        self._timer.timeout.connect(self._poll)
+        self._timer.start()
+
+    def _on_taskbar_created(self) -> None:
+        # Broadcast to every top-level window, so one restart arrives once per bar.
+        if not self._shell_check_queued:
+            self._shell_check_queued = True
+            QTimer.singleShot(0, self._check_shell)
+
+    def _check_shell(self) -> None:
+        self._shell_check_queued = False
+        if self._listener is None:
+            return
+        try:
+            self._api.current_guid()
+            return
+        except SHELL_UNAVAILABLE:
+            pass
+
+        logger.info("Explorer restarted, reconnecting to the virtual desktop service")
+        self._api.reset()
+        self._invalidate()
+        self._listener = DesktopNotificationListener(self._com_event.emit, self._api)
+        if self._timer is None and self._listener.start():
+            self.notify_desktops_updated(update_buttons=True)
+        else:
+            self._start_polling()
 
     def unregister_widget(self, widget: WorkspaceWidget) -> None:
         """Stop tracking a widget, releasing the shell once the last one goes."""
