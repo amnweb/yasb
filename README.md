@@ -110,6 +110,7 @@ choco install yasb
 | [Language](https://github.com/amnweb/yasb/wiki/(Widget)-Language) | Shows the current input language and allows switching between languages. |
 | [Launchpad](https://github.com/amnweb/yasb/wiki/(Widget)-Launchpad) | A customizable launchpad for quick access to applications. |
 | [Libre Hardware Monitor](https://github.com/amnweb/yasb/wiki/(Widget)-Libre-HW-Monitor) | Connects to Libre Hardware Monitor to get sensor data. |
+| [Lyrics](https://github.com/amnweb/yasb/wiki/(Widget)-Lyrics) | Real-time synchronized lyrics display with continuous word-by-word karaoke sweeps and dropdown sheet. |
 | [Media](https://github.com/amnweb/yasb/wiki/(Widget)-Media) | Displays media controls and information. |
 | [Media Lite](https://github.com/amnweb/yasb/wiki/(Widget)-Media-Lite) | A vertical and minimal album-style media widget. |
 | [Memory](https://github.com/amnweb/yasb/wiki/(Widget)-Memory) | Shows current memory usage and information. |

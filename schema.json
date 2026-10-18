@@ -656,6 +656,11 @@
           "title": "Class Name",
           "type": "string"
         },
+        "source": {
+          "default": "auto",
+          "title": "Source",
+          "type": "string"
+        },
         "style": {
           "default": "bars",
           "enum": [
@@ -6334,7 +6339,7 @@
       "additionalProperties": false,
       "properties": {
         "label": {
-          "default": "<span>\ud83e\ude78<span><span class='sgv'>{sgv}</span><span>{direction}</span>",
+          "default": "<span>\ud83e\ude78</span><span class='sgv'>{sgv}</span><span>{direction}</span>",
           "title": "Label",
           "type": "string"
         },
@@ -8194,6 +8199,467 @@
         "options"
       ],
       "title": "LibreMonitorEntry",
+      "type": "object"
+    },
+    "LyricsCallbacksConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "on_left": {
+          "default": "toggle_popup",
+          "title": "On Left",
+          "type": "string"
+        },
+        "on_middle": {
+          "default": "do_nothing",
+          "title": "On Middle",
+          "type": "string"
+        },
+        "on_right": {
+          "default": "toggle_menu",
+          "title": "On Right",
+          "type": "string"
+        }
+      },
+      "title": "LyricsCallbacksConfig",
+      "type": "object"
+    },
+    "LyricsPopupConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "default": 420,
+          "maximum": 1200,
+          "minimum": 200,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "default": 520,
+          "maximum": 1000,
+          "minimum": 200,
+          "title": "Height",
+          "type": "integer"
+        },
+        "alignment": {
+          "default": "center",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "enum": [
+            "up",
+            "down"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        },
+        "offset_top": {
+          "default": 6,
+          "minimum": 0,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "font_scale": {
+          "default": 1.0,
+          "maximum": 3.0,
+          "minimum": 0.5,
+          "title": "Font Scale",
+          "type": "number"
+        },
+        "romanize": {
+          "default": true,
+          "title": "Romanize",
+          "type": "boolean"
+        },
+        "background_style": {
+          "default": "ambient",
+          "enum": [
+            "ambient",
+            "blur",
+            "gradient",
+            "inherit",
+            "black"
+          ],
+          "title": "Background Style",
+          "type": "string"
+        },
+        "progress_style": {
+          "default": "line",
+          "enum": [
+            "line",
+            "wave"
+          ],
+          "title": "Progress Style",
+          "type": "string"
+        }
+      },
+      "title": "LyricsPopupConfig",
+      "type": "object"
+    },
+    "LyricsVisualizerOptions": {
+      "additionalProperties": false,
+      "description": "Look and behaviour of the instrumental-break visualizer (bars, waves, ...).\n\nThe beat effects (beat_jump, sparkles) do not depend on any of these.",
+      "properties": {
+        "bars_number": {
+          "anyOf": [
+            {
+              "maximum": 32,
+              "minimum": 4,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bars Number"
+        },
+        "bar_width": {
+          "default": 3.0,
+          "maximum": 20.0,
+          "minimum": 1.0,
+          "title": "Bar Width",
+          "type": "number"
+        },
+        "bar_spacing": {
+          "default": 2.0,
+          "maximum": 30.0,
+          "minimum": 0.0,
+          "title": "Bar Spacing",
+          "type": "number"
+        },
+        "bar_radius": {
+          "default": 1.5,
+          "maximum": 10.0,
+          "minimum": 0.0,
+          "title": "Bar Radius",
+          "type": "number"
+        },
+        "bar_height": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 4,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bar Height"
+        },
+        "min_bar_height": {
+          "anyOf": [
+            {
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Bar Height"
+        },
+        "vertical_alignment": {
+          "default": "middle",
+          "enum": [
+            "top",
+            "middle",
+            "bottom"
+          ],
+          "title": "Vertical Alignment",
+          "type": "string"
+        },
+        "layout": {
+          "default": "linear",
+          "enum": [
+            "linear",
+            "mirrored"
+          ],
+          "title": "Layout",
+          "type": "string"
+        },
+        "reverse": {
+          "default": false,
+          "title": "Reverse",
+          "type": "boolean"
+        },
+        "noise_reduction": {
+          "default": 65,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Noise Reduction",
+          "type": "integer"
+        },
+        "monstercat": {
+          "default": 1.0,
+          "maximum": 5.0,
+          "minimum": 0.0,
+          "title": "Monstercat",
+          "type": "number"
+        },
+        "sensitivity": {
+          "default": 100,
+          "maximum": 200,
+          "minimum": 10,
+          "title": "Sensitivity",
+          "type": "integer"
+        },
+        "lower_cutoff_freq": {
+          "default": 50,
+          "maximum": 1000,
+          "minimum": 20,
+          "title": "Lower Cutoff Freq",
+          "type": "integer"
+        },
+        "higher_cutoff_freq": {
+          "default": 10000,
+          "maximum": 20000,
+          "minimum": 1000,
+          "title": "Higher Cutoff Freq",
+          "type": "integer"
+        },
+        "framerate": {
+          "default": 60,
+          "maximum": 120,
+          "minimum": 15,
+          "title": "Framerate",
+          "type": "integer"
+        }
+      },
+      "title": "LyricsVisualizerOptions",
+      "type": "object"
+    },
+    "LyricsWidgetConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "class_name": {
+          "default": "",
+          "title": "Class Name",
+          "type": "string"
+        },
+        "max_width": {
+          "anyOf": [
+            {
+              "minimum": 10,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Width"
+        },
+        "fixed_width": {
+          "anyOf": [
+            {
+              "maximum": 1200,
+              "minimum": 40,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fixed Width"
+        },
+        "line_transition": {
+          "default": "slide_up",
+          "enum": [
+            "none",
+            "slide_up",
+            "scale",
+            "wipe"
+          ],
+          "title": "Line Transition",
+          "type": "string"
+        },
+        "font_scale": {
+          "default": 1.0,
+          "maximum": 3.0,
+          "minimum": 0.5,
+          "title": "Font Scale",
+          "type": "number"
+        },
+        "visualizer": {
+          "anyOf": [
+            {
+              "enum": [
+                "bars",
+                "bars_mirrored",
+                "waves",
+                "waves_mirrored",
+                "notes",
+                "dots",
+                "none"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Visualizer"
+        },
+        "visualizer_options": {
+          "$ref": "#/$defs/LyricsVisualizerOptions",
+          "default": {
+            "bars_number": null,
+            "bar_width": 3.0,
+            "bar_spacing": 2.0,
+            "bar_radius": 1.5,
+            "bar_height": null,
+            "min_bar_height": null,
+            "vertical_alignment": "middle",
+            "layout": "linear",
+            "reverse": false,
+            "noise_reduction": 65,
+            "monstercat": 1.0,
+            "sensitivity": 100,
+            "lower_cutoff_freq": 50,
+            "higher_cutoff_freq": 10000,
+            "framerate": 60
+          }
+        },
+        "sparkles": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "enum": [
+                "on",
+                "off"
+              ],
+              "type": "string"
+            }
+          ],
+          "default": true,
+          "title": "Sparkles"
+        },
+        "apply_accent_to": {
+          "default": "effects",
+          "enum": [
+            "effects",
+            "all",
+            "nothing"
+          ],
+          "title": "Apply Accent To",
+          "type": "string"
+        },
+        "accent": {
+          "default": "album_art",
+          "enum": [
+            "album_art",
+            "yasb"
+          ],
+          "title": "Accent",
+          "type": "string"
+        },
+        "beat_jump": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "enum": [
+                "on",
+                "off"
+              ],
+              "type": "string"
+            }
+          ],
+          "default": true,
+          "title": "Beat Jump"
+        },
+        "romanize_replace": {
+          "default": false,
+          "title": "Romanize Replace",
+          "type": "boolean"
+        },
+        "hide_when_paused": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "default": false,
+          "title": "Hide When Paused"
+        },
+        "hide_when_no_lyrics": {
+          "default": false,
+          "title": "Hide When No Lyrics",
+          "type": "boolean"
+        },
+        "popup": {
+          "$ref": "#/$defs/LyricsPopupConfig",
+          "default": {
+            "width": 420,
+            "height": 520,
+            "alignment": "center",
+            "direction": "down",
+            "offset_left": 0,
+            "offset_top": 6,
+            "font_scale": 1.0,
+            "romanize": true,
+            "background_style": "ambient",
+            "progress_style": "line"
+          }
+        },
+        "callbacks": {
+          "$ref": "#/$defs/LyricsCallbacksConfig",
+          "default": {
+            "on_left": "toggle_popup",
+            "on_middle": "do_nothing",
+            "on_right": "toggle_menu"
+          }
+        }
+      },
+      "title": "LyricsWidgetConfig",
+      "type": "object"
+    },
+    "LyricsWidgetEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.lyrics.LyricsWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/LyricsWidgetConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "LyricsWidgetEntry",
       "type": "object"
     },
     "MaxFieldSizeConfig": {
@@ -16264,6 +16730,9 @@
           },
           {
             "$ref": "#/$defs/LibreMonitorEntry"
+          },
+          {
+            "$ref": "#/$defs/LyricsWidgetEntry"
           },
           {
             "$ref": "#/$defs/MediaWidgetEntry"
