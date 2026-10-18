@@ -4,10 +4,9 @@ Lookup process executable name from an AppUserModelID (AUMID).
 
 import os
 
-from win32com.client import Dispatch
-
 from core.utils.win32.aumid import get_aumid_for_process, get_pid_for_window_aumid
 from core.utils.win32.bindings.kernel32 import snapshot_processes
+from core.utils.win32.bindings.ole32 import create_dispatch
 from core.utils.win32.utils import get_process_path
 
 # AUMID -> (app_display_name, process_exe); negative results cached too.
@@ -29,7 +28,7 @@ def resolve_shell_app(aumid: str) -> tuple[str | None, str | None]:
     display_name: str | None = None
     process_exe: str | None = None
     try:
-        folder = Dispatch("Shell.Application").NameSpace("shell:AppsFolder")
+        folder = create_dispatch("Shell.Application").NameSpace("shell:AppsFolder")
         item = folder.ParseName(aumid) if folder else None
         if item:
             raw_name = item.Name

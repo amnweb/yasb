@@ -14,12 +14,8 @@ the biggest.
 import os
 import re
 from dataclasses import dataclass
-from typing import Protocol, cast
 
-import pythoncom
-import pywintypes
 from PIL import Image
-from win32comext.shell import shell, shellcon
 
 from core.utils.icons.extract import (
     get_class_icons,
@@ -30,29 +26,8 @@ from core.utils.icons.extract import (
     get_shell_icon,
 )
 from core.utils.win32.aumid import get_aumid_for_process, get_aumid_for_window
+from core.utils.win32.bindings.shell32 import get_shell_item_icon_location, read_shortcut
 from core.utils.win32.utils import get_process_info, get_process_path, get_process_window
-
-# BHID_SFUIObject, to get a shell item's IExtractIcon
-BHID_SFUIOBJECT = pywintypes.IID("{3981E225-F559-11D3-8E3A-00C04F6837D5}")
-
-
-# pywin32's COM objects are untyped, these tell pyright what we call on them. Delete with pywin32 later.
-class _PersistFile(Protocol):
-    def Load(self, filename: str, /) -> None: ...
-
-
-class _ShellLink(Protocol):
-    def QueryInterface(self, iid: object, /) -> _PersistFile: ...
-    def GetIconLocation(self) -> tuple[str, int]: ...
-    def GetPath(self, flags: int, /) -> tuple[str, object]: ...
-
-
-class _ExtractIcon(Protocol):
-    def GetIconLocation(self, flags: int, /) -> tuple[int, str, int, int]: ...
-
-
-class _ShellItem(Protocol):
-    def BindToHandler(self, bind_context: object, handler: object, iid: object, /) -> _ExtractIcon: ...
 
 
 @dataclass(frozen=True)
@@ -158,21 +133,12 @@ def _icon_location(path: str) -> tuple[str, int]:
 
 
 def _shortcut_icon_location(path: str) -> tuple[str, int]:
-    try:
-        link = cast(
-            _ShellLink,
-            pythoncom.CoCreateInstance(
-                shell.CLSID_ShellLink, None, pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
-            ),
-        )
-        link.QueryInterface(pythoncom.IID_IPersistFile).Load(path)
-        icon_file, index = link.GetIconLocation()
-        if icon_file:
-            return os.path.expandvars(icon_file), index
-        target = link.GetPath(0)[0]
-    except Exception:
+    shortcut = read_shortcut(path)
+    if shortcut is None:
         return path, 0
-    return (target, 0) if target else (path, 0)
+    if shortcut.icon_file:
+        return os.path.expandvars(shortcut.icon_file), shortcut.icon_index
+    return (shortcut.target, 0) if shortcut.target else (path, 0)
 
 
 def _console_icon_location(path: str) -> tuple[str, int]:
@@ -191,16 +157,8 @@ def _console_icon_location(path: str) -> tuple[str, int]:
 
 def _shell_item_icon_location(path: str) -> tuple[str, int]:
     """The icon Explorer shows for a shell item such as a Control Panel item (IExtractIcon::GetIconLocation)."""
-    try:
-        # pywin32's stub wants a bind context, the API doesn't
-        item = cast(
-            _ShellItem,
-            shell.SHCreateItemFromParsingName(path, None, shell.IID_IShellItem),  # pyright: ignore[reportUnknownMemberType, reportArgumentType]
-        )
-        extract = item.BindToHandler(None, BHID_SFUIOBJECT, shell.IID_IExtractIconW)
-        result, icon_file, index, flags = extract.GetIconLocation(shellcon.GIL_FORSHELL)
-    except Exception:
+    location = get_shell_item_icon_location(path)
+    if location is None:
         return path, 0
-    if result != 0 or flags & shellcon.GIL_NOTFILENAME:
-        return path, 0
+    icon_file, index = location
     return os.path.expandvars(icon_file), index

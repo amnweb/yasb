@@ -6,8 +6,8 @@ from typing import Any
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.icons.service import ProcessIcon
-from core.utils.win32.bindings.kernel32 import kernel32, snapshot_processes
-from core.utils.win32.constants import PROCESS_TERMINATE
+from core.utils.process import terminate_process
+from core.utils.win32.bindings.kernel32 import snapshot_processes
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_PORT
 
@@ -21,16 +21,6 @@ class _NetstatEntry:
     foreign_port: int | None
     state: str
     pid: int | None
-
-
-def _terminate_process(pid: int) -> bool:
-    h = kernel32.OpenProcess(PROCESS_TERMINATE, False, pid)
-    if not h:
-        return False
-    try:
-        return bool(kernel32.TerminateProcess(h, 1))
-    finally:
-        kernel32.CloseHandle(h)
 
 
 def _parse_host_port(endpoint: str) -> tuple[str, int | None]:
@@ -331,7 +321,7 @@ class PortViewerProvider(BaseProvider):
             if pid is None:
                 return False
             try:
-                ok = _terminate_process(int(pid))
+                ok = terminate_process(int(pid))
                 if ok:
                     logging.info("Port Viewer: terminated PID %s", pid)
                 else:

@@ -7,6 +7,7 @@ from collections.abc import Callable
 from functools import partial
 from typing import Any
 
+import PyQt6.sip as sip
 from PIL import Image
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication
@@ -17,8 +18,6 @@ from winrt.windows.media.control import (
 )
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionManager as SessionManager
 from winrt.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
-
-from core.utils.singleton import QSingleton
 
 pil_logger = logging.getLogger("PIL")
 pil_logger.setLevel(logging.INFO)
@@ -89,6 +88,19 @@ class SessionState:
         self.thumbnail: Image.Image | None = None
         self.cleanup_callbacks: list[Callable[..., None]] = []
         self.session: MediaSession | None = None
+
+
+class QSingleton(type(QObject)):
+    """Singleton metaclass for Qt classes"""
+
+    _instances: dict[Any, Any] = {}
+    _lock = threading.Lock()
+
+    def __call__(cls, *args: Any, **kwargs: Any):
+        with cls._lock:
+            if cls not in cls._instances or sip.isdeleted(cls._instances[cls]):
+                cls._instances[cls] = super().__call__(*args, **kwargs)
+            return cls._instances[cls]
 
 
 class WindowsMedia(QObject, metaclass=QSingleton):

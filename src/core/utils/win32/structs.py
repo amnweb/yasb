@@ -463,6 +463,41 @@ class SIZE(ct.Structure):
     _fields_ = [("cx", LONG), ("cy", LONG)]
 
 
+class WINDOWPLACEMENT(ct.Structure):
+    _fields_ = [
+        ("length", UINT),
+        ("flags", UINT),
+        ("showCmd", UINT),
+        ("ptMinPosition", wintypes.POINT),
+        ("ptMaxPosition", wintypes.POINT),
+        ("rcNormalPosition", RECT),
+    ]
+
+
+class MONITORINFO(ct.Structure):
+    _fields_ = [
+        ("cbSize", DWORD),
+        ("rcMonitor", RECT),
+        ("rcWork", RECT),
+        ("dwFlags", DWORD),
+    ]
+
+
+class MONITORINFOEXW(MONITORINFO):
+    _fields_ = [("szDevice", WCHAR * 32)]
+
+
+class DISPLAY_DEVICEW(ct.Structure):
+    _fields_ = [
+        ("cb", DWORD),
+        ("DeviceName", WCHAR * 32),
+        ("DeviceString", WCHAR * 128),
+        ("StateFlags", DWORD),
+        ("DeviceID", WCHAR * 128),
+        ("DeviceKey", WCHAR * 128),
+    ]
+
+
 class DWM_THUMBNAIL_PROPERTIES(ct.Structure):
     _pack_ = 1
     _fields_ = [
@@ -491,6 +526,16 @@ class MSG(ct.Structure):
 # Define SHQUERYRBINFO struct for Recycle Bin info
 class SHQUERYRBINFO(ct.Structure):
     _fields_ = [("cbSize", wintypes.DWORD), ("i64Size", ct.c_longlong), ("i64NumItems", ct.c_longlong)]
+
+
+class SHFILEINFOW(ct.Structure):
+    _fields_ = [
+        ("hIcon", HICON),
+        ("iIcon", INT),
+        ("dwAttributes", DWORD),
+        ("szDisplayName", WCHAR * MAX_PATH),
+        ("szTypeName", WCHAR * 80),
+    ]
 
 
 class SHSTOCKICONINFO(ct.Structure):
@@ -926,6 +971,26 @@ class WAVEFORMATEXTENSIBLE(ct.Structure):
 
 class LUID(ct.Structure):
     _fields_ = [("LowPart", DWORD), ("HighPart", LONG)]
+
+
+class LUID_AND_ATTRIBUTES(ct.Structure):
+    _fields_ = [("Luid", LUID), ("Attributes", DWORD)]
+
+
+class TOKEN_PRIVILEGES(ct.Structure):
+    _fields_ = [("PrivilegeCount", DWORD), ("Privileges", LUID_AND_ATTRIBUTES * 1)]
+
+
+class SID_AND_ATTRIBUTES(ct.Structure):
+    _fields_ = [("Sid", c_void_p), ("Attributes", DWORD)]
+
+
+class TOKEN_USER(ct.Structure):
+    _fields_ = [("User", SID_AND_ATTRIBUTES)]
+
+
+class TOKEN_GROUPS(ct.Structure):
+    _fields_ = [("GroupCount", DWORD), ("Groups", SID_AND_ATTRIBUTES * 1)]
 
 
 class DXGI_ADAPTER_DESC(ct.Structure):

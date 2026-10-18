@@ -7,15 +7,8 @@ from collections.abc import Iterable
 from functools import lru_cache
 from pathlib import Path
 
-import win32com.client
-
 from core.utils.win32.aumid import get_aumid_from_shortcut
-
-
-@lru_cache(maxsize=1)
-def get_wscript_shell():
-    """Get a cached WScript.Shell COM object for reading shortcut metadata."""
-    return win32com.client.Dispatch("WScript.Shell")
+from core.utils.win32.bindings.shell32 import read_shortcut
 
 
 @lru_cache(maxsize=1)
@@ -232,12 +225,6 @@ def find_app_shortcut(
                 return cached_shortcut_path, Path(cached_shortcut_path).stem
             shortcut_cache.pop(key, None)
 
-    try:
-        wsh = get_wscript_shell()
-    except Exception as exc:
-        logging.debug("Could not get WScript.Shell to inspect shortcuts: %s", exc)
-        return None
-
     best_match_path: str | None = None
     best_match_name: str | None = None
     best_score = -1
@@ -253,8 +240,8 @@ def find_app_shortcut(
         try:
             for lnk_file in base_path.rglob("*.lnk"):
                 try:
-                    shortcut = wsh.CreateShortcut(str(lnk_file))
-                    target = shortcut.Targetpath or ""
+                    shortcut = read_shortcut(str(lnk_file))
+                    target = shortcut.target if shortcut else ""
                     if not target:
                         continue
 

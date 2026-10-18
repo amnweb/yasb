@@ -4,8 +4,6 @@ import os
 import re
 from typing import override
 
-import win32gui
-import win32process
 from PyQt6.QtCore import QElapsedTimer, QEvent, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel
@@ -13,6 +11,12 @@ from PyQt6.QtWidgets import QLabel
 from core.events.service import EventService
 from core.events.win32 import WinEvent
 from core.utils.icons.service import IconService, WindowIcon
+from core.utils.win32.bindings.user32 import (
+    GetForegroundWindow,
+    GetParent,
+    enum_child_windows,
+    get_window_thread_process_id,
+)
 from core.utils.win32.utils import (
     WindowInfo,
     get_app_name_from_aumid,
@@ -177,7 +181,7 @@ class ActiveWindowWidget(BaseWidget):
         if event in ["Hide", "Destroy"]:
             self.hide()
             return
-        hwnd = win32gui.GetForegroundWindow()
+        hwnd = GetForegroundWindow()
         if hwnd != 0:
             self._on_focus_change_event(hwnd, WinEvent.WinEventOutOfContext)
             if self._update_retry_count < 3 and event in ["MoveWindow"]:
@@ -197,13 +201,13 @@ class ActiveWindowWidget(BaseWidget):
                 return
 
             try:
-                parent = win32gui.GetParent(hwnd)
+                parent = GetParent(hwnd)
                 if parent and parent != 0:
                     return
             except Exception:
                 pass
 
-            fg = win32gui.GetForegroundWindow()
+            fg = GetForegroundWindow()
             if fg and fg != 0 and fg != hwnd:
                 try:
                     fg_info = get_hwnd_info(fg)
@@ -292,7 +296,7 @@ class ActiveWindowWidget(BaseWidget):
 
     def _update_window_title(self, hwnd: int, win_info: WindowInfo, event: WinEvent) -> None:
         try:
-            if hwnd != win32gui.GetForegroundWindow():
+            if hwnd != GetForegroundWindow():
                 return
             title = win_info["title"]
             process = win_info["process"]
@@ -305,21 +309,11 @@ class ActiveWindowWidget(BaseWidget):
             if is_uwp:
                 try:
                     parent_pid = process["pid"]
-                    found_pids: list[int] = []
-
-                    def _collect_pids(child_hwnd: int, _: object) -> bool:
-                        _, child_pid = win32process.GetWindowThreadProcessId(child_hwnd)
+                    for child_hwnd in enum_child_windows(hwnd):
+                        _, child_pid = get_window_thread_process_id(child_hwnd)
                         if child_pid and child_pid != parent_pid:
-                            found_pids.append(child_pid)
-                            return False
-                        return True
-
-                    try:
-                        win32gui.EnumChildWindows(hwnd, _collect_pids, None)
-                    except Exception:
-                        pass
-                    if found_pids:
-                        pid_for_name = found_pids[0]
+                            pid_for_name = child_pid
+                            break
                 except Exception:
                     pass
 

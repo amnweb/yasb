@@ -57,6 +57,8 @@ HEADERS = (
     "winver.h",
     "msi.h",
     "dbghelp.h",
+    "sddl.h",
+    "security.h",
 )
 
 MISSING_HEADER_HINT = (
@@ -282,6 +284,8 @@ def _render(items: dict[str, _Item], vendored: str) -> tuple[str, dict[int, str]
     lines.append("#define CINTERFACE")
     # Declarations such as EndTask sit behind the legacy WINNT macro.
     lines.append("#define WINNT 1")
+    # security.h declares GetUserNameEx only for user-mode callers that define SECURITY_WIN32.
+    lines.append("#define SECURITY_WIN32")
     lines += [f"#include <{header}>" for header in HEADERS]
     lines += ["namespace vendored {", *vendored.splitlines(), "}  // namespace vendored"]
     line_map: dict[int, str] = {}

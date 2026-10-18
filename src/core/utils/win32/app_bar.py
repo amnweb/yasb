@@ -1,11 +1,11 @@
 import logging
 from ctypes import sizeof
 
-import win32con
 from PyQt6.QtGui import QScreen
 
 from core.utils.win32.bindings.shell32 import SHAppBarMessage
 from core.utils.win32.bindings.user32 import GetWindowLongPtr, SetWindowLongPtr
+from core.utils.win32.constants import GWL_EXSTYLE, WS_EX_NOACTIVATE, WS_EX_TOPMOST
 from core.utils.win32.structs import APPBARDATA
 
 # Custom callback message for AppBar notifications (WM_USER + 100)
@@ -87,11 +87,11 @@ class Win32AppBar:
         self.app_bar_data.hWnd = hwnd
         self.register_new()
 
-        current_ex_style = GetWindowLongPtr(hwnd, win32con.GWL_EXSTYLE)
-        updated_ex_style = current_ex_style | win32con.WS_EX_NOACTIVATE
+        current_ex_style = GetWindowLongPtr(hwnd, GWL_EXSTYLE)
+        updated_ex_style = current_ex_style | WS_EX_NOACTIVATE
         if always_on_top:
-            updated_ex_style |= win32con.WS_EX_TOPMOST
-        SetWindowLongPtr(hwnd, win32con.GWL_EXSTYLE, updated_ex_style)
+            updated_ex_style |= WS_EX_TOPMOST
+        SetWindowLongPtr(hwnd, GWL_EXSTYLE, updated_ex_style)
 
         self.position_bar(app_bar_height, screen, scale_screen, bar_name)
         # Only reserve screen space if requested windows_app_bar: true

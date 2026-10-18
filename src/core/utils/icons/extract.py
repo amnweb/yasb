@@ -2,11 +2,7 @@ import ctypes
 import logging
 import struct
 from ctypes import byref, c_size_t
-from typing import cast
 
-import win32api
-import win32con
-import win32gui
 from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
 from PIL import Image
 
@@ -20,17 +16,33 @@ from core.utils.win32.bindings.kernel32 import (
 )
 from core.utils.win32.bindings.ole32 import CoInitialize
 from core.utils.win32.bindings.shell32 import SHCreateItemFromParsingName, shell32
-from core.utils.win32.bindings.user32 import DestroyIcon, LoadImage, SendMessageTimeoutW
+from core.utils.win32.bindings.user32 import (
+    DestroyIcon,
+    GetClassLongPtr,
+    GetSystemMetrics,
+    LoadImage,
+    SendMessageTimeoutW,
+)
 from core.utils.win32.constants import (
+    GCLP_HICON,
+    GCLP_HICONSM,
+    ICON_BIG,
+    ICON_SMALL,
+    IDI_APPLICATION,
+    IMAGE_ICON,
     LOAD_LIBRARY_AS_DATAFILE,
     LOAD_LIBRARY_AS_IMAGE_RESOURCE,
+    LR_LOADFROMFILE,
+    LR_SHARED,
     RT_GROUP_ICON,
     SHGSI_ICON,
     SHGSI_LARGEICON,
     SIIGBF_BIGGERSIZEOK,
     SIIGBF_ICONONLY,
+    SM_CXICON,
     SMTO_ABORTIFHUNG,
     SMTO_BLOCK,
+    WM_GETICON,
 )
 from core.utils.win32.structs import SHSTOCKICONINFO, SIZE
 
@@ -49,18 +61,8 @@ def get_stock_icon(icon_id: int) -> Image.Image | None:
 def get_default_app_icon() -> Image.Image | None:
     """The generic app icon (IDI_APPLICATION)."""
     try:
-        size = win32api.GetSystemMetrics(win32con.SM_CXICON)
-        default_hicon = cast(
-            int,
-            win32gui.LoadImage(
-                0,
-                win32con.IDI_APPLICATION,  # pyright: ignore[reportArgumentType]
-                win32con.IMAGE_ICON,
-                size,
-                size,
-                win32con.LR_SHARED,
-            ),
-        )
+        size = GetSystemMetrics(SM_CXICON)
+        default_hicon = LoadImage(0, MAKEINTRESOURCE(IDI_APPLICATION), IMAGE_ICON, size, size, LR_SHARED)
     except Exception as e:
         logging.debug("Failed to get default icon: %s", e)
         return None
@@ -90,7 +92,7 @@ def get_resource_icon(path: str, index: int, size: int) -> Image.Image | None:
             return None
         chosen = next((s for s in sizes if s >= size), sizes[-1])
         # own copy, shared icons are cached by module handle and the next file can get the same handle
-        hicon = LoadImage(module, MAKEINTRESOURCE(name), win32con.IMAGE_ICON, chosen, chosen, 0)
+        hicon = LoadImage(module, MAKEINTRESOURCE(name), IMAGE_ICON, chosen, chosen, 0)
     finally:
         FreeLibrary(module)
     return _icon_image(hicon)
@@ -106,7 +108,7 @@ def get_ico_icon(path: str, size: int) -> Image.Image | None:
     if not sizes:
         return None
     chosen = next((s for s in sizes if s >= size), sizes[-1])
-    return _icon_image(LoadImage(0, path, win32con.IMAGE_ICON, chosen, chosen, win32con.LR_LOADFROMFILE))
+    return _icon_image(LoadImage(0, path, IMAGE_ICON, chosen, chosen, LR_LOADFROMFILE))
 
 
 def _icon_image(hicon: int) -> Image.Image | None:
@@ -143,12 +145,12 @@ def get_shell_icon(parsing_name: str, size: int) -> Image.Image | None:
 def get_own_icon(hwnd: int) -> tuple[Image.Image | None, bool]:
     """The window's own icon (WM_GETICON big, else small) and whether it answered in time."""
     # big icon first, Illustrator's small one is a document icon
-    for which in (win32con.ICON_BIG, win32con.ICON_SMALL):
+    for which in (ICON_BIG, ICON_SMALL):
         hicon = c_size_t(0)
         # without SMTO_BLOCK every message we get while waiting restarts the timeout
         if not SendMessageTimeoutW(
             hwnd,
-            win32con.WM_GETICON,
+            WM_GETICON,
             which,
             0,
             SMTO_ABORTIFHUNG | SMTO_BLOCK,
@@ -166,12 +168,8 @@ def get_own_icon(hwnd: int) -> tuple[Image.Image | None, bool]:
 def get_class_icons(hwnd: int) -> list[Image.Image]:
     """The window class's small and big icons."""
     images: list[Image.Image] = []
-    for index in (win32con.GCL_HICONSM, win32con.GCL_HICON):
-        try:
-            hicon = cast(int, win32gui.GetClassLong(hwnd, index)) or 0  # pyright: ignore[reportUnknownMemberType]
-        except Exception:
-            continue
-        img = hicon_to_image(hicon)
+    for index in (GCLP_HICONSM, GCLP_HICON):
+        img = hicon_to_image(GetClassLongPtr(hwnd, index))
         if img is not None:
             images.append(img)
     return images

@@ -2,13 +2,19 @@
 
 from typing import TYPE_CHECKING, override
 
-import win32api
-import win32con
-import win32gui
 from PyQt6.QtCore import QPoint, QRect, Qt
 from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QWidget
 
+from core.utils.win32.bindings.user32 import GetWindowLongPtr, SetWindowLongPtr, SetWindowPos
+from core.utils.win32.constants import (
+    GWL_EXSTYLE,
+    HWND_TOPMOST,
+    SWP_FRAMECHANGED,
+    SWP_NOMOVE,
+    SWP_NOSIZE,
+    WS_EX_TOOLWINDOW,
+)
 from core.widgets.services.control_center.api.screenshot.capture import ScreenFreeze
 from core.widgets.services.control_center.api.screenshot.constants import HANDLE, UI
 
@@ -33,16 +39,16 @@ class ScreenPanel(QWidget):
     def _pin(self) -> None:
         try:
             hwnd = int(self.winId())
-            ex = win32api.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-            win32api.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex | win32con.WS_EX_TOOLWINDOW)
-            win32gui.SetWindowPos(
+            ex = GetWindowLongPtr(hwnd, GWL_EXSTYLE)
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, ex | WS_EX_TOOLWINDOW)
+            SetWindowPos(
                 hwnd,
-                win32con.HWND_TOPMOST,
+                HWND_TOPMOST,
                 0,
                 0,
                 0,
                 0,
-                win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_FRAMECHANGED,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED,
             )
         except Exception:
             pass
