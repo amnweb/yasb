@@ -21,7 +21,7 @@ The tests never touch your real YASB setup. `tests/conftest.py` points `YASB_CON
 
 | Folder | What it checks |
 |---|---|
-| `smoke/` | Every module imports, and every widget's config schema builds. |
+| `smoke/` | Every module imports, every widget's config schema builds, and no dependency is in `BLOCKED_PACKAGES` in `test_dependencies.py` (pywin32, for one). |
 | `widgets/` | Bar widgets: rules every widget follows (for example, a widget never calls `winId()` on itself), and focused tests for widgets whose logic can break, such as the custom widget's command output, labels and callbacks. |
 | `bar/` | The bar window: building it with each config option, its place on the screen, auto-hide, animations and the context menu, plus the adaptive style's islands, rail, border and edge curves in every combination. Registering it as a Windows app bar is faked. |
 | `win32/` | Our ctypes code against the real Windows SDK, plus window helpers tested on real windows. |
@@ -126,5 +126,5 @@ built until the tests pass. If pytest crashes outright, which is what a bad ctyp
 looks like, the comment says so and shows the end of the log.
 
 The workflows are `.github/workflows/tests.yaml` (runs the tests), `pr-check.yaml` (Ruff, Pyright, tests
-and builds) and `pr-comment.yaml` (the bot's comment). GitHub always runs `pr-comment.yaml` from `main`,
-so a change to it only takes effect after it's merged.
+and builds) and `pr-comment.yaml` (the bot's comments on Ruff, Pyright and test failures). GitHub always runs
+`pr-comment.yaml` from `main`, so a change to it only takes effect after it's merged.

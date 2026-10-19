@@ -12,12 +12,35 @@ import json
 import os
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import TypedDict
 
 MARKER = "<!-- yasb-bot:tests -->"
 MAX_FAILURES = 25
 MAX_MESSAGE = 2500
 LOG_TAIL_LINES = 60
 CRASH_MARKERS = ("Fatal Python error", "Windows fatal exception")
+
+
+class Failure(TypedDict):
+    id: str
+    message: str
+
+
+class Counts(TypedDict):
+    passed: int
+    failed: int
+    errors: int
+    skipped: int
+    xfailed: int
+
+
+class Report(TypedDict):
+    label: str
+    status: str
+    counts: Counts
+    failures: list[Failure]
+    log_tail: str
+    exit_code: int | None
 
 
 def _node_id(classname: str, name: str) -> str:
@@ -36,24 +59,32 @@ def _failure_text(element: ET.Element) -> str:
 
 
 def _exit_code(path: Path | None) -> int | None:
+    if path is None:
+        return None
     try:
         return int(path.read_text(encoding="utf-8-sig").strip())
-    except (AttributeError, OSError, ValueError):
+    except (OSError, ValueError):
         return None
 
 
-def summarize(junit: Path, log: Path, label: str, exit_code: int | None = None) -> dict:
-    report = {"label": label, "counts": {}, "failures": [], "log_tail": "", "exit_code": exit_code}
+def summarize(junit: Path, log: Path, label: str, exit_code: int | None = None) -> Report:
+    counts: Counts = {"passed": 0, "failed": 0, "errors": 0, "skipped": 0, "xfailed": 0}
+    report: Report = {
+        "label": label,
+        "status": "crashed",
+        "counts": counts,
+        "failures": [],
+        "log_tail": "",
+        "exit_code": exit_code,
+    }
     if not junit.is_file():
         lines = log.read_text(encoding="utf-8", errors="replace").splitlines() if log.is_file() else []
         # faulthandler's dump starts with the crashing test's frame; the end of the log is pytest internals.
         starts = [i for i, line in enumerate(lines) if line.startswith(CRASH_MARKERS)]
         excerpt = lines[starts[-1] : starts[-1] + LOG_TAIL_LINES] if starts else lines[-LOG_TAIL_LINES:]
-        report["status"] = "crashed"
         report["log_tail"] = "\n".join(excerpt)
         return report
 
-    counts = {"passed": 0, "failed": 0, "errors": 0, "skipped": 0, "xfailed": 0}
     for case in ET.parse(junit).iter("testcase"):
         node_id = _node_id(case.get("classname", ""), case.get("name", ""))
         problem = case.find("failure")
@@ -69,14 +100,13 @@ def summarize(junit: Path, log: Path, label: str, exit_code: int | None = None) 
             counts["xfailed" if skipped.get("type") == "pytest.xfail" else "skipped"] += 1
         else:
             counts["passed"] += 1
-    report["counts"] = counts
     if exit_code not in (None, 0, 1) and not report["failures"]:
         report["failures"].append({"id": "pytest", "message": f"pytest exited with code {exit_code}, see the job log"})
     report["status"] = "failure" if report["failures"] else "success"
     return report
 
 
-def _table(reports: list[dict]) -> list[str]:
+def _table(reports: list[Report]) -> list[str]:
     lines = ["| | Passed | Failed | Errors | Skipped | Known issues |", "|---|---:|---:|---:|---:|---:|"]
     for report in reports:
         if report["status"] == "crashed":
@@ -93,7 +123,7 @@ def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[:limit] + "\n... (truncated, see the job log)"
 
 
-def render(reports: list[dict], *, with_marker: bool) -> str:
+def render(reports: list[Report], *, with_marker: bool) -> str:
     failed = any(report["status"] != "success" for report in reports)
     lines = [MARKER] if with_marker else []
     lines.append("## ❌ Tests Failed" if failed else "## ✅ Tests Passed")
@@ -115,20 +145,19 @@ def render(reports: list[dict], *, with_marker: bool) -> str:
                 "",
             ]
 
-    by_test: dict[str, dict] = {}
+    by_test: dict[str, tuple[str, list[str]]] = {}
     for report in reports:
         for failure in report["failures"]:
-            entry = by_test.setdefault(failure["id"], {"message": failure["message"], "labels": []})
-            entry["labels"].append(report["label"])
+            by_test.setdefault(failure["id"], (failure["message"], []))[1].append(report["label"])
 
     if by_test:
         lines += ["### Failures", ""]
-        for node_id, entry in list(by_test.items())[:MAX_FAILURES]:
+        for node_id, (message, labels) in list(by_test.items())[:MAX_FAILURES]:
             lines += [
-                f"<details><summary><code>{node_id}</code> ({', '.join(entry['labels'])})</summary>",
+                f"<details><summary><code>{node_id}</code> ({', '.join(labels)})</summary>",
                 "",
                 "```text",
-                _clip(entry["message"], MAX_MESSAGE),
+                _clip(message, MAX_MESSAGE),
                 "```",
                 "",
                 f'Run it locally: `python -m pytest "{node_id}"`',

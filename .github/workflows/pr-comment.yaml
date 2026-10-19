@@ -45,12 +45,28 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
         continue-on-error: true
 
+      - name: Download Pyright Report
+        uses: actions/download-artifact@v8
+        with:
+          name: pyright-report
+          path: ${{ runner.temp }}/pyright-report
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
+
       - name: Build Test Comment
         run: >-
           python3 .github/scripts/test_report.py comment
           --reports "$RUNNER_TEMP/test-reports"
           --out "$RUNNER_TEMP/tests_comment.md"
           --status "$RUNNER_TEMP/tests_status.txt"
+
+      - name: Build Pyright Comment
+        run: >-
+          python3 .github/scripts/pyright_report.py comment
+          --report "$RUNNER_TEMP/pyright-report/pyright-report.json"
+          --out "$RUNNER_TEMP/pyright_comment.md"
+          --status "$RUNNER_TEMP/pyright_status.txt"
 
       - name: Manage PR Comments
         uses: actions/github-script@v9
@@ -97,6 +113,12 @@ jobs:
                 body: metadata('comment.txt'),
               },
               {
+                name: 'Pyright',
+                matches: (body) => body.includes('<!-- yasb-bot:pyright -->'),
+                status: read(path.join(temp, 'pyright_status.txt')),
+                body: read(path.join(temp, 'pyright_comment.md')),
+              },
+              {
                 name: 'Tests',
                 matches: (body) => body.includes('<!-- yasb-bot:tests -->'),
                 status: read(path.join(temp, 'tests_status.txt')),
@@ -136,7 +158,7 @@ jobs:
                run_id: context.payload.workflow_run.id,
             });
             for (const artifact of artifacts) {
-              if (artifact.name === 'pr-metadata' || artifact.name.startsWith('test-report-')) {
+              if (['pr-metadata', 'pyright-report'].includes(artifact.name) || artifact.name.startsWith('test-report-')) {
                 console.log("Deleting artifact " + artifact.name);
                 await github.rest.actions.deleteArtifact({
                   owner: context.repo.owner,
