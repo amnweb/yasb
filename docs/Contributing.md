@@ -81,7 +81,7 @@ ruff check --fix .
 pyright
 ```
 
-Pyright reads its settings from `[tool.pyright]` in `pyproject.toml` and checks the whole project in strict mode. Its version is pinned in the `dev` extras, so your local run reports the same errors as CI. Every pull request runs this check, and the installers aren't built until it passes. Pylance in VS Code reads the same settings, so most of these errors also show up in the editor.
+Pyright reads its settings from `[tool.pyright]` in `pyproject.toml` and checks the whole project in strict mode. Its version is pinned in the `dev` extras, so your local run reports the same errors as CI. Every pull request runs this check, the bot comments with any errors, and the installers aren't built until it passes. Pylance in VS Code reads the same settings, so most of these errors also show up in the editor.
 
 ### Running Tests
 
@@ -95,7 +95,9 @@ The tests also run on every pull request, and the bot comments with any failures
 
 ## Contributing Guidelines
 
-### Do Not Modify `schema.json`
+### Do Not Modify `README.md` or `schema.json`
+
+`README.md` is kept up to date by the maintainer. If you add a widget, document it in `docs/widgets/` and leave the README alone.
 
 `schema.json` is an **auto-generated file** produced from the Pydantic validation models (see `src/core/validation/export_schema.py`). It is regenerated and committed automatically by CI ([`.github/workflows/update-schema.yaml`](https://github.com/amnweb/yasb/blob/main/.github/workflows/update-schema.yaml)) when a release is published.
 

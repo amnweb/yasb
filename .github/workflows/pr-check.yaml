@@ -147,8 +147,33 @@ jobs:
         shell: pwsh
 
       - name: Run Pyright
-        run: pyright
+        id: pyright
+        run: |
+          pyright --outputjson > pyright.json
+          $code = $LASTEXITCODE
+          Set-Content -Path pyright_exit_code.txt -Value $code
+          exit $code
         shell: pwsh
+
+      - name: Summarize results
+        if: ${{ !cancelled() && steps.pyright.outcome != 'skipped' }}
+        env:
+          PYTHONUTF8: '1'
+        run: |
+          python .github/scripts/pyright_report.py summarize `
+            --json pyright.json `
+            --exit-code pyright_exit_code.txt `
+            --out pyright-report.json `
+            --summary $env:GITHUB_STEP_SUMMARY
+        shell: pwsh
+
+      - name: Upload report
+        if: ${{ !cancelled() && steps.pyright.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: pyright-report
+          path: pyright-report.json
+          retention-days: 1
 
   tests:
     name: Tests
