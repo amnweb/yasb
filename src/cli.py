@@ -354,6 +354,12 @@ class CLIHandler:
             prog="yasbc cloud",
             add_help=False,
         )
+        subparsers.add_parser(
+            "plugin",
+            help="Install and manage third-party widget plugins",
+            prog="yasbc plugin",
+            add_help=False,
+        )
         parser.add_argument(
             "-v",
             "--version",
@@ -373,8 +379,8 @@ class CLIHandler:
             help="Show help message",
         )
         args, passthrough = parser.parse_known_args()
-        # Only `cloud` is allowed leftovers, every other command stays strict.
-        if passthrough and args.command != "cloud":
+        # Only `cloud` and `plugin` are allowed leftovers, every other command stays strict.
+        if passthrough and args.command not in ("cloud", "plugin"):
             parser.error(f"unrecognized arguments: {' '.join(passthrough)}")
         if args.command == "start":
             if not args.silent:
@@ -410,6 +416,10 @@ class CLIHandler:
             from core.cloud.cli import run as run_cloud
 
             sys.exit(run_cloud(passthrough))
+        elif args.command == "plugin":
+            from core.plugins.cli import run as run_plugin
+
+            sys.exit(run_plugin(passthrough))
         elif args.command == "reload":
             if is_process_running("yasb.exe"):
                 if not args.silent:
@@ -686,6 +696,7 @@ class CLIHandler:
                   log                       Tail yasb process logs (cancel with Ctrl-C)
                   reset                     Restore default config files and clear cache
                   cloud                     Back up and restore your config with YASB Cloud
+                  plugin                    Install and manage third-party widget plugins
                   config-dir                Open config directory in file explorer
                   migrate-config            Find and fix deprecated options in config
                   help                      Print this message

@@ -67,7 +67,7 @@ class BarManager(QObject):
 
     @pyqtSlot()
     def on_styles_modified(self):
-        stylesheet = get_stylesheet(show_error_dialog=True)
+        stylesheet = get_stylesheet(show_error_dialog=True, config=self.config)
         if stylesheet and (stylesheet != self.stylesheet):
             self.stylesheet, new_rules = extract_rules(stylesheet)
             GlobalState.set_stylesheet(self.stylesheet)

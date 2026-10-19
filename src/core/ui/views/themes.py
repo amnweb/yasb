@@ -94,6 +94,7 @@ from PyQt6.QtWidgets import (
 )
 from yaml import YAMLError, safe_load
 
+from core.plugins.manifest import PluginError, plugin_id_of
 from core.ui.components.button import Button
 from core.ui.components.content_dialog import ContentDialog, ContentDialogButton
 from core.ui.components.drop_down_button import DropDownButton
@@ -681,6 +682,13 @@ def _download_theme(theme_id: str) -> dict[str, bytes]:
 
 
 def _widget_schema(widget_type: str) -> type[BaseModel]:
+    if plugin_id_of(widget_type):
+        from core.plugins.resolver import resolve_widget_class
+
+        schema = getattr(resolve_widget_class(widget_type), "validation_schema")
+        if not (isinstance(schema, type) and issubclass(schema, BaseModel)):
+            raise TypeError(f'"{widget_type}" has no pydantic validation_schema')
+        return schema
     # Each validation file mirrors its widget's module and defines the widget's config last, after the models it uses.
     module = import_module(f"core.validation.widgets.{widget_type.rsplit('.', 1)[0]}")
     models = [
@@ -725,6 +733,9 @@ def _theme_config_errors(raw: bytes) -> str:
             options = _widget_schema(widget_type).model_validate(widget.get("options", {}))
         except ValidationError as e:
             errors.append(f" - {name}\n{indent(format_pydantic_errors_to_yaml(e), '      ').rstrip()}")
+            continue
+        except PluginError as e:
+            errors.append(f" - {name}: {e}")
             continue
         except Exception:
             errors.append(f' - {name} has unknown type "{widget_type}"')

@@ -117,10 +117,24 @@ def get_config(show_error_dialog: bool = False) -> YasbConfig | None:
         logging.error("The file '%s' could not be read. Do you have read/write permissions?", config_path)
 
 
-def get_stylesheet(show_error_dialog: bool = False) -> str | None:
+def plugin_stylesheets(config: YasbConfig | None) -> list[str]:
+    if config is None:
+        return []
+    from core.plugins.loader import plugin_loader
+    from core.plugins.manifest import plugin_id_of
+
+    plugin_ids: list[str] = []
+    for widget in config.widgets.values():
+        if isinstance(widget, dict) and isinstance(widget_type := widget.get("type"), str):
+            if plugin_id := plugin_id_of(widget_type):
+                plugin_ids.append(plugin_id)
+    return [str(path) for path in plugin_loader().stylesheets(plugin_ids)] if plugin_ids else []
+
+
+def get_stylesheet(show_error_dialog: bool = False, config: YasbConfig | None = None) -> str | None:
     styles_path = get_stylesheet_path()
     try:
-        css_processor = CSSProcessor(styles_path)
+        css_processor = CSSProcessor(styles_path, plugin_stylesheets(config))
         css_content = css_processor.process()
         return css_content
 
@@ -142,7 +156,7 @@ def get_stylesheet(show_error_dialog: bool = False) -> str | None:
 
 def get_config_and_stylesheet() -> tuple[YasbConfig, str]:
     config = get_config()
-    stylesheet = get_stylesheet()
+    stylesheet = get_stylesheet(config=config)
     error_msg: str | None = None
 
     if not config:

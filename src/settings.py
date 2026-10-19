@@ -16,6 +16,7 @@ SCRIPT_PATH = os.path.dirname(sys.executable) if IS_FROZEN else os.path.dirname(
 GITHUB_URL = "https://github.com/amnweb/yasb"
 GITHUB_WIKI_URL = "https://github.com/amnweb/yasb/wiki"
 GITHUB_THEME_URL = "https://github.com/amnweb/yasb-themes"
+PLUGIN_INDEX_URL = "https://raw.githubusercontent.com/amnweb/yasb-plugins/main/index.json"
 WEBSITE_URL = "https://yasb.dev"
 WEBSITE_DOCS_URL = "https://docs.yasb.dev/latest"
 # Configuration Settings

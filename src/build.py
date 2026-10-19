@@ -1,5 +1,7 @@
 import datetime
 import os
+import sys
+from importlib.util import find_spec
 
 from cx_Freeze import Executable, setup  # pyright: ignore[reportUnknownVariableType, reportMissingTypeStubs]
 
@@ -21,6 +23,33 @@ if not arch_info:
 
 display_arch, msi_arch_suffix = arch_info
 
+STDLIB_EXCLUDES = {
+    "antigravity",
+    "curses",
+    "doctest",
+    "ensurepip",
+    "idlelib",
+    "lib2to3",
+    "pty",
+    "pydoc_data",
+    "readline",
+    "test",
+    "this",
+    "tkinter",
+    "tty",
+    "turtle",
+    "turtledemo",
+    "unittest",
+    "venv",
+}
+plugin_stdlib = {
+    name: spec
+    for name in sorted(sys.stdlib_module_names)
+    if not name.startswith("_") and name not in STDLIB_EXCLUDES and (spec := find_spec(name))
+}
+stdlib_packages = [name for name, spec in plugin_stdlib.items() if spec.submodule_search_locations is not None]
+stdlib_modules = [name for name, spec in plugin_stdlib.items() if spec.submodule_search_locations is None]
+
 hook_dll_name = "YASBTrayHook_arm64.dll" if display_arch == "ARM64" else "YASBTrayHook.dll"
 everything_dll_name = "EverythingARM64.dll" if display_arch == "ARM64" else "Everything64.dll"
 
@@ -29,11 +58,14 @@ build_options = {
         "core.widgets.yasb",
         "core.widgets.komorebi",
         "core.widgets.glazewm",
+        "core.plugins",
+        "yasb_api",
+        *stdlib_packages,
     ],
     "constants": [f"ARCHITECTURE='{display_arch}'"],
     "silent_level": 1,
     "silent": True,
-    "excludes": ["PySide6", "pydoc_data", "email", "tkinter", "PyQt5", "PySide2", "unittest"],
+    "excludes": ["PySide6", "PyQt5", "PySide2", *sorted(STDLIB_EXCLUDES)],
     "bin_excludes": ["Qt6Pdf.dll", "_avif.cp314-win_amd64.pyd"],
     "zip_exclude_packages": [],
     "zip_include_packages": ["*"],
@@ -44,6 +76,7 @@ build_options = {
     "includes": [
         "holidays.countries",
         "winrt.windows.applicationmodel",
+        *stdlib_modules,
     ],
     "optimize": 1,
     "include_files": [

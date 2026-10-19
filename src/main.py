@@ -2,8 +2,10 @@ import asyncio
 import logging
 import signal
 import sys
+import threading
 from sys import argv
 from types import FrameType, TracebackType
+from typing import Any
 
 import qasync  # pyright: ignore[reportMissingTypeStubs]
 
@@ -12,6 +14,7 @@ from core.bar_manager import BarManager
 from core.config import get_config_and_stylesheet, is_first_run
 from core.events.service import EventService
 from core.log import enable_debug_logging, init_logger
+from core.plugins.loader import plugin_for_traceback
 from core.tray import SystemTrayManager
 from core.ui.views.welcome import run_setup_wizard
 from core.utils.controller import start_cli_server
@@ -47,6 +50,7 @@ async def main_async(app: YASBApplication):
     # Assign the loop and close event to the app instance
     # This allows the controller to close the app gracefully from another thread
     app.loop = asyncio.get_running_loop()
+    app.loop.set_exception_handler(asyncio_exception_handler)
     app.close_event = app_close_event
 
     # Prevent the app from exiting when closing the dialogs
@@ -118,17 +122,39 @@ async def main_async(app: YASBApplication):
         app.quit()
 
 
+def exception_hook(_exctype: type[BaseException], value: BaseException, traceback: TracebackType | None):
+    if plugin_id := plugin_for_traceback(traceback):
+        logging.error('Unhandled exception in plugin "%s"', plugin_id, exc_info=value)
+        return
+    EventService().clear()
+    logging.error("Unhandled exception", exc_info=value)
+    sys.exit(1)
+
+
+def thread_exception_hook(args: threading.ExceptHookArgs) -> None:
+    if args.exc_value is not None and (plugin_id := plugin_for_traceback(args.exc_traceback)):
+        thread_name = args.thread.name if args.thread else "unknown"
+        logging.error('Unhandled exception in plugin "%s" (thread %s)', plugin_id, thread_name, exc_info=args.exc_value)
+        return
+    threading.__excepthook__(args)
+
+
+def asyncio_exception_handler(loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:
+    exception = context.get("exception")
+    if isinstance(exception, BaseException) and (plugin_id := plugin_for_traceback(exception.__traceback__)):
+        message = context.get("message", "Unhandled exception in an async task")
+        logging.error('Unhandled exception in plugin "%s": %s', plugin_id, message, exc_info=exception)
+        return
+    loop.default_exception_handler(context)
+
+
 if __name__ == "__main__":
     init_logger()
     load_env()
     set_font_engine()
 
-    def exception_hook(_exctype: type, value: BaseException, _traceback: TracebackType | None):
-        EventService().clear()
-        logging.error("Unhandled exception", exc_info=value)
-        sys.exit(1)
-
     sys.excepthook = exception_hook
+    threading.excepthook = thread_exception_hook
 
     try:
         # Acquire the single instance lock before doing any heavy initialization

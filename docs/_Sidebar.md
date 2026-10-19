@@ -8,6 +8,7 @@
 - [FAQ](./FAQ)
 - [Contributing](./Contributing)
 - [Writing Widget](./Writing-Widget)
+- [Plugins](./Plugins)
 - [UI Components](./UI-Components)
 - Widgets:
     - [Active Windows Title](./(Widget)-Active-Windows-Title)

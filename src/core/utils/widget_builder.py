@@ -1,17 +1,20 @@
 import logging
-from collections.abc import Mapping
-from importlib import import_module
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable, Mapping
+from typing import Any, cast
 
 from pydantic import BaseModel, ValidationError
 from PyQt6.QtCore import QObject, QThread
 
+from core.plugins.manifest import PluginError
+from core.plugins.resolver import resolve_widget_class
 from core.utils.alert_dialog import raise_info_alert
 from core.utils.validation_errors import format_pydantic_errors_to_yaml
+from core.widgets.base import BaseWidget
 from settings import DEFAULT_CONFIG_FILENAME
 
-if TYPE_CHECKING:
-    from core.widgets.base import BaseWidget
+
+def _is_grouper(widget_cls: type[BaseWidget]) -> bool:
+    return widget_cls.__name__ == "GrouperWidget" and widget_cls.__module__.endswith("yasb.grouper")
 
 
 class WidgetBuilder(QObject):
@@ -23,6 +26,7 @@ class WidgetBuilder(QObject):
         self._invalid_widget_names: set[str] = set()
         self._invalid_widget_types: dict[str, str] = {}
         self._invalid_widget_options: dict[str, str] = {}
+        self._plugin_errors: dict[str, str] = {}
 
     def build_widgets(self, widget_map: dict[str, list[str]]) -> tuple[dict[str, list[BaseWidget]], set[type[QThread]]]:
         bar_widgets: dict[str, list[BaseWidget]] = {}
@@ -43,9 +47,7 @@ class WidgetBuilder(QObject):
             logging.warning("No widget config could be found for widget '%s", widget_name)
         else:
             try:
-                widget_module_str, widget_class_str = widget_config["type"].rsplit(".", 1)
-                widget_module = import_module(f"core.widgets.{widget_module_str}")
-                widget_cls = getattr(widget_module, widget_class_str)
+                widget_cls = resolve_widget_class(widget_config["type"])
                 widget_schema = getattr(widget_cls, "validation_schema")
                 widget_event_listener = getattr(widget_cls, "event_listener")
 
@@ -74,19 +76,23 @@ class WidgetBuilder(QObject):
 
                 # If this widget is a Grouper, proactively collect child listeners so BarManager can manage them
                 try:
-                    if widget_cls.__name__ == "GrouperWidget" and widget_module.__name__.endswith("yasb.grouper"):
+                    if _is_grouper(widget_cls):
                         child_names: list[str] = normalized_options.get("widgets") or []
                         self._collect_nested_listeners(child_names)
                 except Exception:
                     logging.debug("WidgetBuilder failed to collect nested listeners for Grouper")
 
                 # Pass widget_configs to GrouperWidget
-                if widget_cls.__name__ == "GrouperWidget" and widget_module.__name__.endswith("yasb.grouper"):
-                    widget = widget_cls(config=pydantic_config, widget_configs=self._widget_configurations)
+                widget_factory = cast(Callable[..., BaseWidget], widget_cls)
+                if _is_grouper(widget_cls):
+                    widget = widget_factory(config=pydantic_config, widget_configs=self._widget_configurations)
                 else:
-                    widget = widget_cls(config=pydantic_config)
+                    widget = widget_factory(config=pydantic_config)
                 widget.widget_name = widget_name
                 return widget
+            except PluginError as e:
+                logging.error("Failed to load plugin widget '%s': %s", widget_name, e)
+                self._plugin_errors[widget_name] = str(e)
             except AttributeError, ValueError, ModuleNotFoundError:
                 logging.exception("Failed to import widget with type %s", widget_config["type"])
                 self._invalid_widget_types[widget_name] = widget_config["type"]
@@ -137,6 +143,17 @@ class WidgetBuilder(QObject):
                 informative_msg="Click 'Show Details' to find out more.",
                 additional_details=widget_names_and_types,
             )
+        if self._plugin_errors:
+            plugin_errors = "\n".join(
+                f" - {widget_name}: {error}" for widget_name, error in self._plugin_errors.items()
+            )
+            logging.error("Failed to load plugin widget(s) %s", plugin_errors)
+            raise_info_alert(
+                title=f"Failed to load plugin widget(s) in {DEFAULT_CONFIG_FILENAME}",
+                msg="Failed to load widget(s) provided by plugins",
+                informative_msg="Click 'Show Details' to find out more.",
+                additional_details=plugin_errors,
+            )
         if self._missing_widget_types:
             widget_names = "\n".join([f" - {widget_name}" for widget_name in self._missing_widget_types])
             logging.error("Failed to import widget(s) due to missing widget type(s) %s", widget_names)
@@ -154,14 +171,12 @@ class WidgetBuilder(QObject):
                 cfg = self._widget_configurations.get(name)
                 if not cfg or "type" not in cfg:
                     continue
-                module_str, class_str = cfg["type"].rsplit(".", 1)
-                mod = import_module(f"core.widgets.{module_str}")
-                cls = getattr(mod, class_str)
-                listener = getattr(cls, "event_listener", None)
+                cls = resolve_widget_class(cfg["type"])
+                listener = cls.event_listener
                 if listener:
                     self._widget_event_listeners.add(listener)
                 # If nested grouper, recurse into its configured child names
-                if cls.__name__ == "GrouperWidget" and mod.__name__.endswith("yasb.grouper"):
+                if _is_grouper(cls):
                     child_opts = cfg.get("options", {})
                     child_names: list[str] = child_opts.get("widgets") or []
                     if child_names:

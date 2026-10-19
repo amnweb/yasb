@@ -24,6 +24,7 @@ The YASB CLI is a command line interface that allows you to interact with the YA
 - `reset` - Restore default config files and clear cache.
 - `config-dir` - Open the configuration directory in Windows File Explorer.
 - `cloud` - Back up and restore your configuration with YASB Cloud. See [YASB Cloud](./Cloud).
+- `plugin` - Install, update and remove third-party widget plugins. See [Plugins](./Plugins).
 - `help` - Show the help message.
 
 ## Options
@@ -58,6 +59,14 @@ yasbc disable-autostart --task
 ```
 > **Note:**
 > Creating a task scheduler for autostart on Windows requires administrator privileges.
+
+## Plugins
+
+Plugins are widgets that aren't built into YASB. To install one from the official plugin repository, use its name:
+```bash
+yasbc plugin install lyrics
+```
+This also adds the plugin's widget to `config.yaml`, as the first widget on the left of your bar. A plugin that isn't in the official repository can be installed from GitHub with `yasbc plugin install github.com/owner/repo`, after a warning that its code wasn't reviewed. Use `yasbc plugin search`, `yasbc plugin list`, `yasbc plugin update` and `yasbc plugin remove lyrics` to manage them. See [Plugins](./Plugins) for details and for writing your own.
 
 ## Crash Dumps
 

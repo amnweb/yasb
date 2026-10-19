@@ -39,7 +39,6 @@ the Pydantic model's __name__ exactly.
 """
 
 import logging
-from importlib import import_module
 from typing import Any, Literal, TypedDict, cast
 
 from pydantic import BaseModel
@@ -237,6 +236,7 @@ def _check_model(data: dict[str, Any], path: str, model: type[BaseModel], issues
 
 def _scan(config: dict[str, Any]) -> list[DeprecationIssue]:
     """Walk parsed YAML and collect all deprecated/renamed fields."""
+    from core.plugins.resolver import resolve_widget_class
     from core.validation.bar import BarConfig
 
     issues: list[DeprecationIssue] = []
@@ -252,12 +252,11 @@ def _scan(config: dict[str, Any]) -> list[DeprecationIssue]:
             continue
         wdata = cast(dict[str, Any], wdata)
         try:
-            mod, cls_name = wdata.get("type", "").rsplit(".", 1)
-            schema = getattr(import_module(f"core.widgets.{mod}"), cls_name).validation_schema
+            schema = resolve_widget_class(wdata.get("type", "")).validation_schema
         except Exception:
             continue
         opts = wdata.get("options")
-        if isinstance(opts, dict):
+        if isinstance(opts, dict) and isinstance(schema, type):
             _check_model(cast(dict[str, Any], opts), f"widgets.{wname}.options", schema, issues)
 
     return issues

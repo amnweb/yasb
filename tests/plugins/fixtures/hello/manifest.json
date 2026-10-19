@@ -1,0 +1,14 @@
+{
+  "id": "hello",
+  "name": "Hello",
+  "version": "1.0.0",
+  "author": "YASB",
+  "description": "Says hello. The example plugin used by YASB's tests.",
+  "api": "1",
+  "min_yasb": "2.0.0",
+  "widgets": {
+    "HelloWidget": "widget:HelloWidget"
+  },
+  "styles": "styles.css",
+  "example_config": "example.yaml"
+}
