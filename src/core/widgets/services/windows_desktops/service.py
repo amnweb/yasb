@@ -2,12 +2,23 @@ import ctypes
 import logging
 import os
 from collections.abc import Callable
+from concurrent.futures import Future
 from ctypes import wintypes
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from functools import partial
 from typing import TYPE_CHECKING, Any, override
 
 from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
-from PyQt6.QtCore import QAbstractNativeEventFilter, QCoreApplication, QObject, QTimer, pyqtSignal
+from PyQt6.QtCore import (
+    QAbstractNativeEventFilter,
+    QCoreApplication,
+    QObject,
+    Qt,
+    QThread,
+    QTimer,
+    pyqtSignal,
+    pyqtSlot,
+)
 
 from core.utils.win32.bindings.user32 import (
     GetClassName,
@@ -18,7 +29,6 @@ from core.utils.win32.bindings.user32 import (
 from core.utils.win32.structs import MSG
 from core.widgets.services.windows_desktops.com import (
     DesktopInfo,
-    VirtualDesktopApi,
     VirtualDesktopError,
     get_api,
 )
@@ -56,6 +66,12 @@ POLL_INTERVAL_MS = 500
 # Events that change which desktops exist or how they are ordered.
 SET_CHANGED_EVENTS = frozenset({DesktopEvent.CREATED, DesktopEvent.DESTROYED, DesktopEvent.MOVED})
 
+WINDOW_EVENTS = frozenset({DesktopEvent.VIEW_MOVED, DesktopEvent.VIEWS_CHANGED})
+
+INITIAL_LOAD_TIMEOUT_S = 0.5
+FOREGROUND_TIMEOUT_S = 0.25
+SHUTDOWN_WAIT_MS = 500
+
 WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
 
 
@@ -87,32 +103,40 @@ class _TaskbarCreatedFilter(QAbstractNativeEventFilter):
         return False, 0  # pyright: ignore[reportReturnType]
 
 
+class _ServiceThread(QThread):
+    @override
+    def run(self) -> None:
+        # Running the loop from Python keeps one Python thread state, so the
+        # per-thread COM objects in com.py survive between jobs.
+        self.exec()
+
+
 @dataclass(frozen=True)
 class ForegroundView:
-    """A foreground window and the shell view behind it.
+    """A foreground window and its pin state.
 
     The context menu reads pin state from this object to label its entries.
     """
 
     hwnd: int
-    view: Any = field(repr=False)
-    api: VirtualDesktopApi = field(repr=False)
+    pinned: bool
+    app_pinned: bool
 
     def is_pinned(self) -> bool:
         """Is this window pinned to every desktop?"""
-        return self.api.is_view_pinned(self.view)
+        return self.pinned
 
     def is_app_pinned(self) -> bool:
         """Is this window's whole app pinned to every desktop?"""
-        return self.api.is_app_pinned(self.view)
+        return self.app_pinned
 
 
 class WindowsDesktopService(QObject):
     """Manages Windows virtual desktops and broadcasts changes.
 
-    One instance is shared by every widget. Desktop state is cached and dropped
-    whenever the shell reports a change, so redrawing a bar of buttons costs one
-    enumeration rather than one per button.
+    One instance is shared by every widget. It lives on its own thread, so a
+    hung Explorer stalls that thread rather than the bar. Widgets read the
+    cached state, which the thread refreshes whenever the shell reports a change.
     """
 
     _instance = None
@@ -120,10 +144,12 @@ class WindowsDesktopService(QObject):
 
     desktop_changed = pyqtSignal(dict)
     desktops_updated = pyqtSignal(dict, dict)
+    populated_changed = pyqtSignal()
 
-    # Carries a notification from whichever thread COM called in on to the Qt
-    # main thread. Same-thread emits stay direct; cross-thread ones queue.
+    # Carries a notification from whichever thread COM called in on to the
+    # service's thread. Same-thread emits stay direct; cross-thread ones queue.
     _com_event = pyqtSignal(object)
+    _job_queued = pyqtSignal(object)
 
     def __new__(cls):
         if cls._instance is None:
@@ -142,6 +168,7 @@ class WindowsDesktopService(QObject):
         self._listener: DesktopNotificationListener | None = None
 
         self._com_event.connect(self._on_com_event)
+        self._job_queued.connect(self._run_job)
 
         self._shell_check_queued = False
         self._taskbar_filter = _TaskbarCreatedFilter(self._on_taskbar_created)
@@ -149,9 +176,10 @@ class WindowsDesktopService(QObject):
         if app is not None:
             app.installNativeEventFilter(self._taskbar_filter)
 
-        # Cached snapshot, dropped whenever the shell reports a change.
-        self._desktops: list[DesktopInfo] | None = None
+        # Cached snapshot, replaced whenever the shell reports a change.
+        self._desktops: list[DesktopInfo] = []
         self._current_guid: str | None = None
+        self._populated: frozenset[str] = frozenset()
 
         # One user action can produce several notifications: switching desktops
         # also reports a wallpaper change and a switch. These collect what needs
@@ -159,29 +187,62 @@ class WindowsDesktopService(QObject):
         self._pending_current_changed = False
         self._pending_set_changed = False
         self._pending_buttons = False
+        self._pending_populated = False
         self._refresh_queued = False
 
         # Last state broadcast, used to suppress no-op signals.
         self._last_count = 0
         self._last_number = 0
+
+        self._thread = _ServiceThread()
+        self._thread.setObjectName("yasb-windows-desktops")
+        self.moveToThread(self._thread)
+        self._thread.start()
+        if app is not None:
+            app.aboutToQuit.connect(self._stop_thread, Qt.ConnectionType.DirectConnection)  # pyright: ignore[reportCallIssue]
+
         try:
-            snapshot = self._snapshot()
-            self._last_count = len(snapshot)
-            self._last_number = self._current_number()
+            self._call_in_thread(self._load_initial_state, INITIAL_LOAD_TIMEOUT_S)
+        except TimeoutError:
+            logger.warning("Explorer is not answering, virtual desktops will appear once it does")
         except SHELL_UNAVAILABLE:
             logger.debug("Could not read initial virtual desktop state", exc_info=True)
 
-    def _snapshot(self) -> list[DesktopInfo]:
-        """The desktop list, read from the shell only when the cache is cold."""
-        if self._desktops is None:
-            self._desktops = self._api.list_desktops()
-        return self._desktops
+    def _run_in_thread(self, job: Callable[[], object]) -> None:
+        self._job_queued.emit(job)
 
-    def _current(self) -> str:
-        """The current desktop's GUID, cached alongside the list."""
-        if self._current_guid is None:
-            self._current_guid = self._api.current_guid()
-        return self._current_guid
+    def _call_in_thread[T](self, job: Callable[[], T], timeout: float) -> T:
+        future: Future[T] = Future()
+
+        def run() -> None:
+            try:
+                future.set_result(job())
+            except Exception as e:
+                future.set_exception(e)
+
+        self._run_in_thread(run)
+        return future.result(timeout)
+
+    @pyqtSlot(object)
+    def _run_job(self, job: Callable[[], object]) -> None:
+        try:
+            job()
+        except Exception:
+            logger.warning("Virtual desktop call failed", exc_info=True)
+
+    def _stop_thread(self) -> None:
+        self._thread.quit()
+        self._thread.wait(SHUTDOWN_WAIT_MS)
+
+    def _load_initial_state(self) -> None:
+        self._reload_desktops()
+        self._refresh_state()
+        self._refresh_populated()
+
+    def _reload_desktops(self) -> None:
+        desktops = self._api.list_desktops()
+        current_guid = self._api.current_guid()
+        self._desktops, self._current_guid = desktops, current_guid
 
     def _current_number(self) -> int:
         """The current desktop's 1-based position.
@@ -189,33 +250,42 @@ class WindowsDesktopService(QObject):
         Raises if the current desktop is not in the snapshot, so callers skip
         the update rather than broadcasting a position no button can match.
         """
-        guid = self._current()
-        number = next((d.number for d in self._snapshot() if d.guid == guid), 0)
+        guid = self._current_guid
+        number = next((d.number for d in self._desktops if d.guid == guid), 0)
         if not number:
             raise VirtualDesktopError(f"Current desktop {guid} is not in the desktop list")
         return number
 
-    def _invalidate(self) -> None:
-        self._desktops = None
-        self._current_guid = None
+    def _refresh_populated(self) -> None:
+        try:
+            populated = self._api.populated_guids()
+        except SHELL_UNAVAILABLE:
+            logger.debug("Could not read which desktops have windows", exc_info=True)
+            return
+        if populated != self._populated:
+            self._populated = populated
+            self.populated_changed.emit()
 
     def _resolve(self, number: int) -> DesktopInfo:
         """Find a desktop by its 1-based position."""
-        desktop = next((d for d in self._snapshot() if d.number == number), None)
-        if desktop is None:
-            # The cache may predate a change we have not been told about yet.
-            self._invalidate()
-            desktop = next((d for d in self._snapshot() if d.number == number), None)
+        desktop = next((d for d in self._desktops if d.number == number), None)
         if desktop is None:
             raise VirtualDesktopError(f"No desktop at position {number}")
         return desktop
 
+    @pyqtSlot(object)
     def _on_com_event(self, event: DesktopEvent) -> None:
         """Record what a notification implies, then schedule one refresh."""
         if event is DesktopEvent.CURRENT_CHANGED:
             self._pending_current_changed = True
+            self._pending_populated = True
         elif event in SET_CHANGED_EVENTS:
             self._pending_set_changed = True
+            self._pending_populated = True
+            if event is DesktopEvent.MOVED:
+                self._pending_buttons = True
+        elif event in WINDOW_EVENTS:
+            self._pending_populated = True
         elif event is DesktopEvent.RENAMED:
             self._pending_set_changed = True
             self._pending_buttons = True
@@ -234,12 +304,19 @@ class WindowsDesktopService(QObject):
         current_changed = self._pending_current_changed
         set_changed = self._pending_set_changed
         update_buttons = self._pending_buttons
+        populated_changed = self._pending_populated
         self._pending_current_changed = False
         self._pending_set_changed = False
         self._pending_buttons = False
+        self._pending_populated = False
 
-        self._invalidate()
+        if populated_changed:
+            self._refresh_populated()
+        if not (current_changed or set_changed):
+            return
+
         try:
+            self._reload_desktops()
             number = self._current_number()
         except SHELL_UNAVAILABLE:
             logger.debug("Failed to read virtual desktop state after notification", exc_info=True)
@@ -255,7 +332,7 @@ class WindowsDesktopService(QObject):
     def _refresh_state(self, update_buttons: bool = False) -> None:
         """Emit `desktops_updated` when the desktop set or selection moved."""
         try:
-            count = len(self._snapshot())
+            count = len(self._desktops)
             number = self._current_number()
         except SHELL_UNAVAILABLE:
             logger.debug("Failed to refresh virtual desktop state", exc_info=True)
@@ -269,7 +346,9 @@ class WindowsDesktopService(QObject):
         """Track a widget, starting notifications on the first one."""
         if widget not in self._widgets:
             self._widgets.append(widget)
+        self._run_in_thread(self._start_listening)
 
+    def _start_listening(self) -> None:
         if self._listener is None:
             self._listener = DesktopNotificationListener(self._com_event.emit, self._api)
 
@@ -290,7 +369,7 @@ class WindowsDesktopService(QObject):
         # Broadcast to every top-level window, so one restart arrives once per bar.
         if not self._shell_check_queued:
             self._shell_check_queued = True
-            QTimer.singleShot(0, self._check_shell)
+            self._run_in_thread(self._check_shell)
 
     def _check_shell(self) -> None:
         self._shell_check_queued = False
@@ -304,7 +383,6 @@ class WindowsDesktopService(QObject):
 
         logger.info("Explorer restarted, reconnecting to the virtual desktop service")
         self._api.reset()
-        self._invalidate()
         self._listener = DesktopNotificationListener(self._com_event.emit, self._api)
         if self._timer is None and self._listener.start():
             self.notify_desktops_updated(update_buttons=True)
@@ -318,16 +396,19 @@ class WindowsDesktopService(QObject):
         except ValueError:
             pass
         if not self._widgets:
-            if self._listener is not None:
-                self._listener.stop()
-                self._listener = None
-            if self._timer:
-                self._timer.stop()
-                self._timer = None
+            self._run_in_thread(self._stop_listening)
+
+    def _stop_listening(self) -> None:
+        if self._listener is not None:
+            self._listener.stop()
+            self._listener = None
+        if self._timer:
+            self._timer.stop()
+            self._timer = None
 
     def _poll(self):
-        self._invalidate()
         try:
+            self._reload_desktops()
             number = self._current_number()
         except SHELL_UNAVAILABLE:
             logger.debug("Virtual desktop poll failed", exc_info=True)
@@ -344,6 +425,7 @@ class WindowsDesktopService(QObject):
                 self._timer = None
 
         if number != self._last_number:
+            self._refresh_populated()
             self.desktop_changed.emit({"index": number})
         self._refresh_state(update_buttons=False)
 
@@ -352,10 +434,13 @@ class WindowsDesktopService(QObject):
 
     def notify_desktops_updated(self, update_buttons: bool = False):
         """Force a refresh (e.g. after rename/create/delete)."""
-        self._invalidate()
+        self._run_in_thread(partial(self._force_refresh, update_buttons))
+
+    def _force_refresh(self, update_buttons: bool) -> None:
         try:
+            self._reload_desktops()
             number = self._current_number()
-            self._last_count = len(self._snapshot())
+            self._last_count = len(self._desktops)
         except SHELL_UNAVAILABLE:
             logger.debug("Failed to read state for forced refresh", exc_info=True)
             number = self._last_number
@@ -365,11 +450,12 @@ class WindowsDesktopService(QObject):
     @staticmethod
     def get_desktops() -> list[DesktopInfo]:
         """Every desktop, or an empty list while the shell is unreachable."""
-        try:
-            return WindowsDesktopService()._snapshot()
-        except SHELL_UNAVAILABLE:
-            logger.debug("Could not read the desktop list", exc_info=True)
-            return []
+        return WindowsDesktopService()._desktops
+
+    @staticmethod
+    def get_populated_desktops() -> set[int]:
+        service = WindowsDesktopService()
+        return {d.number for d in service._desktops if d.guid in service._populated}
 
     @staticmethod
     def get_current_desktop() -> DesktopInfo:
@@ -399,38 +485,34 @@ class WindowsDesktopService(QObject):
     @staticmethod
     def switch_desktop(number: int):
         service = WindowsDesktopService()
-        service._api.switch_to(service._resolve(number).guid)
-        # The notification that follows would drop the cache anyway, but not
-        # before a caller could read the previous desktop back out of it.
-        service._invalidate()
+        service._run_in_thread(partial(service._api.switch_to, service._resolve(number).guid))
 
     @staticmethod
     def create_desktop():
         service = WindowsDesktopService()
-        guid = service._api.create()
-        service._invalidate()
-        return guid
+        service._run_in_thread(service._api.create)
 
     @staticmethod
     def remove_desktop(number: int):
         service = WindowsDesktopService()
-        service._api.remove(service._resolve(number).guid)
-        service._invalidate()
+        if len(service._desktops) < 2:
+            return
+        service._run_in_thread(partial(service._api.remove, service._resolve(number).guid))
 
     @staticmethod
     def rename_desktop(number: int, name: str):
         service = WindowsDesktopService()
-        service._api.rename(service._resolve(number).guid, name)
-        service._invalidate()
+        service._run_in_thread(partial(service._api.rename, service._resolve(number).guid, name))
 
     @staticmethod
     def set_wallpaper(number: int, path: str):
         service = WindowsDesktopService()
-        service._api.set_wallpaper(service._resolve(number).guid, path)
+        service._run_in_thread(partial(service._api.set_wallpaper, service._resolve(number).guid, path))
 
     @staticmethod
     def set_wallpaper_all(path: str):
-        WindowsDesktopService()._api.set_wallpaper_all(path)
+        service = WindowsDesktopService()
+        service._run_in_thread(partial(service._api.set_wallpaper_all, path))
 
     @staticmethod
     def get_foreground_app_view() -> ForegroundView | None:
@@ -443,46 +525,50 @@ class WindowsDesktopService(QObject):
                 return None
             if GetClassName(hwnd) in SKIP_WINDOW_CLASSES or _is_own_window(hwnd):
                 return None
-            # None means the foreground is not an application window: a menu,
-            # a popup or the desktop. That is an ordinary outcome.
-            view = service._api.try_view_for_hwnd(hwnd)
-            if view is None:
-                # Logged with identifying detail: which window ends up in the
-                # foreground here is the only reason the move and pin entries
-                # go missing from the menu, so it needs to be diagnosable.
-                logger.debug(
-                    "Foreground window %s (class %r) has no application view; move and pin entries will be omitted",
-                    hwnd,
-                    GetClassName(hwnd),
-                )
-                return None
-            if not service._api.is_shown_in_switchers(view):
-                return None
-            return ForegroundView(hwnd=hwnd, view=view, api=service._api)
+            return service._call_in_thread(partial(service._read_foreground_view, hwnd), FOREGROUND_TIMEOUT_S)
+        except TimeoutError:
+            return None
         except Exception:
             logger.debug("Could not read the foreground window", exc_info=True)
             return None
 
+    def _read_foreground_view(self, hwnd: int) -> ForegroundView | None:
+        view = self._api.try_view_for_hwnd(hwnd)
+        if view is None or not self._api.is_shown_in_switchers(view):
+            return None
+        return ForegroundView(
+            hwnd=hwnd, pinned=self._api.is_view_pinned(view), app_pinned=self._api.is_app_pinned(view)
+        )
+
     @staticmethod
     def move_window(hwnd: int, desktop_number: int):
         service = WindowsDesktopService()
-        view = service._api.view_for_hwnd(hwnd)
-        service._api.move_view(view, service._resolve(desktop_number).guid)
+        service._run_in_thread(partial(service._move_window, hwnd, service._resolve(desktop_number).guid))
+
+    def _move_window(self, hwnd: int, guid: str) -> None:
+        view = self._api.view_for_hwnd(hwnd)
+        self._api.move_view(view, guid)
 
     @staticmethod
     def toggle_pin_window(hwnd: int):
         service = WindowsDesktopService()
-        view = service._api.view_for_hwnd(hwnd)
-        if service._api.is_view_pinned(view):
-            service._api.unpin_view(view)
+        service._run_in_thread(partial(service._toggle_pin_window, hwnd))
+
+    def _toggle_pin_window(self, hwnd: int) -> None:
+        view = self._api.view_for_hwnd(hwnd)
+        if self._api.is_view_pinned(view):
+            self._api.unpin_view(view)
         else:
-            service._api.pin_view(view)
+            self._api.pin_view(view)
 
     @staticmethod
     def toggle_pin_app(hwnd: int):
         service = WindowsDesktopService()
-        view = service._api.view_for_hwnd(hwnd)
-        if service._api.is_app_pinned(view):
-            service._api.unpin_app(view)
+        service._run_in_thread(partial(service._toggle_pin_app, hwnd))
+
+    def _toggle_pin_app(self, hwnd: int) -> None:
+        view = self._api.view_for_hwnd(hwnd)
+        if self._api.is_app_pinned(view):
+            self._api.unpin_app(view)
         else:
-            service._api.pin_app(view)
+            self._api.pin_app(view)

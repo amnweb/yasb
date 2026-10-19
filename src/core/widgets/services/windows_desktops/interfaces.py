@@ -19,6 +19,7 @@ import sys
 from ctypes import HRESULT, POINTER, c_ulonglong, c_void_p
 from ctypes.wintypes import BOOL, DWORD, HWND, INT, LPCWSTR, LPVOID, RECT, SIZE, UINT, ULONG
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import Any
 
 from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
@@ -76,7 +77,6 @@ IApplicationViewOperation = UINT
 APPLICATION_VIEW_CLOAK_TYPE = UINT
 IApplicationViewPosition = UINT
 IImmersiveApplication = UINT
-IApplicationViewChangeListener = UINT
 TrustLevel = INT
 AdjacentDesktop = UINT
 
@@ -244,11 +244,36 @@ class IApplicationViewCollection(IUnknown):
         COMMETHOD([], HRESULT, "GetViewInFocus", (["out"], POINTER(POINTER(IApplicationView)), "view")),
         STDMETHOD(HRESULT, "Unknown1", (POINTER(POINTER(IApplicationView)),)),
         STDMETHOD(HRESULT, "RefreshCollection", ()),
-        STDMETHOD(
-            HRESULT, "RegisterForApplicationViewChanges", (POINTER(IApplicationViewChangeListener), POINTER(DWORD))
+        COMMETHOD(
+            [],
+            HRESULT,
+            "RegisterForApplicationViewChanges",
+            (["in"], LPVOID, "pListener"),
+            (["out"], POINTER(DWORD), "pdwCookie"),
         ),
-        STDMETHOD(HRESULT, "UnregisterForApplicationViewChanges", (DWORD,)),
+        COMMETHOD([], HRESULT, "UnregisterForApplicationViewChanges", (["in"], DWORD, "dwCookie")),
     ]
+
+
+class IApplicationViewChangeListener(IUnknown):
+    _iid_ = GUID("{727F9E97-76EE-497B-A942-B6371328485C}")
+    _methods_ = [
+        COMMETHOD(
+            [],
+            HRESULT,
+            "OnApplicationViewChanged",
+            (["in"], c_void_p, "pView"),
+            (["in"], UINT, "change"),
+            (["in"], c_void_p, "pUnknown"),
+        ),
+    ]
+
+
+class ApplicationViewChange(IntEnum):
+    ADDED = 0
+    REMOVED = 1
+    SHOWN_IN_SWITCHERS = 10
+    REMOVED_FROM_SWITCHERS = 11
 
 
 class IVirtualDesktopNotificationService(IUnknown):

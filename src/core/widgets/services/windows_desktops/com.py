@@ -33,6 +33,7 @@ from core.widgets.services.windows_desktops.interfaces import (
     CLSID_VirtualDesktopNotificationService,
     CLSID_VirtualDesktopPinnedApps,
     DesktopInterfaces,
+    IApplicationView,
     IApplicationViewCollection,
     IVirtualDesktop2,
     IVirtualDesktopNotificationService,
@@ -319,6 +320,21 @@ class VirtualDesktopApi:
         app_id = self._app_id(view)
         if app_id is not None:
             self.ensure().pinned.UnpinAppID(app_id)
+
+    def populated_guids(self) -> frozenset[str]:
+        """GUIDs of desktops that have an Alt+Tab window of their own."""
+        guids: set[str] = set()
+        for view in self.ensure().views.GetViewsByZOrder().iter(IApplicationView):
+            try:
+                if not view.GetShowInSwitchers():
+                    continue
+                guid = str(view.GetVirtualDesktopId())
+                if guid in guids or self.is_view_pinned(view) or self.is_app_pinned(view):
+                    continue
+                guids.add(guid)
+            except COMError:
+                continue
+        return frozenset(guids)
 
     def notification_service(self) -> Any:
         """Acquire the service that desktop change callbacks register with."""
