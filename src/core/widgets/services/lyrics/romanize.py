@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import re
 import unicodedata
 from collections.abc import Sequence
@@ -19,10 +20,9 @@ def _get_kakasi() -> Any:
     global _pykakasi_cache
     if _pykakasi_cache is None:
         try:
-            import pykakasi  # pyright: ignore[reportMissingImports]
-
-            _pykakasi_cache = pykakasi.kakasi()  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        except ImportError, Exception:
+            pykakasi = cast(Any, importlib.import_module("pykakasi"))
+            _pykakasi_cache = pykakasi.kakasi()
+        except Exception:
             _pykakasi_cache = False
     return _pykakasi_cache if _pykakasi_cache is not False else None
 
@@ -31,10 +31,8 @@ def _get_pinyin() -> Any:
     global _pypinyin_cache
     if _pypinyin_cache is None:
         try:
-            import pypinyin  # pyright: ignore[reportMissingImports]
-
-            _pypinyin_cache = pypinyin
-        except ImportError, Exception:
+            _pypinyin_cache = cast(Any, importlib.import_module("pypinyin"))
+        except Exception:
             _pypinyin_cache = False
     return _pypinyin_cache if _pypinyin_cache is not False else None
 
@@ -43,10 +41,9 @@ def _get_unidecode() -> Any:
     global _unidecode_cache
     if _unidecode_cache is None:
         try:
-            from unidecode import unidecode  # pyright: ignore[reportMissingImports]
-
-            _unidecode_cache = unidecode
-        except ImportError, Exception:
+            unidecode_mod = cast(Any, importlib.import_module("unidecode"))
+            _unidecode_cache = unidecode_mod.unidecode
+        except Exception:
             _unidecode_cache = False
     return _unidecode_cache if _unidecode_cache is not False else None
 
