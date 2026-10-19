@@ -1,51 +1,14 @@
 from __future__ import annotations
 
-import importlib
 import re
 import unicodedata
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 from .kanji_data import KANJI_READINGS
 
 if TYPE_CHECKING:
     from .models import Lyrics
-
-_pykakasi_cache: Any = None
-_pypinyin_cache: Any = None
-_unidecode_cache: Any = None
-
-
-def _get_kakasi() -> Any:
-    global _pykakasi_cache
-    if _pykakasi_cache is None:
-        try:
-            pykakasi = cast(Any, importlib.import_module("pykakasi"))
-            _pykakasi_cache = pykakasi.kakasi()
-        except Exception:
-            _pykakasi_cache = False
-    return _pykakasi_cache if _pykakasi_cache is not False else None
-
-
-def _get_pinyin() -> Any:
-    global _pypinyin_cache
-    if _pypinyin_cache is None:
-        try:
-            _pypinyin_cache = cast(Any, importlib.import_module("pypinyin"))
-        except Exception:
-            _pypinyin_cache = False
-    return _pypinyin_cache if _pypinyin_cache is not False else None
-
-
-def _get_unidecode() -> Any:
-    global _unidecode_cache
-    if _unidecode_cache is None:
-        try:
-            unidecode_mod = cast(Any, importlib.import_module("unidecode"))
-            _unidecode_cache = unidecode_mod.unidecode
-        except Exception:
-            _unidecode_cache = False
-    return _unidecode_cache if _unidecode_cache is not False else None
 
 
 # Script Detection
@@ -840,50 +803,9 @@ _JAPANESE_PHRASE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     ("巡り会って", " めぐりあって "),
 )
 
-_EXACT_AUX_SUFFIXES: frozenset[str] = frozenset({"た", "だ", "て", "で", "ない", "たい"})
-_PREFIX_AUX_SUFFIXES: tuple[str, ...] = (
-    "たかった",
-    "たくて",
-    "たって",
-    "たら",
-    "たり",
-    "ていこう",
-    "ていく",
-    "ていい",
-    "ていた",
-    "ている",
-    "ても",
-    "ては",
-    "なかった",
-    "なくて",
-    "なくたって",
-    "ないで",
-    "ないね",
-    "ないよ",
-    "られ",
-    "らせ",
-    "れなくて",
-    "れなくたって",
-    "られた",
-    "られて",
-    "られない",
-    "れない",
-    "れた",
-    "れて",
-    "れる",
-    "させ",
-    "せて",
-    "せた",
-    "せない",
-    "せる",
-    "して",
-    "した",
-    "しない",
-)
-
 
 def romanize_japanese(text: str) -> str | None:
-    """Romanize Japanese (Kana and Kanji). Uses pykakasi if installed, otherwise built-in dictionary."""
+    """Romanize Japanese (Kana and Kanji) using the built-in pure-Python engine."""
     trimmed = unicodedata.normalize("NFKC", text).strip()
     if not trimmed:
         return None
@@ -893,67 +815,6 @@ def romanize_japanese(text: str) -> str | None:
     for src, dst in _JAPANESE_PHRASE_REPLACEMENTS:
         t = t.replace(src, dst)
     t = re.sub(r" +", " ", t).strip()
-
-    kks = _get_kakasi()
-    if kks:
-        try:
-            converted = cast(list[dict[str, Any]], kks.convert(t))  # pyright: ignore[reportUnknownMemberType]
-            tokens: list[tuple[str, str]] = []
-            for item in converted:
-                orig = str(item.get("orig", ""))
-                hep = str(item.get("hepburn", "")).strip()
-                if hep:
-                    tokens.append((orig, hep))
-
-            words: list[str] = []
-            pending_sokuon: str | None = None
-
-            for orig, hep in tokens:
-                # Particle へ is pronounced 'e'
-                if orig == "へ" and hep == "he":
-                    hep = "e"
-
-                # 1. Resolve pending sokuon (促音 っ / ッ)
-                if pending_sokuon is not None:
-                    fc = hep[0].lower()
-                    if hep.startswith(("ch", "c")):
-                        gem = "t"
-                    elif fc in "kstp":
-                        gem = fc
-                    else:
-                        gem = "t"
-                    words.append(pending_sokuon + gem + hep)
-                    pending_sokuon = None
-                    continue
-
-                # 2. Token ends with small tsu (sokuon)
-                if orig.endswith(("っ", "ッ")):
-                    base = hep[:-3] if hep.endswith("tsu") else (hep[:-2] if hep.endswith("tu") else hep)
-                    pending_sokuon = base
-                    continue
-
-                # 3. Token begins with sokuon or double consonant (e.g. った / tta, っても / ttemo)
-                if (orig.startswith(("っ", "ッ")) or hep.startswith(("tt", "kk", "ss", "pp"))) and words:
-                    words[-1] = words[-1] + hep
-                    continue
-
-                # 4. Verbal inflection suffix attached to preceding stem
-                if words and (orig in _EXACT_AUX_SUFFIXES or any(orig.startswith(pfx) for pfx in _PREFIX_AUX_SUFFIXES)):
-                    words[-1] = words[-1] + hep
-                    continue
-
-                words.append(hep)
-
-            if pending_sokuon is not None:
-                words.append(pending_sokuon + "tsu")
-
-            trans = " ".join(words)
-            trans = re.sub(r"(\w+)niha\b", r"\1 ni wa", trans)
-            trans = re.sub(r"\s+", " ", trans).strip()
-            if trans and trans.lower() != text.strip().lower():
-                return trans
-        except Exception:
-            pass
 
     # Built-in pure-Python Kana + Kanji engine
     res: list[str] = []
@@ -1056,30 +917,10 @@ def romanize_text(text: str, system: str | None = None) -> str | None:
             return trans
 
     if system == "chinese" or (system is None and has_cjk(trimmed)):
-        pinyin = _get_pinyin()
-        if pinyin:
-            try:
-                parts = cast(list[str], pinyin.lazy_pinyin(trimmed, style=pinyin.Style.TONE))  # pyright: ignore[reportUnknownMemberType]
-                trans = " ".join(parts).strip()
-                if trans and trans.lower() != trimmed.lower():
-                    return trans
-            except Exception:
-                pass
-
-        # Also fallback to Kanji reading if CJK character is in KANJI_READINGS
+        # Fallback to Kanji reading if CJK character is in KANJI_READINGS
         trans_jp = romanize_japanese(trimmed)
         if trans_jp and trans_jp.lower() != trimmed.lower():
             return trans_jp
-
-    unidec = _get_unidecode()
-    if unidec:
-        try:
-            trans = cast(str, unidec(trimmed)).strip()  # pyright: ignore[reportUnknownVariableType]
-            trans = re.sub(r"\s+", " ", trans)
-            if trans and trans.lower() != trimmed.lower():
-                return trans
-        except Exception:
-            pass
 
     return None
 
