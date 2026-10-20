@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 
+from core.cli.format import Format
 from core.plugins import cli, install
 from core.plugins.discovery import plugin_data_path
 from core.plugins.manifest import PLUGIN_API_VERSION, PluginError, PluginManifest
@@ -18,6 +19,7 @@ from tests.plugins.helpers import FIXTURE, PLUGIN_ID, WIDGET_TYPE, write_manifes
 from tests.support.source import SRC_ROOT
 
 INDEX_URL = "https://plugins.test/index.json"
+UNREVIEWED = "This plugin isn't from the official repository. Use it only if you trust the author."
 
 
 class FakeRepository:
@@ -170,7 +172,7 @@ def test_update_of_a_plugin_that_left_the_repository(root: Path, repo: FakeRepos
 
 # --- from GitHub -----------------------------------------------------------------------
 
-GITHUB_REPO = "videonomad/hello"
+GITHUB_REPO = "jdoe/hello"
 ARCHIVE_URL = f"https://github.com/{GITHUB_REPO}/archive/HEAD.zip"
 
 
@@ -232,7 +234,7 @@ def test_update_from_github(root: Path, repo: FakeRepository, tmp_path: Path):
     repo.on_github(GITHUB_REPO, _version(tmp_path, "1.1.0"))
     outcome, installed = install.update(PLUGIN_ID, root, install.PluginIndex())
 
-    assert outcome == f"updated 1.0.0 -> 1.1.0 from github.com/{GITHUB_REPO}, which isn't reviewed"
+    assert outcome == f"updated 1.0.0 -> 1.1.0 from github.com/{GITHUB_REPO}"
     assert installed is not None and installed.manifest.version == "1.1.0"
     assert install.read_install_record(installed.directory)["source"] == "github"
 
@@ -362,9 +364,7 @@ def test_remove_a_plugin_that_is_not_installed(root: Path):
 def test_cli_local_install_warns_and_lists(root: Path, capsys: pytest.CaptureFixture[str]):
     assert cli.run(["install", str(FIXTURE)]) == 0
     out = capsys.readouterr().out
-    assert f"Installed {PLUGIN_ID} 1.0.0 by YASB to {root / PLUGIN_ID}" in out
-    assert "not from the official plugin repository" in out
-    assert f'type: "{WIDGET_TYPE}"' in out
+    assert out == f"Installed {PLUGIN_ID} 1.0.0 by YASB.\n{Format.yellow}{UNREVIEWED}{Format.reset}\n"
 
     assert cli.run(["list"]) == 0
     assert f"{PLUGIN_ID}  1.0.0       local: {FIXTURE.resolve()}" in capsys.readouterr().out
@@ -374,12 +374,34 @@ def test_cli_local_install_warns_and_lists(root: Path, capsys: pytest.CaptureFix
     assert f'Error: Plugin "{PLUGIN_ID}" is not installed' in capsys.readouterr().err
 
 
+def test_cli_install_leaves_the_config_alone(root: Path, config_home: Path):
+    config = config_home / "config.yaml"
+    config.write_text("# mine\nwidgets: {}\n", encoding="utf-8")
+
+    assert cli.run(["install", str(FIXTURE)]) == 0
+
+    assert config.read_text(encoding="utf-8") == "# mine\nwidgets: {}\n"
+
+
+def test_cli_with_a_config_that_uses_the_plugin(root: Path, config_home: Path, capsys: pytest.CaptureFixture[str]):
+    config = config_home / "config.yaml"
+    text = f'bars:\n  main:\n    widgets:\n      left: ["greeting"]\nwidgets:\n  greeting:\n    type: "{WIDGET_TYPE}"\n'
+    config.write_text(text, encoding="utf-8")
+
+    assert cli.run(["install", str(FIXTURE)]) == 0
+    assert "Run `yasbc reload` to load it." in capsys.readouterr().out
+
+    assert cli.run(["remove", PLUGIN_ID, "-y"]) == 0
+    assert "config.yaml still uses it (greeting). Remove it there" in capsys.readouterr().out
+    assert config.read_text(encoding="utf-8") == text
+
+
 def test_cli_official_install(root: Path, repo: FakeRepository, capsys: pytest.CaptureFixture[str]):
     repo.publish()
 
     assert cli.run(["install", PLUGIN_ID]) == 0
     out = capsys.readouterr().out
-    assert "not from the official plugin repository" not in out
+    assert UNREVIEWED not in out
 
     cli.run(["list"])
     assert f"{PLUGIN_ID}  1.0.0       official repository" in capsys.readouterr().out
@@ -399,7 +421,7 @@ def test_cli_github_install_asks_and_defaults_to_no(
 
     out = capsys.readouterr().out
     assert f"{PLUGIN_ID} 1.0.0 by YASB, from github.com/{GITHUB_REPO}" in out
-    assert "not from the official plugin repository" in out
+    assert UNREVIEWED in out
     assert "Nothing was installed." in out
     assert not (root / PLUGIN_ID).exists()
 
@@ -408,7 +430,7 @@ def test_cli_github_install_with_yes(root: Path, repo: FakeRepository, capsys: p
     repo.on_github(GITHUB_REPO)
 
     assert cli.run(["install", f"github.com/{GITHUB_REPO}", "-y"]) == 0
-    assert capsys.readouterr().out.count("not from the official plugin repository") == 1
+    assert capsys.readouterr().out.count(UNREVIEWED) == 1
 
     cli.run(["list"])
     assert f"{PLUGIN_ID}  1.0.0       github.com/{GITHUB_REPO}" in capsys.readouterr().out
@@ -426,13 +448,13 @@ def test_cli_list_explains_skipped_plugins(root: Path, capsys: pytest.CaptureFix
 def test_cli_search(repo: FakeRepository, tmp_path: Path, capsys: pytest.CaptureFixture[str]):
     repo.publish()
     lyrics = _version(tmp_path, "2.0.0")
-    write_manifest(lyrics, id="lyrics", version="2.0.0", name="Lyrics", author="Kovinda", description="Synced lyrics")
+    write_manifest(lyrics, id="lyrics", version="2.0.0", name="Lyrics", author="Rowan", description="Synced lyrics")
     repo.publish(lyrics, disabled=True)
 
-    assert cli.run(["search", "kovinda"]) == 0
+    assert cli.run(["search", "rowan"]) == 0
 
     out = capsys.readouterr().out
-    assert "lyrics  2.0.0  by Kovinda  (temporarily disabled)\n    Synced lyrics" in out
+    assert "lyrics  2.0.0  by Rowan  (temporarily disabled)\n    Synced lyrics" in out
     assert "hello" not in out
 
 

@@ -26,7 +26,7 @@ The tests never touch your real YASB setup. `tests/conftest.py` points `YASB_CON
 | `bar/` | The bar window: building it with each config option, its place on the screen, auto-hide, animations and the context menu, plus the adaptive style's islands, rail, border and edge curves in every combination. Registering it as a Windows app bar is faked. |
 | `win32/` | Our ctypes code against the real Windows SDK, plus window helpers tested on real windows. |
 | `cloud/` | YASB Cloud: API errors, encryption, backups, restores, settings. None of them contact the real server. |
-| `plugins/` | Third-party widget plugins: the manifest, finding and loading plugins, plugin CSS, the `yasb_api` names, and `yasbc plugin` installs from folders, zips and a faked official repository. `fixtures/hello` is the example plugin. |
+| `plugins/` | Third-party widget plugins: the manifest, finding and loading plugins, the `yasb_api` names, and `yasbc plugin` installs from folders, zips and a faked official repository. `fixtures/hello` is the example plugin. |
 | `support/` | Helpers the tests share. |
 
 ## Writing a test

@@ -66,7 +66,7 @@ Plugins are widgets that aren't built into YASB. To install one from the officia
 ```bash
 yasbc plugin install lyrics
 ```
-This also adds the plugin's widget to `config.yaml`, as the first widget on the left of your bar. A plugin that isn't in the official repository can be installed from GitHub with `yasbc plugin install github.com/owner/repo`, after a warning that its code wasn't reviewed. Use `yasbc plugin search`, `yasbc plugin list`, `yasbc plugin update` and `yasbc plugin remove lyrics` to manage them. See [Plugins](./Plugins) for details and for writing your own.
+Then add its widget to `config.yaml` as the plugin's README shows. A plugin that isn't in the official repository can be installed from GitHub with `yasbc plugin install github.com/owner/repo`, after a warning that it wasn't reviewed. Use `yasbc plugin search`, `yasbc plugin list`, `yasbc plugin update` and `yasbc plugin remove lyrics` to manage them. See [Plugins](./Plugins) for details and for writing your own.
 
 ## Crash Dumps
 

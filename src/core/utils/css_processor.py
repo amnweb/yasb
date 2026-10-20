@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-from collections.abc import Sequence
 
 
 class CSSProcessor:
@@ -12,12 +11,11 @@ class CSSProcessor:
 
     _localdata_initialized = False
 
-    def __init__(self, css_path: str, prepend: Sequence[str] = ()):
+    def __init__(self, css_path: str):
         self.css_path = css_path
         self.base_path = os.path.dirname(css_path)
         self.imported_files: set[str] = set()
         self.css_content = self._read_css_file(css_path)
-        self.prepend = prepend
 
     def process(self) -> str:
         """
@@ -32,8 +30,6 @@ class CSSProcessor:
         css = self._process_imports(css)
         # Remove comments again after processing imports
         css = self._remove_comments(css)
-        # Prepend plugin stylesheets
-        css = "".join(CSSProcessor(path)._fragment() for path in self.prepend) + css
         # Extract and replace CSS variables
         css = self._extract_and_replace_variables(css)
         # Strip the leading dash from -qproperty-*, so editors treat it as a vendor
@@ -42,12 +38,6 @@ class CSSProcessor:
         # Resolve relative url() paths to absolute paths
         css = self._resolve_urls(css)
         return css
-
-    def _fragment(self) -> str:
-        css = self._remove_comments(self.css_content)
-        css = self._process_imports(css)
-        css = self._remove_comments(css)
-        return self._resolve_urls(css) + "\n"
 
     def _read_css_file(self, file_path: str) -> str:
         try:

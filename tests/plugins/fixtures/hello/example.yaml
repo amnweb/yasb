@@ -1,4 +1,0 @@
-hello:
-  type: "plugins.hello.HelloWidget"
-  options:
-    name: "YASB"

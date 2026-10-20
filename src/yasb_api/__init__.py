@@ -36,7 +36,7 @@ __all__ = [
 def data_dir(module: str) -> Path:
     plugin_id = plugin_id_for_module(module)
     if plugin_id is None:
-        raise ValueError(f"{module} is not part of a loaded YASB plugin; pass the plugin module's __name__")
+        raise ValueError(f"{module} is not part of a loaded YASB plugin, pass the plugin module's __name__")
     return plugin_data_dir(plugin_id)
 
 

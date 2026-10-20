@@ -38,8 +38,6 @@ def test_example_manifest_is_valid():
     assert manifest.id == PLUGIN_ID
     assert manifest.api == str(PLUGIN_API_VERSION)
     assert manifest.widgets == {"HelloWidget": "widget:HelloWidget"}
-    assert manifest.styles == "styles.css"
-    assert manifest.example_config == "example.yaml"
     assert manifest.slug == "hello"
     assert manifest.author == "YASB"
 
@@ -67,9 +65,6 @@ def test_unknown_manifest_fields_are_ignored():
         {"widgets": {"HelloWidget": "widget.HelloWidget"}},
         {"widgets": {"HelloWidget": ".widget:HelloWidget"}},
         {"widgets": {"Hello-Widget": "widget:HelloWidget"}},
-        {"styles": "../outside.css"},
-        {"styles": "C:/Windows/styles.css"},
-        {"example_config": "/example.yaml"},
     ],
     ids=lambda changes: json.dumps(changes),
 )

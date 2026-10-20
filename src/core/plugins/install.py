@@ -313,7 +313,7 @@ def update(plugin_id: str, root: Path, index: PluginIndex) -> tuple[str, Install
             if version_tuple(manifest.version) <= version_tuple(current):
                 return f"up to date ({current})", None
             installed = install_directory(plugin_dir, root, record, True)
-        return f"updated {current} -> {manifest.version} from {github.label}, which isn't reviewed", installed
+        return f"updated {current} -> {manifest.version} from {github.label}", installed
     if record.get("source") != "official":
         return f"installed from {record.get('path', 'a local folder')}, install it again to update it", None
     entry = index.plugins.get(plugin_id)
@@ -330,11 +330,10 @@ def update(plugin_id: str, root: Path, index: PluginIndex) -> tuple[str, Install
     return f"updated {current} -> {entry.version}", installed
 
 
-def remove(plugin_id: str, root: Path, purge_data: bool = False) -> Path:
+def remove(plugin_id: str, root: Path, purge_data: bool = False) -> None:
     plugin = installed_plugins(root).get(plugin_id)
     if plugin is None:
         raise PluginError(f'Plugin "{plugin_id}" is not installed')
     shutil.rmtree(plugin.directory)
     if purge_data:
         shutil.rmtree(plugin_data_path(plugin_id), ignore_errors=True)
-    return plugin.directory

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from core.plugins import config_edit, discovery, loader
+from core.plugins import cli, discovery, loader
 from core.plugins.loader import PluginLoader
 from core.widgets import registry
 from tests.plugins.helpers import FIXTURE, plugin_modules
@@ -36,5 +36,5 @@ def config_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     home.mkdir()
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "localappdata"))
     monkeypatch.setattr(discovery, "DEFAULT_CONFIG_DIRECTORY", str(home))
-    monkeypatch.setattr(config_edit, "DEFAULT_CONFIG_DIRECTORY", str(home))
+    monkeypatch.setattr(cli, "DEFAULT_CONFIG_DIRECTORY", str(home))
     return home

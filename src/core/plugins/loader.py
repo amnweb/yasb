@@ -4,7 +4,6 @@ import importlib.util
 import logging
 import os
 import sys
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType, TracebackType
@@ -81,22 +80,6 @@ class PluginLoader:
             return widget_cls
         available = ", ".join(sorted(plugin.widgets))
         raise PluginError(f'Plugin "{plugin_id}" has no widget "{class_name}" (it provides: {available})')
-
-    def stylesheets(self, plugin_ids: Iterable[str]) -> list[Path]:
-        discovered = self.discover()
-        paths: list[Path] = []
-        for plugin_id in dict.fromkeys(plugin_ids):
-            source = discovered.get(plugin_id)
-            if source is None or source.manifest is None or source.manifest.styles is None:
-                continue
-            path = source.directory / source.manifest.styles
-            if path.is_file():
-                paths.append(path)
-            else:
-                logging.warning(
-                    'Plugin "%s" lists styles "%s" but %s does not exist', plugin_id, source.manifest.styles, path
-                )
-        return paths
 
     def plugin_for_file(self, filename: str) -> str | None:
         path = os.path.normcase(filename)

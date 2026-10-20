@@ -1,8 +1,7 @@
 import re
-from pathlib import PurePath
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 PLUGIN_API_VERSION = 1
 MANIFEST_FILENAME = "manifest.json"
@@ -38,16 +37,8 @@ def version_tuple(version: str) -> tuple[int, ...]:
     return tuple(int(part) for part in re.findall(r"\d+", version)[:3])
 
 
-def _inside_plugin(path: str) -> str:
-    pure = PurePath(path)
-    if not pure.parts or pure.anchor or ".." in pure.parts:
-        raise ValueError("must be a relative path inside the plugin folder")
-    return path
-
-
 type WidgetName = Annotated[str, StringConstraints(pattern=rf"^{_IDENTIFIER}$")]
 type EntryPoint = Annotated[str, StringConstraints(pattern=rf"^{_IDENTIFIER}(?:\.{_IDENTIFIER})*:{_IDENTIFIER}$")]
-type PluginPath = Annotated[str, AfterValidator(_inside_plugin)]
 
 
 class PluginManifest(BaseModel):
@@ -61,8 +52,6 @@ class PluginManifest(BaseModel):
     api: str = Field(pattern=r"^\d+$")
     min_yasb: str = Field(pattern=r"^\d+\.\d+\.\d+$")
     widgets: dict[WidgetName, EntryPoint] = Field(min_length=1)
-    styles: PluginPath | None = None
-    example_config: PluginPath | None = None
 
     @property
     def slug(self) -> str:

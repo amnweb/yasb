@@ -20,6 +20,7 @@ import time
 import winreg
 from typing import Any
 
+from core.cli.format import Format
 from core.cli.pipe import CLI_SERVER_PIPE_NAME, LOG_SERVER_PIPE_NAME, read_message, write_message
 from core.utils.process import is_process_running
 from core.utils.win32.bindings.advapi32 import get_current_user_sid
@@ -50,19 +51,6 @@ YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
 
 EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
-
-
-class Format:
-    reset = "\033[0m"
-    green = "\033[92m"
-    yellow = "\033[93m"
-    red = "\033[91m"
-    red_bg = "\033[41m"
-    gray = "\033[90m"
-    blue = "\033[94m"
-    cyan = "\033[96m"
-    magenta = "\033[95m"
-    underline = "\033[4m"
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
