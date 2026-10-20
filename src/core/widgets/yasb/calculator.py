@@ -5,6 +5,7 @@ import re
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QGridLayout, QLabel, QPushButton, QVBoxLayout
 
+from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import PopupWidget
 from core.validation.widgets.yasb.calculator import CalculatorConfig
 from core.widgets.base import BaseWidget
@@ -61,10 +62,11 @@ class CalculatorWidget(BaseWidget):
     # Popup
     # ------------------------------------------------------------------
     def _toggle_menu(self):
-        if self._menu is not None and self._menu.isVisible():
+        if is_valid_qobject(self._menu) and self._menu.isVisible():
             self._menu.hide()
             self._menu = None
             return
+        self._menu = None
         self._show_menu()
 
     def _show_menu(self):
