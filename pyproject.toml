@@ -63,17 +63,17 @@ Changelog = "https://github.com/amnweb/yasb/releases/latest"
 dev = [
     "YASB[test,packaging]",
     "pre-commit",
-    "ruff>=0.15.0",
+    "ruff==0.17.1",
     "pyright==1.1.414",
     "pyqt6-stubs==20250824",
     "pycaw-stubs==20260927.20261008",
     "types-pillow==10.2.0.20240822",
 ]
 test = [
-    "pytest>=9.1",
+    "pytest==9.1.1",
 ]
 packaging = [
-    "cx-freeze==8.7.2"
+    "cx-freeze==8.6.4"
 ]
 [tool.hatch.metadata]
 allow-direct-references = true
