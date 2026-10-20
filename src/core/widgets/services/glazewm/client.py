@@ -142,9 +142,9 @@ class GlazewmClient(QObject):
             return
 
         if response.get("messageType") == MessageType.EVENT_SUBSCRIPTION:
-            self._websocket.sendTextMessage(QueryType.MONITORS)
-            self._websocket.sendTextMessage(QueryType.TILING_DIRECTION)
-            self._websocket.sendTextMessage(QueryType.BINDING_MODES)
+            for message in self.initial_messages:
+                if message in QueryType:
+                    self._websocket.sendTextMessage(message)
         elif response.get("messageType") == MessageType.CLIENT_RESPONSE:
             raw_data: Any = response.get("data")
             if not isinstance(raw_data, dict):
