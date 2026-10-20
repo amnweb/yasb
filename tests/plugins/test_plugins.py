@@ -57,6 +57,8 @@ def test_unknown_manifest_fields_are_ignored():
         {"id": "hello-"},
         {"author": ""},
         {"name": ""},
+        {"description": ""},
+        {"description": "x" * 71},
         {"version": "1.0"},
         {"api": "one"},
         {"api": 1},
@@ -73,7 +75,7 @@ def test_invalid_manifest_is_rejected(changes: dict[str, Any]):
         PluginManifest.model_validate(manifest_data(**changes))
 
 
-@pytest.mark.parametrize("field", ["id", "name", "version", "author", "api", "min_yasb", "widgets"])
+@pytest.mark.parametrize("field", ["id", "name", "version", "author", "description", "api", "min_yasb", "widgets"])
 def test_required_manifest_field(field: str):
     data = manifest_data()
     del data[field]

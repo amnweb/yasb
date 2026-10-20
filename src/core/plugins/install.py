@@ -39,6 +39,7 @@ GITHUB_PATTERN = re.compile(
 )
 
 type Confirm = Callable[[PluginManifest, str], bool]
+type ConfirmReplace = Callable[[PluginManifest], bool]
 
 
 class InstallCancelled(Exception):
@@ -222,6 +223,15 @@ def read_install_record(directory: Path) -> dict[str, Any]:
     return cast(dict[str, Any], record) if isinstance(record, dict) else {}
 
 
+def _origin(record: dict[str, Any]) -> str:
+    source = str(record.get("source", "local"))
+    if source == "github":
+        return "github:" + str(record.get("url", "")).partition("@")[0].lower()
+    if source in ("local", "zip"):
+        return f"{source}:{os.path.normcase(str(record.get('path', '')))}"
+    return source
+
+
 def is_official(directory: Path) -> bool:
     return read_install_record(directory).get("source") == "official"
 
@@ -230,14 +240,24 @@ def installed_plugins(root: Path) -> dict[str, DiscoveredPlugin]:
     return discover_plugins(root, log_errors=False)
 
 
-def install_directory(source: Path, root: Path, record: dict[str, Any], replace: bool = False) -> Installed:
+def install_directory(
+    source: Path,
+    root: Path,
+    record: dict[str, Any],
+    replace: bool = False,
+    confirm_replace: ConfirmReplace | None = None,
+) -> Installed:
     key, found = read_manifest(source)
     if found.manifest is None:
         raise PluginError(f'Plugin "{key}" {found.error}')
     manifest = found.manifest
     existing = installed_plugins(root).get(manifest.id)
     target = existing.directory if existing else root / manifest.id
-    if target.exists() and not replace:
+    different = target.exists() and _origin(read_install_record(target)) != _origin(record)
+    if different and confirm_replace is not None:
+        if not confirm_replace(manifest):
+            raise InstallCancelled
+    elif target.exists() and not replace:
         raise PluginError(
             f'Plugin "{manifest.id}" is already installed in {target}. '
             "Use `yasbc plugin update` or add --force to replace it."
@@ -266,24 +286,31 @@ def is_local_source(source: str) -> bool:
     return "/" in source or "\\" in source or source.lower().endswith(".zip") or source in (".", "..")
 
 
-def install(source: str, root: Path, replace: bool = False, confirm: Confirm | None = None) -> Installed:
+def install(
+    source: str,
+    root: Path,
+    replace: bool = False,
+    confirm: Confirm | None = None,
+    confirm_replace: ConfirmReplace | None = None,
+) -> Installed:
     if github := github_source(source):
         with tempfile.TemporaryDirectory(prefix="yasb-plugin-") as temp:
             plugin_dir, manifest = _from_github(github, Path(temp))
             if confirm is not None and not confirm(manifest, github.label):
                 raise InstallCancelled
-            return install_directory(plugin_dir, root, {"source": "github", "url": github.label}, replace)
+            record = {"source": "github", "url": github.label}
+            return install_directory(plugin_dir, root, record, replace, confirm_replace)
     if is_local_source(source):
         local = Path(source).expanduser()
         if local.is_dir():
-            return install_directory(
-                _plugin_root(local), root, {"source": "local", "path": str(local.resolve())}, replace
-            )
+            record = {"source": "local", "path": str(local.resolve())}
+            return install_directory(_plugin_root(local), root, record, replace, confirm_replace)
         if not local.is_file():
             raise PluginError(f"{local} does not exist")
         with tempfile.TemporaryDirectory(prefix="yasb-plugin-") as temp:
             plugin_dir = extract_zip(local.read_bytes(), Path(temp))
-            return install_directory(plugin_dir, root, {"source": "zip", "path": str(local.resolve())}, replace)
+            record = {"source": "zip", "path": str(local.resolve())}
+            return install_directory(plugin_dir, root, record, replace, confirm_replace)
     if not is_plugin_id(source):
         raise PluginError(
             f'"{source}" is not a plugin name. Names use lowercase letters, digits and "-", like "lyrics". '
@@ -292,7 +319,8 @@ def install(source: str, root: Path, replace: bool = False, confirm: Confirm | N
     entry = _official_entry(fetch_index(), source)
     with tempfile.TemporaryDirectory(prefix="yasb-plugin-") as temp:
         plugin_dir = _download(source, entry, Path(temp))
-        return install_directory(plugin_dir, root, {"source": "official", "version": entry.version}, replace)
+        record = {"source": "official", "version": entry.version}
+        return install_directory(plugin_dir, root, record, replace, confirm_replace)
 
 
 def update(plugin_id: str, root: Path, index: PluginIndex) -> tuple[str, Installed | None]:

@@ -1,5 +1,6 @@
 import argparse
 import io
+import shutil
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -9,14 +10,50 @@ import yaml
 
 from core.cli.format import Format
 from core.plugins import install as installer
+from core.plugins import template
 from core.plugins.discovery import plugins_dir
-from core.plugins.manifest import PluginError, PluginManifest, plugin_id_of
+from core.plugins.manifest import (
+    DESCRIPTION_MAX_LENGTH,
+    PluginError,
+    PluginManifest,
+    is_plugin_id,
+    plugin_id_of,
+)
 from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME
 
 
 def _confirm(question: str, default: bool = True) -> bool:
     answer = input(f"{question} ({'Y/n' if default else 'y/N'}): ").strip().lower()
     return default if not answer else answer in ("y", "yes")
+
+
+def _ask(title: str, explanation: str, check: Callable[[str], str | None] | None = None) -> str:
+    print(f"\n{title}\n{explanation}")
+    while True:
+        if not (answer := input("> ").strip()):
+            if sys.stdout.isatty():
+                # ANSI: back to the start of the previous line, then clear it
+                print("\033[F\033[K", end="", flush=True)
+            continue
+        if (problem := check(answer) if check else None) is None:
+            return answer
+        print(f"{Format.red}{problem}{Format.reset}")
+
+
+def _print_table(headers: list[str], rows: list[list[str]]) -> None:
+    widths = [max(len(row[column]) for row in (headers, *rows)) for column in range(len(headers) - 1)]
+    room = max(shutil.get_terminal_size().columns - sum(widths) - 2 * len(widths) - 1, 20)
+    last_width = min(max(len(row[-1]) for row in (headers, *rows)), room)
+
+    def line(row: list[str]) -> str:
+        *cells, last = row
+        last = last if len(last) <= room else last[: room - 3] + "..."
+        return "  ".join([*(cell.ljust(width) for cell, width in zip(cells, widths, strict=True)), last]).rstrip()
+
+    print(line(headers))
+    print("-" * (sum(widths) + 2 * len(widths) + last_width))
+    for row in rows:
+        print(line(row))
 
 
 def _widgets_using(plugin_id: str) -> list[str]:
@@ -36,8 +73,12 @@ def cmd_install(root: Path, source: str, force: bool, assume_yes: bool) -> int:
         )
         return assume_yes or _confirm("Install it?", default=False)
 
+    def confirm_replace(manifest: PluginManifest) -> bool:
+        print(f'"{manifest.id}" is already installed. This is a different plugin with the same ID.')
+        return assume_yes or _confirm("Replace it?", default=False)
+
     try:
-        installed = installer.install(source, root, replace=force, confirm=confirm)
+        installed = installer.install(source, root, replace=force, confirm=confirm, confirm_replace=confirm_replace)
     except installer.InstallCancelled:
         print("Nothing was installed.")
         return 1
@@ -57,15 +98,20 @@ def cmd_list(root: Path) -> int:
     if not plugins:
         print(f"No plugins installed in {root}")
         return 0
-    width = max(len(plugin_id) for plugin_id in plugins)
+    rows: list[list[str]] = []
+    skipped: list[str] = []
     for plugin_id, plugin in plugins.items():
         if plugin.manifest is None:
-            print(f"{plugin_id:<{width}}  skipped: it {plugin.error}")
+            skipped.append(f"{plugin_id} was skipped: it {plugin.error}")
             continue
         record = installer.read_install_record(plugin.directory)
         origins = {"official": "official repository", "github": str(record.get("url", "GitHub"))}
-        origin = origins.get(str(record.get("source")), f"local: {record.get('path', '?')}")
-        print(f"{plugin_id:<{width}}  {plugin.manifest.version:<10}  {origin}")
+        origin = origins.get(str(record.get("source")), f"local: {record['path']}" if "path" in record else "local")
+        rows.append([plugin_id, plugin.manifest.name, plugin.manifest.version, origin])
+    if rows:
+        _print_table(["ID", "Name", "Version", "Source"], rows)
+    for message in skipped:
+        print(f"{Format.yellow}{message}{Format.reset}")
     return 0
 
 
@@ -113,10 +159,55 @@ def cmd_search(query: str) -> int:
     if not matches:
         print("No plugins found.")
         return 0
-    for plugin_id, entry in matches.items():
-        disabled = "  (temporarily disabled)" if entry.disabled else ""
-        print(f"{plugin_id}  {entry.version}  by {entry.author}{disabled}\n    {entry.description or entry.name}")
-    print("\nInstall one with `yasbc plugin install <name>`.")
+    rows = [
+        [
+            plugin_id,
+            entry.name,
+            f"{entry.version} (disabled)" if entry.disabled else entry.version,
+            entry.author,
+            entry.description,
+        ]
+        for plugin_id, entry in matches.items()
+    ]
+    _print_table(["ID", "Name", "Version", "Author", "Description"], rows)
+    print("\nInstall one with `yasbc plugin install <id>`.")
+    return 0
+
+
+def cmd_create(root: Path) -> int:
+    def check_id(answer: str) -> str | None:
+        if not is_plugin_id(answer) or not answer[0].isalpha():
+            return "Use lowercase letters, digits and -, starting with a letter, like now-playing."
+        if (root / answer).exists():
+            return f"{root / answer} already exists."
+        return None
+
+    def check_description(answer: str) -> str | None:
+        if len(answer) > DESCRIPTION_MAX_LENGTH:
+            return f"Keep it to {DESCRIPTION_MAX_LENGTH} characters, this one has {len(answer)}."
+        return None
+
+    print("Create a new YASB plugin. All answers are required.")
+    plugin_id = _ask(
+        "Plugin ID:",
+        "ID Used in `yasbc plugin install <id>`, in config.yaml, and as the folder name.\n"
+        "Lowercase letters, digits and -, for example: now-playing",
+        check_id,
+    )
+    name = _ask(
+        "Name:",
+        "The name people see in `yasbc plugin search` and `yasbc plugin list`.\nFor example: Now Playing",
+    )
+    author = _ask("Author:", "Your name or GitHub username.")
+    description = _ask(
+        "Description:",
+        f"One sentence about what your widget does, up to {DESCRIPTION_MAX_LENGTH} characters.\n"
+        "For example: Shows the song that's playing in Spotify.",
+        check_description,
+    )
+    directory = template.create_plugin(root, plugin_id, name, author, description)
+    print(f"\nCreated {plugin_id} in {directory}")
+    print(f"Add it to {DEFAULT_CONFIG_FILENAME} as README.md shows, then run `yasbc reload`.")
     return 0
 
 
@@ -135,7 +226,7 @@ def _parser() -> argparse.ArgumentParser:
         help='A plugin name from the official repository, like "lyrics", github.com/owner/repo, or a folder or .zip',
     )
     install.add_argument("-f", "--force", action="store_true", help="Replace the plugin if it is already installed")
-    install.add_argument("-y", "--yes", action="store_true", help="Don't ask before installing a plugin from GitHub")
+    install.add_argument("-y", "--yes", action="store_true", help="Answer yes to every question")
 
     commands.add_parser("list", help="List installed plugins")
 
@@ -149,6 +240,8 @@ def _parser() -> argparse.ArgumentParser:
 
     search = commands.add_parser("search", help="Search the official plugin repository")
     search.add_argument("query", nargs="?", default="", help="Words to look for in the name, author or description")
+
+    commands.add_parser("create", help="Create a new plugin in the plugins folder, step by step")
 
     commands.add_parser("path", help="Print the plugins folder")
     return parser
@@ -172,6 +265,7 @@ def run(argv: list[str]) -> int:
         "remove": lambda a: cmd_remove(root, a.plugin, a.purge, a.yes),
         "update": lambda a: cmd_update(root, a.plugin),
         "search": lambda a: cmd_search(a.query),
+        "create": lambda a: cmd_create(root),
         "path": lambda a: cmd_path(root),
     }
     try:
@@ -180,6 +274,6 @@ def run(argv: list[str]) -> int:
     except (PluginError, OSError) as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
-    except KeyboardInterrupt:
+    except KeyboardInterrupt, EOFError:
         print("\nCancelled.", file=sys.stderr)
         return 1

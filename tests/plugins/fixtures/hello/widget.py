@@ -14,7 +14,7 @@ class HelloWidget(BaseWidget):
     validation_schema = HelloConfig
 
     def __init__(self, config: HelloConfig):
-        super().__init__(class_name="hello-widget")
+        super().__init__(class_name="plugin-hello")
         self.label = QLabel(greeting(config.name))
         self.label.setProperty("class", "label")
         self.widget_layout.addWidget(self.label)

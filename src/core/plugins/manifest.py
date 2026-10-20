@@ -7,6 +7,7 @@ PLUGIN_API_VERSION = 1
 MANIFEST_FILENAME = "manifest.json"
 PLUGIN_TYPE_PREFIX = "plugins."
 PLUGIN_ID_PATTERN = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
+DESCRIPTION_MAX_LENGTH = 70
 _IDENTIFIER = r"[A-Za-z_][A-Za-z0-9_]*"
 
 
@@ -48,7 +49,7 @@ class PluginManifest(BaseModel):
     name: str = Field(min_length=1)
     version: str = Field(pattern=r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
     author: str = Field(min_length=1)
-    description: str = ""
+    description: str = Field(min_length=1, max_length=DESCRIPTION_MAX_LENGTH)
     api: str = Field(pattern=r"^\d+$")
     min_yasb: str = Field(pattern=r"^\d+\.\d+\.\d+$")
     widgets: dict[WidgetName, EntryPoint] = Field(min_length=1)

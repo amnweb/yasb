@@ -2,6 +2,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -15,11 +16,16 @@ from core.cli.format import Format
 from core.plugins import cli, install
 from core.plugins.discovery import plugin_data_path
 from core.plugins.manifest import PLUGIN_API_VERSION, PluginError, PluginManifest
+from core.plugins.template import create_plugin
 from tests.plugins.helpers import FIXTURE, PLUGIN_ID, WIDGET_TYPE, write_manifest, zip_folder
 from tests.support.source import SRC_ROOT
 
 INDEX_URL = "https://plugins.test/index.json"
 UNREVIEWED = "This plugin isn't from the official repository. Use it only if you trust the author."
+
+
+def _rows(out: str) -> list[list[str]]:
+    return [re.split(r" {2,}", line.strip()) for line in out.splitlines() if line.strip()]
 
 
 class FakeRepository:
@@ -361,13 +367,16 @@ def test_remove_a_plugin_that_is_not_installed(root: Path):
 # --- yasbc plugin ----------------------------------------------------------------------
 
 
-def test_cli_local_install_warns_and_lists(root: Path, capsys: pytest.CaptureFixture[str]):
+def test_cli_local_install_warns_and_lists(
+    root: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    monkeypatch.setenv("COLUMNS", "300")
     assert cli.run(["install", str(FIXTURE)]) == 0
     out = capsys.readouterr().out
     assert out == f"Installed {PLUGIN_ID} 1.0.0 by YASB.\n{Format.yellow}{UNREVIEWED}{Format.reset}\n"
 
     assert cli.run(["list"]) == 0
-    assert f"{PLUGIN_ID}  1.0.0       local: {FIXTURE.resolve()}" in capsys.readouterr().out
+    assert [PLUGIN_ID, "Hello", "1.0.0", f"local: {FIXTURE.resolve()}"] in _rows(capsys.readouterr().out)
 
     assert cli.run(["remove", PLUGIN_ID, "-y"]) == 0
     assert cli.run(["remove", PLUGIN_ID, "-y"]) == 1
@@ -404,7 +413,56 @@ def test_cli_official_install(root: Path, repo: FakeRepository, capsys: pytest.C
     assert UNREVIEWED not in out
 
     cli.run(["list"])
-    assert f"{PLUGIN_ID}  1.0.0       official repository" in capsys.readouterr().out
+    assert [PLUGIN_ID, "Hello", "1.0.0", "official repository"] in _rows(capsys.readouterr().out)
+
+
+def test_cli_asks_before_replacing_a_different_plugin_with_the_same_id(
+    root: Path, repo: FakeRepository, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    repo.publish()
+    cli.run(["install", PLUGIN_ID])
+    answers = iter(["n", "y"])
+
+    def answer(prompt: str) -> str:
+        return next(answers)
+
+    monkeypatch.setattr("builtins.input", answer)
+    capsys.readouterr()
+
+    assert cli.run(["install", str(FIXTURE), "--force"]) == 1
+    out = capsys.readouterr().out
+    assert f'"{PLUGIN_ID}" is already installed. This is a different plugin with the same ID.' in out
+    assert "Nothing was installed." in out
+    assert install.is_official(root / PLUGIN_ID)
+
+    assert cli.run(["install", str(FIXTURE)]) == 0
+    assert not install.is_official(root / PLUGIN_ID)
+
+
+def test_cli_asks_before_replacing_a_plugin_made_with_create(root: Path, monkeypatch: pytest.MonkeyPatch):
+    create_plugin(root, PLUGIN_ID, "Hello", "jdoe", "Says hello")
+
+    def answer(prompt: str) -> str:
+        return "n"
+
+    monkeypatch.setattr("builtins.input", answer)
+
+    assert cli.run(["install", str(FIXTURE), "--force"]) == 1
+    assert (root / PLUGIN_ID / "README.md").is_file()
+
+
+def test_cli_reinstalling_the_same_plugin_does_not_ask(
+    root: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    def no_questions(prompt: str) -> str:
+        raise AssertionError(prompt)
+
+    monkeypatch.setattr("builtins.input", no_questions)
+    cli.run(["install", str(FIXTURE)])
+
+    assert cli.run(["install", str(FIXTURE)]) == 1
+    assert "already installed" in capsys.readouterr().err
+    assert cli.run(["install", str(FIXTURE), "--force"]) == 0
 
 
 def test_cli_github_install_asks_and_defaults_to_no(
@@ -433,7 +491,7 @@ def test_cli_github_install_with_yes(root: Path, repo: FakeRepository, capsys: p
     assert capsys.readouterr().out.count(UNREVIEWED) == 1
 
     cli.run(["list"])
-    assert f"{PLUGIN_ID}  1.0.0       github.com/{GITHUB_REPO}" in capsys.readouterr().out
+    assert [PLUGIN_ID, "Hello", "1.0.0", f"github.com/{GITHUB_REPO}"] in _rows(capsys.readouterr().out)
 
 
 def test_cli_list_explains_skipped_plugins(root: Path, capsys: pytest.CaptureFixture[str]):
@@ -442,7 +500,7 @@ def test_cli_list_explains_skipped_plugins(root: Path, capsys: pytest.CaptureFix
 
     cli.run(["list"])
 
-    assert f"{PLUGIN_ID}  skipped: it targets plugin API 2" in capsys.readouterr().out
+    assert f"{PLUGIN_ID} was skipped: it targets plugin API 2" in capsys.readouterr().out
 
 
 def test_cli_search(repo: FakeRepository, tmp_path: Path, capsys: pytest.CaptureFixture[str]):
@@ -453,9 +511,24 @@ def test_cli_search(repo: FakeRepository, tmp_path: Path, capsys: pytest.Capture
 
     assert cli.run(["search", "rowan"]) == 0
 
-    out = capsys.readouterr().out
-    assert "lyrics  2.0.0  by Rowan  (temporarily disabled)\n    Synced lyrics" in out
-    assert "hello" not in out
+    rows = _rows(capsys.readouterr().out)
+    assert rows[0] == ["ID", "Name", "Version", "Author", "Description"]
+    assert rows[2] == ["lyrics", "Lyrics", "2.0.0 (disabled)", "Rowan", "Synced lyrics"]
+    assert not any("hello" in row for row in rows)
+
+
+def test_cli_search_cuts_long_descriptions_to_the_window(
+    repo: FakeRepository, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    monkeypatch.setenv("COLUMNS", "60")
+    lyrics = _version(tmp_path, "2.0.0")
+    write_manifest(lyrics, id="lyrics", version="2.0.0", name="Lyrics", author="Rowan", description="Synced " * 10)
+    repo.publish(lyrics)
+
+    cli.run(["search", "lyrics"])
+
+    row = next(line for line in capsys.readouterr().out.splitlines() if line.startswith("lyrics"))
+    assert row.endswith("...") and len(row) <= 60
 
 
 def test_cli_update_reports_each_plugin(root: Path, repo: FakeRepository, capsys: pytest.CaptureFixture[str]):
