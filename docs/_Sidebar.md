@@ -45,6 +45,7 @@
     - [Media Lite](./(Widget)-Media-Lite)
     - [Memory](./(Widget)-Memory)
     - [Microphone](./(Widget)-Microphone)
+    - [Microsoft Teams Status](./(Widget)-MS-Teams-Status)
     - [Notes](./(Widget)-Notes)
     - [Notifications](./(Widget)-Notifications)
     - [OBS](./(Widget)-Obs)
