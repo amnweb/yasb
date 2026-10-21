@@ -54,10 +54,14 @@ class ControlCenterSliderConfig(CustomBaseModel):
     source_selector_icon: str = "\ue972"
 
 
+class ControlCenterVolumeSliderConfig(ControlCenterSliderConfig):
+    show_app_mixer: bool = True
+
+
 class SlidersSectionConfig(CustomBaseModel):
     show: bool = True
     brightness: ControlCenterSliderConfig = ControlCenterSliderConfig(icon="\ue706")
-    volume: ControlCenterSliderConfig = ControlCenterSliderConfig(icon="\ue767")
+    volume: ControlCenterVolumeSliderConfig = ControlCenterVolumeSliderConfig(icon="\ue767")
     microphone: ControlCenterSliderConfig = ControlCenterSliderConfig(icon="\ue720")
 
 

@@ -1,11 +1,12 @@
 import logging
+import time
 from collections.abc import Callable
 from functools import partial
 from typing import override
 
 from pycaw.api.endpointvolume import IAudioEndpointVolume
 from PyQt6.QtCore import QEvent, QObject, QPoint, Qt
-from PyQt6.QtGui import QAction, QWheelEvent
+from PyQt6.QtGui import QAction, QMouseEvent, QWheelEvent
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -22,8 +23,13 @@ from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
 from core.utils.win32.bindings.user32 import user32
 from core.utils.win32.utils import apply_qmenu_style
-from core.validation.widgets.yasb.control_center import ControlCenterSliderConfig, SlidersSectionConfig
+from core.validation.widgets.yasb.control_center import (
+    ControlCenterSliderConfig,
+    ControlCenterVolumeSliderConfig,
+    SlidersSectionConfig,
+)
 from core.widgets.services.brightness.service import BrightnessService
+from core.widgets.services.control_center.sections.app_mixer import AppMixerMenu
 from core.widgets.services.microphone.service import AudioInputService
 from core.widgets.services.volume.service import AudioOutputService
 
@@ -56,6 +62,9 @@ class SlidersSectionWidget(QFrame):
         self._volume_value_label: QLabel | None = None
         self._volume_source_btn: QPushButton | None = None
         self._volume_source_menu: QMenu | None = None
+        self._volume_icon: QLabel | None = None
+        self._app_mixer_menu: QMenu | None = None
+        self._app_mixer_closed_at = 0.0
         self._microphone_slider: QSlider | None = None
         self._microphone_value_label: QLabel | None = None
         self._microphone_source_btn: QPushButton | None = None
@@ -140,6 +149,12 @@ class SlidersSectionWidget(QFrame):
         icon_label = QLabel(slider_config.icon, row)
         icon_label.setProperty("class", "icon")
         icon_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        if isinstance(slider_config, ControlCenterVolumeSliderConfig) and slider_config.show_app_mixer:
+            icon_label.setCursor(Qt.CursorShape.PointingHandCursor)
+            icon_label.installEventFilter(self)
+            if self._tooltip:
+                set_tooltip(icon_label, "Volume mixer", position="top")
+            self._volume_icon = icon_label
         layout.addWidget(icon_label)
 
         slider = QSlider(Qt.Orientation.Horizontal, row)
@@ -292,6 +307,31 @@ class SlidersSectionWidget(QFrame):
         if service.set_default_device(device_id):
             self.refresh_popup()
 
+    def _show_app_mixer_menu(self) -> None:
+        if self._app_mixer_menu and is_valid_qobject(self._app_mixer_menu) and self._app_mixer_menu.isVisible():
+            self._app_mixer_menu.close()
+            return
+        # The click that closed the menu reaches the icon too; don't reopen it.
+        if time.monotonic() - self._app_mixer_closed_at < 0.25:
+            return
+
+        icon = self._volume_icon
+        row = icon.parentWidget() if icon is not None else None
+        panel = self.window()
+        if row is None or panel is None or self._output_service is None:
+            return
+        # Drop down from the volume row, as wide as the row, and never past the panel's bottom edge.
+        pos = row.mapToGlobal(QPoint(0, row.height()))
+        panel_bottom = panel.mapToGlobal(QPoint(0, panel.height())).y()
+
+        menu = AppMixerMenu(panel, self._output_service, width=row.width(), max_height=panel_bottom - pos.y())
+        menu.aboutToHide.connect(self._on_app_mixer_hidden)
+        self._app_mixer_menu = menu
+        menu.popup(pos)
+
+    def _on_app_mixer_hidden(self) -> None:
+        self._app_mixer_closed_at = time.monotonic()
+
     def _show_microphone_source_menu(self):
         if (
             self._microphone_source_menu
@@ -380,6 +420,14 @@ class SlidersSectionWidget(QFrame):
 
     @override
     def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        if (
+            a0 is self._volume_icon
+            and isinstance(a1, QMouseEvent)
+            and a1.type() == QEvent.Type.MouseButtonRelease
+            and a1.button() == Qt.MouseButton.LeftButton
+        ):
+            self._show_app_mixer_menu()
+            return True
         if (
             isinstance(a1, QWheelEvent)
             and isinstance(a0, QSlider)
