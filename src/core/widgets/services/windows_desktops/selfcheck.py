@@ -66,7 +66,7 @@ def pump(seconds: float = 1.2) -> None:
 
 def main(full: bool = False) -> int:
     from core.widgets.services.windows_desktops import interfaces as vd
-    from core.widgets.services.windows_desktops.com import get_api
+    from core.widgets.services.windows_desktops.com import VirtualDesktopError, get_api
     from core.widgets.services.windows_desktops.notification import DesktopEvent, DesktopNotificationListener
 
     version = sys.getwindowsversion()
@@ -111,9 +111,22 @@ def main(full: bool = False) -> int:
         record("read window pin state", lambda: api.is_view_pinned(view))
         record("read app pin state", lambda: api.is_app_pinned(view))
 
+    def populated_numbers() -> str:
+        populated = api.populated_guids()
+        return ", ".join(str(d.number) for d in desktops or [] if d.guid in populated) or "none"
+
+    record("desktops with windows", populated_numbers)
+
     events: list[DesktopEvent] = []
     listener = DesktopNotificationListener(events.append, api)
     registered = record("register for notifications", listener.start)
+
+    def require_view_changes() -> None:
+        if not listener.views_active:
+            raise VirtualDesktopError("RegisterForApplicationViewChanges failed, see the warning above")
+
+    if registered:
+        record("register for window changes", require_view_changes)
 
     if full and desktops and current and registered:
         print("\n--- full mode: creating a scratch desktop ---")

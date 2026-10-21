@@ -196,6 +196,7 @@ UNDOCUMENTED_INTERFACES: dict[str, str] = {
     "core.utils.win32.bindings.shell32.IQuietHoursSettings": "undocumented shell interface",
     "core.utils.win32.bindings.shell32.ITipInvocation": "undocumented shell interface",
     "core.widgets.services.windows_desktops.interfaces.IApplicationView": "undocumented shell interface",
+    "core.widgets.services.windows_desktops.interfaces.IApplicationViewChangeListener": "undocumented shell interface",
     "core.widgets.services.windows_desktops.interfaces.IApplicationViewCollection": "undocumented shell interface",
     "core.widgets.services.windows_desktops.interfaces.IVirtualDesktop2": "undocumented shell interface",
     "core.widgets.services.windows_desktops.interfaces.IVirtualDesktopNotificationService": "undocumented shell interface",
