@@ -389,10 +389,7 @@ class ServerMonitor(BaseWidget):
                     self._animations.append(animation)  # Store animation reference
 
                 row_widget.setProperty("class", f"row {class_name}")
-                _server_url = (
-                    f"https://{server_data['url']}" if self.config.ssl_check else f"http://{server_data['url']}"
-                )
-                self._bind_open_url(row_widget, _server_url)
+                self._bind_open_url(row_widget, server_data["url"])
                 row_widget_layout = QVBoxLayout(row_widget)
                 row_widget_layout.setContentsMargins(0, 0, 0, 0)
                 row_widget_layout.setSpacing(0)

@@ -5,7 +5,7 @@ Monitors a list of remote servers to make sure they are online and their SSL cer
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`           | string  | `'{icon}'`                        | The format string for the widget. |
-| `label_alt`       | string  | `'{online}/{offline} of {total} servers'`        | The alternative format string for the widget. |
+| `label_alt`       | string  | `'{online}/{offline} of {total}'`        | The alternative format string for the widget. |
 | `update_interval` | integer | `300`                                                                  | The interval in seconds to update the widget. Must be between 10 and 36000.   |
 | `tooltip`         | boolean | `true`                                                                 | Whether to show the tooltip. |
 | `ssl_check`       | boolean | `true`                                                                 | Whether to check SSL certificates. |
@@ -88,6 +88,10 @@ icons:
             url: google.com
           - name: Yahoo
             url: subdomain.yahoo.com
+          - name: Home Server
+            url: https://192.168.1.20:8443
+          - name: Router
+            url: http://192.168.1.1
         menu:
           blur: True
           round_corners: True
@@ -108,14 +112,14 @@ icons:
 - **tooltip:** Whether to show the tooltip.
 - **ssl_check:** Whether to check SSL certificates.
 - **ssl_warning:** The number of days before expiration to show SSL warnings (1-365).
-- **ssl_verify:** Whether to verify SSL certificates. If you have self-signed certificates, you may need to set this to `false`.
+- **ssl_verify:** Whether a server with an untrusted certificate (self-signed, expired, or for another hostname) shows as Offline. Set it to `false` for self-signed certificates. The SSL days are shown either way.
 - **desktop_notifications:** Desktop notification settings. Show desktop notifications for SSL warnings and offline servers.
   - **ssl:** Show a notification for SSL certificate warnings.
   - **offline:** Show a notification when a server goes offline.
 - **timeout:** The timeout in seconds for server checks. Must be between 1 and 30.
 - **servers:** A list of server entries. Each entry has:
   - **name:** The display name shown in the menu.
-  - **url:** The server hostname to check.
+  - **url:** The server to check. Use a hostname (`example.com`), a hostname with a port (`example.com:8443`), or a full URL (`http://192.168.1.10:8080`). Without `http://` or `https://`, the widget uses `https://` when `ssl_check` is `true` and `http://` when it is `false`. A server written with `http://` is never SSL checked, so use it for servers that don't support HTTPS, such as a router, or to skip the SSL check for one server.
 - **menu:** A dictionary specifying the menu settings for the widget. It contains the following keys:
   - **blur:** Enable blur effect for the menu.
   - **round_corners:** Enable round corners for the menu (this option is not supported on Windows 10).

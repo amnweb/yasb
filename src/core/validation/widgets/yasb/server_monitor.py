@@ -46,7 +46,7 @@ class ServerMonitorCallbacksConfig(CallbacksConfig):
 
 class ServerMonitorConfig(CustomBaseModel):
     label: str = "{icon}"
-    label_alt: str = "{online}/{offline} of {total} servers"
+    label_alt: str = "{online}/{offline} of {total}"
     update_interval: int = Field(default=300, ge=10, le=36000)
     tooltip: bool = True
     servers: list[ServerEntryConfig] = []

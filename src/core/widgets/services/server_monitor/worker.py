@@ -1,15 +1,61 @@
+import http.client
 import logging
 import socket
 import ssl
 import urllib.error
 import urllib.request
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, override
-from urllib.parse import urlparse
+from urllib.parse import urlsplit
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 logger = logging.getLogger("server_monitor")
+
+_DER_EXPLICIT_VERSION = 0xA0
+_DER_UTC_TIME = 0x17
+
+
+def _build_url(server: str, ssl_check: bool) -> str:
+    if "://" in server:
+        return server
+    return f"{'https' if ssl_check else 'http'}://{server}"
+
+
+def _ssl_context(verify: bool) -> ssl.SSLContext:
+    context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    if not verify:
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+    return context
+
+
+def _read_tlv(data: bytes, pos: int) -> tuple[int, int, int]:
+    tag = data[pos]
+    length = data[pos + 1]
+    pos += 2
+    if length & 0x80:
+        size = length & 0x7F
+        length = int.from_bytes(data[pos : pos + size], "big")
+        pos += size
+    return tag, pos, pos + length
+
+
+def _cert_not_after(der: bytes) -> datetime:
+    _, pos, _ = _read_tlv(der, 0)
+    _, pos, _ = _read_tlv(der, pos)
+    tag, _, end = _read_tlv(der, pos)
+    if tag == _DER_EXPLICIT_VERSION:
+        pos = end
+    # X.509 TBSCertificate: serialNumber, signature, issuer, then validity (notBefore, notAfter)
+    for _ in range(3):
+        _, _, pos = _read_tlv(der, pos)
+    _, pos, _ = _read_tlv(der, pos)
+    _, _, pos = _read_tlv(der, pos)
+    tag, start, end = _read_tlv(der, pos)
+    fmt = "%y%m%d%H%M%SZ" if tag == _DER_UTC_TIME else "%Y%m%d%H%M%SZ"
+    return datetime.strptime(der[start:end].decode("ascii"), fmt).replace(tzinfo=UTC)
 
 
 class ServerCheckWorker(QThread):
@@ -57,7 +103,7 @@ class ServerCheckWorker(QThread):
             logger.warning("No internet connection detected, skipping server checks")
             server_statuses: list[dict[str, Any]] = [
                 {
-                    "url": s["url"],
+                    "url": _build_url(s["url"], self.ssl_check),
                     "name": s["name"],
                     "status": "Offline",
                     "response_time": None,
@@ -83,10 +129,11 @@ class ServerCheckWorker(QThread):
         self.status_updated.emit(server_statuses)
 
     def check_single_server(self, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict[str, Any]:
-        ping_result = self.ping_server(server, ssl_verify, ssl_check, timeout)
+        url = _build_url(server, ssl_check)
+        ping_result = self.ping_server(url, ssl_verify, ssl_check, timeout)
 
         return {
-            "url": server,
+            "url": url,
             "ssl": ping_result["ssl"],
             "response_time": f"{ping_result['response_time']}ms" if ping_result["response_time"] else None,
             "response_code": ping_result["response_code"],
@@ -94,31 +141,24 @@ class ServerCheckWorker(QThread):
             "no_internet": ping_result.get("no_internet", False),
         }
 
-    def ping_server(self, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict[str, Any]:
+    def ping_server(self, url: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict[str, Any]:
         """Check server availability and collect status information."""
         http_status = None
         response_time = None
-        final_hostname = server
-        url = f"https://{server}" if ssl_check else f"http://{server}"
-
-        # Configure SSL context if needed
-        context = ssl.create_default_context() if not ssl_verify else None
-        if context:
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
+        final_url = url
+        context = _ssl_context(ssl_verify)
 
         try:
             start_time = datetime.now()
-            request = urllib.request.Request(url, method="GET")
+            request = urllib.request.Request(url, method="GET", headers={"User-Agent": "YASB Server Monitor"})
 
             try:
                 with urllib.request.urlopen(request, timeout=timeout, context=context) as response:
                     http_status = response.status
-                    final_url: str = response.url
-                    parsed_url = urlparse(final_url)
-                    final_hostname = parsed_url.netloc or server
+                    final_url = response.url
             except urllib.error.HTTPError as e:
                 http_status = e.code
+                final_url = e.url
 
             if http_status is not None:
                 response_time = int((datetime.now() - start_time).total_seconds() * 1000)
@@ -126,7 +166,7 @@ class ServerCheckWorker(QThread):
         except OSError as e:
             reason = str(e).lower()
             if "getaddrinfo" in reason or "name or service not known" in reason:
-                logger.debug("Server '%s' is unreachable", server)
+                logger.debug("Server '%s' is unreachable", url)
                 return {
                     "status": "Offline",
                     "response_time": None,
@@ -135,14 +175,19 @@ class ServerCheckWorker(QThread):
                     "no_internet": True,
                 }
             elif "timed out" in reason:
-                logger.debug("Server '%s' is unreachable: connection timed out", server)
+                logger.debug("Server '%s' is unreachable: connection timed out", url)
             else:
-                logger.debug("Server '%s' is unreachable: connection failed", server)
+                logger.debug("Server '%s' is unreachable: connection failed", url)
+        except ValueError, http.client.HTTPException:
+            logger.debug("Server '%s' is unreachable: invalid URL or response", url)
 
         status = "Online" if http_status is not None and http_status < 500 else "Offline"
 
         # Only attempt SSL expiry checks when online.
-        ssl_days = self.check_ssl_expiry(final_hostname, timeout) if (ssl_check and status == "Online") else None
+        ssl_days = None
+        final = urlsplit(final_url)
+        if ssl_check and status == "Online" and urlsplit(url).scheme == "https" and final.hostname:
+            ssl_days = self.check_ssl_expiry(final.hostname, final.port or 443, ssl_verify, timeout)
 
         return {
             "status": status,
@@ -152,21 +197,22 @@ class ServerCheckWorker(QThread):
             "no_internet": False,
         }
 
-    def check_ssl_expiry(self, hostname: str, timeout: int) -> int | None:
+    def check_ssl_expiry(self, hostname: str, port: int, ssl_verify: bool, timeout: int) -> int | None:
         try:
-            context = ssl.create_default_context()
-            with socket.create_connection((hostname, 443), timeout=timeout) as sock:
+            context = _ssl_context(ssl_verify)
+            with socket.create_connection((hostname, port), timeout=timeout) as sock:
                 with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-                    cert = ssock.getpeercert()
-                    not_after = cert.get("notAfter") if cert else None
-                    if not isinstance(not_after, str):
-                        return None
-                    exp_date = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z")
-                    return (exp_date - datetime.now()).days
+                    der = ssock.getpeercert(binary_form=True)
+            if not der:
+                return None
+            return (_cert_not_after(der) - datetime.now(UTC)).days
         except OSError as e:
             reason = str(e).lower()
             if "getaddrinfo" in reason or "name or service not known" in reason:
                 logger.debug("SSL check skipped for '%s'", hostname)
             else:
                 logger.debug("SSL check failed for '%s': connection error", hostname)
+            return None
+        except ValueError, IndexError:
+            logger.debug("SSL check failed for '%s': unreadable certificate", hostname)
             return None
