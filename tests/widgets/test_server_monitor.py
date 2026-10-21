@@ -87,6 +87,7 @@ def https_port(tmp_path: Path) -> Iterator[int]:
     cert = tmp_path / "localhost.pem"
     cert.write_text(CERT_UTC_TIME + CERT_UTC_TIME_KEY)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.load_cert_chain(cert)
     server = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
     server.socket = context.wrap_socket(server.socket, server_side=True)
