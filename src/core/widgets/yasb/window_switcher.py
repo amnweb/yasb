@@ -256,7 +256,10 @@ class WindowSwitcherWidget(BaseWidget):
             else:
                 btn_layout.addWidget(icon_label)
 
+            for child in btn.findChildren(QWidget):
+                child.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
             btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            btn.setMouseTracking(True)
             btn.installEventFilter(self)
             self.buttons_list.append(btn)
             container_layout.addWidget(btn)
@@ -439,8 +442,11 @@ class WindowSwitcherWidget(BaseWidget):
             return True
 
         if isinstance(a0, _SwitcherItem) and a0 in self.buttons_list:
-            if a1.type() == QEvent.Type.Enter:
-                self.set_focused_button(self.buttons_list.index(a0), by_mouse=True)
+            # Enter also fires when the popup opens or scrolls under a stationary cursor, MouseMove does not
+            if a1.type() == QEvent.Type.MouseMove:
+                index = self.buttons_list.index(a0)
+                if index != self.current_focus_index:
+                    self.set_focused_button(index, by_mouse=True)
             elif a1.type() == QEvent.Type.MouseButtonRelease and isinstance(a1, QMouseEvent):
                 if a1.button() == Qt.MouseButton.LeftButton:
                     self._switch_to_window(a0.hwnd)

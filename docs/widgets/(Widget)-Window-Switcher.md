@@ -27,7 +27,7 @@ The Window Switcher is a fast, lightweight popup widget designed to let you easi
 | Name | Type | Default | Description |
 | --- | --- | --- | --- |
 | enabled | boolean | `false` | Show live window previews. |
-| width | int | `240` | Preview width in pixels. |
+| width | int | `240` | Preview width in pixels. Min 100, Max 360 |
 
 ### Popup
 Contains the styling parameters for the window switcher interface.
