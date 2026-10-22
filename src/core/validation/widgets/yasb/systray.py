@@ -31,4 +31,4 @@ class SystrayWidgetConfig(CustomBaseModel):
     show_network: bool = False
     hide_icons: list[str] = []
     tooltip: bool = True
-    use_hook: bool = False
+    use_hook: bool = True

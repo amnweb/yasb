@@ -20,7 +20,7 @@ Puts your system tray icons directly in the status bar. You can pin important ic
 | `show_network`              | boolean   | `false`       | Whether to show network icon (from the original systray).                                                                     |
 | `hide_icons`                | list      | `[]`          | List of process names to hide from the systray (exact match, case-insensitive).                                               |
 | `tooltip`                   | boolean   | `true`        | Whether to show tooltips when hovering over systray icons.                                                                    |
-| `use_hook`                  | boolean   | `false`       | Whether to use the systray hook. Default is false. False will use legacy systray monitor, true will use the new systray hook. |
+| `use_hook`                  | boolean   | `true`       | Whether to use the systray hook. Default is false. False will use legacy systray monitor, true will use the new systray hook. |
 
 
 ## Popup Options
@@ -52,7 +52,7 @@ systray:
     show_battery: false
     show_volume: false
     show_network: false
-    use_hook: false # Whether to use the new systray hook instead of the legacy systray monitor
+    use_hook: true # Whether to use the new systray hook instead of the legacy systray monitor
     hide_icons: [] # Optional, list of process names to hide (e.g. ["discord"])
 ```
 
@@ -106,7 +106,7 @@ The systray hook is a more reliable and performant way to monitor systray icons.
 - **show_network:** Whether to show network icon (from the original systray).
 - **hide_icons:** A list of process names to hide from the systray. Each entry is matched exactly (case-insensitive) against the executable name without extension. For example, to hide Discord set `hide_icons: ["discord"]` which matches `Discord.exe`.
 - **tooltip:** Whether to show tooltips when hovering over systray icons.
-- **use_hook:** Whether to use the systray hook. Default is false. False will use legacy systray monitor, true will use the new systray hook.
+- **use_hook:** Whether to use the systray hook. Default is true. False will use legacy systray monitor, true will use the new systray hook.
 
 ## Debug Options
 Show unpinned button has a right click menu that allows you to refresh the systray icons.
