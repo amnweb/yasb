@@ -29,7 +29,7 @@ def fetch_status() -> dict[str, Any]:
         request = urllib.request.Request(STATUS_URL, headers={"User-Agent": "yasb-claude-usage-widget"})
         with urllib.request.urlopen(request, timeout=10) as response:
             payload = json.loads(response.read().decode("utf-8"))
-        status = payload.get("status") or {}
+        status: dict[str, Any] = payload.get("status") or {}
         indicator = status.get("indicator") or "none"
         if indicator not in STATUS_LEVELS:
             indicator = "unknown"

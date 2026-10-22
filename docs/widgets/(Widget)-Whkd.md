@@ -5,7 +5,8 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
 | Option           | Type     | Default                        | Description                                                                 |
 |------------------|----------|--------------------------------|-----------------------------------------------------------------------------|
 | `label`          | string   | `"\uf11c"`                       | The string for the label button.  |
-| `special_keys`   | list     | `None`                           | A list of special keys to be used as hotkeys.  |
+| `special_keys`   | list     | `[]`                             | A list of special keys to be used as hotkeys.  |
+| `keybindings`    | list     | `[]`                             | Optional hotkeys. See [Keybindings](./Keybindings). |
 
 ## Callbacks
 
@@ -44,6 +45,7 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
 - **special_keys:** A list of special keys to be used as hotkeys. The list contains dictionaries with two keys: `key` and `key_replace`. The `key` is the special key to be used as a hotkey and the `key_replace` is the string to replace the special key with.
   - **key:** The special key to be used as a hotkey.
   - **key_replace:** The string to replace the special key with.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings). The available action is `open_popup`.
 
 > [!NOTE]  
 > The special keys are keys which you can style and replace with custom icons. Special keys settings are optional. If you don't want to use special keys, you can leave the `special_keys` option empty.
@@ -142,5 +144,5 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
     border-radius: 8px;
 }
 ```
-## Preview of the WHKD card
-![YASB WHKD Widget](assets/765432109-1a2b3c4d-5e6f-78ab-9012-3456789abcd.png)
+## Preview of the Widget
+![WHKD YASB Widget](assets/765432109-1a2b3c4d-5e6f-78ab-9012-3456789abcd.png)

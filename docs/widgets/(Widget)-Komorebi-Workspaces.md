@@ -10,13 +10,39 @@ Displays your Komorebi workspaces with clear indicators for active and populated
 | `label_workspace_populated_btn` | string | `'{index}'`              | The format string for the populated workspace button.                          |
 | `label_default_name`       | string  | `''`                     | The default name for workspaces.                                            |
 | `label_float_override`     | string  | `'Override Active'`                     | The label to display when Komorebi's float override is active. |
-| `toggle_workspace_layer`  | dict    | `{'enabled': false, 'tiling_label': 'Tiling', 'floating_label': 'Floating'}` | Controls toggling between tiling and floating layers.  |
-| `app_icons`    | dict    | `{'enabled_populated': false, 'enabled_active': false, 'size': 16, 'max_icons': 0, 'hide_label': false, 'hide_duplicates': false, 'hide_floating': false}` | Controls the display of opened app icons per workspace. |
+| `toggle_workspace_layer`  | dict    | [See below](#toggle-workspace-layer-options) | Controls toggling between tiling and floating layers.  |
+| `app_icons`    | dict    | [See below](#app-icons-options) | Controls the display of opened app icons per workspace. |
 | `hide_if_offline`       | boolean | `false`         | Whether to hide the widget if Komorebi is offline.                          |
 | `label_zero_index`        | boolean | `false`    | Whether to use zero-based indexing for workspace labels.                    |
 | `hide_empty_workspaces`  | boolean | `false`      | Whether to hide empty workspaces.                                           |
 | `enable_scroll_switching` | boolean | `false`      | Enable scroll switching between workspaces.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
+
+## Toggle Workspace Layer Options
+
+The `toggle_workspace_layer` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+toggle_workspace_layer:
+  enabled: false
+  tiling_label: "Tiling"
+  floating_label: "Floating"
+```
+
+## App Icons Options
+
+The `app_icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+app_icons:
+  enabled_populated: false
+  enabled_active: false
+  size: 16
+  max_icons: 0
+  hide_label: false
+  hide_duplicates: false
+  hide_floating: false
+```
 
 ## Example Configuration
 

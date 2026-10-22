@@ -14,15 +14,17 @@ import logging
 import os
 import shlex
 import subprocess
+from ctypes import WinError
 from pathlib import Path
+from typing import Any, TypedDict
 
-import win32gui
-import win32process
-from PIL import Image
-from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import QObject, pyqtSignal
 
+from core.utils.icons.sources import AppIcon, FileIcon, IconSource
 from core.utils.system import app_data_path
+from core.utils.win32.bindings.kernel32 import GetLastError
+from core.utils.win32.bindings.shell32 import read_shortcut, shell_execute
+from core.utils.win32.bindings.user32 import FindWindowEx, get_window_thread_process_id
 from core.utils.win32.utils import get_app_name_from_aumid
 from core.widgets.services.taskbar.pin_context import (
     WindowContext,
@@ -35,7 +37,6 @@ from core.widgets.services.taskbar.shortcut_resolver import (
     find_app_shortcut,
     find_shortcut_by_aumid,
     find_shortcut_by_name,
-    get_wscript_shell,
     normalized_targets,
 )
 
@@ -49,16 +50,19 @@ class TaskbarSignalBus(QObject):
 _taskbar_signal_bus = TaskbarSignalBus()
 
 
+class _AppsCache(TypedDict):
+    data: dict[str, Any] | None
+    file_path: str | None
+    mtime: float | None
+
+
 class PinManager:
     """
     Manages pinned applications for the taskbar widget.
     """
 
-    # Global cache for pinned app icons (shared across all PinManager instances)
-    _icon_cache = {}  # {(unique_id, size, dpi): QPixmap}
-
     # Global cache for pinned apps data (shared across all PinManager instances)
-    _apps_global_cache = {
+    _apps_global_cache: _AppsCache = {
         "data": None,  # {"pinned_apps": {}, "pinned_order": []}
         "file_path": None,
         "mtime": None,  # Last modification time for cache invalidation
@@ -94,9 +98,9 @@ class PinManager:
 
     def __init__(self):
         """Initialize the pin manager."""
-        self.pinned_apps = {}  # {unique_id: {path, aumid, icon, process_name, title}}
-        self.pinned_order = []  # [unique_id, ...]
-        self.running_pinned = {}  # Maps hwnd -> unique_id for running pinned apps
+        self.pinned_apps: dict[str, dict[str, str]] = {}
+        self.pinned_order: list[str] = []
+        self.running_pinned: dict[int, str] = {}
 
     @staticmethod
     def get_signal_bus():
@@ -115,23 +119,43 @@ class PinManager:
             return os.path.join(windows_dir, "explorer.exe")
         return None
 
+    def icon_source(self, unique_id: str, metadata: dict[str, str] | None = None) -> IconSource | None:
+        """What a pinned app's icon is taken from: a Store app's ID, else the shortcut the pin launches (as Windows
+        does for its own pins), else its exe, tool file or folder. metadata defaults to the pin's stored data."""
+        id_type, value, args = self._parse_unique_id(unique_id)
+        if id_type == "aumid":
+            return AppIcon(value)
+        shortcut_path = (metadata if metadata is not None else self.pinned_apps.get(unique_id, {})).get("shortcut_path")
+        if shortcut_path and os.path.isfile(shortcut_path):
+            return FileIcon(shortcut_path)
+        if id_type == "explorer":
+            return FileIcon(value)
+        if id_type == "path":
+            return FileIcon(self._tool_file(args) or value)
+        return None
+
+    @staticmethod
+    def _tool_file(args: str) -> str | None:
+        """The .msc or .cpl file a pinned mmc.exe or rundll32.exe tool opens; it carries the tool's icon."""
+        if not args:
+            return None
+        system32 = os.path.join(os.environ.get("SystemRoot") or os.environ.get("WINDIR") or "C:\\Windows", "System32")
+        try:
+            tokens = shlex.split(args, posix=False)
+        except ValueError:
+            tokens = args.split()
+        for token in tokens:
+            for part in token.strip('"').split(","):
+                if part.lower().endswith((".msc", ".cpl")):
+                    path = part if os.path.isabs(part) else os.path.join(system32, part)
+                    if os.path.isfile(path):
+                        return path
+        return None
+
     @staticmethod
     def get_pinned_apps_file() -> Path:
         """Get the path to the pinned apps JSON file."""
         return app_data_path("taskbar_pinned.json")
-
-    @staticmethod
-    def get_pinned_icons_folder() -> Path:
-        """Get the folder path for storing pinned app icons."""
-        folder = app_data_path("taskbar_icons")
-        folder.mkdir(parents=True, exist_ok=True)
-        return folder
-
-    @staticmethod
-    def get_icon_cache_path(unique_id: str) -> Path:
-        """Get the file path for a cached icon."""
-        safe_name = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in unique_id)
-        return PinManager.get_pinned_icons_folder() / f"{safe_name}.png"
 
     def load_pinned_apps(self) -> None:
         """Load pinned apps from disk using global cache to avoid redundant file reads."""
@@ -175,9 +199,9 @@ class PinManager:
                     id_type, value, _ = PinManager._parse_unique_id(unique_id)
                     exe_path = value if id_type == "path" else None
                     if not exe_path:
-                        exe_path = metadata.get("path") if isinstance(metadata, dict) else None
+                        exe_path = metadata.get("path")
 
-                    shortcut_path = metadata.get("shortcut_path") if isinstance(metadata, dict) else None
+                    shortcut_path = metadata.get("shortcut_path")
                     if not exe_path or not shortcut_path or not os.path.exists(shortcut_path):
                         continue
 
@@ -203,7 +227,7 @@ class PinManager:
         """Save pinned apps to disk and update global cache."""
         file_path = self.get_pinned_apps_file()
         try:
-            data = {
+            data: dict[str, Any] = {
                 "pinned_apps": self.pinned_apps,
                 "pinned_order": self.pinned_order,
             }
@@ -245,7 +269,7 @@ class PinManager:
         if exe_path and not aumid and not context.is_explorer and not context.explorer_path:
             for key in normalized_targets(exe_path):
                 cached_shortcut = PinManager._shortcut_cache.get(key)
-                if cached_shortcut and isinstance(cached_shortcut, str):
+                if cached_shortcut:
                     if os.path.exists(cached_shortcut):
                         shortcut_path = cached_shortcut
                         shortcut_name = Path(cached_shortcut).stem
@@ -307,7 +331,7 @@ class PinManager:
                     # First check cache
                     for key in normalized_targets(exe_path):
                         cached_shortcut = PinManager._shortcut_cache.get(key)
-                        if cached_shortcut and isinstance(cached_shortcut, str):
+                        if cached_shortcut:
                             if os.path.exists(cached_shortcut):
                                 shortcut_path = cached_shortcut
                                 shortcut_name = Path(cached_shortcut).stem
@@ -389,110 +413,111 @@ class PinManager:
         return metadata
 
     @staticmethod
-    def get_app_identifier(hwnd: int, window_data: dict, *, resolve_shortcut: bool = False) -> tuple[str | None, dict]:
+    def get_app_unique_id(hwnd: int, window_data: dict[str, Any]) -> str | None:
+        context = collect_window_context(hwnd, window_data)
+        return PinManager._unique_id(context) if context else None
+
+    @staticmethod
+    def get_app_identifier(
+        hwnd: int, window_data: dict[str, Any], *, resolve_shortcut: bool = False
+    ) -> tuple[str | None, dict[str, str]]:
         """
         Get a unique identifier for an app and its metadata.
         For File Explorer, includes the folder path or shell location in the unique_id to allow
         multiple pinned folders and special folders (e.g., Recycle Bin, This PC).
         Returns (unique_id, metadata_dict) or (None, {}) if unable to identify the app.
         """
-        from core.utils.win32.utils import get_app_name_from_pid
-
         context = collect_window_context(hwnd, window_data)
-        if not context:
+        unique_id = PinManager._unique_id(context) if context else None
+        if context is None or unique_id is None:
             return None, {}
 
-        exe_path = context.exe_path
-        exe_lower = exe_path.lower() if exe_path else ""
-        needs_args = exe_lower.endswith(("mmc.exe", "rundll32.exe"))
-        cmdline_args: str | None = None
-
-        if needs_args:
-            try:
-                cmd_text = ensure_command_line(context)
-                if cmd_text:
-                    if cmd_text.startswith('"'):
-                        end_quote = cmd_text.find('"', 1)
-                        if end_quote != -1:
-                            cmdline_args = cmd_text[end_quote + 1 :].strip()
-                    else:
-                        parts = cmd_text.split(None, 1)
-                        if len(parts) > 1:
-                            cmdline_args = parts[1]
-            except Exception as exc:
-                logging.debug("Could not get command line args: %s", exc)
-
-        app_name: str | None = None
-
-        if context.is_explorer:
-            app_name = context.window_title
-        elif not context.aumid:
-            app_name = context.window_title or context.process_name
-
-        if not app_name:
-            try:
-                pid_for_name = context.base_pid
-
-                if exe_path and "ApplicationFrameHost.exe" in exe_path and pid_for_name:
-                    try:
-                        child_hwnd = win32gui.FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
-                        if child_hwnd:
-                            _, child_pid = win32process.GetWindowThreadProcessId(child_hwnd)
-                            if child_pid:
-                                pid_for_name = child_pid
-                    except Exception:
-                        pass
-
-                # For UWP apps (including PWAs), try to get real app name from PackageManager first
-                if context.aumid:
-                    resolved_name = get_app_name_from_aumid(context.aumid)
-                    if resolved_name:
-                        app_name = resolved_name
-
-                # If AUMID lookup failed or no AUMID, use normal flow
-                if not app_name and pid_for_name:
-                    real_name = get_app_name_from_pid(pid_for_name)
-                    if real_name:
-                        app_name = real_name
-
-            except Exception as e:
-                logging.warning("Error resolving app name: %s", e)
-
-        if not app_name:
-            app_name = context.window_title or context.process_name
-
-        unique_id: str | None = None
-
-        if context.aumid:
-            unique_id = f"aumid:{context.aumid}"
-        elif context.explorer_path:
-            unique_id = f"explorer:{context.explorer_path}"
-        elif exe_path:
-            normalized_paths = normalized_targets(exe_path)
-            stable_path = normalized_paths[1] if len(normalized_paths) > 1 else exe_path
-            unique_id = f"path:{stable_path}"
-            if cmdline_args:
-                unique_id = f"{unique_id}|{cmdline_args}"
-        else:
-            logging.debug("Cannot create identifier for app - no AUMID, explorer path, or exe path found")
-            return None, {}
-
-        base_title = app_name or context.window_title or context.process_name or ""
-        metadata: dict[str, str] = {"title": base_title}
-
+        metadata: dict[str, str] = {"title": PinManager._app_display_name(hwnd, context)}
         if resolve_shortcut:
-            enriched = PinManager._resolve_pin_metadata(context, base_title)
+            enriched = PinManager._resolve_pin_metadata(context, metadata["title"])
             if "title" in enriched:
                 metadata["title"] = enriched["title"]
             if "shortcut_path" in enriched:
                 metadata["shortcut_path"] = enriched["shortcut_path"]
-
         if not metadata["title"]:
             metadata["title"] = context.window_title or context.process_name or metadata["title"]
-
         return unique_id, metadata
 
-    def pin_app(self, hwnd: int, window_data: dict, icon_image: Image.Image = None, position: int = -1) -> str | None:
+    @staticmethod
+    def _unique_id(context: WindowContext) -> str | None:
+        if context.aumid:
+            return f"aumid:{context.aumid}"
+        if context.explorer_path:
+            return f"explorer:{context.explorer_path}"
+        if not context.exe_path:
+            logging.debug("Cannot create identifier for app - no AUMID, explorer path, or exe path found")
+            return None
+        normalized_paths = normalized_targets(context.exe_path)
+        stable_path = normalized_paths[1] if len(normalized_paths) > 1 else context.exe_path
+        host_args = PinManager._host_arguments(context)
+        return f"path:{stable_path}|{host_args}" if host_args else f"path:{stable_path}"
+
+    @staticmethod
+    def _host_arguments(context: WindowContext) -> str | None:
+        # mmc.exe and rundll32.exe host many different tools (Device Manager, Services, Control Panel
+        # applets), so only their arguments tell those apps apart
+        if not (context.exe_path or "").lower().endswith(("mmc.exe", "rundll32.exe")):
+            return None
+        try:
+            cmd_text = ensure_command_line(context)
+        except Exception as exc:
+            logging.debug("Could not get command line args: %s", exc)
+            return None
+        if not cmd_text:
+            return None
+        if cmd_text.startswith('"'):
+            end_quote = cmd_text.find('"', 1)
+            return cmd_text[end_quote + 1 :].strip() if end_quote != -1 else None
+        parts = cmd_text.split(None, 1)
+        return parts[1] if len(parts) > 1 else None
+
+    @staticmethod
+    def _app_display_name(hwnd: int, context: WindowContext) -> str:
+        name: str | None = None
+        if context.is_explorer:
+            name = context.window_title
+        elif not context.aumid:
+            name = context.window_title or context.process_name
+        if not name:
+            name = PinManager._lookup_app_name(hwnd, context)
+        return name or context.window_title or context.process_name or ""
+
+    @staticmethod
+    def _lookup_app_name(hwnd: int, context: WindowContext) -> str | None:
+        from core.utils.win32.utils import get_app_name_from_pid
+
+        try:
+            if context.aumid:
+                name = get_app_name_from_aumid(context.aumid)
+                if name:
+                    return name
+            pid = PinManager._name_source_pid(hwnd, context)
+            return get_app_name_from_pid(pid) if pid else None
+        except Exception as e:
+            logging.warning("Error resolving app name: %s", e)
+            return None
+
+    @staticmethod
+    def _name_source_pid(hwnd: int, context: WindowContext) -> int | None:
+        # Store apps run inside ApplicationFrameHost.exe; the app's own process owns the CoreWindow child
+        pid = context.base_pid
+        if pid and context.exe_path and "ApplicationFrameHost.exe" in context.exe_path:
+            try:
+                child = FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
+                if child:
+                    _, child_pid = get_window_thread_process_id(child)
+                    if child_pid:
+                        return child_pid
+            except Exception:
+                pass
+        return pid
+
+    def pin_app(self, hwnd: int, window_data: dict[str, Any], position: int = -1) -> str | None:
         """
         Pin an application to the taskbar (pinned apps are global across all monitors).
         """
@@ -503,16 +528,6 @@ class PinManager:
             if not unique_id or not metadata:
                 logging.warning("Cannot pin app - unable to determine valid identifier")
                 return None
-
-            # Cache icon if provided
-            if icon_image:
-                # Save original sized icon as PNG
-                icon_image.convert("RGBA").save(
-                    str(self.get_icon_cache_path(unique_id)),
-                    "PNG",
-                    optimize=False,
-                    compress_level=1,
-                )
 
             self.pinned_apps[unique_id] = metadata
 
@@ -545,19 +560,18 @@ class PinManager:
             logging.error("Error pinning app: %s", e)
             return None
 
-    def unpin_app(self, hwnd: int, window_data: dict = None) -> None:
+    def unpin_app(self, hwnd: int, window_data: dict[str, Any] | None = None) -> None:
         """Unpin an application from the taskbar."""
         try:
             # Get unique_id for this app
             unique_id = self.running_pinned.get(hwnd)
             if not unique_id and window_data:
-                unique_id, _ = self.get_app_identifier(hwnd, window_data)
+                unique_id = self.get_app_unique_id(hwnd, window_data)
 
             if unique_id and unique_id in self.pinned_apps:
                 del self.pinned_apps[unique_id]
                 self.pinned_order.remove(unique_id)
                 self.running_pinned.pop(hwnd, None)
-                self.delete_cached_icon(unique_id)
                 self.save_pinned_apps()
 
                 # Notify other taskbar instances
@@ -578,65 +592,8 @@ class PinManager:
             # Notify other taskbar instances about the reorder
             _taskbar_signal_bus.pinned_apps_changed.emit("reorder", "")
 
-    def load_cached_icon(self, unique_id: str, size: int, dpi: float = 1.0) -> QPixmap | None:
-        """
-        Load a cached icon from PNG file and scale to proper size with DPI awareness.
-        If cached icon is missing, extracts native Windows icon as fallback.
-        Uses a global cache to avoid reloading the same icon across multiple instances.
-        """
-        from core.utils.win32.app_icons import get_window_icon
-
-        # Check global cache first (include DPI in cache key)
-        cache_key = (unique_id, size, dpi)
-        if cache_key in PinManager._icon_cache:
-            return PinManager._icon_cache[cache_key]
-
-        try:
-            icon_path = self.get_icon_cache_path(unique_id)
-
-            # If cached icon doesn't exist, extract native icon using get_window_icon with fake hwnd
-            if not icon_path.exists():
-                icon_img = get_window_icon(0)  # Fake hwnd - will fallback to native icons
-                if icon_img:
-                    icon_img.convert("RGBA").save(str(icon_path), "PNG", optimize=False, compress_level=1)
-
-            if icon_path.exists():
-                pixmap = QPixmap(str(icon_path))
-                if not pixmap.isNull():
-                    physical_size = int(size * dpi)
-                    scaled = pixmap.scaled(
-                        physical_size,
-                        physical_size,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation,
-                    )
-                    scaled.setDevicePixelRatio(dpi)
-
-                    # Store in global cache for reuse
-                    PinManager._icon_cache[cache_key] = scaled
-                    return scaled
-        except Exception as e:
-            logging.error("Error loading cached icon for %s: %s", unique_id, e)
-        return None
-
-    def delete_cached_icon(self, unique_id: str) -> None:
-        """Delete a cached icon file and remove from global cache."""
-        try:
-            # Remove from global cache (all size variants)
-            keys_to_remove = [k for k in PinManager._icon_cache.keys() if k[0] == unique_id]
-            for key in keys_to_remove:
-                del PinManager._icon_cache[key]
-
-            # Delete the file
-            icon_path = self.get_icon_cache_path(unique_id)
-            if icon_path.exists():
-                icon_path.unlink()
-
-        except Exception as e:
-            logging.error("Error deleting cached icon: %s", e)
-
     @staticmethod
-    def _launch_exe(exe_path: str, arguments: str = "", working_dir: str = None) -> None:
+    def _launch_exe(exe_path: str, arguments: str = "", working_dir: str | None = None) -> None:
         """Launch an executable with subprocess, with UAC elevation if needed."""
         # Validate working directory
         if not working_dir or not os.path.exists(working_dir):
@@ -669,14 +626,10 @@ class PinManager:
         except OSError as e:
             # Check if elevation is required (WinError 740)
             if e.winerror == 740:
-                import win32api
-                import win32con
-
-                try:
-                    win32api.ShellExecute(0, "runas", exe_path, arguments, working_dir, win32con.SW_SHOWNORMAL)
-                except Exception as shell_error:
+                if shell_execute(exe_path, "runas", arguments, working_dir) <= 32:
+                    shell_error = WinError(GetLastError())
                     logging.error("Failed to launch with elevation: %s", shell_error)
-                    raise
+                    raise shell_error
             else:
                 raise
 
@@ -702,9 +655,11 @@ class PinManager:
                         os.startfile(f"shell:AppsFolder\\{value}")
                     return
                 except Exception:
-                    args = {"arguments": extra_arguments} if extra_arguments else {}
                     try:
-                        os.startfile(f"shell:AppsFolder\\{value}", **args)
+                        if extra_arguments:
+                            os.startfile(f"shell:AppsFolder\\{value}", arguments=extra_arguments)
+                        else:
+                            os.startfile(f"shell:AppsFolder\\{value}")
                         return
                     except Exception:
                         if extra_arguments:
@@ -730,11 +685,11 @@ class PinManager:
 
             if shortcut_path and os.path.exists(shortcut_path):
                 # Read shortcut properties to get target and args
-                wsh = get_wscript_shell()
-                shortcut = wsh.CreateShortcut(shortcut_path)
-                target = shortcut.Targetpath or ""
-                arguments = shortcut.Arguments or ""
-                working_dir = shortcut.WorkingDirectory or ""
+                shortcut = read_shortcut(shortcut_path)
+                if shortcut is not None:
+                    target = shortcut.target
+                    arguments = shortcut.arguments
+                    working_dir = shortcut.working_directory
 
             # Fallback to direct exe path if shortcut didn't provide target
             if not target and id_type == "path" and os.path.exists(value):

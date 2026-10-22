@@ -1,25 +1,28 @@
-import ctypes
-import ctypes.wintypes
 import json
 import logging
 import os
 import time
+from typing import TYPE_CHECKING, Any, cast
 
-import pythoncom
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication
-from win32comext.shell import shell
 
 from core.utils.shell_utils import shell_open
 from core.utils.system import app_data_path
+from core.utils.win32.app_loader import AppEntry, app_icon_source
+from core.utils.win32.bindings.shell32 import read_shortcut
+from core.utils.win32.bindings.version import get_version_strings
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
     ProviderMenuActionResult,
     ProviderResult,
 )
-from core.widgets.services.quick_launch.fuzzy import _split_camel, fuzzy_score
+from core.widgets.services.quick_launch.fuzzy import fuzzy_score, split_camel
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_APPS
+
+if TYPE_CHECKING:
+    from core.widgets.services.quick_launch.service import QuickLaunchService
 
 
 class LaunchHistory:
@@ -27,10 +30,10 @@ class LaunchHistory:
 
     def __init__(self):
         self._recent_file = str(app_data_path("quick_launch_recent.json"))
-        self._history: dict[str, dict] = self._load()
+        self._history: dict[str, dict[str, Any]] = self._load()
 
     @property
-    def data(self) -> dict[str, dict]:
+    def data(self) -> dict[str, dict[str, Any]]:
         return self._history
 
     def record(self, name: str, path: str):
@@ -83,15 +86,15 @@ class LaunchHistory:
         except Exception:
             pass
 
-    def _load(self) -> dict[str, dict]:
+    def _load(self) -> dict[str, dict[str, Any]]:
         try:
             if os.path.isfile(self._recent_file):
                 with open(self._recent_file, encoding="utf-8") as f:
                     data = json.load(f)
                 # Migrate legacy list format
                 if isinstance(data, list):
-                    history: dict[str, dict] = {}
-                    for r in reversed(data):
+                    history: dict[str, dict[str, Any]] = {}
+                    for r in reversed(cast(list[dict[str, Any]], data)):
                         key = r.get("key", "")
                         if key:
                             history[key] = {
@@ -102,7 +105,7 @@ class LaunchHistory:
                             }
                     return history
                 if isinstance(data, dict):
-                    return data
+                    return cast(dict[str, dict[str, Any]], data)
         except Exception:
             pass
         return {}
@@ -110,35 +113,7 @@ class LaunchHistory:
 
 def _get_exe_description(exe_path: str) -> str | None:
     """Extract FileDescription + CompanyName from an exe's version info."""
-    try:
-        size = ctypes.windll.version.GetFileVersionInfoSizeW(exe_path, None)
-        if not size:
-            return None
-        buf = ctypes.create_string_buffer(size)
-        if not ctypes.windll.version.GetFileVersionInfoW(exe_path, 0, size, buf):
-            return None
-        lp_translate = ctypes.c_void_p()
-        u_len = ctypes.c_uint()
-        ctypes.windll.version.VerQueryValueW(
-            buf, r"\VarFileInfo\Translation", ctypes.byref(lp_translate), ctypes.byref(u_len)
-        )
-        if not u_len.value:
-            return None
-        lang, codepage = ctypes.cast(lp_translate, ctypes.POINTER(ctypes.wintypes.WORD * 2)).contents
-        prefix = rf"\StringFileInfo\{lang:04x}{codepage:04x}"
-        parts = []
-        for field in ("FileDescription", "CompanyName"):
-            lp_buf = ctypes.c_wchar_p()
-            u_len2 = ctypes.c_uint()
-            if ctypes.windll.version.VerQueryValueW(
-                buf, f"{prefix}\\{field}", ctypes.byref(lp_buf), ctypes.byref(u_len2)
-            ):
-                val = lp_buf.value
-                if val:
-                    parts.append(val.strip())
-        return " - ".join(parts) if parts else None
-    except Exception:
-        return None
+    return " - ".join(get_version_strings(exe_path, ("FileDescription", "CompanyName")).values()) or None
 
 
 def _resolve_squirrel_target(target: str, args: str) -> str | None:
@@ -170,15 +145,14 @@ def _resolve_squirrel_target(target: str, args: str) -> str | None:
 def _get_lnk_description(lnk_path: str) -> str | None:
     """Resolve a .lnk shortcut and return description from its target exe,
     falling back to the shortcut's own Description property, then target path."""
-    try:
-        link = pythoncom.CoCreateInstance(
-            shell.CLSID_ShellLink, None, pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
-        )
-        link.QueryInterface(pythoncom.IID_IPersistFile).Load(lnk_path)
-        target = link.GetPath(0)[0]
-        args = link.GetArguments()
-        # Squirrel/Electron apps point to Update.exe --processStart RealApp.exe
-        resolved = _resolve_squirrel_target(target, args)
+    shortcut = read_shortcut(lnk_path)
+    if shortcut is not None:
+        target = shortcut.target
+        try:
+            # Squirrel/Electron apps point to Update.exe --processStart RealApp.exe
+            resolved = _resolve_squirrel_target(target, shortcut.arguments)
+        except OSError:
+            resolved = None
         if resolved and os.path.isfile(resolved):
             desc = _get_exe_description(resolved)
             if desc:
@@ -187,15 +161,12 @@ def _get_lnk_description(lnk_path: str) -> str | None:
             desc = _get_exe_description(target)
             if desc:
                 return desc
-        shortcut_desc = link.GetDescription()
-        if shortcut_desc and shortcut_desc.strip():
-            return shortcut_desc.strip()
+        if shortcut.description.strip():
+            return shortcut.description.strip()
         if resolved and os.path.isfile(resolved):
             return resolved
         if target and os.path.isfile(target):
             return target
-    except Exception:
-        pass
     # Fallback: use subfolder name under Start Menu\Programs (e.g. "System Tools")
     lnk_lower = lnk_path.lower()
     marker = r"\start menu\programs" + "\\"
@@ -213,14 +184,14 @@ class DescriptionResolverWorker(QThread):
 
     finished = pyqtSignal(dict)
 
-    def __init__(self, apps: list):
+    def __init__(self, apps: list[AppEntry]):
         super().__init__()
         self._apps = apps
 
     def run(self):
         cache: dict[str, str] = {}
         # Build UWP package lookup
-        uwp_lookup = {}
+        uwp_lookup: dict[str, str] = {}
         try:
             from winrt.windows.management.deployment import PackageManager
 
@@ -268,15 +239,15 @@ class AppsProvider(BaseProvider):
     input_placeholder = "Search applications..."
     icon = ICON_APPS
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
-        self._service = None
+        self._service: QuickLaunchService | None = None
         self._history = LaunchHistory()
         self._desc_cache: dict[str, str] = {}
         self._desc_worker: DescriptionResolverWorker | None = None
 
     @property
-    def service(self):
+    def service(self) -> QuickLaunchService:
         if self._service is None:
             from core.widgets.services.quick_launch.service import QuickLaunchService
 
@@ -286,7 +257,7 @@ class AppsProvider(BaseProvider):
     def match(self, text: str) -> bool:
         return True
 
-    def start_description_resolution(self, apps: list):
+    def start_description_resolution(self, apps: list[AppEntry]):
         """Start background thread to resolve app descriptions."""
         if self._desc_worker and self._desc_worker.isRunning():
             self._desc_worker.finished.disconnect()
@@ -295,10 +266,10 @@ class AppsProvider(BaseProvider):
         self._desc_worker.finished.connect(self._on_descriptions_ready)
         self._desc_worker.start()
 
-    def _on_descriptions_ready(self, cache: dict):
+    def _on_descriptions_ready(self, cache: dict[str, str]):
         self._desc_cache = cache
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         svc = self.service
         show_recent = self.config.get("show_recent", True)
         max_recent = self.config.get("max_recent", 10)
@@ -311,8 +282,8 @@ class AppsProvider(BaseProvider):
             if show_recent:
                 # Recent apps first (by last_used timestamp) then the rest
                 # Non-recent apps: root-level first, subfolder apps after
-                recent = []
-                rest = []
+                recent: list[tuple[float, str, str]] = []
+                rest: list[tuple[str, str]] = []
                 for name, path, _ in svc.apps:
                     key = f"{name}::{path}"
                     entry = self._history.data.get(key)
@@ -335,7 +306,7 @@ class AppsProvider(BaseProvider):
                     pkg_name = appid.rsplit(".", 1)[-1] if "." in appid else appid
                     # Split CamelCase (WindowsTerminal -> Windows Terminal)
                     # and match against the human-readable form.
-                    pkg_words = _split_camel(pkg_name)
+                    pkg_words = split_camel(pkg_name)
                     pkg_fs = fuzzy_score(text_lower, pkg_words)
                     if pkg_fs is not None:
                         # Cap package-name matches between word-prefix (3)
@@ -343,11 +314,6 @@ class AppsProvider(BaseProvider):
                         # higher tiers for frequently used apps.
                         fs = min(pkg_fs, 3.5)
                 if fs is not None:
-                    # Demote apps with default icon (system shortcuts,
-                    # not real apps) so they sink below real app matches.
-                    icon = svc.icon_paths.get(f"{n}::{p}", "")
-                    if icon.endswith("_default_app.png"):
-                        fs = min(fs, 0.5)
                     scored_apps.append((float(fs), n, p))
 
             if show_recent:
@@ -365,10 +331,9 @@ class AppsProvider(BaseProvider):
             apps = [(n, p) for _, n, p in scored_apps]
 
         show_description = self.config.get("show_description", False)
-        results = []
+        results: list[ProviderResult] = []
         for name, path in apps:
             app_key = f"{name}::{path}"
-            icon_path = svc.icon_paths.get(app_key, "")
             if show_description:
                 desc = self._desc_cache.get(path, "")
             else:
@@ -377,7 +342,7 @@ class AppsProvider(BaseProvider):
                 ProviderResult(
                     title=name,
                     description=desc,
-                    icon_path=icon_path,
+                    icon_source=app_icon_source(path),
                     provider=self.name,
                     id=app_key,
                     action_data={"name": name, "path": path},
@@ -510,18 +475,14 @@ class AppsProvider(BaseProvider):
     def _resolve_app_target(path: str) -> str:
         """Resolve .lnk shortcut to its target executable path."""
         if path.lower().endswith(".lnk") and os.path.isfile(path):
-            try:
-                link = pythoncom.CoCreateInstance(
-                    shell.CLSID_ShellLink, None, pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
-                )
-                link.QueryInterface(pythoncom.IID_IPersistFile).Load(path)
-                target = link.GetPath(0)[0]
-                args = link.GetArguments()
-                resolved = _resolve_squirrel_target(target, args)
+            shortcut = read_shortcut(path)
+            if shortcut is not None:
+                try:
+                    resolved = _resolve_squirrel_target(shortcut.target, shortcut.arguments)
+                except OSError:
+                    resolved = None
                 if resolved and os.path.isfile(resolved):
                     return resolved
-                if target and os.path.isfile(target):
-                    return target
-            except Exception:
-                pass
+                if shortcut.target and os.path.isfile(shortcut.target):
+                    return shortcut.target
         return path

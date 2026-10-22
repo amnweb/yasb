@@ -32,17 +32,17 @@ import ctypes
 import sys
 import time
 import traceback
+from collections.abc import Callable
 from ctypes.wintypes import MSG
+from typing import Any
 
 from core.utils.win32.bindings.user32 import user32
-
-# PeekMessage removes the message from the queue after retrieving it.
-PM_REMOVE = 0x0001
+from core.utils.win32.constants import PM_REMOVE
 
 results: list[tuple[str, bool, str]] = []
 
 
-def record(name: str, fn) -> object:
+def record[T](name: str, fn: Callable[[], T]) -> T | None:
     """Run one check, record pass or fail, and return its value."""
     try:
         value = fn()
@@ -66,7 +66,7 @@ def pump(seconds: float = 1.2) -> None:
 
 def main(full: bool = False) -> int:
     from core.widgets.services.windows_desktops import interfaces as vd
-    from core.widgets.services.windows_desktops.com import get_api
+    from core.widgets.services.windows_desktops.com import VirtualDesktopError, get_api
     from core.widgets.services.windows_desktops.notification import DesktopEvent, DesktopNotificationListener
 
     version = sys.getwindowsversion()
@@ -75,22 +75,22 @@ def main(full: bool = False) -> int:
     print(f"Python {sys.version.split()[0]}\n")
 
     probes = {"count": 0}
-    original_probe = vd._manager_available
+    original_probe = vd.manager_available
 
-    def counting_probe(provider, iid):
+    def counting_probe(provider: Any, iid: Any) -> bool:
         probes["count"] += 1
         return original_probe(provider, iid)
 
-    vd._manager_available = counting_probe
+    vd.manager_available = counting_probe
     tier = record("resolve tier", vd.resolve_tier)
-    vd._manager_available = original_probe
+    vd.manager_available = original_probe
     print(f"tier {tier}, resolved with {probes['count']} COM probe(s)")
 
     api = get_api()
     record("acquire COM interfaces", api.available)
     record("supports desktop names", lambda: api.supports_names)
     record("supports per-desktop wallpaper", lambda: api.supports_wallpaper)
-    record("IVirtualDesktopManagerInternal2", lambda: api._ensure().manager2 is not None)
+    record("IVirtualDesktopManagerInternal2", lambda: api.ensure().manager2 is not None)
 
     desktops = record("list desktops", api.list_desktops)
     current = record("read current desktop", api.current_guid)
@@ -101,7 +101,7 @@ def main(full: bool = False) -> int:
             mark = "  <- current" if d.guid == current else ""
             print(f"   {d.number}. name={d.name!r} {d.guid}{mark}")
         record("current desktop is in the list", lambda: any(d.guid == current for d in desktops))
-        record("resolve a desktop by GUID", lambda: api._find(desktops[0].guid) is not None)
+        record("resolve a desktop by GUID", lambda: api.find(desktops[0].guid) is not None)
 
     from core.utils.win32.bindings.user32 import GetForegroundWindow
 
@@ -111,11 +111,24 @@ def main(full: bool = False) -> int:
         record("read window pin state", lambda: api.is_view_pinned(view))
         record("read app pin state", lambda: api.is_app_pinned(view))
 
+    def populated_numbers() -> str:
+        populated = api.populated_guids()
+        return ", ".join(str(d.number) for d in desktops or [] if d.guid in populated) or "none"
+
+    record("desktops with windows", populated_numbers)
+
     events: list[DesktopEvent] = []
     listener = DesktopNotificationListener(events.append, api)
     registered = record("register for notifications", listener.start)
 
-    if full and desktops and registered:
+    def require_view_changes() -> None:
+        if not listener.views_active:
+            raise VirtualDesktopError("RegisterForApplicationViewChanges failed, see the warning above")
+
+    if registered:
+        record("register for window changes", require_view_changes)
+
+    if full and desktops and current and registered:
         print("\n--- full mode: creating a scratch desktop ---")
 
         scratch = None

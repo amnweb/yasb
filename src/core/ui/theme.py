@@ -26,9 +26,10 @@ FONT_WEIGHTS = {
 
 def is_dark() -> bool:
     app = QGuiApplication.instance()
-    if app is None:
+    hints = app.styleHints() if isinstance(app, QGuiApplication) else None
+    if hints is None:
         return True
-    return app.styleHints().colorScheme() == Qt.ColorScheme.Dark
+    return hints.colorScheme() == Qt.ColorScheme.Dark
 
 
 def theme_key() -> str:

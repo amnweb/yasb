@@ -2,7 +2,7 @@ import logging
 import math
 from collections import OrderedDict
 from functools import partial
-from typing import NamedTuple
+from typing import NamedTuple, override
 
 from PyQt6.QtCore import (
     QEasingCurve,
@@ -15,7 +15,23 @@ from PyQt6.QtCore import (
     QThreadPool,
     QVariantAnimation,
 )
-from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap, QPolygonF
+from PyQt6.QtGui import (
+    QAction,
+    QColor,
+    QContextMenuEvent,
+    QKeyEvent,
+    QMouseEvent,
+    QPainter,
+    QPainterPath,
+    QPaintEvent,
+    QPen,
+    QPixmap,
+    QPolygonF,
+    QResizeEvent,
+    QScreen,
+    QShowEvent,
+    QWheelEvent,
+)
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -26,6 +42,7 @@ from PyQt6.QtWidgets import (
 from core.bar_helper import GlobalState
 from core.utils.win32.utils import apply_qmenu_style
 from core.utils.win32.window_actions import force_foreground_focus
+from core.validation.widgets.yasb.wallpapers import GalleryConfig
 from core.widgets.services.wallpapers.images import FolderScanner, ImageLoader
 from core.widgets.services.wallpapers.manager import WallpaperManager
 
@@ -62,12 +79,13 @@ class GalleryWindow(QMainWindow):
 
     image_files: list[str]
     is_closing: bool
+    dpr: float
     _menu_open = False
 
     def build_frame(self) -> None:
         raise NotImplementedError
 
-    def build_content(self, screen) -> None:
+    def build_content(self, screen: QScreen) -> None:
         raise NotImplementedError
 
     def selected_image(self) -> str | None:
@@ -76,22 +94,25 @@ class GalleryWindow(QMainWindow):
     def _on_fade_out_finished(self) -> None:
         raise NotImplementedError
 
-    def initUI(self, parent=None, screen=None) -> None:
+    def initUI(self, parent: QWidget | None = None, screen: QScreen | None = None) -> None:
         screen = self.setup_window(parent, screen)
         self.build_frame()
         self.setStyleSheet(GlobalState.stylesheet())
         self.build_content(screen)
 
-    def setup_window(self, parent, screen=None):
+    def setup_window(self, parent: QWidget | None, screen: QScreen | None = None) -> QScreen:
         if parent and not screen:
-            if parent.window() and parent.window().screen():
-                screen = parent.window().screen()
+            window = parent.window()
+            if window and window.screen():
+                screen = window.screen()
             if not screen:
                 screen = QApplication.screenAt(parent.mapToGlobal(QPoint(0, 0)))
             if not screen:
                 screen = parent.screen()
         if not screen:
             screen = QApplication.primaryScreen()
+        if screen is None:
+            raise RuntimeError("No screen to show the wallpaper gallery on")
 
         try:
             self.dpr = float(screen.devicePixelRatio())
@@ -103,22 +124,24 @@ class GalleryWindow(QMainWindow):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         return screen
 
-    def showEvent(self, event):
-        super().showEvent(event)
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
+        super().showEvent(a0)
         force_foreground_focus(int(self.winId()))
 
-    def changeEvent(self, event):
-        if event.type() == QEvent.Type.ActivationChange:
+    @override
+    def changeEvent(self, a0: QEvent | None) -> None:
+        if a0 is not None and a0.type() == QEvent.Type.ActivationChange:
             if not self.isActiveWindow() and not self.is_closing and not self._menu_open:
                 self.fade_out_and_close_gallery()
-        super().changeEvent(event)
+        super().changeEvent(a0)
 
     def set_wallpaper(self) -> None:
         image_path = self.selected_image()
         if image_path:
             self.apply_wallpaper(image_path, None)
 
-    def show_context_menu_for_image(self, index: int, pos) -> None:
+    def show_context_menu_for_image(self, index: int, pos: QPoint) -> None:
         if index < 0 or index >= len(self.image_files):
             return
 
@@ -127,14 +150,16 @@ class GalleryWindow(QMainWindow):
         apply_qmenu_style(menu)
         menu.setProperty("class", "context-menu")
 
-        action_all = menu.addAction("Set on all screens")
+        action_all = QAction("Set on all screens", menu)
+        menu.addAction(action_all)
         action_all.triggered.connect(lambda: self.apply_wallpaper(image_path, None))
 
         monitor_ids = WallpaperManager().get_monitor_ids()
         if len(monitor_ids) > 1:
             menu.addSeparator()
             for position, monitor_id in enumerate(monitor_ids):
-                action = menu.addAction(f"Set on screen {position + 1}")
+                action = QAction(f"Set on screen {position + 1}", menu)
+                menu.addAction(action)
                 action.triggered.connect(partial(self.apply_wallpaper, image_path, monitor_id))
 
         self._menu_open = True
@@ -150,7 +175,7 @@ class GalleryWindow(QMainWindow):
         else:
             WallpaperManager().set_wallpaper(image_path, monitor_id=monitor_id, animate=False)
 
-    def fade_in_gallery(self, parent=None, screen=None) -> None:
+    def fade_in_gallery(self, parent: QWidget | None = None, screen: QScreen | None = None) -> None:
         for widget in QApplication.topLevelWidgets():
             if isinstance(widget, GalleryWindow) and widget.isVisible():
                 widget.fade_out_and_close_gallery()
@@ -261,8 +286,16 @@ class CardsView(QWidget):
         """Fill *rect* with *pixmap*, cropping rather than stretching it."""
         size = pixmap.deviceIndependentSize()
         scale = max(rect.width() / size.width(), rect.height() / size.height())
-        width, height = size.width() * scale, size.height() * scale
         centre = rect.center()
+        if abs(scale - 1.0) < 0.01:
+            # Unscaled and on whole device pixels, QPainter copies the pixmap instead of resampling it.
+            device = painter.device()
+            dpr = device.devicePixelRatio() if device is not None else 1.0
+            x = round((centre.x() - size.width() / 2.0) * dpr) / dpr
+            y = round((centre.y() - size.height() / 2.0) * dpr) / dpr
+            painter.drawPixmap(QPointF(x, y), pixmap)
+            return
+        width, height = size.width() * scale, size.height() * scale
         target = QRectF(centre.x() - width / 2.0, centre.y() - height / 2.0, width, height)
         painter.drawPixmap(target, pixmap, QRectF(0, 0, pixmap.width(), pixmap.height()))
 
@@ -288,7 +321,8 @@ class CardsView(QWidget):
         painter.setPen(QColor(255, 255, 255, 235))
         painter.drawText(self.rect(), align, message)
 
-    def paintEvent(self, event):
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
@@ -377,11 +411,12 @@ class CardsView(QWidget):
                 return index
         return None
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         self.gallery.fit_to_view(self.width(), self.height())
 
-    def _on_animation_value(self, value):
+    def _on_animation_value(self, value: float):
         self.offset = float(value)
         self.update()
 
@@ -397,14 +432,15 @@ class CardsView(QWidget):
 
         self.index = index % count
         target = self.gallery.offset_for(self.index)
-        self.gallery.on_focus_changed(self.index)
-
         self.animation.stop()
+
         if not animate:
             self.offset = target
+            self.gallery.on_focus_changed(self.index)
             self.update()
             return
 
+        self.gallery.on_focus_changed(self.index)
         self.animation.setStartValue(self.offset)
         self.animation.setEndValue(target)
         self.animation.start()
@@ -418,40 +454,53 @@ class CardsView(QWidget):
         else:
             self.go_to(max(0, min(count - 1, self.index + delta)))
 
-    def wheelEvent(self, event):
-        delta = event.angleDelta().y()
+    @override
+    def wheelEvent(self, a0: QWheelEvent | None) -> None:
+        if a0 is None:
+            return
+        delta = a0.angleDelta().y()
         if delta:
             self.move_by(-1 if delta > 0 else 1)
-            event.accept()
+            a0.accept()
 
-    def mouseMoveEvent(self, event):
-        hovered = self.card_at(event.position())
+    @override
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is None:
+            return
+        hovered = self.card_at(a0.position())
         if hovered != self.hovered:
             self.hovered = hovered
             self.update()
 
-    def leaveEvent(self, event):
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         if self.hovered is not None:
             self.hovered = None
             self.update()
 
-    def mousePressEvent(self, event):
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
         # Clicking never moves the cards, so a double click acts on what you aimed at.
-        event.accept()
+        if a0 is not None:
+            a0.accept()
 
-    def mouseDoubleClickEvent(self, event):
-        if event.button() != Qt.MouseButton.LeftButton:
+    @override
+    def mouseDoubleClickEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is None or a0.button() != Qt.MouseButton.LeftButton:
             return
-        index = self.card_at(event.position())
+        index = self.card_at(a0.position())
         if index is not None:
             self.gallery.apply_wallpaper(self.gallery.image_files[index], None)
-        event.accept()
+        a0.accept()
 
-    def contextMenuEvent(self, event):
-        mouse = event.reason() == event.Reason.Mouse
-        index = self.card_at(QPointF(event.pos())) if mouse else self.index
+    @override
+    def contextMenuEvent(self, a0: QContextMenuEvent | None) -> None:
+        if a0 is None:
+            return
+        mouse = a0.reason() == a0.Reason.Mouse
+        index = self.card_at(QPointF(a0.pos())) if mouse else self.index
         if index is not None:
-            self.gallery.show_context_menu_for_image(index, event.globalPos())
+            self.gallery.show_context_menu_for_image(index, a0.globalPos())
 
 
 class Cards(GalleryWindow):
@@ -468,11 +517,20 @@ class Cards(GalleryWindow):
 
     def layout_cards(self) -> list[tuple[int, Placement]]:
         """Every card worth painting, outermost first."""
-        cards = []
+        cards: list[tuple[int, Placement]] = []
         for index, distance in self.view.visible_cards():
             spot = self.place(distance)
             cards.append((index, spot._replace(focus=max(0.0, 1.0 - abs(distance)))))
         return cards
+
+    def selected_spot(self) -> Placement:
+        """Where the selected card sits, the largest a card is ever drawn."""
+        return self.place(0.0)
+
+    def thumbnail_size(self) -> tuple[float, float]:
+        """The size the selected card's picture is drawn at."""
+        area = self.view.project(self.selected_spot(), self.border).boundingRect()
+        return area.width(), area.height()
 
     def decode_order(self, index: int) -> float:
         return abs(self.view.relative_distance(index))
@@ -484,21 +542,22 @@ class Cards(GalleryWindow):
         count = len(self.image_files)
         return offset % count if count and self.wraps else offset
 
-    def __init__(self, image_paths, gallery):
+    def __init__(self, image_paths: str | list[str], gallery: GalleryConfig):
         super().__init__()
         self.image_paths = [image_paths] if isinstance(image_paths, str) else list(image_paths)
         self.image_files: list[str] = []
         self.scanning = True
 
-        width = gallery["image_width"]
-        height = width * 9 // 16 if gallery["orientation"] == "landscape" else width * 16 // 9
+        width = gallery.image_width
+        height = width * 9 // 16 if gallery.orientation == "landscape" else width * 16 // 9
         self.card_size = (width, height)
-        self.corner_radius = gallery["image_corner_radius"]
-        self.accent = resolve_accent(gallery["accent_color"])
+        self.corner_radius = gallery.image_corner_radius
+        self.accent = resolve_accent(gallery.accent_color)
 
         self.neighbours = 1
         self.wraps = False
         self.dpr = 1.0
+        self.screen_name: str | None = None
         self.is_closing = False
         self._cache: OrderedDict[int, QPixmap] = OrderedDict()
         self._pending: set[int] = set()
@@ -510,22 +569,28 @@ class Cards(GalleryWindow):
 
         # Started here rather than on show, so the walk has a head start on the
         # window being built and the fade-in running.
-        scanner = FolderScanner(self.image_paths)
+        screens = {
+            screen.name(): (geo.left(), geo.top(), geo.right(), geo.bottom())
+            for screen in QApplication.screens()
+            for geo in [screen.geometry()]
+        }
+        scanner = FolderScanner(self.image_paths, screens)
         scanner.signals.finished.connect(self._on_scan_finished)
         self.threadpool.start(scanner)
 
-    def _on_scan_finished(self, files: list[str]):
+    def _on_scan_finished(self, files: list[str], current: dict[str, int]):
         self.scanning = False
         if self.is_closing:
             return
         self.image_files = files
         self.fit_to_view(self.view.width(), self.view.height())
-        self.view.go_to(0, animate=False)
+        self.view.go_to(current.get(self.screen_name or "", 0), animate=False)
 
     def build_frame(self):
         self.setCentralWidget(self.view)
 
-    def build_content(self, screen):
+    def build_content(self, screen: QScreen):
+        self.screen_name = screen.name()
         area = screen.geometry()
         _, card_h = self.card_size
         height = min(area.height(), int(card_h * self.max_scale))
@@ -563,7 +628,7 @@ class Cards(GalleryWindow):
 
         radius = self.neighbours + 3
         wanted = {(index + offset) % count for offset in range(-radius, radius + 1)}
-        card_w, card_h = self.card_size
+        thumb_w, thumb_h = self.thumbnail_size()
 
         self._requeue(wanted)
 
@@ -571,7 +636,7 @@ class Cards(GalleryWindow):
             if target in self._cache or target in self._pending:
                 continue
             self._pending.add(target)
-            loader = ImageLoader(self.image_files[target], card_w, card_h, target, dpr=self.dpr)
+            loader = ImageLoader(self.image_files[target], thumb_w, thumb_h, target, dpr=self.dpr)
             loader.signals.loaded.connect(self._on_image_loaded)
             loader.setAutoDelete(False)
             self._queued[target] = loader
@@ -618,8 +683,11 @@ class Cards(GalleryWindow):
         step = max(1.0, self.step * card_w)
         return max(1, int((self.view.width() / 2 - card_w / 2) // step))
 
-    def keyPressEvent(self, event):
-        key = event.key()
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is None:
+            return
+        key = a0.key()
         page = self.page_step()
 
         if key == Qt.Key.Key_Escape:
@@ -639,7 +707,7 @@ class Cards(GalleryWindow):
         elif key == Qt.Key.Key_End:
             self.view.go_to(len(self.image_files) - 1)
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
     def _on_fade_out_finished(self):
         self.view.animation.stop()
@@ -677,6 +745,9 @@ class Magnified(Cards):
     @property
     def max_scale(self) -> float:
         return 1.0 + self.grow
+
+    def selected_spot(self) -> Placement:
+        return Placement(x=0.0, scale=self.max_scale)
 
     def scale_at(self, distance: float) -> float:
         return 1.0 + self.grow * max(0.0, 1.0 - abs(distance) / self.reach)
@@ -749,7 +820,7 @@ class Slide(Cards):
         )
 
 
-TYPES: dict[str, type[GalleryWindow]] = {
+TYPES: dict[str, type[Cards]] = {
     "default": Default,
     "magnified": Magnified,
     "strip": Strip,

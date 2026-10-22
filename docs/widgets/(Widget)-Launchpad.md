@@ -6,15 +6,57 @@ The Launchpad widget provides a customizable application launcher grid for quick
 
 | Option                | Type     | Default                | Description                                                                 |
 |-----------------------|----------|------------------------|-----------------------------------------------------------------------------|
-| `label`               | string   | `'<span>\udb85\udcde</span>'`| The label/icon for the widget on the bar.                                   |
+| `label`               | string   | `'\udb85\udcde'`| The label/icon for the widget on the bar.                                   |
 | `search_placeholder`  | string   | `"Search applications..."`     | Placeholder text for the search field.                                      |
 | `app_icon_size`       | int      | `64`                   | Size of application icons in pixels.                                        |
-| `window`              | dict     | `{fullscreen: false, width: 800, height: 600, overlay_block: true}`                | Popup window size and fullscreen options.                                   |
-| `window_style`        | dict     | `{enable_blur: true, round_corners: true, round_corners_type: "normal", border_color: "system"}`                | Popup window styling (blur, corners, border, etc).                          |
+| `window`              | dict     | [See below](#window-options) | Popup window size and fullscreen options.                                   |
+| `window_style`        | dict     | [See below](#window-style-options) | Popup window styling (blur, corners, border, etc).                          |
 | `window_animation`    | dict     | `{fade_in_duration: 400, fade_out_duration: 400}`                | Animation settings for showing/hiding the popup.                            |
 | `group_apps`          | bool     | `false`                | Enable grouping to organize apps by category.                               |
-| `callbacks`           | dict     | `{on_left: "toggle_launchpad", on_right: "do_nothing", on_middle: "do_nothing"}` | Mouse event callbacks.      |
-| `shortcuts`           | dict     | `{add_app: "Ctrl+N", edit_app: "F2", show_context_menu: "Shift+F10", delete_app: "Delete"}` | Keyboard shortcuts for popup actions. |
+| `callbacks`           | dict     | [See below](#callbacks) | Mouse event callbacks.      |
+| `keybindings`         | list     | `[]`                   | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `shortcuts`           | dict     | [See below](#shortcuts) | Keyboard shortcuts for popup actions. |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_launchpad"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_launchpad` - Open or close the launchpad popup.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Window Options
+
+The `window` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+window:
+  fullscreen: false
+  width: 800
+  height: 600
+  overlay_block: true
+```
+
+## Window Style Options
+
+The `window_style` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+window_style:
+  enable_blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "system"
+```
 
 ## Example Configuration
 
@@ -81,12 +123,13 @@ launchpad:
 - **window_style:** Popup window styling (blur, round corners, border, etc).
   - ***enable_blur:*** Whether to enable background blur for the popup.
   - ***round_corners:*** Whether to round the corners of the popup window.
-  - ***round_corners_type:*** Type of corner rounding ("normal" or "small").
+  - ***round_corners_type:*** Type of corner rounding ("normal" or "sharp").
   - ***border_color:*** Color of the popup window border (can be "system" HEX or None).
 - **window_animation:** Animation settings for showing/hiding the popup.
   - ***fade_in_duration:*** Duration of the fade-in animation in milliseconds.
   - ***fade_out_duration:*** Duration of the fade-out animation in milliseconds.
-- **callbacks:** Mouse event callbacks (`on_left`, `on_middle`, `on_right`).
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **shortcuts**: Keyboard shortcuts for common actions in the Launchpad popup.
   - **Ctrl+N**: Open the "Add New App" dialog.
   - **F2**: Edit the currently focused/selected app.
@@ -113,7 +156,7 @@ The Launchpad widget is a powerful application launcher designed for quick acces
 > The Launchpad widget supports autocomplete for application names when adding or editing apps. In most cases, the icon will be extracted automatically for executables and shortcuts. However, for some applications (especially certain UWP apps or unusual shortcuts), icon extraction may not always succeed. If this happens, you can manually select an icon file.
 
 > [!IMPORTANT]  
-> Launchpad widget uses the `QMenu` for the context menu, which supports various styles. You can customize the appearance of the menu using CSS styles. For more information on styling, refer to the [Context Menu Styling](https://github.com/amnweb/yasb/wiki/Styling#context-menu-styling
+> Launchpad widget uses the `QMenu` for the context menu, which supports various styles. You can customize the appearance of the menu using CSS styles. For more information on styling, refer to the [Context Menu Styling](https://github.com/amnweb/yasb/wiki/Styling#context-menu-styling).
 If you want to use different styles for the context menu, you can target the `.launchpad .context-menu` class to customize the appearance of the Launchpad widget menu.
 
 ## Example Style
@@ -407,6 +450,6 @@ If you want to use different styles for the context menu, you can target the `.l
 }
 ```
 
-## Preview
+## Preview of the Widget
 
-![Launchpad Widget Preview](assets/cf6e095b-804e2221-a7a8-a36b-44bde9433392.png)
+![Launchpad YASB Widget](assets/cf6e095b-804e2221-a7a8-a36b-44bde9433392.png)

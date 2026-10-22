@@ -4,15 +4,67 @@ The Todo widget provides a simple task management interface directly in your YAS
 
 | Option         | Type    | Default                                      | Description                                                                 |
 |----------------|---------|----------------------------------------------|-----------------------------------------------------------------------------|
-| `label`        | string  | `\uf4a0 {count}`                 | Main label format.  Use `{count}` for total tasks, `{completed}` for completed tasks, {total} for total tasks. |
+| `label`        | string  | `\uf4a0 {count}/{completed}`      | Main label format.  Use `{count}` for active (not completed) tasks, `{completed}` for completed tasks, `{total}` for all tasks. |
 | `label_alt`    | string  | `\uf4a0 Tasks: {count}`                      | Alternative label format.                                                    |
 | `data_path`    | string  | `""`                                        | Custom path to JSON file for storing tasks. Leave empty to use default location (`~/.config/yasb/todo.json`). Supports `~` for home directory. |
-| `menu`         | dict    | See example below                                    | Popup menu settings.                                                         |
-| `icons`        | dict    | See example below                                    | Icons for add, delete, check, etc.                                           |
-| `categories`   | dict    | See example below                                    | Task categories and their labels.                                            |
-| `callbacks`    | dict    | `{on_left: "toggle_menu", on_middle: "do_nothing", on_right: "toggle_label"}` | Mouse event callbacks.                  |
+| `menu`         | dict    | [See below](#menu-options) | Popup menu settings.                                                         |
+| `icons`        | dict    | [See below](#icons-options) | Icons for add, delete, check, etc.                                           |
+| `categories`   | dict    | `default`, `urgent`, `important`, `soon`, `today` | Task categories and their labels.                                            |
+| `keybindings`  | list    | `[]`                                         | Optional hotkeys. See [Keybindings](./Keybindings).                          |
+| `callbacks`    | dict    | [See below](#callbacks) | Mouse event callbacks.                  |
 
 
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_menu"
+  on_middle: "do_nothing"
+  on_right: "toggle_label"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_menu` - Open or close the popup menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Menu Options
+
+The `menu` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+menu:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "system"
+  alignment: "left"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+```
+
+## Icons Options
+
+The `icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+icons:
+  add: "New Task"
+  edit: "Edit"
+  delete: "Delete"
+  date: "\ue641"
+  category: "\uf412"
+  checked: "\udb80\udd34"
+  unchecked: "\udb80\udd30"
+  sort: "\ueab4"
+  no_tasks: "\uf4a0"
+```
 
 ## Example Configuration
 
@@ -61,7 +113,7 @@ todo:
 
 ## Description of Options
 
-- **label**:  Main label format, supports `{count}` for total tasks, `{completed}` for completed tasks, and `{total}` for total tasks.
+- **label**:  Main label format, supports `{count}` for active (not completed) tasks, `{completed}` for completed tasks, and `{total}` for all tasks.
 - **label_alt**: Alternative label format.
 - **data_path**: Optional custom path to the JSON file where tasks are stored. If empty or not specified, uses the default location (`~/.config/yasb/todo.json`). Supports `~` for home directory expansion (e.g., `~/Documents/my-todos.json` or `C:/Users/YourName/my-todos.json`).
 - **menu**: Popup menu appearance and behavior:
@@ -83,8 +135,9 @@ todo:
   - **unchecked** Icon for unchecked tasks.
   - **sort**: Icon for sorting tasks.
   - **no_tasks** Icon displayed when no tasks are available.
-- **categories**: Define task categories and their labels.
-- **callbacks**: Map mouse actions to widget functions.
+- **categories**: Define task categories and their labels. By default `default` (General), `urgent` (Urgent), `important` (Important), `soon` (Complete soon) and `today` (End of day) are available.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 
 > [!IMPORTANT]  
@@ -456,5 +509,5 @@ todo:
 }
 ```
 
-## Preview 
-![Todo Widget Preview](assets/5b36a854-bc554dc6-757d-4c27-903e0e8d07b4.png)
+## Preview of the Widget
+![Todo YASB Widget](assets/5b36a854-bc554dc6-757d-4c27-903e0e8d07b4.png)

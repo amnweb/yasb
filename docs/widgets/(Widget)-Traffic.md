@@ -4,25 +4,26 @@ Displays your network upload and download speeds in real-time. You can filter by
 
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `label`         | string  | `'\ueb01 \ueab4 {download_speed} - \ueab7 {upload_speed}'`                | The format string for the traffic widget. Displays download and upload speeds. |
-| `label_alt`     | string  | `'Download {download_speed} - Upload {upload_speed}'`                | The alternative format string for the traffic widget. Displays upload and download speeds. |
+| `label`         | string  | `'\ueb01 \ueab4 {download_speed} \| \ueab7 {upload_speed}'`                | The format string for the traffic widget. Displays download and upload speeds. |
+| `label_alt`     | string  | `'\ueb01 \ueab4 {upload_speed} \| \ueab7 {download_speed}'`                | The alternative format string for the traffic widget. Displays upload and download speeds. |
 | `class_name`    | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
-| `update_interval` | integer | `1000`                                                                 | The interval in milliseconds to update the traffic data. Must be between 1000 and 60000. |
-| `interface`       | string  | `Auto`                                                                  | The network interface to monitor. If not specified, the widget will use the default interface. |
+| `update_interval` | integer | `1000`                                                                 | The interval in milliseconds to update the traffic data. |
+| `interface`       | string  | `auto`                                                                  | The network interface to monitor. If not specified, the widget will use the default interface. |
 | `hide_if_offline` | boolean | `false`                                                                 | Hide the widget if the network interface is offline.                        |
 | `max_label_length` | integer | `0`                                                                    | The maximum length of the label.                                           |
 | `max_label_length_align` | string  | `'left'`                                                               | The alignment of the label when it exceeds the maximum length. Can be `left`, `center`, or `right`. |
 | `speed_unit`     | string  | `'bits'`                                                                | The unit of speed to display. Can be `bits` or `bytes`. |
 | `hide_decimal` | boolean | `False`                                                                 | Hide decimal in the label. If set to `True`, the label will not show decimal places in the speed values. |
 | `speed_threshold` | dict   | `{'min_upload': 1000, 'min_download': 1000}` | Minimum speed threshold for upload and download in bits. If the speed is below this threshold, the widget will not display the speed values. |
-| `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the traffic widget. |
-| `menu`          | dict    | See below                  | Menu options for the widget. |
+| `callbacks`     | dict    | [See below](#available-callbacks) | Callbacks for mouse events on the traffic widget. |
+| `menu`          | dict    | [See below](#menu-options) | Menu options for the widget. |
+| `keybindings`   | list    | `[]`                       | Optional hotkeys. See [Keybindings](./Keybindings). |
 
 
 ## Menu Options
 | Option               | Type    | Default    | Description                                                  |
 |----------------------|---------|------------|--------------------------------------------------------------|
-| `blur`               | bool    | `false`    | Blur background behind the popup.                            |
+| `blur`               | bool    | `true`     | Blur background behind the popup.                            |
 | `round_corners`      | bool    | `true`     | Enable rounded corners on the popup.                         |
 | `round_corners_type` | string  | `"normal"` | Rounding style: `"small"`, `"normal"`.         |
 | `border_color`       | string  | `"system"` | Border color can be `None`, `system` or `Hex Color` `"#ff0000"`       |
@@ -34,9 +35,22 @@ Displays your network upload and download speeds in real-time. You can filter by
 | `show_internet_info` | bool    | `true`     | Show the internet connection information in the menu. Connected or disconnected status. |
 
 ## Available Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
 - `toggle_label`: Toggles the label between the main and alternative formats.
 - `toggle_menu`: Toggles the visibility of the menu.
 - `reset_data`: Resets all traffic data.
+- `update_label`: Refreshes the label now.
 
 ## Available Placeholders
 - `{download_speed}` - Current download speed
@@ -74,7 +88,7 @@ traffic:
 - **label:** The format string for the traffic widget. Displays download and upload speeds.
 - **label_alt:** The alternative format string for the traffic widget. Displays upload and download speeds.
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
-- **update_interval:** The interval in milliseconds to update the traffic data. Must be between 0 and 60000.
+- **update_interval:** The interval in milliseconds to update the traffic data.
 - **interface:** The network interface to monitor. If not specified, the widget will use the default interface.
 - **hide_if_offline:** Hide the widget if the network interface is offline.
 - **max_label_length:** The maximum length of the label.
@@ -82,7 +96,8 @@ traffic:
 - **speed_unit:** The unit of speed to display. Can be `bits` or `bytes`.
 - **hide_decimal:** Hide decimal in the label. If set to `True`, the label will not show decimal places in the speed values.
 - **speed_threshold:** A dictionary specifying the minimum speed threshold for upload and download in bits. If the speed is below this threshold, the widget will not display the speed values.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#available-callbacks).
 - **menu:** A dictionary specifying the menu options for the widget. See **Menu Options** above for details.
 
 > [!NOTE]  
@@ -288,4 +303,4 @@ traffic:
 ```
 
 ## Preview of the Widget
-![Power Plan Widget](assets/d937ad0d-94feed9b-557f-b331-10e7a654c7d0.png)
+![Traffic YASB Widget](assets/d937ad0d-94feed9b-557f-b331-10e7a654c7d0.png)

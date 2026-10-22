@@ -33,7 +33,9 @@ jobs:
       - name: Install Ruff
         run: |
           python -m pip install --upgrade pip
-          pip install ruff
+          $ruff = python -c "import tomllib; dev = tomllib.load(open('pyproject.toml', 'rb'))['project']['optional-dependencies']['dev']; print(next(d for d in dev if d.startswith('ruff')))"
+          Write-Host "Installing $ruff from pyproject.toml"
+          pip install $ruff
         shell: pwsh
 
       - name: Run Ruff Format Check
@@ -64,8 +66,11 @@ jobs:
           $prNumber = "${{ github.event.pull_request.number }}"
           $prNumber | Out-File "pr_number.txt" -Encoding utf8
 
-          if ($env:Step_Ruff_Format_Outcome -eq 'failure' -or $env:Step_Ruff_Lint_Outcome -eq 'failure') {
-              $comment = "## ❌ Ruff Lint Check Failed`n`n"
+          $ruffFailed = $env:Step_Ruff_Format_Outcome -eq 'failure' -or $env:Step_Ruff_Lint_Outcome -eq 'failure'
+          ($ruffFailed ? 'failure' : 'success') | Out-File "ruff_status.txt" -Encoding utf8
+
+          if ($ruffFailed) {
+              $comment = "<!-- yasb-bot:ruff -->`n## ❌ Ruff Lint Check Failed`n`n"
               $comment += "The code quality checks did not pass. Please review and fix the issues below:`n`n"
               
               if ($env:Step_Ruff_Format_Outcome -eq 'failure' -and (Test-Path "format_output.txt")) {
@@ -110,6 +115,7 @@ jobs:
           name: pr-metadata
           path: |
             pr_number.txt
+            ruff_status.txt
             comment.txt
           retention-days: 1
 
@@ -120,9 +126,64 @@ jobs:
           exit 1
         shell: pwsh
 
+  typecheck:
+    runs-on: windows-latest
+    name: Pyright Type Check
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+        shell: pwsh
+
+      - name: Run Pyright
+        id: pyright
+        run: |
+          pyright --outputjson > pyright.json
+          $code = $LASTEXITCODE
+          Set-Content -Path pyright_exit_code.txt -Value $code
+          exit $code
+        shell: pwsh
+
+      - name: Summarize results
+        if: ${{ !cancelled() && steps.pyright.outcome != 'skipped' }}
+        env:
+          PYTHONUTF8: '1'
+        run: |
+          python .github/scripts/pyright_report.py summarize `
+            --json pyright.json `
+            --exit-code pyright_exit_code.txt `
+            --out pyright-report.json `
+            --summary $env:GITHUB_STEP_SUMMARY
+        shell: pwsh
+
+      - name: Upload report
+        if: ${{ !cancelled() && steps.pyright.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: pyright-report
+          path: pyright-report.json
+          retention-days: 1
+
+  tests:
+    name: Tests
+    uses: ./.github/workflows/tests.yaml
+
   build-x64:
-    needs: ruff-lint
-    if: success() && github.event.pull_request.draft == false
+    needs: [ruff-lint, typecheck, tests]
+    if: success() && github.event.pull_request.draft == false && github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: windows-latest
     name: Build (x64)
     steps:
@@ -190,8 +251,8 @@ jobs:
           retention-days: 7
 
   build-arm64:
-    needs: ruff-lint
-    if: success() && github.event.pull_request.draft == false
+    needs: [ruff-lint, typecheck, tests]
+    if: success() && github.event.pull_request.draft == false && github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: windows-11-arm
     name: Build (arm64)
     steps:

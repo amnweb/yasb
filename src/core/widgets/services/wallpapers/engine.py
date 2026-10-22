@@ -26,13 +26,44 @@ import math
 import os
 import winreg
 from ctypes import wintypes
+from typing import override
 
-from PyQt6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QImage, QPainter, QPainterPath, QPixmap, QPolygonF
+import PyQt6.sip as sip
+from PyQt6.QtCore import QByteArray, QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, QTimer, pyqtSignal
+from PyQt6.QtGui import (
+    QCloseEvent,
+    QColor,
+    QImage,
+    QImageReader,
+    QPainter,
+    QPainterPath,
+    QPaintEvent,
+    QPixmap,
+    QPolygonF,
+)
 from PyQt6.QtWidgets import QApplication, QWidget
-from win32con import (
+
+from core.utils.win32.bindings.user32 import (
+    MONITORENUMPROC,
+    EnumChildWindows,
+    EnumWindows,
+    FindWindow,
+    FindWindowEx,
+    GetClassName,
+    GetWindowLongPtr,
+    GetWindowRect,
+    SendMessageTimeout,
+    SetParent,
+    SetWindowLongPtr,
+    SetWindowPos,
+    ShowWindow,
+    user32,
+)
+from core.utils.win32.constants import (
     GWL_EXSTYLE,
     GWL_STYLE,
+    HWND_TOP,
+    SW_SHOW,
     SWP_FRAMECHANGED,
     SWP_NOACTIVATE,
     WM_DESTROY,
@@ -40,79 +71,23 @@ from win32con import (
     WS_EX_LAYERED,
     WS_POPUP,
 )
+from core.utils.win32.registry_keys import COLORS_KEY, DESKTOP_KEY
+from core.utils.win32.structs import WNDENUMPROC
+from core.utils.win32.typecheck import CPointer
+from core.utils.win32.undocumented import WM_SPAWN_WORKER
 
 logger = logging.getLogger("wallpaper_engine")
-user32 = ctypes.WinDLL("user32", use_last_error=True)
 
-HWND = wintypes.HWND
-ULONG_PTR = ctypes.c_ulonglong
-LONG_PTR = ctypes.c_ssize_t
-
-WM_SPAWN_WORKER = 0x052C
-HWND_TOP = HWND(0)
-
-EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, HWND, wintypes.LPARAM)
-EnumChildProc = ctypes.WINFUNCTYPE(wintypes.BOOL, HWND, wintypes.LPARAM)
-
-SetWindowLongPtr = user32.SetWindowLongPtrW
-GetWindowLongPtr = user32.GetWindowLongPtrW
-SetWindowLongPtr.restype = LONG_PTR
-SetWindowLongPtr.argtypes = [HWND, ctypes.c_int, LONG_PTR]
-GetWindowLongPtr.restype = LONG_PTR
-GetWindowLongPtr.argtypes = [HWND, ctypes.c_int]
-
-user32.FindWindowW.restype = HWND
-user32.FindWindowW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
-
-user32.FindWindowExW.restype = HWND
-user32.FindWindowExW.argtypes = [HWND, HWND, wintypes.LPCWSTR, wintypes.LPCWSTR]
-
-user32.SetWindowPos.restype = wintypes.BOOL
-user32.SetWindowPos.argtypes = [HWND, HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_uint]
-
-user32.EnumWindows.restype = wintypes.BOOL
-user32.EnumWindows.argtypes = [EnumWindowsProc, wintypes.LPARAM]
-
-user32.EnumChildWindows.restype = wintypes.BOOL
-user32.EnumChildWindows.argtypes = [HWND, EnumChildProc, wintypes.LPARAM]
-
-user32.SetParent.restype = HWND
-user32.SetParent.argtypes = [HWND, HWND]
-
-user32.GetClassNameW.restype = ctypes.c_int
-user32.GetClassNameW.argtypes = [HWND, wintypes.LPWSTR, ctypes.c_int]
-
-user32.SendMessageTimeoutW.restype = wintypes.LPARAM
-user32.SendMessageTimeoutW.argtypes = [
-    HWND,
-    wintypes.UINT,
-    wintypes.WPARAM,
-    wintypes.LPARAM,
-    wintypes.UINT,
-    wintypes.UINT,
-    ctypes.POINTER(ULONG_PTR),
-]
-
-user32.ShowWindow.restype = wintypes.BOOL
-user32.ShowWindow.argtypes = [HWND, ctypes.c_int]
-
-user32.GetWindowRect.restype = wintypes.BOOL
-user32.GetWindowRect.argtypes = [HWND, ctypes.POINTER(wintypes.RECT)]
-
-MonitorEnumProc = ctypes.WINFUNCTYPE(
-    wintypes.BOOL, wintypes.HANDLE, wintypes.HANDLE, ctypes.POINTER(wintypes.RECT), wintypes.LPARAM
-)
-
-user32.EnumDisplayMonitors.restype = wintypes.BOOL
-user32.EnumDisplayMonitors.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.RECT), MonitorEnumProc, wintypes.LPARAM]
+# (x, y, width, height, device pixel ratio) of one monitor, in logical pixels.
+type ScreenArea = tuple[int, int, int, int, float]
 
 
 def _enum_physical_monitors() -> list[tuple[int, int, int, int]]:
     """Return physical-pixel rects (left, top, right, bottom) for every monitor."""
     rects: list[tuple[int, int, int, int]] = []
 
-    @MonitorEnumProc
-    def _cb(hmon, hdc, lprect, _):
+    @MONITORENUMPROC
+    def _cb(hmon: int, hdc: int, lprect: CPointer[wintypes.RECT], _: int) -> bool:
         r = lprect.contents
         rects.append((r.left, r.top, r.right, r.bottom))
         return True
@@ -130,7 +105,7 @@ def _transcoded_wallpaper_path() -> str:
 def _read_fit_mode() -> str:
     """Read wallpaper fit mode from HKCU\\Control Panel\\Desktop (registry)."""
     try:
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop")
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, DESKTOP_KEY)
         try:
             tile = winreg.QueryValueEx(key, "TileWallpaper")[0]
             style = winreg.QueryValueEx(key, "WallpaperStyle")[0]
@@ -157,7 +132,7 @@ def _read_fit_mode() -> str:
 def _read_background_color() -> QColor:
     """Read the Windows desktop background color from the registry."""
     try:
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Colors")
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, COLORS_KEY)
         try:
             bg_str = winreg.QueryValueEx(key, "Background")[0]
         finally:
@@ -180,7 +155,7 @@ def _panorama_threshold(landscape: bool) -> float:
     default = 2.22 if landscape else 1.0
     name = "PanoramaThreshold" if landscape else "PanoramaPortraitThreshold"
     try:
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop")
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, DESKTOP_KEY)
         try:
             value = int(winreg.QueryValueEx(key, name)[0])
         finally:
@@ -195,7 +170,7 @@ def _panorama_threshold(landscape: bool) -> float:
     return value / 1000.0 if value else default
 
 
-def _monitors_tile_a_rectangle(areas) -> bool:
+def _monitors_tile_a_rectangle(areas: list[ScreenArea]) -> bool:
     """Whether the monitors cover their bounding box exactly, with no step or gap.
 
     Windows builds a region from the monitor rects and refuses to span unless
@@ -219,7 +194,7 @@ def _monitors_tile_a_rectangle(areas) -> bool:
     return covered == (right - left) * (bottom - top)
 
 
-def _wants_autospan(px: QPixmap, areas) -> bool:
+def _wants_autospan(px: QPixmap, areas: list[ScreenArea]) -> bool:
     """Whether Windows would turn this fit/fill into a span.
 
     Windows calls this autospan. A landscape image wider than the panorama
@@ -251,7 +226,7 @@ def _transcode_limits() -> tuple[int, int] | None:
     what returning None means here.
     """
     try:
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop")
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, DESKTOP_KEY)
         try:
             max_virtual_desktop = int(winreg.QueryValueEx(key, "MaxVirtualDesktopDimension")[0])
             max_monitor = int(winreg.QueryValueEx(key, "MaxMonitorDimension")[0])
@@ -321,72 +296,70 @@ def _trunc_div(a: int, b: int) -> int:
 
 def _locate_workerw() -> int:
     """Find the WorkerW window that sits behind desktop icons."""
-    progman = user32.FindWindowW("Progman", None)
+    progman = FindWindow("Progman", None)
     if not progman:
         logger.warning("Could not locate Progman. Wallpaper animation skipped.")
         return 0
-    user32.SendMessageTimeoutW(progman, WM_SPAWN_WORKER, 0, 0, 0, 1000, ctypes.byref(ULONG_PTR()))
-    worker = HWND()
+    SendMessageTimeout(progman, WM_SPAWN_WORKER, 0, 0, 0, 1000, None)
+    worker = 0
 
-    @EnumChildProc
-    def _child_proc(hwnd, _):
+    @WNDENUMPROC
+    def _child_proc(hwnd: int, _: int) -> bool:
         nonlocal worker
         if worker:
             return False
-        buf = ctypes.create_unicode_buffer(256)
-        user32.GetClassNameW(hwnd, buf, len(buf))
-        if buf.value == "WorkerW":
+        if GetClassName(hwnd) == "WorkerW":
             worker = hwnd
             return False
         return True
 
-    user32.EnumChildWindows(HWND(progman), _child_proc, 0)
+    EnumChildWindows(progman, _child_proc, 0)
 
     if not worker:
 
-        @EnumWindowsProc
-        def _enum_proc(hwnd, _):
+        @WNDENUMPROC
+        def _enum_proc(hwnd: int, _: int) -> bool:
             nonlocal worker
             if worker:
                 return False
-            if user32.FindWindowExW(hwnd, None, "SHELLDLL_DefView", None):
-                candidate = user32.FindWindowExW(None, hwnd, "WorkerW", None)
+            if FindWindowEx(hwnd, 0, "SHELLDLL_DefView", None):
+                candidate = FindWindowEx(0, hwnd, "WorkerW", None)
                 if candidate:
                     worker = candidate
                     return False
             return True
 
-        user32.EnumWindows(_enum_proc, 0)
+        EnumWindows(_enum_proc, 0)
 
     if not worker:
         logger.warning("Could not locate WorkerW. Wallpaper animation skipped. (Windows OS animation must be enabled.)")
         return 0
-    user32.ShowWindow(worker, 5)
+    ShowWindow(worker, SW_SHOW)
     return worker
 
 
-def _attach_to_workerw(widget: QWidget) -> bool:
+def _attach_to_workerw(widget: WallpaperEngine) -> bool:
     """Parent *widget* to WorkerW and compute per-monitor screen areas."""
     worker = _locate_workerw()
     if not worker:
         return False
-    hwnd = HWND(int(widget.winId()))
+    hwnd = int(widget.winId())
 
     exstyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE)
 
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, LONG_PTR(exstyle & ~WS_EX_LAYERED))
-    user32.SetParent(hwnd, worker)
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, LONG_PTR(exstyle))
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, exstyle & ~WS_EX_LAYERED)
+    SetParent(hwnd, worker)
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, exstyle)
 
     style = GetWindowLongPtr(hwnd, GWL_STYLE)
-    SetWindowLongPtr(hwnd, GWL_STYLE, LONG_PTR((style | WS_CHILD) & ~WS_POPUP))
+    SetWindowLongPtr(hwnd, GWL_STYLE, (style | WS_CHILD) & ~WS_POPUP)
 
     wr = wintypes.RECT()
-    user32.GetWindowRect(worker, ctypes.byref(wr))
+    GetWindowRect(worker, ctypes.byref(wr))
     ww, wh = wr.right - wr.left, wr.bottom - wr.top
     dpr = widget.devicePixelRatioF() or 1.0
 
-    areas = []
+    areas: list[ScreenArea] = []
     for ml, mt, mr, mb in _enum_physical_monitors():
         areas.append(
             (
@@ -399,7 +372,7 @@ def _attach_to_workerw(widget: QWidget) -> bool:
         )
     widget.set_screen_areas(areas)
 
-    user32.SetWindowPos(hwnd, HWND_TOP, 0, 0, ww, wh, SWP_NOACTIVATE | SWP_FRAMECHANGED)
+    SetWindowPos(hwnd, HWND_TOP, 0, 0, ww, wh, SWP_NOACTIVATE | SWP_FRAMECHANGED)
     return True
 
 
@@ -414,7 +387,9 @@ class _ImageLoader(QThread):
         self.old_path = old_path
 
     def run(self):
-        new_img = QImage(self.new_path)
+        reader = QImageReader(self.new_path)
+        reader.setAutoTransform(True)
+        new_img = reader.read()
         old_img = QImage(self.old_path)
         self.loaded.emit(new_img, old_img)
 
@@ -431,7 +406,7 @@ class WallpaperEngine(QWidget):
         self._animation = animation
         self._progress = 0.0
         self._committed = False
-        self._areas: list[tuple[int, int, int, int, float]] = []
+        self._areas: list[ScreenArea] = []
         self._dpr = 1.0
         self._per_screen_scaled_old: list[tuple[QPixmap, int, int]] = []
         self._per_screen_scaled_new: list[tuple[QPixmap, int, int]] = []
@@ -441,7 +416,9 @@ class WallpaperEngine(QWidget):
         self._pixmap_old = QPixmap()
         self._resources_freed = False
 
-        self.setGeometry(QApplication.primaryScreen().geometry())
+        primary = QApplication.primaryScreen()
+        if primary is not None:
+            self.setGeometry(primary.geometry())
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
@@ -491,7 +468,7 @@ class WallpaperEngine(QWidget):
         self.setWindowOpacity(1.0)
         self._timeline.start()
 
-    def set_screen_areas(self, areas: list[tuple[int, int, int, int, float]]) -> None:
+    def set_screen_areas(self, areas: list[ScreenArea]) -> None:
         if areas:
             min_x = min(dx for dx, _, _, _, _ in areas)
             min_y = min(dy for _, dy, _, _, _ in areas)
@@ -514,7 +491,9 @@ class WallpaperEngine(QWidget):
         px = _apply_transcode_cap(px)
         dpr = self._dpr
         if dpr != 1.0:
-            areas = [(*(int(round(v * dpr)) for v in (dx, dy, dw, dh)), d) for dx, dy, dw, dh, d in areas]
+            areas = [
+                (round(dx * dpr), round(dy * dpr), round(dw * dpr), round(dh * dpr), d) for dx, dy, dw, dh, d in areas
+            ]
             px = QPixmap(px)
             px.setDevicePixelRatio(dpr)
         vw = max(dx + dw for dx, _, dw, _, _ in areas) if areas else int(round(self.width() * dpr))
@@ -552,7 +531,9 @@ class WallpaperEngine(QWidget):
             Qt.TransformationMode.SmoothTransformation,
         )
 
-    def _scale_span(self, px: QPixmap, areas, vw: int, vh: int, cover: bool = True) -> list[tuple[QPixmap, int, int]]:
+    def _scale_span(
+        self, px: QPixmap, areas: list[ScreenArea], vw: int, vh: int, cover: bool = True
+    ) -> list[tuple[QPixmap, int, int]]:
         """One image across the whole virtual desktop, each monitor clips its part.
 
         *cover* is false only when a fit has been autospanned. Windows keeps the
@@ -565,7 +546,7 @@ class WallpaperEngine(QWidget):
         oy = _trunc_div(vh - scaled.height(), 3 if cover else 2)
         return [(scaled, ox - dx, oy - dy) for dx, dy, _, _, _ in areas]
 
-    def _scale_tile(self, px: QPixmap, areas, vw: int, vh: int) -> list[tuple[QPixmap, int, int]]:
+    def _scale_tile(self, px: QPixmap, areas: list[ScreenArea], vw: int, vh: int) -> list[tuple[QPixmap, int, int]]:
         """Repeat the image at its native size from the virtual desktop origin.
 
         Windows never scales a tiled wallpaper, whatever its size, and the grid
@@ -698,7 +679,8 @@ class WallpaperEngine(QWidget):
         rect.addRect(QRectF(float(dx), float(dy), float(dw), float(dh)))
         return circ.intersected(rect)
 
-    def paintEvent(self, _) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
 
         t = self._progress
@@ -756,14 +738,20 @@ class WallpaperEngine(QWidget):
                 wl.wait(1000)
             self._wallpaper_loader = None
 
-    def nativeEvent(self, _, message):
+    @override
+    def nativeEvent(
+        self, eventType: QByteArray | bytes | bytearray | memoryview, message: sip.voidptr | None
+    ) -> tuple[bool, sip.voidptr | None]:
+        if message is None:
+            return False, sip.voidptr(0)
         msg = ctypes.cast(int(message), ctypes.POINTER(wintypes.MSG)).contents
         if msg.message == WM_DESTROY:
             self._free_resources()
             self.deleteLater()
-            return True, 0
-        return False, 0
+            return True, sip.voidptr(0)
+        return False, sip.voidptr(0)
 
-    def closeEvent(self, event) -> None:
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         self._free_resources()
-        super().closeEvent(event)
+        super().closeEvent(a0)

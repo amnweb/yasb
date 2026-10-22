@@ -17,11 +17,22 @@ Shows Bluetooth status, connected devices, and a popup menu to browse paired/new
 | `max_length` | integer | `null` | Max label length before truncation. |
 | `max_length_ellipsis` | string | `"..."` | Ellipsis used when truncating. |
 | `tooltip` | boolean | `true` | Show tooltip on hover. |
-| `icons` | dict | see defaults below | Bar icons for on / off / connected (Segoe Fluent by default; all three use `\ue702`). |
-| `device_aliases` | list | `[]` | Rename devices in the bar label. |
-| `keybindings` | list | `[]` | Optional keyboard shortcuts. |
-| `callbacks` | dict | `{'on_left': 'toggle_menu'}` | Mouse callbacks (`on_middle` / `on_right` default to `do_nothing`). |
-| `menu_config` | dict | see defaults below | Popup menu options. Nested keys (`labels`, `device_icons`, ...) can also be set partially - only override what you need. |
+| `icons` | dict | [See below](#icons-options) | Bar icons for on / off / connected (Segoe Fluent by default; all three use `\ue702`). |
+| `device_aliases` | list | `[]` | Rename devices in the bar label. Each item has two required string keys: `name` (the device name as reported by Windows) and `alias` (the name to show). |
+| `keybindings` | list | `[]` | Optional keyboard shortcuts. See [Keybindings](./Keybindings). |
+| `callbacks` | dict | [See below](#callbacks) | Mouse callbacks (`on_middle` / `on_right` default to `do_nothing`). |
+| `menu_config` | dict | [See below](#menu-config) | Popup menu options. Nested keys (`labels`, `device_icons`, ...) can also be set partially - only override what you need. |
+
+## Icons Options
+
+The `icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+icons:
+  bluetooth_on: "\ue702"
+  bluetooth_off: "\ue702"
+  bluetooth_connected: "\ue702"
+```
 
 ## Minimal Configuration
 
@@ -123,6 +134,17 @@ bluetooth:
 | `{device_count}` | Number of connected devices. |
 
 ## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_menu"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
 
 - `toggle_menu` - open/close the Bluetooth devices popup
 - `toggle_label` - switch between `label` and `label_alt`
@@ -359,5 +381,5 @@ That is **not** loading or unloading drivers, and it is not ripping the adapter 
 }
 ```
 
-## Preview of example above
+## Preview of the Widget
 ![Bluetooth YASB Widget](assets/0168475d-f51c-4232-b0e7-e89582d21be5.png)

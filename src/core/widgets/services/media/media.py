@@ -7,6 +7,7 @@ from collections.abc import Callable
 from functools import partial
 from typing import Any
 
+import PyQt6.sip as sip
 from PIL import Image
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication
@@ -17,8 +18,6 @@ from winrt.windows.media.control import (
 )
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionManager as SessionManager
 from winrt.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
-
-from core.utils.singleton import QSingleton
 
 pil_logger = logging.getLogger("PIL")
 pil_logger.setLevel(logging.INFO)
@@ -89,6 +88,19 @@ class SessionState:
         self.thumbnail: Image.Image | None = None
         self.cleanup_callbacks: list[Callable[..., None]] = []
         self.session: MediaSession | None = None
+
+
+class QSingleton(type(QObject)):
+    """Singleton metaclass for Qt classes"""
+
+    _instances: dict[Any, Any] = {}
+    _lock = threading.Lock()
+
+    def __call__(cls, *args: Any, **kwargs: Any):
+        with cls._lock:
+            if cls not in cls._instances or sip.isdeleted(cls._instances[cls]):
+                cls._instances[cls] = super().__call__(*args, **kwargs)
+            return cls._instances[cls]
 
 
 class WindowsMedia(QObject, metaclass=QSingleton):
@@ -270,7 +282,7 @@ class WindowsMedia(QObject, metaclass=QSingleton):
     async def _sync_media_properties(self, app_id: str):
         """Fetch media properties via tracked session; never hold the SMTC lock across await."""
         state = self._trackers.get(app_id)
-        if state is None or state.session is None:
+        if state is None:
             return
         try:
             with self._smtc_lock:
@@ -291,7 +303,7 @@ class WindowsMedia(QObject, metaclass=QSingleton):
                 thumb_ref = props.thumbnail
             del props
 
-            if thumb_ref is not None:
+            if thumb_ref is not None:  # pyright: ignore[reportUnnecessaryComparison]
                 thumbnail = await self._get_thumbnail_async(thumb_ref)
             else:
                 thumbnail = None

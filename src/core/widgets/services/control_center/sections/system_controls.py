@@ -1,10 +1,11 @@
 import io
 from collections.abc import Callable
-from typing import Any
+from functools import partial
+from typing import Any, override
 
 from PIL import Image
 from PyQt6.QtCore import QEvent, QPoint, QSize, Qt
-from PyQt6.QtGui import QIcon, QPainter, QPainterPath, QPixmap
+from PyQt6.QtGui import QAction, QIcon, QPainter, QPainterPath, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPushButton, QWidget
 
 from core.bar_helper import GlobalState
@@ -12,6 +13,7 @@ from core.utils.qobject import is_valid_qobject
 from core.utils.shell_utils import shell_open
 from core.utils.tooltip import set_tooltip
 from core.utils.win32.utils import apply_qmenu_style
+from core.validation.widgets.yasb.control_center import SystemControlsConfig
 from core.widgets.services.power_menu.power_commands import PowerOperations
 from core.widgets.services.power_menu.user_info import get_user_avatar_path, get_windows_username
 
@@ -19,7 +21,9 @@ from core.widgets.services.power_menu.user_info import get_user_avatar_path, get
 class SystemControlsSectionWidget(QFrame):
     """Section containing system-level controls: user profile, settings, and power menu."""
 
-    def __init__(self, parent: QWidget, config: object, refresh_popup: object, tooltip: bool = False):
+    def __init__(
+        self, parent: QWidget, config: SystemControlsConfig, refresh_popup: Callable[[], None], tooltip: bool = False
+    ):
         super().__init__(parent)
         self.config = config
         self.refresh_popup = refresh_popup
@@ -66,11 +70,12 @@ class SystemControlsSectionWidget(QFrame):
             set_tooltip(self._profile_image_btn, get_windows_username(), position="top")
         layout.addWidget(self._profile_image_btn)
 
-    def event(self, event: QEvent) -> bool:
+    @override
+    def event(self, e: QEvent | None) -> bool:
         # Built before the popup has a screen, so the scale is only known once it is shown
-        if event.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
+        if e is not None and e.type() in (QEvent.Type.Show, QEvent.Type.DevicePixelRatioChange):
             self._update_profile_image()
-        return super().event(event)
+        return super().event(e)
 
     def _update_profile_image(self) -> None:
         dpr = self.devicePixelRatioF()
@@ -138,12 +143,20 @@ class SystemControlsSectionWidget(QFrame):
                 menu.addSeparator()
             else:
                 label, callback = item
-                action = menu.addAction(label)
+                action = QAction(label, menu)
+                menu.addAction(action)
                 action.triggered.connect(callback)
+
+    @staticmethod
+    def _open_link(url: str, checked: bool = False) -> None:
+        shell_open(url)
 
     def _show_settings_menu(self):
         if self._settings_menu and is_valid_qobject(self._settings_menu) and self._settings_menu.isVisible():
             self._settings_menu.close()
+            return
+        btn = self._settings_btn
+        if btn is None:
             return
 
         menu = self._create_context_menu()
@@ -162,11 +175,10 @@ class SystemControlsSectionWidget(QFrame):
         ]
         self._populate_menu(
             menu,
-            [link if link is None else (link[0], lambda c=False, u=link[1]: shell_open(u)) for link in links],
+            [link if link is None else (link[0], partial(self._open_link, link[1])) for link in links],
         )
 
         self._settings_menu = menu
-        btn = self._settings_btn
         pos = btn.mapToGlobal(QPoint(btn.width() - menu.sizeHint().width(), btn.height() + 6))
         btn.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
         btn.update()
@@ -176,10 +188,14 @@ class SystemControlsSectionWidget(QFrame):
         if self._profile_menu and is_valid_qobject(self._profile_menu) and self._profile_menu.isVisible():
             self._profile_menu.close()
             return
+        btn = self._profile_image_btn
+        if btn is None:
+            return
 
         menu = self._create_context_menu()
-        username_action = menu.addAction(get_windows_username())
-        username_action.triggered.connect(lambda checked=False: shell_open("ms-settings:yourinfo"))
+        username_action = QAction(get_windows_username(), menu)
+        menu.addAction(username_action)
+        username_action.triggered.connect(partial(self._open_link, "ms-settings:yourinfo"))
         menu.addSeparator()
         self._populate_menu(
             menu,
@@ -190,7 +206,6 @@ class SystemControlsSectionWidget(QFrame):
         )
 
         self._profile_menu = menu
-        btn = self._profile_image_btn
         pos = btn.mapToGlobal(QPoint(0, btn.height() + 6))
         btn.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
         btn.update()
@@ -199,6 +214,9 @@ class SystemControlsSectionWidget(QFrame):
     def _show_power_menu(self):
         if self._power_menu and is_valid_qobject(self._power_menu) and self._power_menu.isVisible():
             self._power_menu.close()
+            return
+        btn = self._power_btn
+        if btn is None:
             return
 
         menu = self._create_context_menu()
@@ -213,7 +231,6 @@ class SystemControlsSectionWidget(QFrame):
         )
 
         self._power_menu = menu
-        btn = self._power_btn
         pos = btn.mapToGlobal(QPoint(btn.width() - menu.sizeHint().width(), btn.height() + 6))
         btn.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
         btn.update()

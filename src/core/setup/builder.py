@@ -1,3 +1,5 @@
+from typing import Any
+
 from yaml import dump as yaml_dump
 
 from core.setup.bar_config import CONFIG_HEADER, ROOT_BAR, ROOT_CONFIG, ROOT_STYLE
@@ -26,14 +28,14 @@ FEATURE_GROUPS: tuple[tuple[str, str, str], ...] = (*OPTIONAL_GROUPS,)
 DEFAULT_GROUPS = ["base", "active_window"]
 
 
-def build_config(selected_groups: list[str] | None = None, bar_overrides: dict | None = None) -> str:
+def build_config(selected_groups: list[str] | None = None, bar_overrides: dict[str, Any] | None = None) -> str:
     if selected_groups is None:
         selected_groups = DEFAULT_GROUPS
     if "base" not in selected_groups:
         selected_groups = ["base", *selected_groups]
 
-    all_widgets: dict = {}
-    all_placements: dict = {}
+    all_widgets: dict[str, dict[str, Any]] = {}
+    all_placements: dict[str, tuple[str, int]] = {}
 
     for group_name in selected_groups:
         preset = WIDGETS_CONFIG[group_name]
@@ -48,9 +50,9 @@ def build_config(selected_groups: list[str] | None = None, bar_overrides: dict |
     for widget_name, (section, _) in sorted(all_placements.items(), key=lambda x: x[1][1]):
         section_map.get(section, left).append(widget_name)
 
-    config: dict = {**ROOT_CONFIG}
+    config: dict[str, Any] = {**ROOT_CONFIG}
 
-    bar: dict = {
+    bar: dict[str, Any] = {
         **ROOT_BAR,
         "alignment": dict(ROOT_BAR["alignment"]),
         "padding": dict(ROOT_BAR["padding"]),

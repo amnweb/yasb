@@ -1,15 +1,21 @@
+from collections.abc import Callable
+from typing import Any, override
+
+import PyQt6.QtCore as QtCore
 from PyQt6.QtCore import (
     QEasingCurve,
     QParallelAnimationGroup,
     QPropertyAnimation,
     QRectF,
     Qt,
-    pyqtProperty,
 )
-from PyQt6.QtGui import QColor, QPainter
+from PyQt6.QtGui import QColor, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from core.ui.theme import get_tokens, theme_key
+
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 _DASH_HEIGHT = 6.0
 _DASH_RADIUS = 3.0
@@ -38,7 +44,9 @@ class StepIndicator(QWidget):
         self.setFixedSize(total_w, 20)
         self._anim_group: QParallelAnimationGroup | None = None
 
-        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     def _build_colors(self, t: dict[str, str]) -> None:
         self._color_active = QColor(t["accent_fill_default"])
@@ -54,43 +62,43 @@ class StepIndicator(QWidget):
             self._colors[i] = QColor(self._color_active if i == self._current else self._color_inactive)
         self.update()
 
-    @pyqtProperty(float)
-    def activeWidth(self) -> float:
+    def _get_activeWidth(self) -> float:
         return self._widths[self._current]
 
-    @activeWidth.setter
-    def activeWidth(self, v: float) -> None:
+    def _set_activeWidth(self, v: float) -> None:
         self._widths[self._current] = v
         self.update()
 
-    @pyqtProperty(float)
-    def prevWidth(self) -> float:
+    activeWidth: float = pyqtProperty(float, _get_activeWidth, _set_activeWidth)
+
+    def _get_prevWidth(self) -> float:
         return self._widths[self._prev] if hasattr(self, "_prev") else _DASH_INACTIVE_W
 
-    @prevWidth.setter
-    def prevWidth(self, v: float) -> None:
+    def _set_prevWidth(self, v: float) -> None:
         if hasattr(self, "_prev"):
             self._widths[self._prev] = v
             self.update()
 
-    @pyqtProperty(QColor)
-    def activeColor(self) -> QColor:
+    prevWidth: float = pyqtProperty(float, _get_prevWidth, _set_prevWidth)
+
+    def _get_activeColor(self) -> QColor:
         return self._colors[self._current]
 
-    @activeColor.setter
-    def activeColor(self, c: QColor) -> None:
+    def _set_activeColor(self, c: QColor) -> None:
         self._colors[self._current] = QColor(c)
         self.update()
 
-    @pyqtProperty(QColor)
-    def prevColor(self) -> QColor:
+    activeColor: QColor = pyqtProperty(QColor, _get_activeColor, _set_activeColor)
+
+    def _get_prevColor(self) -> QColor:
         return self._colors[self._prev] if hasattr(self, "_prev") else QColor(self._color_inactive)
 
-    @prevColor.setter
-    def prevColor(self, c: QColor) -> None:
+    def _set_prevColor(self, c: QColor) -> None:
         if hasattr(self, "_prev"):
             self._colors[self._prev] = QColor(c)
             self.update()
+
+    prevColor: QColor = pyqtProperty(QColor, _get_prevColor, _set_prevColor)
 
     def set_current(self, index: int) -> None:
         index = max(0, min(index, self._count - 1))
@@ -136,7 +144,8 @@ class StepIndicator(QWidget):
         group.start()
         self._anim_group = group  # prevent GC
 
-    def paintEvent(self, _event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setPen(Qt.PenStyle.NoPen)

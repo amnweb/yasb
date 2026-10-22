@@ -1,8 +1,9 @@
 import threading
 from collections.abc import Callable
+from typing import Any, override
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QColor, QDesktopServices, QFont, QPalette
+from PyQt6.QtGui import QCloseEvent, QColor, QDesktopServices, QFont, QPalette, QShowEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
@@ -10,6 +11,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QVBoxLayout,
+    QWidget,
 )
 
 from core.ui.components.button import Button
@@ -27,7 +29,7 @@ class GitHubAuthDialog(ViewBase, QDialog):
 
     def __init__(
         self,
-        parent=None,
+        parent: QWidget | None = None,
         name: str = "notifications",
         save_fn: Callable[[str], None] | None = None,
     ):
@@ -158,7 +160,7 @@ class GitHubAuthDialog(ViewBase, QDialog):
 
         threading.Thread(target=_request, daemon=True).start()
 
-    def _on_device_code_received(self, data: dict):
+    def _on_device_code_received(self, data: dict[str, Any]):
         self._user_code = data.get("user_code", "")
         device_code = data.get("device_code", "")
         interval = int(data.get("interval", 5))
@@ -193,7 +195,9 @@ class GitHubAuthDialog(ViewBase, QDialog):
         print(message)
         self._result_label.setWordWrap(True)
         self._result_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.layout().insertWidget(0, self._result_label, 1)
+        layout = self.layout()
+        if isinstance(layout, QVBoxLayout):
+            layout.insertWidget(0, self._result_label, 1)
         self._cancel_btn.setText("Close")
 
     def _finish_success(self, token: str):
@@ -205,18 +209,21 @@ class GitHubAuthDialog(ViewBase, QDialog):
         self._show_result_page(message)
 
     def _copy_code(self):
-        if self._user_code:
-            QApplication.clipboard().setText(self._user_code)
+        clipboard = QApplication.clipboard()
+        if self._user_code and clipboard is not None:
+            clipboard.setText(self._user_code)
             self._copy_btn.setText("Copied")
             QTimer.singleShot(1000, lambda: self._copy_btn.setText("Copy"))
 
     def _open_browser(self):
         QDesktopServices.openUrl(QUrl("https://github.com/login/device"))
 
-    def showEvent(self, event) -> None:
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
         self._apply_frame_styles()
-        super().showEvent(event)
+        super().showEvent(a0)
 
-    def closeEvent(self, event):
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         self._stop = True
-        super().closeEvent(event)
+        super().closeEvent(a0)

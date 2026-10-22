@@ -4,185 +4,32 @@ It includes functions to retrieve the AUMID for a given window handle or shortcu
 It uses the Windows Shell API to access properties of application windows.
 """
 
-import ctypes
-import ctypes.wintypes as wt
-from ctypes import POINTER, WINFUNCTYPE, byref, c_void_p
+import os
+from ctypes import byref
+from ctypes.wintypes import DWORD
 
-from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, TH32CS_SNAPPROCESS
-from core.utils.win32.structs import PROCESSENTRY32
-
-
-class GUID(ctypes.Structure):
-    _fields_ = [
-        ("Data1", ctypes.c_uint32),
-        ("Data2", ctypes.c_uint16),
-        ("Data3", ctypes.c_uint16),
-        ("Data4", ctypes.c_ubyte * 8),
-    ]
-
-    def __init__(self, guid_str: str):
-        super().__init__()
-        import uuid
-
-        u = uuid.UUID(guid_str)
-        self.Data1 = u.time_low
-        self.Data2 = u.time_mid
-        self.Data3 = u.time_hi_version
-        d4 = u.bytes[8:]
-        for i in range(8):
-            self.Data4[i] = d4[i]
-
-
-class PROPERTYKEY(ctypes.Structure):
-    _fields_ = [("fmtid", GUID), ("pid", ctypes.c_uint32)]
-
-
-class BLOB(ctypes.Structure):
-    """BLOB arm of the PROPVARIANT union (propidlbase.h)."""
-
-    _fields_ = [
-        ("cbSize", wt.ULONG),
-        ("pBlobData", POINTER(ctypes.c_byte)),
-    ]
-
-
-class PROPVARIANT_UNION(ctypes.Union):
-    _fields_ = [
-        ("pwszVal", wt.LPWSTR),
-        ("pszVal", wt.LPSTR),
-        ("ulVal", ctypes.c_uint32),
-        ("uhVal", ctypes.c_uint64),
-        ("boolVal", wt.VARIANT_BOOL),
-        ("blob", BLOB),
-    ]
-
-
-class PROPVARIANT(ctypes.Structure):
-    _anonymous_ = ("data",)
-    _fields_ = [
-        ("vt", ctypes.c_ushort),
-        ("wReserved1", ctypes.c_ushort),
-        ("wReserved2", ctypes.c_ushort),
-        ("wReserved3", ctypes.c_ushort),
-        ("data", PROPVARIANT_UNION),
-    ]
-
-
-VT_LPWSTR = 31
-
-
-IID_IPropertyStore = GUID("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99")
-PKEY_AppUserModel_ID = PROPERTYKEY(GUID("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 5)
-
-
-class IPropertyStoreVtbl(ctypes.Structure):
-    _fields_ = [
-        (
-            "QueryInterface",
-            WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(GUID), POINTER(c_void_p)),
-        ),
-        ("AddRef", WINFUNCTYPE(ctypes.c_ulong, c_void_p)),
-        ("Release", WINFUNCTYPE(ctypes.c_ulong, c_void_p)),
-        ("GetCount", WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(ctypes.c_uint))),
-        (
-            "GetAt",
-            WINFUNCTYPE(ctypes.c_long, c_void_p, ctypes.c_uint, POINTER(PROPERTYKEY)),
-        ),
-        (
-            "GetValue",
-            WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(PROPERTYKEY), POINTER(PROPVARIANT)),
-        ),
-        (
-            "SetValue",
-            WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(PROPERTYKEY), POINTER(PROPVARIANT)),
-        ),
-        ("Commit", WINFUNCTYPE(ctypes.c_long, c_void_p)),
-    ]
-
-
-class IPropertyStore(ctypes.Structure):
-    _fields_ = [("lpVtbl", POINTER(IPropertyStoreVtbl))]
-
-
-shell32 = ctypes.WinDLL("shell32", use_last_error=True)
-ole32 = ctypes.WinDLL("ole32", use_last_error=True)
-user32 = ctypes.WinDLL("user32", use_last_error=True)
-kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-
-SHGetPropertyStoreForWindow = shell32.SHGetPropertyStoreForWindow
-SHGetPropertyStoreForWindow.argtypes = [wt.HWND, POINTER(GUID), POINTER(c_void_p)]
-SHGetPropertyStoreForWindow.restype = ctypes.c_long
-
-# SHGetPropertyStoreFromParsingName - to read properties from files (shortcuts)
-SHGetPropertyStoreFromParsingName = shell32.SHGetPropertyStoreFromParsingName
-SHGetPropertyStoreFromParsingName.argtypes = [
-    wt.LPCWSTR,
-    c_void_p,
-    ctypes.c_uint32,
-    POINTER(GUID),
-    POINTER(c_void_p),
-]
-SHGetPropertyStoreFromParsingName.restype = ctypes.c_long
-
-# PropVariantClear is exported by Ole32.dll
-PropVariantClear = ole32.PropVariantClear
-PropVariantClear.argtypes = [POINTER(PROPVARIANT)]
-PropVariantClear.restype = ctypes.c_long
-
-CoInitialize = ole32.CoInitialize
-CoInitialize.argtypes = [c_void_p]
-CoInitialize.restype = ctypes.c_long
-
-# Additional APIs for process-based fallback
-# Get PID for a HWND
-GetWindowThreadProcessId = user32.GetWindowThreadProcessId
-GetWindowThreadProcessId.argtypes = [wt.HWND, POINTER(wt.DWORD)]
-GetWindowThreadProcessId.restype = wt.DWORD
-
-# Open/close process
-OpenProcess = kernel32.OpenProcess
-OpenProcess.argtypes = [wt.DWORD, wt.BOOL, wt.DWORD]
-OpenProcess.restype = wt.HANDLE
-
-CloseHandle = kernel32.CloseHandle
-CloseHandle.argtypes = [wt.HANDLE]
-CloseHandle.restype = wt.BOOL
-
-kernel32.CreateToolhelp32Snapshot.argtypes = [wt.DWORD, wt.DWORD]
-kernel32.CreateToolhelp32Snapshot.restype = wt.HANDLE
-
-kernel32.Process32FirstW.argtypes = [wt.HANDLE, POINTER(PROCESSENTRY32)]
-kernel32.Process32FirstW.restype = wt.BOOL
-
-kernel32.Process32NextW.argtypes = [wt.HANDLE, POINTER(PROCESSENTRY32)]
-kernel32.Process32NextW.restype = wt.BOOL
-
-# GetApplicationUserModelId(HANDLE, PUINT32, PWSTR)
-GetApplicationUserModelId = None  # type: ignore
-for dll in (kernel32, shell32):
-    if GetApplicationUserModelId is not None:
-        break
-    try:
-        fn = getattr(dll, "GetApplicationUserModelId")
-        fn.argtypes = [wt.HANDLE, POINTER(ctypes.c_uint32), wt.LPWSTR]
-        fn.restype = ctypes.c_long
-        GetApplicationUserModelId = fn  # type: ignore
-    except AttributeError:
-        continue
-
-# Constants
-ERROR_INSUFFICIENT_BUFFER = 0x7A
-GPS_DEFAULT = 0  # Default flags for SHGetPropertyStoreFromParsingName
-
-
-def _ensure_com_initialized():
-    try:
-        # COINIT_APARTMENTTHREADED is default for CoInitialize
-        hr = CoInitialize(None)
-        # Ignore S_OK (0), S_FALSE (1) and RPC_E_CHANGED_MODE (0x80010106)
-        return hr
-    except Exception:
-        return 0
+from core.utils.win32.bindings.kernel32 import (
+    CloseHandle,
+    GetApplicationUserModelId,
+    OpenProcess,
+    snapshot_processes,
+)
+from core.utils.win32.bindings.ole32 import CoInitialize
+from core.utils.win32.bindings.shell32 import (
+    SHGetPropertyStoreForWindow,
+    SHGetPropertyStoreFromParsingName,
+    get_string_property,
+)
+from core.utils.win32.bindings.user32 import (
+    EnumWindows,
+    GetClassName,
+    GetWindowTextLength,
+    GetWindowThreadProcessId,
+    IsIconic,
+    IsWindowVisible,
+)
+from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, PKEY_AppUserModel_ID
+from core.utils.win32.structs import WNDENUMPROC
 
 
 def get_aumid_for_window(hwnd: int) -> str | None:
@@ -190,47 +37,28 @@ def get_aumid_for_window(hwnd: int) -> str | None:
     1. Try PKEY_AppUserModel_ID from the window's IPropertyStore.
     2. Fallback: Query the process AUMID using GetApplicationUserModelId for the window's PID.
     """
-    _ensure_com_initialized()
+    CoInitialize()
 
-    # 1) Window property store
-    store_ptr = c_void_p()
-    hr = SHGetPropertyStoreForWindow(wt.HWND(hwnd), byref(IID_IPropertyStore), byref(store_ptr))
-    if hr == 0 and store_ptr.value:
-        store = ctypes.cast(store_ptr, POINTER(IPropertyStore))
-        pv = PROPVARIANT()
-        try:
-            hr = store.contents.lpVtbl.contents.GetValue(store, byref(PKEY_AppUserModel_ID), byref(pv))
-            if hr == 0 and pv.vt == VT_LPWSTR and pv.pwszVal:
-                return ctypes.wstring_at(pv.pwszVal)
-        finally:
-            PropVariantClear(byref(pv))
-            # Release IPropertyStore
-            try:
-                store.contents.lpVtbl.contents.Release(store)
-            except Exception:
-                pass
+    store = SHGetPropertyStoreForWindow(hwnd)
+    if store is not None:
+        aumid = get_string_property(store, PKEY_AppUserModel_ID)
+        if aumid is not None:
+            return aumid
 
-    # Process-based fallback (if API available)
-    pid = wt.DWORD(0)
-    GetWindowThreadProcessId(wt.HWND(hwnd), byref(pid))
-    if pid.value != 0 and GetApplicationUserModelId is not None:
-        hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid.value)
-        if hProcess:
-            try:
-                length = ctypes.c_uint32(0)
-                res = GetApplicationUserModelId(hProcess, byref(length), None)
-                if res == ERROR_INSUFFICIENT_BUFFER and length.value:
-                    buf = ctypes.create_unicode_buffer(length.value)
-                    res = GetApplicationUserModelId(hProcess, byref(length), buf)
-                    if res == 0 and buf.value:
-                        return buf.value
-            finally:
-                try:
-                    CloseHandle(hProcess)
-                except Exception:
-                    pass
+    return get_aumid_for_process(_window_pid(hwnd))
 
-    return None
+
+def get_aumid_for_process(pid: int) -> str | None:
+    """The AUMID a process runs under (Store apps, and apps that set their own), or None."""
+    if not pid:
+        return None
+    process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not process:
+        return None
+    try:
+        return GetApplicationUserModelId(process)
+    finally:
+        CloseHandle(process)
 
 
 def get_aumid_from_shortcut(shortcut_path: str) -> str | None:
@@ -243,36 +71,15 @@ def get_aumid_from_shortcut(shortcut_path: str) -> str | None:
     Returns:
         AUMID string if the shortcut has one embedded, None otherwise
     """
-    import os
-
-    _ensure_com_initialized()
+    CoInitialize()
 
     if not os.path.exists(shortcut_path):
         return None
 
-    store_ptr = c_void_p()
-    hr = SHGetPropertyStoreFromParsingName(
-        shortcut_path, None, GPS_DEFAULT, byref(IID_IPropertyStore), byref(store_ptr)
-    )
-
-    if hr != 0 or not store_ptr.value:
+    store = SHGetPropertyStoreFromParsingName(shortcut_path)
+    if store is None:
         return None
-
-    store = ctypes.cast(store_ptr, POINTER(IPropertyStore))
-    pv = PROPVARIANT()
-    aumid = None
-
-    try:
-        hr = store.contents.lpVtbl.contents.GetValue(store, byref(PKEY_AppUserModel_ID), byref(pv))
-        if hr == 0 and pv.vt == VT_LPWSTR and pv.pwszVal:
-            aumid = ctypes.wstring_at(pv.pwszVal)
-    finally:
-        PropVariantClear(byref(pv))
-        try:
-            store.contents.lpVtbl.contents.Release(store)
-        except Exception:
-            pass
-    return aumid
+    return get_string_property(store, PKEY_AppUserModel_ID)
 
 
 def _pids_for_exe_tree(process_name: str) -> set[int]:
@@ -285,23 +92,10 @@ def _pids_for_exe_tree(process_name: str) -> set[int]:
     children: dict[int, list[int]] = {}
     roots: set[int] = set()
 
-    h_snap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-    if h_snap == wt.HANDLE(-1).value:
-        return set()
-    try:
-        pe = PROCESSENTRY32()
-        pe.dwSize = ctypes.sizeof(PROCESSENTRY32)
-        if not kernel32.Process32FirstW(h_snap, byref(pe)):
-            return set()
-        while True:
-            pid = pe.th32ProcessID
-            children.setdefault(pe.th32ParentProcessID, []).append(pid)
-            if pe.szExeFile and pe.szExeFile.lower() == target:
-                roots.add(pid)
-            if not kernel32.Process32NextW(h_snap, byref(pe)):
-                break
-    finally:
-        CloseHandle(h_snap)
+    for entry in snapshot_processes():
+        children.setdefault(entry.parent_pid, []).append(entry.pid)
+        if entry.exe and entry.exe.lower() == target:
+            roots.add(entry.pid)
 
     result: set[int] = set()
     stack = list(roots)
@@ -326,39 +120,72 @@ def activate_app_by_aumid(aumid: str, fallback_process_name: str | None = None) 
     Returns:
         True if a window was found and activation was attempted, False otherwise.
     """
-    from core.utils.win32.window_actions import force_foreground_focus, restore_window
+    from core.utils.win32.window_actions import restore_window, set_foreground
 
-    found_hwnd = None
-    fallback_pids = _pids_for_exe_tree(fallback_process_name) if fallback_process_name else set()
+    hwnd = _find_window_by_aumid(aumid, fallback_process_name)
+    if hwnd is None:
+        return False
 
-    WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+    if IsIconic(hwnd):
+        restore_window(hwnd)
+    set_foreground(hwnd)
+    return True
 
-    def enum_window_callback(hwnd, _):
-        nonlocal found_hwnd
-        if not user32.IsWindowVisible(hwnd):
-            return True
 
-        # Exact AUMID match
+def _find_window_by_aumid(aumid: str, fallback_process_name: str | None) -> int | None:
+    windows = _visible_top_level_windows()
+    for hwnd in windows:
         if get_aumid_for_window(hwnd) == aumid:
-            found_hwnd = hwnd
-            return False
+            return hwnd
 
-        # Fallback: process (or descendant) match; skip untitled helpers
-        if fallback_pids:
-            pid = wt.DWORD(0)
-            GetWindowThreadProcessId(wt.HWND(hwnd), byref(pid))
-            if pid.value in fallback_pids and user32.GetWindowTextLengthW(hwnd) > 0:
-                found_hwnd = hwnd
-                return False
+    if fallback_process_name:
+        fallback_pids = _pids_for_exe_tree(fallback_process_name)
+        for hwnd in windows:
+            # Skip untitled helper windows of the same process
+            if _window_pid(hwnd) in fallback_pids and GetWindowTextLength(hwnd) > 0:
+                return hwnd
 
+    return None
+
+
+def get_pid_for_window_aumid(aumid: str) -> int | None:
+    """PID of a visible window whose AppUserModelID matches, ignoring case (shell property store)."""
+    if not aumid:
+        return None
+
+    target = aumid.lower()
+    for hwnd in _top_level_windows():
+        if not IsWindowVisible(hwnd):
+            continue
+        window_aumid = get_aumid_for_window(hwnd)
+        if window_aumid and window_aumid.lower() == target:
+            pid = _window_pid(hwnd)
+            if pid:
+                return pid
+    return None
+
+
+def _top_level_windows() -> list[int]:
+    hwnds: list[int] = []
+
+    def collect(hwnd: int, _: int) -> bool:
+        hwnds.append(hwnd)
         return True
 
-    user32.EnumWindows(WNDENUMPROC(enum_window_callback), 0)
+    EnumWindows(WNDENUMPROC(collect), 0)
+    return hwnds
 
-    if found_hwnd:
-        force_foreground_focus(found_hwnd)
-        if user32.IsIconic(found_hwnd):
-            restore_window(found_hwnd)
-        return True
 
-    return False
+def _visible_top_level_windows() -> list[int]:
+    # minimized Store apps leave their CoreWindow as a cloaked top-level window, restore the frame instead
+    return [
+        hwnd
+        for hwnd in _top_level_windows()
+        if IsWindowVisible(hwnd) and GetClassName(hwnd) != "Windows.UI.Core.CoreWindow"
+    ]
+
+
+def _window_pid(hwnd: int) -> int:
+    pid = DWORD(0)
+    GetWindowThreadProcessId(hwnd, byref(pid))
+    return pid.value

@@ -1,9 +1,10 @@
 import logging
 import os
 import subprocess
+from typing import override
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
 from core.utils.tooltip import set_tooltip
@@ -82,15 +83,18 @@ class ClickableLabel(QLabel):
     def __init__(self, parent: ApplicationsWidget | None = None):
         super().__init__(parent)
         self.parent_widget = parent
-        self.data = None
+        self.data: str | None = None
+        self.container: QWidget | None = None
 
-    def mousePressEvent(self, event):
-        if event is not None:
-            event.accept()
+    @override
+    def mousePressEvent(self, ev: QMouseEvent | None) -> None:
+        if ev is not None:
+            ev.accept()
 
-    def mouseReleaseEvent(self, event):
-        if event is None:
+    @override
+    def mouseReleaseEvent(self, ev: QMouseEvent | None) -> None:
+        if ev is None:
             return
-        if event.button() == Qt.MouseButton.LeftButton and self.data and self.parent_widget:
+        if ev.button() == Qt.MouseButton.LeftButton and self.data and self.parent_widget:
             self.parent_widget.execute_code(self.data)
-        event.accept()
+        ev.accept()

@@ -8,14 +8,61 @@ Puts your running apps on the status bar, working just like a standard taskbar. 
 | `show_only_visible` | boolean | `false` | Whether to show only visible applications in the taskbar. |
 | `strict_filtering` | boolean | `true` | Whether to enforce strict filtering of applications based on their properties. |
 | `ignore_apps`       | dict    | `processes:[], titles[], classes:[]` | Ignore applications by process name, title, or class. |
-| `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
-| `title_label`       | dict    | `{'enabled': False, 'show': 'focused', 'min_length': 10, 'max_length': 30}`                     | Title label configuration for displaying window titles.                     |
+| `tooltip`  | boolean  | `False`       | Whether to show the tooltip on hover. |
+| `title_label`       | dict    | [See below](#title-label-options) | Title label configuration for displaying window titles.                     |
 | `monitor_exclusive` | boolean | `False` | Whether the application should be exclusive to the monitor. |
 | `hide_empty`        | boolean | `False` | Whether to hide the taskbar widget when there are no applications to display. |
-| `callbacks`         | dict    | `{'on_left': 'toggle_window', 'on_middle': 'do_nothing', 'on_right': 'context_menu'}` | Callbacks for mouse events on the widget.                                   |
-| `preview`           | dict    | `{'enabled': False, 'width': 240, 'delay': 400, 'padding': 8, 'margin': 8, 'blur': False, 'peek': False}` | Configuration for window preview thumbnails.                                |
+| `callbacks`         | dict    | [See below](#callbacks) | Callbacks for mouse events on the widget.                                   |
+| `preview`           | dict    | [See below](#preview-options) | Configuration for window preview thumbnails.                                |
 | `grouping`          | dict    | `{'enabled': False, 'show_count': True}` | Combine all windows of the same app into a single button. |
 | `animation`         | dict    | `{'enabled': True, 'duration': 200}` | Configuration for animations when switching between applications. |
+| `keybindings`       | list    | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_window"
+  on_middle: "do_nothing"
+  on_right: "context_menu"
+```
+
+Available actions:
+
+- `toggle_window` - Bring the window of the button under the cursor to the foreground, restoring it if minimized. For a pinned app, launch it.
+- `close_app` - Close the window of the button under the cursor.
+- `context_menu` - Show the context menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Title Label Options
+
+The `title_label` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+title_label:
+  enabled: false
+  show: "focused"
+  min_length: 10
+  max_length: 30
+```
+
+## Preview Options
+
+The `preview` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+preview:
+  enabled: false
+  width: 240
+  delay: 400
+  padding: 8
+  margin: 8
+  blur: false
+  peek: false
+```
 
 ## Example Configuration
 
@@ -70,7 +117,11 @@ taskbar:
   - titles: A list of window titles to ignore.
   - classes: A list of window classes to ignore.
 - **hide_empty:** A boolean indicating whether to hide the taskbar widget when there are no applications to display. If set to `True`, the taskbar will automatically hide itself when there are no open applications that meet the filtering criteria.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions, which can be `toggle_window`, `do_nothing`, `close_app` or `context_menu`.
+- **animation:** A dictionary specifying the animation settings when switching between applications. It includes:
+  - enabled: A boolean flag to enable or disable animations. Default `true`.
+  - duration: The duration of the animation in milliseconds. Default `200`.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **preview:** A dictionary specifying the configuration for window preview thumbnails. It includes:
   - enabled: A boolean flag to enable or disable window previews.
   - width: The width of the preview thumbnail in pixels. (minimum 100px)

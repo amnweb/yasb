@@ -10,7 +10,7 @@ varies by build, and consumers re-read state through the API anyway.
 
 Callbacks arrive on whichever thread the shell calls in on, not necessarily the
 one that registered, so consumers must treat them as arriving from an arbitrary
-thread. The service marshals them onto the Qt main thread with a signal.
+thread. The service marshals them onto its own thread with a signal.
 """
 
 import logging
@@ -19,10 +19,14 @@ from ctypes import c_void_p, cast
 from enum import Enum, auto
 from typing import Any
 
-import comtypes
+import comtypes  # pyright: ignore[reportMissingTypeStubs]
 
 from core.widgets.services.windows_desktops.com import VirtualDesktopApi, get_api
-from core.widgets.services.windows_desktops.interfaces import DesktopInterfaces
+from core.widgets.services.windows_desktops.interfaces import (
+    ApplicationViewChange,
+    DesktopInterfaces,
+    IApplicationViewChangeListener,
+)
 
 logger = logging.getLogger("windows_desktop_service")
 
@@ -37,6 +41,18 @@ class DesktopEvent(Enum):
     RENAMED = auto()
     WALLPAPER_CHANGED = auto()
     SWITCHED = auto()
+    VIEW_MOVED = auto()
+    VIEWS_CHANGED = auto()
+
+
+VIEW_LIST_CHANGES = frozenset(
+    {
+        ApplicationViewChange.ADDED,
+        ApplicationViewChange.REMOVED,
+        ApplicationViewChange.SHOWN_IN_SWITCHERS,
+        ApplicationViewChange.REMOVED_FROM_SWITCHERS,
+    }
+)
 
 
 _sink_class: type | None = None
@@ -95,15 +111,15 @@ def _make_sink_class(interfaces: DesktopInterfaces) -> type:
         def VirtualDesktopSwitched(self, *_args: Any) -> int:
             return self._emit(DesktopEvent.SWITCHED)
 
+        def ViewVirtualDesktopChanged(self, *_args: Any) -> int:
+            return self._emit(DesktopEvent.VIEW_MOVED)
+
         # Callbacks we deliberately ignore. They still need implementations so
         # the shell gets S_OK rather than E_NOTIMPL.
         def VirtualDesktopDestroyBegin(self, *_args: Any) -> int:
             return 0
 
         def VirtualDesktopDestroyFailed(self, *_args: Any) -> int:
-            return 0
-
-        def ViewVirtualDesktopChanged(self, *_args: Any) -> int:
             return 0
 
         def RemoteVirtualDesktopConnected(self, *_args: Any) -> int:
@@ -113,6 +129,22 @@ def _make_sink_class(interfaces: DesktopInterfaces) -> type:
             return 0
 
     return DesktopNotificationSink
+
+
+class _ViewChangeSink(comtypes.COMObject):
+    _com_interfaces_ = [IApplicationViewChangeListener]
+
+    def __init__(self, dispatch: Callable[[DesktopEvent], None]):
+        super().__init__()
+        self._dispatch = dispatch
+
+    def OnApplicationViewChanged(self, _view: Any, change: int, _unknown: Any) -> int:
+        try:
+            if change in VIEW_LIST_CHANGES:
+                self._dispatch(DesktopEvent.VIEWS_CHANGED)
+        except Exception:
+            logger.exception("Application view change handler failed")
+        return 0
 
 
 def _sink_type(interfaces: DesktopInterfaces) -> type:
@@ -135,10 +167,17 @@ class DesktopNotificationListener:
         self._service: Any = None
         self._sink: Any = None
         self._cookie: int | None = None
+        self._views: Any = None
+        self._view_sink: Any = None
+        self._view_cookie: int | None = None
 
     @property
     def active(self) -> bool:
         return self._cookie is not None
+
+    @property
+    def views_active(self) -> bool:
+        return self._view_cookie is not None
 
     def start(self) -> bool:
         """Register with the shell. Returns whether notifications are live."""
@@ -150,7 +189,9 @@ class DesktopNotificationListener:
             self._sink = _sink_type(interfaces)(self._on_event)
             # Register takes the raw interface pointer, not the Python object.
             pointer = cast(
-                self._sink._com_pointers_[interfaces.IVirtualDesktopNotification._iid_],
+                self._sink._com_pointers_[
+                    interfaces.IVirtualDesktopNotification._iid_  # pyright: ignore[reportPrivateUsage]
+                ],
                 c_void_p,
             )
             self._cookie = self._service.Register(pointer)
@@ -161,7 +202,30 @@ class DesktopNotificationListener:
             self._cookie = None
             return False
         logger.info("Registered for virtual desktop notifications (cookie=%s)", self._cookie)
+        self._start_view_changes()
         return True
+
+    def _start_view_changes(self) -> None:
+        try:
+            self._views = self._api.ensure().views
+            self._view_sink = _ViewChangeSink(self._on_event)
+            pointer = cast(
+                self._view_sink._com_pointers_[
+                    IApplicationViewChangeListener._iid_  # pyright: ignore[reportPrivateUsage]
+                ],
+                c_void_p,
+            )
+            self._view_cookie = self._views.RegisterForApplicationViewChanges(pointer)
+        except Exception:
+            logger.warning(
+                "Could not register for window changes; desktops with windows update on desktop switches only",
+                exc_info=True,
+            )
+            self._views = None
+            self._view_sink = None
+            self._view_cookie = None
+            return
+        logger.info("Registered for window changes (cookie=%s)", self._view_cookie)
 
     def stop(self) -> None:
         """Unregister and drop the sink. Safe to call when not started."""
@@ -174,3 +238,12 @@ class DesktopNotificationListener:
         self._cookie = None
         self._service = None
         self._sink = None
+        if self._view_cookie is not None and self._views is not None:
+            try:
+                self._views.UnregisterForApplicationViewChanges(self._view_cookie)
+                logger.info("Unregistered window changes (cookie=%s)", self._view_cookie)
+            except Exception:
+                logger.debug("Failed to unregister window changes", exc_info=True)
+        self._views = None
+        self._view_sink = None
+        self._view_cookie = None

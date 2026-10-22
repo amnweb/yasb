@@ -5,7 +5,7 @@ Shows whether new windows in GlazeWM will open side-by-side (horizontally) or st
 | Option               | Type   | Default                 | Description                                     |
 |----------------------|--------|-------------------------|-------------------------------------------------|
 | `horizontal_label`   | string | `'\udb81\udce1'`        | The label used for horizontal tiling direction. |
-| `vertical_label`     | string | `'\udb81\udce2'`        | Optional label for populated workspaces.        |
+| `vertical_label`     | string | `'\udb81\udce2'`        | The label used for vertical tiling direction.   |
 | `glazewm_server_uri` | string | `'ws://localhost:6123'` | Optional GlazeWM server uri.                    |
 
 ## Example Configuration

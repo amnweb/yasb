@@ -1,5 +1,7 @@
 import logging
 
+from PyQt6.QtCore import QObject
+
 from core.widgets.services.control_center.api.screenshot.capture import capture_screens
 from core.widgets.services.control_center.api.screenshot.overlay import Overlay
 
@@ -24,7 +26,7 @@ class ScreenshotService:
             overlay = Overlay(freezes)
             cls._overlay = overlay
 
-            def _clear(_obj=None, _ov=overlay):
+            def _clear(_obj: QObject | None = None, _ov: Overlay = overlay) -> None:
                 if cls._overlay is _ov:
                     cls._overlay = None
 

@@ -14,19 +14,18 @@ readme = "README.md"
 requires-python = ">= 3.14"
 dependencies = [
     "pyqt6==6.10.2",
-    "pydantic==2.13.4",
-    "certifi==2026.7.22",
+    "pydantic==2.14.1",
+    "certifi==2026.10.19",
     "humanize==4.16.0",
-    "pywin32==312",
     "pyyaml==6.0.3",
-    "holidays==0.103",
+    "holidays==0.106",
     "watchdog==6.0.0",
-    "pycaw==20251023",
-    "pillow==12.3.0",
+    "pycaw==20260927",
+    "pillow==13.0.0",
     "qasync==0.28.0",
-    "comtypes==1.4.16",
-    "python-dotenv==1.2.3",
-    "tzdata==2026.3",
+    "comtypes==1.4.17",
+    "python-dotenv==1.2.4",
+    "tzdata==2026.5",
     "winrt.windows.foundation==3.2.1",
     "winrt.windows.foundation.collections==3.2.1",
     "winrt.windows.data.xml.dom==3.2.1",
@@ -62,11 +61,16 @@ Changelog = "https://github.com/amnweb/yasb/releases/latest"
 
 [project.optional-dependencies]
 dev = [
+    "YASB[test,packaging]",
     "pre-commit",
-    "ruff>=0.15.0",
-    "pyqt6-stubs",
-    "types-pillow",
-    "types-pywin32",
+    "ruff==0.17.1",
+    "pyright==1.1.414",
+    "pyqt6-stubs==20250824",
+    "pycaw-stubs==20260927.20261008",
+    "types-pillow==10.2.0.20240822",
+]
+test = [
+    "pytest==9.1.1",
 ]
 packaging = [
     "cx-freeze==8.6.4"
@@ -80,6 +84,17 @@ pattern = "BUILD_VERSION = \"(?P<version>[^\"]+)\""
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/core"]
+
+[tool.pytest]
+minversion = "9.1"
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+addopts = ["-ra"]
+strict = true
+faulthandler_timeout = "300"
+markers = [
+    "sdk: compares ctypes code with the Windows SDK; needs MSVC, skipped without it unless YASB_REQUIRE_SDK=1",
+]
 
 [tool.ruff]
 line-length = 120
@@ -107,3 +122,14 @@ docstring-code-format     = true
 quote-style               = "double"
 indent-style              = "space"
 skip-magic-trailing-comma = false
+line-ending               = "cr-lf"
+
+[tool.pyright]
+include = ["."]
+exclude = ["**/__pycache__", "src/build", "src/dist"]
+extraPaths = ["src"]
+pythonVersion = "3.14"
+pythonPlatform = "Windows"
+typeCheckingMode = "strict"
+reportMissingImports = true
+reportUntypedFunctionDecorator = false

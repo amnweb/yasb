@@ -54,11 +54,12 @@ komorebi_stack:
 - **show_icons:** Whether to display app icons. Options are `always`, `never`, or `focused`.
 - **max_length:** The maximum number of characters to display for the label. If the title exceeds this length, it will be truncated.
 - **max_length_active:** The maximum number of characters to display for the active window label. If the title exceeds this length, it will be truncated.
+- **max_length_overall:** If specified, `max_length` is calculated as `max_length_overall` divided by the number of inactive windows.
 - **max_length_ellipsis:** The string to append to truncated window titles.  
 - **hide_if_offline:** Whether to hide the widget if Komorebi is offline.
 - **show_only_stack:** Whether to hide the widget if no stacked windows in focus.   
 - **rewrite:** A list of search-and-replace rules to be applied to window titles and process names. See [Rewrite Options](#rewrite-options) below.
-- **enable_scroll_switching:** Enable scroll switching between workspaces.
+- **enable_scroll_switching:** Enable scroll switching between windows in the stack.
 - **reverse_scroll_direction:** Reverse scroll direction.
 
 > Note:

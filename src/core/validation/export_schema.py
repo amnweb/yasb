@@ -2,9 +2,9 @@ import importlib
 import json
 import os
 import sys
-from typing import Literal, Union
+from typing import Union
 
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, Field, create_model
 
 # Add src to sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -62,14 +62,14 @@ def export_schema():
         for type_str, config_class in mappings:
             # Create a model for this specific widget type
             # class MyWidgetEntry(BaseModel):
-            #     type: Literal["yasb.brightness.BrightnessWidget"]
+            #     type: str = Field(json_schema_extra={"const": "yasb.brightness.BrightnessWidget"})
             #     options: BrightnessConfig
 
             model_name = config_class.__name__.replace("Config", "Entry")
 
             entry_model = create_model(
                 model_name,
-                type=(Literal[type_str], ...),
+                type=(str, Field(json_schema_extra={"const": type_str})),
                 options=(config_class, ...),
             )
             widget_entry_models.append(entry_model)

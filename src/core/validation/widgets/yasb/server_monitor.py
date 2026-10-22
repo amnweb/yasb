@@ -1,4 +1,5 @@
 import logging
+from typing import Any, cast
 
 from pydantic import Field, field_validator
 
@@ -45,7 +46,7 @@ class ServerMonitorCallbacksConfig(CallbacksConfig):
 
 class ServerMonitorConfig(CustomBaseModel):
     label: str = "{icon}"
-    label_alt: str = "{online}/{offline} of {total} servers"
+    label_alt: str = "{online}/{offline} of {total}"
     update_interval: int = Field(default=300, ge=10, le=36000)
     tooltip: bool = True
     servers: list[ServerEntryConfig] = []
@@ -55,17 +56,20 @@ class ServerMonitorConfig(CustomBaseModel):
 
     @field_validator("servers", mode="before")
     @classmethod
-    def _migrate_servers(cls, v: list) -> list:
+    def _migrate_servers(cls, v: Any) -> Any:
         # TODO: Remove this migration code in a future major release after users migrate to the new format.
-        if not isinstance(v, list) or not v:
+        if not isinstance(v, list):
             return v
-        if isinstance(v[0], str):
+        entries = cast(list[Any], v)
+        if not entries:
+            return entries
+        if isinstance(entries[0], str):
             logger.warning(
                 "ServerMonitorConfig: 'servers' format has changed."
                 " Use list of {name: ..., url: ...} instead of plain strings."
             )
-            return [{"name": s, "url": s} for s in v if s]
-        return v
+            return [{"name": s, "url": s} for s in entries if s]
+        return entries
 
     desktop_notifications: DesktopNotificationsConfig = DesktopNotificationsConfig()
     timeout: int = Field(default=5, ge=1, le=30)

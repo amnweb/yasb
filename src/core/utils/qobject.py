@@ -2,7 +2,7 @@
 
 from typing import TypeGuard
 
-from PyQt6 import sip
+import PyQt6.sip as sip
 from PyQt6.QtCore import QObject
 
 

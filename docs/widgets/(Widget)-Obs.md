@@ -5,7 +5,7 @@ ObsWidget is a custom widget that integrates with OBS (Open Broadcaster Software
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `connection` | dict | `{host: "localhost", port: 4455, password: ""}` | Connection info for OBS WebSocket Server |
-| `icons` | dict | See below | Icons for recording states, virtual camera, studio mode, and streaming |
+| `icons` | dict | [See below](#icons-options) | Icons for recording states, virtual camera, studio mode, and streaming |
 | `hide_when_not_recording` | boolean | `false` | Hide widget when not recording |
 | `blinking_icon` | boolean | `true` | Blink record/stream icon when active |
 | `show_record_time` | boolean | `false` | Show recording duration |
@@ -16,7 +16,25 @@ ObsWidget is a custom widget that integrates with OBS (Open Broadcaster Software
 | `show_scene_name` | boolean | `false` | Show current OBS program scene name |
 | `show_stream_stats` | boolean | `false` | Show stream bitrate (kbps) and dropped frames while streaming |
 | `tooltip` | boolean | `true` | Enable or disable tooltips for buttons |
+| `keybindings` | list | `[]` | Optional hotkeys, see [Callbacks (Hotkey Only)](#callbacks-hotkey-only) and [Keybindings](./Keybindings) |
 
+
+## Icons Options
+
+The `icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+icons:
+  recording: "\ueba7"
+  stopped: "\ueba7"
+  paused: "\ueba7"
+  virtual_cam_on: "\udb81\udda0"
+  virtual_cam_off: "\udb81\udda0"
+  studio_mode_on: "\udb84\uddd8"
+  studio_mode_off: "\udb84\uddd8"
+  streaming: "\udb82\udd02"
+  streaming_stopped: "\udb82\udd02"
+```
 
 ## Example Configuration
 

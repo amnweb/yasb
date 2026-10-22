@@ -1,6 +1,20 @@
-from PyQt6.QtCore import QEvent, QPointF, Qt
-from PyQt6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPen
-from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from collections.abc import Iterable, Sequence
+from typing import Protocol, override
+
+from PyQt6.QtCore import QEvent, QObject, QPoint, QPointF, Qt
+from PyQt6.QtGui import (
+    QBrush,
+    QCloseEvent,
+    QColor,
+    QLinearGradient,
+    QMouseEvent,
+    QPainter,
+    QPainterPath,
+    QPaintEvent,
+    QPen,
+    QResizeEvent,
+)
+from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
@@ -9,10 +23,25 @@ from core.utils.utilities import PopupWidget, refresh_widget_style
 class PinnablePopup(PopupWidget):
     """Popup that can be pinned to stay open and draggable when pinned."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._is_pinned = False
-        self._drag_pos = None
+    def __init__(
+        self,
+        parent: QWidget,
+        blur: bool = False,
+        round_corners: bool = False,
+        round_corners_type: str = "normal",
+        border_color: str = "None",
+    ):
+        super().__init__(
+            parent,
+            blur=blur,
+            round_corners=round_corners,
+            round_corners_type=round_corners_type,
+            border_color=border_color,
+        )
+        self.is_pinned = False
+        self._drag_pos: QPoint | None = None
+        self.graph: GraphWidget | None = None
+        self.stat_labels: dict[str, QLabel] = {}
         self.setWindowFlags(
             Qt.WindowType.Tool
             | Qt.WindowType.FramelessWindowHint
@@ -20,45 +49,57 @@ class PinnablePopup(PopupWidget):
             | Qt.WindowType.NoDropShadowWindowHint
         )
 
-    def event(self, event):
-        if event.type() == QEvent.Type.WindowDeactivate:
-            if self._is_pinned:
+    @override
+    def event(self, a0: QEvent | None) -> bool:
+        if a0 is not None and a0.type() == QEvent.Type.WindowDeactivate:
+            if self.is_pinned:
                 return True
             self.hide_animated()
             return True
-        return super().event(event)
+        return super().event(a0)
 
-    def mousePressEvent(self, event):
-        if self._is_pinned and event.button() == Qt.MouseButton.LeftButton:
-            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
-            event.accept()
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None and self.is_pinned and a0.button() == Qt.MouseButton.LeftButton:
+            self._drag_pos = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            a0.accept()
         else:
-            super().mousePressEvent(event)
+            super().mousePressEvent(a0)
 
-    def mouseMoveEvent(self, event):
-        if self._is_pinned and self._drag_pos is not None and event.buttons() & Qt.MouseButton.LeftButton:
-            self.move(event.globalPosition().toPoint() - self._drag_pos)
-            event.accept()
+    @override
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+        if (
+            a0 is not None
+            and self.is_pinned
+            and self._drag_pos is not None
+            and a0.buttons() & Qt.MouseButton.LeftButton
+        ):
+            self.move(a0.globalPosition().toPoint() - self._drag_pos)
+            a0.accept()
         else:
-            super().mouseMoveEvent(event)
+            super().mouseMoveEvent(a0)
 
-    def mouseReleaseEvent(self, event):
-        if self._is_pinned and event.button() == Qt.MouseButton.LeftButton:
+    @override
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None and self.is_pinned and a0.button() == Qt.MouseButton.LeftButton:
             self._drag_pos = None
-            event.accept()
+            a0.accept()
         else:
-            super().mouseReleaseEvent(event)
+            super().mouseReleaseEvent(a0)
 
-    def eventFilter(self, obj, event):
-        if self._is_pinned:
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        if self.is_pinned:
             return False
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
-    def closeEvent(self, event):
-        if self._is_pinned:
-            event.accept()
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
+        if self.is_pinned:
+            if a0 is not None:
+                a0.accept()
             return
-        super().closeEvent(event)
+        super().closeEvent(a0)
 
 
 class GraphWidget(QFrame):
@@ -70,7 +111,7 @@ class GraphWidget(QFrame):
     SPLINE_TENSION = 0.2
     GRID_CELL_SIZE = 16
 
-    def __init__(self, css_class="graph", show_grid=False, parent=None):
+    def __init__(self, css_class: str = "graph", show_grid: bool = False, parent: QWidget | None = None):
         super().__init__(parent)
         self._data: list[float] = []
         self._line_path: QPainterPath | None = None
@@ -89,8 +130,9 @@ class GraphWidget(QFrame):
         self._rebuild_paths()
         self.update()
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         self._rebuild_paths()
 
     def _rebuild_paths(self) -> None:
@@ -105,7 +147,7 @@ class GraphWidget(QFrame):
         chart_h = h - pad * 2
         n = len(self._data)
         x_step = w / (n - 1) if n > 1 else w
-        pts = []
+        pts: list[QPointF] = []
         for i, val in enumerate(self._data):
             frac = max(0.0, min(val / 100.0, 1.0))
             pts.append(QPointF(i * x_step, pad + chart_h * (1.0 - frac)))
@@ -147,9 +189,10 @@ class GraphWidget(QFrame):
             path.cubicTo(cp1_x, cp1_y, cp2_x, cp2_y, p2.x(), p2.y())
         return path
 
-    def paintEvent(self, event):
-        super().paintEvent(event)
-        if self._line_path is None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
+        super().paintEvent(a0)
+        if self._line_path is None or self._fill_path is None:
             return
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -204,15 +247,45 @@ class GraphWidget(QFrame):
         painter.drawPath(self._line_path)
 
 
+class StatPopupMenuConfig(Protocol):
+    @property
+    def blur(self) -> bool: ...
+    @property
+    def round_corners(self) -> bool: ...
+    @property
+    def round_corners_type(self) -> str: ...
+    @property
+    def border_color(self) -> str: ...
+    @property
+    def alignment(self) -> str: ...
+    @property
+    def direction(self) -> str: ...
+    @property
+    def offset_left(self) -> int: ...
+    @property
+    def offset_top(self) -> int: ...
+    @property
+    def show_graph(self) -> bool: ...
+    @property
+    def show_graph_grid(self) -> bool: ...
+    @property
+    def pin_icon(self) -> str: ...
+    @property
+    def unpin_icon(self) -> str: ...
+
+
+type StatRow = tuple[str | None, str, str, str | None, str, str]
+
+
 def build_stat_popup(
-    parent,
-    menu_config,
-    popup_class_name,
-    title,
-    history,
-    stat_rows,
-    graph_class="graph",
-):
+    parent: QWidget,
+    menu_config: StatPopupMenuConfig,
+    popup_class_name: str,
+    title: str,
+    history: Iterable[float],
+    stat_rows: Sequence[StatRow],
+    graph_class: str = "graph",
+) -> PinnablePopup:
 
     popup = PinnablePopup(
         parent,
@@ -248,7 +321,7 @@ def build_stat_popup(
         pin_btn.setProperty("class", "pin-btn pinned" if checked else "pin-btn")
         set_tooltip(pin_btn, "Pin this window" if not checked else "Unpin this window")
         refresh_widget_style(pin_btn)
-        popup._is_pinned = checked
+        popup.is_pinned = checked
 
     pin_btn.toggled.connect(on_pin_toggled)
     header_layout.addWidget(pin_btn)
@@ -266,11 +339,10 @@ def build_stat_popup(
         )
         graph_layout.addWidget(graph)
         layout.addWidget(graph_container)
-        popup._graph = graph
-        if history:
-            graph.set_data(list(history))
-    else:
-        popup._graph = None
+        popup.graph = graph
+        history_values = list(history)
+        if history_values:
+            graph.set_data(history_values)
 
     stats_frame = QFrame()
     stats_frame.setProperty("class", "stats")
@@ -278,7 +350,7 @@ def build_stat_popup(
     grid.setContentsMargins(0, 0, 0, 0)
     grid.setSpacing(0)
 
-    stat_labels = {}
+    stat_labels: dict[str, QLabel] = {}
     for i, (left_header, left_key, left_value, right_header, right_key, right_value) in enumerate(stat_rows):
         for col, (header_text, key, value, is_right) in enumerate(
             [
@@ -306,7 +378,7 @@ def build_stat_popup(
             stat_labels[key] = value_label
 
     layout.addWidget(stats_frame)
-    popup._stat_labels = stat_labels
+    popup.stat_labels = stat_labels
 
     popup.adjustSize()
     popup.setPosition(

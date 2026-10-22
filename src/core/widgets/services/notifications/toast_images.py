@@ -398,7 +398,7 @@ def _read_download_record() -> dict[str, str]:
     return _downloads[1]
 
 
-def _read_download_entries(key, entries: int) -> dict[str, str]:
+def _read_download_entries(key: winreg.HKEYType, entries: int) -> dict[str, str]:
     downloads: dict[str, str] = {}
     for index in range(entries):
         try:

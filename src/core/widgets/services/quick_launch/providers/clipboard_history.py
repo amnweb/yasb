@@ -47,7 +47,7 @@ class ClipboardHistoryProvider(BaseProvider):
     input_placeholder = "Search clipboard history..."
     icon = ICON_CLIPBOARD
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         cfg = config or {}
         self._max_items: int = max(1, int(cfg.get("max_items", 30)))
@@ -118,6 +118,8 @@ class ClipboardHistoryProvider(BaseProvider):
     @staticmethod
     def _get_history_items_mta():
         """Call the blocking WinRT API from an MTA thread to avoid STA restriction."""
+        if Clipboard is None:
+            raise RuntimeError("Clipboard history API unavailable")
         return Clipboard.get_history_items_async().get()
 
     def _load_history(self) -> tuple[str, list[dict[str, Any]]]:
@@ -264,7 +266,7 @@ class ClipboardHistoryProvider(BaseProvider):
             )
         ]
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).strip()
         query_lower = query.lower()
 
@@ -373,7 +375,7 @@ class ClipboardHistoryProvider(BaseProvider):
             if not item:
                 self._load_history()
                 item = self._history_items.get(item_id)
-            if item:
+            if item and Clipboard is not None:
                 try:
                     Clipboard.set_history_item_as_content(item)
                 except Exception as exc:
@@ -384,7 +386,7 @@ class ClipboardHistoryProvider(BaseProvider):
             if not item:
                 self._load_history()
                 item = self._history_items.get(item_id)
-            if item:
+            if item and Clipboard is not None:
                 try:
                     Clipboard.delete_item_from_history(item)
                 except Exception as exc:

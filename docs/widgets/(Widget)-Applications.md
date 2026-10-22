@@ -4,10 +4,10 @@ A simple launcher that puts shortcut buttons for your favorite apps and tools ri
 
 | Option     | Type   | Default | Description                                                                 |
 |------------|--------|---------|-----------------------------------------------------------------------------|
-| `label`   | string | {data}    | The label for the applications widget.                                      |
+| `label`   | string | Required | The label for the applications widget.                                      |
 | `class_name` | string | `""` | The CSS class name for styling the widget. Optional.                        |
 |  `image_icon_size` | int | `14` | The size of the icon in pixels if the icon is an image.                      |
-| `app_list`  | list   | `[]`| Application list with command. |
+| `app_list`  | list   | Required | Application list with command. |
 | `tooltip`  | bool   | `True`| Enable or disable tooltips for application names. |
 
 ## Example Configuration
@@ -32,10 +32,10 @@ apps:
 - **label:** The label for the applications widget.
 - **class_name:** The CSS class name for styling the widget. Optional.
 - **image_icon_size:** The size of the icon in pixels if the icon is an image.
-- **app_list:** A list of applications to display in the widget. Each application can be specified as a string (the command to launch) or as a dictionary with the following keys:
-  - **icon:** The icon for the application. This can be a Unicode character (e.g., `\uf0a2`), an image path (e.g., `C:\\path\\to\\icon.png`), or an icon name that can be resolved by the system.
-  - **launch:** The command to launch the application. This can include arguments and should be properly quoted if necessary.
-  - **name:** (Optional) The name of the application to display as a tooltip when hovering over the icon.
+- **app_list:** A list of applications to display in the widget. Each application is a dictionary with the following keys:
+  - **icon:** (Required) The icon for the application. This can be a Unicode character (e.g., `\uf0a2`), an image path (e.g., `C:\\path\\to\\icon.png`), or an icon name that can be resolved by the system.
+  - **launch:** (Required) The command to launch the application. This can include arguments and should be properly quoted if necessary.
+  - **name:** (Optional, default `None`) The name of the application to display as a tooltip when hovering over the icon.
 - **tooltip:** A boolean to enable or disable tooltips for application names.
 
 > [!NOTE]  

@@ -6,14 +6,15 @@ The Window Switcher is a fast, lightweight popup widget designed to let you easi
 
 | Name | Type | Default | Description |
 | --- | --- | --- | --- |
-| label | string | `"\uf2d0"` | The icon or text displayed on the status bar. |
+| label | string | `"\uf2d2"` | The icon or text displayed on the status bar. |
 | label_alt | string | `""` | The alternate label. |
 | icon_size | int | `48` | The size of the application icons. |
 | max_visible_apps | int | `5` | The maximum number of apps to show before enabling scrolling. |
 | show_title | boolean | `true` | Whether to display the focused app's title below the icons. |
-| callbacks | object | See [Callbacks](#callbacks) | Defines widget interaction actions. |
-| popup | object | See [Popup](#popup) | Defines popup styling and positioning. |
-| keybindings | list | `[]` | Global hotkeys to trigger the popup. |
+| preview | object | [See below](#preview) | Defines window previews. |
+| callbacks | object | [See below](#callbacks) | Defines widget interaction actions. |
+| popup | object | [See below](#popup) | Defines popup styling and positioning. |
+| keybindings | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
 
 ### Callbacks
 | Option | Type | Default | Action |
@@ -21,6 +22,12 @@ The Window Switcher is a fast, lightweight popup widget designed to let you easi
 | on_left | string | `"toggle_window_switcher"` | Toggles the window switcher. |
 | on_middle | string | `"do_nothing"` | Optional action. |
 | on_right | string | `"do_nothing"` | Optional action. |
+
+### Preview
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| enabled | boolean | `false` | Show live window previews. |
+| width | int | `240` | Preview width in pixels. Min 100, Max 360 |
 
 ### Popup
 Contains the styling parameters for the window switcher interface.
@@ -40,6 +47,8 @@ When the popup is open, you can use the keyboard to navigate:
 - **Delete**: Close the selected window application.
 - **Escape**: Close the window switcher without changing focus.
 
+A keybinding with a modifier, like `alt+w`, works like Alt+Tab: hold `alt` and press `w` to cycle, release `alt` to switch.
+
 ## Usage
 Add the widget configuration to your `config.yaml`:
 
@@ -49,22 +58,17 @@ widgets:
     type: "yasb.window_switcher.WindowSwitcherWidget"
     options:
       label: "<span>\uf2d2</span>"
-      icon_size: 48
-      max_visible_apps: 5
+      icon_size: 64
+      max_visible_apps: 6
       show_title: true
+      preview:
+        enabled: false
+        width: 240
       keybindings:
         - keys: "alt+w"
           action: "toggle_window_switcher"
           screen: "cursor"
 ```
-
-### Keybindings Options
-
-| Option   | Type   | Description                                                                                                            |
-| -------- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `keys`   | string | A keyboard shortcut sequence (e.g. `"alt+w"`).                                                                         |
-| `action` | string | The widget action to trigger (`"toggle_window_switcher"`).                                                             |
-| `screen` | string | Screen mode to pop up on (`"active"`, `"cursor"`, `"primary"`). Default is `"active"`.                                 |
 
 > **Note:**
 > **Layout & Quality Notes:**
@@ -88,18 +92,23 @@ Because this is a really simple widget, all of the styling classes used by the w
 }
 /* Styling for each window item */
 .window-switcher-popup .item {
-    background-color: rgba(255, 255, 255, 0);
+    background-color: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
     margin: 5px;
     padding: 10px;
     cursor: pointer;
-    border: 1px solid transparent
+    border: 4px solid transparent
 }
 /* Hover or keyboard-focus effect */
-.window-switcher-popup .item:hover,
 .window-switcher-popup .item.active {
-    background-color: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    border: 4px solid #049afd;
+}
+/* Preview title */
+.window-switcher-popup .item-title {
+    color: #ffffff;
+    font-size: 13px;
+    font-family: "Segoe UI";
+    padding-bottom: 4px;
 }
 /* Window title text styling */
 .window-switcher-popup .title {

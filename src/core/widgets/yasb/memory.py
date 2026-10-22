@@ -2,9 +2,9 @@ import collections
 import re
 
 from humanize import naturalsize
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel, QVBoxLayout
 
-from core.utils.stat_popup import build_stat_popup
+from core.utils.stat_popup import PinnablePopup, StatRow, build_stat_popup
 from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
@@ -26,7 +26,7 @@ class MemoryWidget(BaseWidget):
         self.config = config
         self._show_alt_label = False
         self._last_data: MemoryData | None = None
-        self._history: collections.deque = collections.deque(maxlen=config.menu.graph_history_size)
+        self._history: collections.deque[float] = collections.deque(maxlen=config.menu.graph_history_size)
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
@@ -74,14 +74,14 @@ class MemoryWidget(BaseWidget):
 
     def _update_popup(self, data: MemoryData):
         """Push fresh data into the open popup if visible."""
-        popup = PopupWidget._open_popups.get(id(self))
-        if popup is None or not popup.isVisible():
+        popup = PopupWidget.open_popup_for(self)
+        if not isinstance(popup, PinnablePopup) or not popup.isVisible():
             return
         try:
-            if popup._graph is not None:
-                popup._graph.set_data(list(self._history))
-            format_size = popup._format_size
-            labels = popup._stat_labels
+            if popup.graph is not None:
+                popup.graph.set_data(list(self._history))
+            format_size = self._format_popup_size
+            labels = popup.stat_labels
             labels["used"].setText(format_size(data.virtual.used))
             labels["total"].setText(format_size(data.virtual.total))
             labels["cached"].setText(format_size(data.cached_bytes))
@@ -96,10 +96,10 @@ class MemoryWidget(BaseWidget):
         if not self.config.menu.enabled:
             return
         menu = self.config.menu
-        format_size = lambda v: naturalsize(v, True, False, "%.1f").replace("i", "")
+        format_size = self._format_popup_size
         data = self._last_data
 
-        stat_rows = [
+        stat_rows: list[StatRow] = [
             (
                 "In use",
                 "used",
@@ -135,19 +135,23 @@ class MemoryWidget(BaseWidget):
             stat_rows=stat_rows,
             graph_class="memory-graph",
         )
-        popup._format_size = format_size
 
-        if menu.show_graph and popup._graph is not None:
+        if menu.show_graph and popup.graph is not None:
             main_layout = popup.layout()
-            graph_container = popup._graph.parentWidget()
-            graph_idx = main_layout.indexOf(graph_container)
-            util_label = QLabel("Utilization")
-            util_label.setProperty("class", "graph-title")
-            main_layout.insertWidget(graph_idx, util_label)
+            graph_container = popup.graph.parentWidget()
+            if isinstance(main_layout, QVBoxLayout) and graph_container is not None:
+                graph_idx = main_layout.indexOf(graph_container)
+                util_label = QLabel("Utilization")
+                util_label.setProperty("class", "graph-title")
+                main_layout.insertWidget(graph_idx, util_label)
 
         popup.show()
 
-    def _update_label(self, virtual_mem, swap_mem):
+    @staticmethod
+    def _format_popup_size(value: float) -> str:
+        return naturalsize(value, True, False, "%.1f").replace("i", "")
+
+    def _update_label(self, virtual_mem: VirtualMemory, swap_mem: SwapMemory):
         """Update label using shared memory data."""
 
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
@@ -156,9 +160,13 @@ class MemoryWidget(BaseWidget):
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
-        _round = lambda value: round(value) if self.config.hide_decimal else value
-        _naturalsize = lambda value: naturalsize(value, True, True, "%.0f" if self.config.hide_decimal else "%.1f")
-        label_options = {
+        def _round(value: float) -> float:
+            return round(value) if self.config.hide_decimal else value
+
+        def _naturalsize(value: float) -> str:
+            return naturalsize(value, True, True, "%.0f" if self.config.hide_decimal else "%.1f")
+
+        label_options: dict[str, object] = {
             "{virtual_mem_free}": _naturalsize(virtual_mem.free),
             "{virtual_mem_percent}": _round(virtual_mem.percent),
             "{virtual_mem_total}": _naturalsize(virtual_mem.total),
@@ -184,7 +192,7 @@ class MemoryWidget(BaseWidget):
             for fmt_str, value in label_options.items():
                 part = part.replace(fmt_str, str(value))
 
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 if "<span" in part and "</span>" in part:
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(icon)
@@ -215,8 +223,7 @@ class MemoryWidget(BaseWidget):
             return "medium"
         elif self.config.memory_thresholds.medium < virtual_memory_percent <= self.config.memory_thresholds.high:
             return "high"
-        elif self.config.memory_thresholds.high < virtual_memory_percent:
-            return "critical"
+        return "critical"
 
     def _get_histogram_bar(self, num: float, num_min: float, num_max: float) -> str:
         if num_max == num_min:

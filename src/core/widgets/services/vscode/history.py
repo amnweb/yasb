@@ -3,6 +3,15 @@ import logging
 import os
 import sqlite3
 import urllib.parse
+from typing import Any, NotRequired, TypedDict, cast
+
+
+class RecentWorkspace(TypedDict):
+    type: str
+    path: str
+    display_path: str
+    is_remote: bool
+    remote_authority: NotRequired[str | None]
 
 
 def _uri_to_windows_path(uri: str) -> str:
@@ -33,7 +42,9 @@ def _remote_uri_display_path(uri: str) -> str:
     return f"{authority} - {path}" if authority else (path or uri)
 
 
-def _recent_uri_to_workspace(uri: str, workspace_type: str, remote_authority: str | None = None) -> dict | None:
+def _recent_uri_to_workspace(
+    uri: str, workspace_type: str, remote_authority: str | None = None
+) -> RecentWorkspace | None:
     if _is_remote_uri(uri):
         return {
             "type": workspace_type,
@@ -56,31 +67,34 @@ def _recent_uri_to_workspace(uri: str, workspace_type: str, remote_authority: st
 
 
 def _add_recent_uri(
-    result_list: list[dict], uri: str, workspace_type: str, remote_authority: str | None = None
+    result_list: list[RecentWorkspace], uri: str, workspace_type: str, remote_authority: str | None = None
 ) -> None:
     workspace_data = _recent_uri_to_workspace(uri, workspace_type, remote_authority)
     if workspace_data:
         result_list.append(workspace_data)
 
 
-def load_recent_workspaces(state_file_path: str) -> list[dict]:
+def load_recent_workspaces(state_file_path: str) -> list[RecentWorkspace]:
     try:
         with sqlite3.connect(state_file_path) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'")
             result = cursor.fetchone()
-            result_list = []
+            result_list: list[RecentWorkspace] = []
             if result:
-                paths_data = json.loads(result[0]).get("entries", [])
-                for entry in paths_data:
-                    if isinstance(entry, dict):
+                paths_data: list[Any] = json.loads(result[0]).get("entries", [])
+                for raw_entry in paths_data:
+                    if isinstance(raw_entry, dict):
+                        entry = cast(dict[str, Any], raw_entry)
                         remote_auth = entry.get("remoteAuthority")
-                        if entry.get("folderUri"):
-                            _add_recent_uri(result_list, entry.get("folderUri"), "folder", remote_auth)
-                        if entry.get("fileUri"):
-                            _add_recent_uri(result_list, entry.get("fileUri"), "file", remote_auth)
+                        folder_uri = entry.get("folderUri")
+                        if folder_uri:
+                            _add_recent_uri(result_list, folder_uri, "folder", remote_auth)
+                        file_uri = entry.get("fileUri")
+                        if file_uri:
+                            _add_recent_uri(result_list, file_uri, "file", remote_auth)
                     else:
-                        logging.error("Unexpected entry type: %s", type(entry))
+                        logging.error("Unexpected entry type: %s", type(raw_entry).__name__)
             else:
                 logging.debug("No recent workspaces found in %s", state_file_path)
             return result_list

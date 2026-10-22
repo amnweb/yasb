@@ -114,7 +114,7 @@ def _buf(data: bytes) -> ctypes.Array[ctypes.c_ubyte]:
 def _as_puchar(buffer: ctypes.Array[ctypes.c_ubyte] | None) -> Any:
     """Cast a ctypes byte array to `PUCHAR`, or NULL for an empty/absent buffer."""
     if buffer is None or len(buffer) == 0:
-        return ctypes.cast(None, PUCHAR)
+        return PUCHAR()
     return ctypes.cast(buffer, PUCHAR)
 
 

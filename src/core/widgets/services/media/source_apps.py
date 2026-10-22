@@ -6,13 +6,10 @@ import os
 
 from winrt.windows.applicationmodel import AppInfo
 
+from core.utils.win32.aumid import get_pid_for_window_aumid
+from core.utils.win32.aumid_process import get_process_name_for_aumid, resolve_shell_app
+from core.utils.win32.bindings.kernel32 import snapshot_processes
 from core.utils.win32.utils import get_app_name_from_aumid, get_app_name_from_pid
-from core.widgets.services.media.aumid_process import (
-    _enum_processes,
-    get_pid_for_window_aumid,
-    get_process_name_for_aumid,
-    resolve_shell_app,
-)
 
 _name_cache: dict[str, str] = {}
 
@@ -36,9 +33,9 @@ def _appinfo_name(aumid: str) -> str | None:
 
 def _pid_for_exe(exe_name: str) -> int | None:
     target = exe_name.lower()
-    for pid, exe in _enum_processes():
-        if exe and os.path.basename(str(exe)).lower() == target:
-            return pid
+    for process in snapshot_processes():
+        if process.exe and os.path.basename(process.exe).lower() == target:
+            return process.pid
     return None
 
 

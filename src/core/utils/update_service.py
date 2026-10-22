@@ -15,7 +15,9 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any, cast
 
 import certifi
 
@@ -35,10 +37,10 @@ ARCHITECTURE = get_architecture()
 # Module-level singletons
 _update_service_instance: UpdateService | None = None
 _update_checker_started = False
-_update_callbacks: list = []
+_update_callbacks: list[Callable[[ReleaseInfo], object]] = []
 
 
-def register_update_callback(fn) -> None:
+def register_update_callback(fn: Callable[[ReleaseInfo], object]) -> None:
     """Register a callable to be invoked when an update is found."""
     _update_callbacks.append(fn)
 
@@ -93,6 +95,10 @@ class UpdateService:
     def current_version(self) -> str:
         """Get the current application version."""
         return self._current_version
+
+    @property
+    def current_channel(self) -> str:
+        return self._current_channel
 
     def _get_current_channel(self) -> str:
         """Detect the current release channel from RELEASE_CHANNEL.
@@ -165,7 +171,9 @@ class UpdateService:
 
         return latest_segments > current_segments
 
-    def _select_asset_for_architecture(self, assets: list[dict], channel: str = "stable") -> dict | None:
+    def _select_asset_for_architecture(
+        self, assets: list[dict[str, Any]], channel: str = "stable"
+    ) -> dict[str, Any] | None:
         """Select the appropriate MSI asset for the current architecture.
 
         Args:
@@ -202,7 +210,7 @@ class UpdateService:
         logging.error("No suitable MSI asset found for %s channel, architecture: %s", channel, ARCHITECTURE)
         return None
 
-    def _fetch_release_data(self, check_channel: str, timeout: int) -> dict:
+    def _fetch_release_data(self, check_channel: str, timeout: int) -> dict[str, Any]:
         """Fetch release data from GitHub API with fallback to metadata endpoint."""
         context = ssl.create_default_context(cafile=certifi.where())
         api_url = GITHUB_API_PREVIEW_URL if check_channel == "preview" else GITHUB_API_URL
@@ -285,10 +293,10 @@ class UpdateService:
             release_info = ReleaseInfo(
                 version=version,
                 changelog=release_data.get("body", ""),
-                download_url=msi_asset.get("browser_download_url"),
+                download_url=cast(str, msi_asset.get("browser_download_url")),
                 asset_name=msi_asset.get("name", ""),
                 asset_size=msi_asset.get("size"),
-                architecture=ARCHITECTURE,
+                architecture=ARCHITECTURE or "",
             )
 
             return release_info
@@ -331,7 +339,7 @@ class UpdateService:
         except Exception as e:
             logging.warning("Failed to update last check time: %s", e)
 
-    def get_version_info(self) -> dict:
+    def get_version_info(self) -> dict[str, Any]:
         """Get comprehensive version and architecture information.
 
         Returns:
@@ -409,7 +417,7 @@ def start_update_checker() -> None:
                 toaster = ToastNotifier()
 
                 # Determine launch URL and message based on channel
-                if update_service._current_channel == "preview":
+                if update_service.current_channel == "preview":
                     launch_url = "https://github.com/amnweb/yasb/releases/tag/preview"
                     message = "New preview build is available!"
                 else:

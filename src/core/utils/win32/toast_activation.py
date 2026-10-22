@@ -12,35 +12,26 @@ call, either in the registry for a plain desktop app or in the manifest for a pa
 A sender that has neither cannot be handed anything, and the caller is told so.
 """
 
-import ctypes
-import ctypes.wintypes as wt
 import logging
 import re
+import uuid
 import winreg
 import xml.etree.ElementTree as ET
-from ctypes import POINTER, WINFUNCTYPE, byref, c_void_p
 
-from core.utils.win32.aumid import GUID, _ensure_com_initialized
-from core.utils.win32.bindings import AllowSetForegroundWindow, shell_execute
+from comtypes import GUID, COMError  # pyright: ignore[reportMissingTypeStubs]
+
+from core.utils.win32.bindings.ole32 import CoInitialize, create_com_object
+from core.utils.win32.bindings.shell32 import INotificationActivationCallback, shell_execute
+from core.utils.win32.bindings.user32 import AllowSetForegroundWindow
+from core.utils.win32.constants import ASFW_ANY, CLSCTX_LOCAL_SERVER
 from core.utils.win32.packages import installed_path, package_family_name
 
-ole32 = ctypes.WinDLL("ole32", use_last_error=True)
-
-CoCreateInstance = ole32.CoCreateInstance
-CoCreateInstance.argtypes = [POINTER(GUID), c_void_p, ctypes.c_ulong, POINTER(GUID), POINTER(c_void_p)]
-CoCreateInstance.restype = ctypes.c_long
-
-CLSCTX_LOCAL_SERVER = 0x4
 # ShellExecute reports failure as a value that would be a meaningless instance handle
 SHELL_EXECUTE_MIN_SUCCESS = 32
-# Let whichever process the notification goes to take the foreground, which it is only
-# allowed to do because the click that got us here happened in a window of ours
-ASFW_ANY = 0xFFFFFFFF
 # A URI scheme as RFC 3986 spells it, two letters at the least so that a drive letter,
 # which reads as a one letter scheme, is not taken for one
 URI_SCHEME = re.compile(r"[A-Za-z][A-Za-z0-9+.-]+:")
 
-IID_INotificationActivationCallback = GUID("53E31837-6600-4A81-9395-75CFFE746F94")
 # Where a plain desktop app registers the class the shell calls back into. A packaged app
 # declares it in its manifest instead, under this element
 CUSTOM_ACTIVATOR = "CustomActivator"
@@ -48,23 +39,6 @@ ACTIVATION_ELEMENT = "ToastNotificationActivation"
 ACTIVATION_ATTRIBUTE = "ToastActivatorCLSID"
 # Toasts whose activation the shell handles itself, with nothing to hand the sender
 SHELL_ACTIVATION_TYPES = ("system",)
-
-
-class INotificationActivationCallbackVtbl(ctypes.Structure):
-    _fields_ = [
-        ("QueryInterface", WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(GUID), POINTER(c_void_p))),
-        ("AddRef", WINFUNCTYPE(ctypes.c_ulong, c_void_p)),
-        ("Release", WINFUNCTYPE(ctypes.c_ulong, c_void_p)),
-        # Activate(LPCWSTR appUserModelId, LPCWSTR invokedArgs, NOTIFICATION_USER_INPUT_DATA*, ULONG)
-        (
-            "Activate",
-            WINFUNCTYPE(ctypes.c_long, c_void_p, wt.LPCWSTR, wt.LPCWSTR, c_void_p, ctypes.c_ulong),
-        ),
-    ]
-
-
-class INotificationActivationCallback(ctypes.Structure):
-    _fields_ = [("lpVtbl", POINTER(INotificationActivationCallbackVtbl))]
 
 
 def activate_toast(aumid: str, launch: str, activation_type: str) -> bool:
@@ -92,6 +66,8 @@ def _open_protocol(launch: str) -> bool:
         if launch:
             logging.debug("Not opening a notification protocol that is not a URI: %s", launch)
         return False
+    # Let whichever process the notification goes to take the foreground, which it is only
+    # allowed to do because the click that got us here happened in a window of ours
     AllowSetForegroundWindow(ASFW_ANY)
     result = shell_execute(launch)
     if result and result > SHELL_EXECUTE_MIN_SUCCESS:
@@ -106,38 +82,29 @@ def _invoke_activator(aumid: str, launch: str) -> bool:
     if not clsid:
         return False
 
-    # An apartment of some kind is needed before the class can be created, and the caller
-    # is not always one that has been in COM before
-    _ensure_com_initialized()
-    activator = c_void_p()
-    hr = CoCreateInstance(
-        byref(GUID(clsid)),
-        None,
-        CLSCTX_LOCAL_SERVER,
-        byref(IID_INotificationActivationCallback),
-        byref(activator),
-    )
-    if hr != 0 or not activator.value:
-        logging.debug("The toast activator of %s could not be created (0x%08X)", aumid, hr & 0xFFFFFFFF)
+    try:
+        # The registry spells it with braces and a manifest without, comtypes only reads the first
+        class_id = GUID(f"{{{uuid.UUID(clsid)}}}")
+    except ValueError:
+        logging.debug("The toast activator of %s is not a CLSID: %s", aumid, clsid)
         return False
 
-    callback = ctypes.cast(activator, POINTER(INotificationActivationCallback))
-    try:
-        AllowSetForegroundWindow(ASFW_ANY)
-        # No user input: the menu shows a notification, it does not offer its input fields
-        hr = callback.contents.lpVtbl.contents.Activate(activator, aumid, launch, None, 0)
-        if hr != 0:
-            logging.debug("%s refused the notification (0x%08X)", aumid, hr & 0xFFFFFFFF)
-            return False
-        return True
-    except Exception:
-        logging.exception("Failed to hand a notification back to %s", aumid)
+    # An apartment of some kind is needed before the class can be created, and the caller
+    # is not always one that has been in COM before
+    CoInitialize()
+    activator = create_com_object(class_id, INotificationActivationCallback, CLSCTX_LOCAL_SERVER)
+    if activator is None:
+        logging.debug("The toast activator of %s could not be created", aumid)
         return False
-    finally:
-        try:
-            callback.contents.lpVtbl.contents.Release(activator)
-        except Exception:
-            pass
+
+    AllowSetForegroundWindow(ASFW_ANY)
+    try:
+        # No user input: the menu shows a notification, it does not offer its input fields
+        activator.Activate(aumid, launch, None, 0)
+    except COMError as e:
+        logging.debug("%s refused the notification (0x%08X)", aumid, e.hresult & 0xFFFFFFFF)
+        return False
+    return True
 
 
 # aumid -> clsid, for senders that have one

@@ -164,7 +164,8 @@ class ExcludedFilesCard(Card):
 
     def _rebuild(self) -> None:
         while self._rule_box.count():
-            widget = self._rule_box.takeAt(0).widget()
+            item = self._rule_box.takeAt(0)
+            widget = item.widget() if item is not None else None
             if widget is not None:
                 widget.setParent(None)
                 widget.deleteLater()

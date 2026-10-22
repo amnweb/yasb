@@ -4,7 +4,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from core.cloud.constants import (
     MAX_EXCLUDE_RULE_LENGTH,
@@ -25,7 +25,7 @@ def clean_rules(values: Any) -> tuple[str, ...]:
         return ()
 
     seen: dict[str, None] = {}
-    for value in values:
+    for value in cast(list[Any], values):
         if not isinstance(value, str):
             continue
         rule = value.strip()
@@ -52,10 +52,11 @@ class Settings:
     def from_json(cls, data: Any) -> Settings:
         if not isinstance(data, dict):
             return cls()
+        data = cast(dict[str, Any], data)
         auto = data.get("auto_backup")
         return cls(
             exclude=clean_rules(data.get("exclude")),
-            auto_backup=bool(auto.get("enabled")) if isinstance(auto, dict) else False,
+            auto_backup=bool(cast(dict[str, Any], auto).get("enabled")) if isinstance(auto, dict) else False,
             debug_logging=bool(data.get("debug_logging")),
         )
 

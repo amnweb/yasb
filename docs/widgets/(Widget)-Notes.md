@@ -11,11 +11,31 @@ A quick note-taking utility that opens a scratchpad popup directly from your sta
 | `start_floating`      | Boolean  | `false`                                                                         | Whether the menu should start in floating mode.                                                                                                 |
 | `paste_plain_text`    | Boolean  | `false`                                                                         | If true, the widget will paste plain text from the clipboard by default, while Shift+Ctrl+V will paste rich text.                               |
 | `enter_to_add_note`   | Boolean  | `true`                                                                          | If true, pressing Enter in the input field will add a new note and Shift+Enter will add a new line.                                             |
-| `menu`                | Dict     | See below                                                                       | Popup menu settings. See details below.                                                                                                         |
-| `icons`               | Dict     | See below                                                                       | Icons used within the widget. See details below.                                                                                                |
-| `callbacks`           | Dict     | `{ on_left: "toggle_menu", on_middle: "do_nothing", on_right: "toggle_label" }` | Maps mouse actions to widget functions (e.g., toggling the menu or label).                                                                      |
+| `menu`                | Dict     | [See below](#menu-options) | Popup menu settings. See details below.                                                                                                         |
+| `icons`               | Dict     | [See below](#icons-options) | Icons used within the widget. See details below.                                                                                                |
+| `keybindings`         | List     | `[]`                                                                            | Optional hotkeys. See [Keybindings](./Keybindings).                                                                                             |
+| `callbacks`           | Dict     | [See below](#callbacks) | Maps mouse actions to widget functions (e.g., toggling the menu or label).                                                                      |
 
-### Menu Options
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_menu"
+  on_middle: "do_nothing"
+  on_right: "toggle_label"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_menu` - Open or close the popup menu.
+- `update_label` - Refresh the label now.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Menu Options
 
 | Option                | Type       | Default Value   | Description                                                                                    |
 | --------------------- | ---------- | --------------- | ---------------------------------------------------------------------------------------------- |
@@ -29,7 +49,7 @@ A quick note-taking utility that opens a scratchpad popup directly from your sta
 | `offset_left`         | Integer    | `0`             | Horizontal offset for fine positioning.                                                        |
 | `show_date_time`      | Boolean    | `true`          | Indicates whether to display the note’s timestamp.                                             |
 
-### Icons Options
+## Icons Options
 
 | Option                | Type       | Default Value    | Description                                                                                    |
 | --------------------- | ---------- | ---------------  | ---------------------------------------------------------------------------------------------- |
@@ -96,10 +116,11 @@ notes:
   - **note**: Icon representing a note.
   - **delete**: Icon used for the delete action.
   - **copy**: Icon for copying text.
-- **callbacks** A set of functions mapped to mouse actions:
-  - **on_left**: Triggered when the left mouse button is clicked (default: "toggle_menu").
-  - **on_middle**: Triggered on a middle mouse click (default: "do_nothing").
-  - **on_right**: Triggered on a right mouse click (default: "toggle_label").
+  - **float_on**: Icon shown when floating can be enabled.
+  - **float_off**: Icon shown when floating can be disabled.
+  - **close**: Icon for the close button in the header.
+- **keybindings** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ## Available Styles
 
@@ -338,8 +359,8 @@ notes:
 ```
 
 
-## Preview of example above
+## Preview of the Widget
 ![Notes YASB Widget](assets/827491365-a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5.png)
 
-## Preview of floating mode
-![Notes YASB Widget](assets/827491365-a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p6.png)
+## Preview of the Widget (Floating Mode)
+![Notes YASB Widget (Floating Mode)](assets/827491365-a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p6.png)

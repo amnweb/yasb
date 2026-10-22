@@ -1,5 +1,6 @@
 # Ignore Python cache directories
 __pycache__/
+.ruff_cache/
 YASB.egg-info/
 *.pyc
 *.pyo
@@ -18,6 +19,8 @@ dist/
 build/
 build_arm64/
 build_x64/
+# Test caches
+.pytest_cache/
 # Temporary files
 *.tmp
 *.temp

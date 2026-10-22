@@ -1,10 +1,12 @@
+from typing import Any
+
 import yaml
 from pydantic import ValidationError
 
 
 def format_pydantic_errors_to_yaml(exc: ValidationError) -> str:
     """Format a Pydantic ValidationError to a YAML string."""
-    tree = {}
+    tree: dict[str | int, Any] = {}
     for error in exc.errors():
         current = tree
         loc = error["loc"]

@@ -16,7 +16,7 @@ def _get_initials(target: str) -> str:
     return "".join(initials)
 
 
-def _split_camel(name: str) -> str:
+def split_camel(name: str) -> str:
     """Split a CamelCase name into space-separated words.
 
     Examples:

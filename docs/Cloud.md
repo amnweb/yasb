@@ -29,7 +29,7 @@ At the bottom you see the account you are signed in as, your plan, and how much 
 ![Backups list](assets/738bd466-81a9-4322-aaef-57ea3626df3a.png)
 
 ## Backing up
-Click **Backup Now**. You can type a note so you recognise it later, for example "before I tried the new theme". If you leave it empty, the name of your PC is used.
+Click **Backup Now**. You can type a note (up to 100 characters) so you recognise it later, for example "before I tried the new theme". If you leave it empty, the name of your PC is used.
 
 The app packs your configuration folder, encrypts it, and uploads it. Log files, caches and temporary files are left out automatically.
 
@@ -83,7 +83,7 @@ Once shared, the row gets **Copy link** and **Stop sharing**. Stopping makes the
 ## Excluded files
 Some things do not belong in a backup. Logs, caches and temporary files are already left out, and so are folders like `.git`, `.venv` and `node_modules`.
 
-You can add your own rules under **Excluded files** in settings.
+You can add your own rules under **Excluded files** in settings. There is room for up to 100 rules, each up to 200 characters long.
 
 - A rule without a slash matches a file name anywhere in your configuration folder. `*.env` leaves out every `.env` file, wherever it is.
 - A rule with a slash matches the path instead. `secrets/*` leaves out everything in the `secrets` folder.

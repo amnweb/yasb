@@ -18,3 +18,37 @@ updates:
       include: "scope"
     labels:
       - "dependencies"
+
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "12:00"
+      timezone: "Etc/UTC"
+    assignees:
+      - "amnweb"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "12:00"
+      timezone: "Etc/UTC"
+    assignees:
+      - "amnweb"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"

@@ -7,12 +7,11 @@ import os
 import sys
 import time
 from collections.abc import Callable
-from ctypes import byref, windll
+from ctypes import byref
 from ctypes.wintypes import (
     DWORD,
     HMODULE,
     MSG,
-    POINT,
 )
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,29 +21,25 @@ from PIL import Image
 from PIL.ImageFilter import SHARPEN
 from PIL.ImageQt import ImageQt
 from PyQt6.QtGui import QImage
-from win32con import (
-    PROCESS_QUERY_INFORMATION,
-    PROCESS_VM_READ,
-    WM_CLOSE,
-    WS_CLIPCHILDREN,
-    WS_CLIPSIBLINGS,
-    WS_EX_TOOLWINDOW,
-    WS_EX_TOPMOST,
-    WS_POPUP,
-)
 
-from core.utils.win32.app_icons import hicon_to_image
-from core.utils.win32.bindings import (
+from core.utils.icons.convert import hicon_to_image
+from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
-    CreateWindowEx,
-    GetWindowThreadProcessId,
+    GetLastError,
+    GetModuleHandle,
+    GetSystemWindowsDirectoryW,
     OpenProcess,
-    PostMessage,
-    QueryFullProcessImageNameW,
+    QueryFullProcessImageName,
 )
-from core.utils.win32.bindings.kernel32 import GetLastError, GetSystemWindowsDirectoryW
 from core.utils.win32.bindings.psapi import EnumProcessModulesEx, GetModuleBaseNameW
-from core.utils.win32.bindings.user32 import FindWindowEx, GetShellWindow
+from core.utils.win32.bindings.user32 import (
+    CreateWindowEx,
+    FindWindowEx,
+    GetShellWindow,
+    GetWindowThreadProcessId,
+    PostMessage,
+    user32,
+)
 from core.utils.win32.constants import (
     LIST_MODULES_ALL,
     NIF_GUID,
@@ -53,17 +48,21 @@ from core.utils.win32.constants import (
     NIF_MESSAGE,
     NIF_STATE,
     NIF_TIP,
+    PROCESS_QUERY_INFORMATION,
     PROCESS_QUERY_LIMITED_INFORMATION,
+    PROCESS_VM_READ,
+    WM_CLOSE,
+    WS_CLIPCHILDREN,
+    WS_CLIPSIBLINGS,
+    WS_EX_TOOLWINDOW,
+    WS_EX_TOPMOST,
+    WS_POPUP,
 )
 from core.utils.win32.structs import NOTIFYICONDATA, WNDCLASS, WNDPROC
 from core.utils.win32.utils import get_windows_host_arch
 from settings import IS_FROZEN
 
 logger = logging.getLogger("systray_widget")
-
-user32 = windll.user32
-gdi32 = windll.gdi32
-kernel32 = windll.kernel32
 
 
 @dataclass
@@ -110,7 +109,7 @@ class NativeWindowEx:
 
         self.wc = WNDCLASS()
         self.wc.lpfnWndProc = WNDPROC(window_proc)
-        self.wc.hInstance = kernel32.GetModuleHandleW(None)
+        self.wc.hInstance = GetModuleHandle(None)
         self.wc.lpszClassName = class_name
 
         if not user32.RegisterClassW(byref(self.wc)):
@@ -153,12 +152,6 @@ class NativeWindowEx:
             self.hwnd = 0
 
 
-def cursor_position():
-    point = POINT()
-    user32.GetCursorPos(byref(point))
-    return point.x, point.y
-
-
 def pack_i32(low: int, high: int) -> int:
     """Pack two 16-bit signed integers into a 32-bit integer."""
     high = ct.c_short(high).value  # Ensure sign extension
@@ -180,15 +173,9 @@ def get_exe_path_from_hwnd(hwnd: int) -> str | None:
         return None
 
     try:
-        # Get process image file name
-        buffer_size = ct.c_ulong(1024)
-        buffer = ct.create_unicode_buffer(buffer_size.value)
-        if QueryFullProcessImageNameW(h_process, 0, buffer, ct.byref(buffer_size)):
-            return buffer.value
+        return QueryFullProcessImageName(h_process)
     finally:
         CloseHandle(h_process)
-
-    return None
 
 
 def array_to_str(array: bytes) -> str:
@@ -281,14 +268,13 @@ def get_explorer_pid() -> int | None:
             h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, explorer_pid.value)
             if not h_process:
                 raise Exception(f"Failed to open process. Err: {GetLastError()}")
-            exe_path_buf = ctypes.create_unicode_buffer(1024)
-            size = DWORD(1024)
-            if not QueryFullProcessImageNameW(h_process, 0, exe_path_buf, byref(size)):
+            exe_path = QueryFullProcessImageName(h_process)
+            if exe_path is None:
                 raise Exception(f"Failed to get process image name. Err: {GetLastError()}")
             expected_path_buf = ctypes.create_unicode_buffer(1024)
             if not GetSystemWindowsDirectoryW(expected_path_buf, 1024):
                 raise Exception(f"Failed to get system windows directory. Err: {GetLastError()}")
-            exe_path = exe_path_buf.value.lower()
+            exe_path = exe_path.lower()
             expected_path = os.path.join(expected_path_buf.value, "explorer.exe").lower()
             if exe_path != expected_path:
                 raise Exception(f"Unexpected process image name {exe_path}. Expected {expected_path}")

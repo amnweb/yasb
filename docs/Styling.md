@@ -1,3 +1,5 @@
+# Styling
+
 ## Style file    
 
 Styling is done using the CSS file format and with a file named `styles.css`.
@@ -145,9 +147,7 @@ Example: how to target the clock widget
 }
 ```
 
-## Per-output styling
-
-The main YASB windows carry a class tag with the name of the output this window is shown on.
+## Default style for all elements
 
 ```css
 * { font-size: 13px;color: #cdd6f4; }
@@ -166,7 +166,7 @@ Icons can be styled with the following:
 You can specify different icon class in the configuration file as shown below.
 
 ```yaml
-label: "<span class=\"icon-1"\">\uf4bc</span> {virtual_mem_free}"
+label: "<span class=\"icon-1\">\uf4bc</span> {virtual_mem_free}"
 ```
 
 > **Note**:
@@ -226,7 +226,7 @@ Example of widget size and background transition on class change using `all` key
 .glazewm-workspaces .ws-btn.focused_populated,
 .glazewm-workspaces .ws-btn.focused_empty {
      /* These two properties be animated on workspace change */
-    pading: 1px 50px;
+    padding: 1px 50px;
     background: gray;
 }
 ```
@@ -290,7 +290,7 @@ YASB can follow the OS theme, if you have OS dark style YASB will add class `.da
 ```css
 .yasb-bar {
     /* background color for light style */
-    background-color: #1e1e1e;
+    background-color: #f3f3f3;
 }
 .dark.yasb-bar {
     /* background color for dark style */

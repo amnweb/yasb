@@ -6,18 +6,76 @@ Displays your Wi-Fi signal strength and the name of the network (SSID) you are c
 | ---------------------     | --------- | -------------------------------------------------------------------------                | --------------------------------------------------------------- |
 | `label`                   | string    | `"{wifi_icon}"`                                                                          | The label format for the WiFi widget.                           |
 | `label_alt`               | string    | `"{wifi_icon} {wifi_name}"`                                                              | The alternative label format for the WiFi widget.               |
-| `update_interval`         | integer   | `1000`                                                                                   | Update interval in milliseconds.                                |
+| `update_interval`         | integer   | `1000`                                                                                   | Update interval in milliseconds (0-60000).                      |
 | `class_name`              | string    | `""`                                                                                     | Additional CSS class name for the widget.                       |
-| `wifi_icons`              | list      | `[ "\udb82\udd2e", "\udb82\udd1f", "\udb82\udd22", "\udb82\udd25", "\udb82\udd28" ]`     | Icons for different WiFi signal strengths.                      |
+| `wifi_icons`              | list      | [See below](#wifi-icons) | Icons for different WiFi signal strengths.                      |
 | `ethernet_label`          | string    | `"{wifi_icon}"`                                                                          | The label format during active Ethernet connection.             |
 | `ethernet_label_alt`      | string    | `"{wifi_icon} {ip_addr}"`                                                                | The alternative label format during active Ethernet connection. |
-| `ethernet_icon`           | string    | "\ueba9"                                                                                 | The icon to indicate Ethernet connection.                       |
+| `ethernet_icon`           | string    | `"\ueba9"`                                                                               | The icon to indicate Ethernet connection.                       |
 | `get_exact_wifi_strength` | boolean   | `false`                                                                                  | Whether to get the exact WiFi signal strength.                  |
 | `hide_if_ethernet`        | boolean   | `false`                                                                                  | Whether to hide the widget if an Ethernet connection is active. |
-| `callbacks`               | dict      | `{ 'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | Callbacks for mouse events on the widget.                       |
-| `menu_config`             | dict      | `None`                                                                                   | Popup menu configuration.                                       |
+| `callbacks`               | dict      | [See below](#callbacks) | Callbacks for mouse events on the widget.                       |
+| `menu_config`             | dict      | [See below](#menu-config-options) | Popup menu configuration.                                       |
+| `keybindings`             | list      | `[]`                                                                                     | Optional hotkeys. See [Keybindings](./Keybindings).             |
 
 > **Note:** Available label replacements: "{wifi_icon}", "{wifi_name}", "{wifi_strength}", "{ip_addr}"
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `toggle_menu` - Open or close the popup menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Menu Config Options
+
+The `menu_config` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+menu_config:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "System"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+  wifi_icons_secured:
+    - "\ue670"
+    - "\ue671"
+    - "\ue672"
+    - "\ue673"
+  wifi_icons_unsecured:
+    - "\uec3c"
+    - "\uec3d"
+    - "\uec3e"
+    - "\uec3f"
+```
+
+## WiFi Icons
+
+The default value of `wifi_icons` is:
+
+```yaml
+wifi_icons:
+  - "\udb82\udd2e"
+  - "\udb82\udd1f"
+  - "\udb82\udd22"
+  - "\udb82\udd25"
+  - "\udb82\udd28"
+```
 
 ## Example Configuration
 
@@ -69,7 +127,7 @@ wifi:
 ## Description of Options
 - **label:** The format string for the WiFi Widget. Default is `"{wifi_icon}"`.
 - **label_alt:** The format string for the WiFi Widget when the it's in the alternative state. Default is `"{wifi_icon} {wifi_name}"`.
-- **update_interval:** The interval in milliseconds at which the widget updates. Default is `1000`.
+- **update_interval:** The interval in milliseconds at which the widget updates (0-60000). Default is `1000`.
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling. Default is `""`.
 - **get_exact_wifi_strength:** A boolean value that determines whether to get the exact WiFi signal strength. This may require location access permissions in Windows 11. Default is `False`.
 - **ethernet_label:** The format string for the WiFi Widget during active Ethernet connection. Default is `"{wifi_icon}"`.
@@ -77,7 +135,8 @@ wifi:
 - **ethernet_icon**: The icon that indicates an active Ethernet connection. It will be used as `{wifi_icon}` whenever there's no active WiFi connection. Default is "\ueba9".
 - **hide_if_ethernet:** A boolean value that determines whether to hide the widget if an Ethernet connection is active. Default is `False`.
 - **wifi_icons:** A list of icons to use for different WiFi signal strengths. Default is `["\udb82\udd2e","\udb82\udd1f","\udb82\udd22","\udb82\udd25","\udb82\udd28",]`.
-- **callbacks:** A dictionary of callbacks for mouse events on the widget. Default is `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}`.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **menu_config:** A dictionary of options for the popup menu. It contains the following keys: `blur`, `round_corners`, `round_corners_type`, `border_color`, `alignment`, `direction`, `offset_top`, `offset_left`, `wifi_icons_secured`, and `wifi_icons_unsecured`.
 
 ## Notes on WiFi "Location Access" permissions
@@ -265,5 +324,5 @@ wifi:
 }
 ```
 
-## Preview of the Popup Menu
-![Popup Menu Demo](assets/457922931-4ba996e6-0ee6-4f68-9528-2a2f14002104.gif)
+## Preview of the Widget
+![WiFi YASB Widget](assets/457922931-4ba996e6-0ee6-4f68-9528-2a2f14002104.gif)

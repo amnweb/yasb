@@ -2,11 +2,10 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
-import win32api
 from winrt.windows.devices.display import DisplayMonitor, DisplayMonitorConnectionKind
 
-EDD_GET_DEVICE_INTERFACE_NAME = 1
-DISPLAY_DEVICE_ACTIVE = 0x00000001
+from core.utils.win32.bindings.user32 import EnumDisplayDevices
+from core.utils.win32.constants import DISPLAY_DEVICE_ACTIVE, EDD_GET_DEVICE_INTERFACE_NAME
 
 
 @dataclass(frozen=True)
@@ -21,13 +20,12 @@ def _interface_paths(device: str) -> list[tuple[str, bool]]:
     paths: list[tuple[str, bool]] = []
     index = 0
     while index < 16:
-        try:
-            info = win32api.EnumDisplayDevices(device, index, EDD_GET_DEVICE_INTERFACE_NAME)
-        except Exception:
+        info = EnumDisplayDevices(device, index, EDD_GET_DEVICE_INTERFACE_NAME)
+        if info is None:
             break
-        path = info.DeviceID or ""
+        path = info.DeviceID
         if path:
-            active = bool(int(getattr(info, "StateFlags", 0) or 0) & DISPLAY_DEVICE_ACTIVE)
+            active = bool(info.StateFlags & DISPLAY_DEVICE_ACTIVE)
             paths.append((path, active))
         index += 1
     return paths

@@ -4,6 +4,7 @@ import os
 import sqlite3
 import urllib.parse
 from pathlib import Path
+from typing import Any
 
 from core.utils.shell_utils import shell_open
 from core.utils.win32.constants import SW_HIDE
@@ -100,14 +101,14 @@ class VSCodeProvider(BaseProvider):
     input_placeholder = "Search VSCode recents..."
     icon = ICON_VSCODE
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         state_storage_path = self.config.get("state_storage_path", "")
         if not state_storage_path:
             state_storage_path = get_state_db_path()
         self._state_file_path = state_storage_path
 
-    def _get_recents(self) -> list[dict]:
+    def _get_recents(self) -> list[dict[str, Any]]:
         if not os.path.exists(self._state_file_path):
             return []
 
@@ -128,14 +129,14 @@ class VSCodeProvider(BaseProvider):
 
         return []
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).lower()
         cancel_event = kwargs.get("cancel_event")
 
         recents = self._get_recents()
         results: list[ProviderResult] = []
 
-        scored_items = []
+        scored_items: list[tuple[float, bool, str, str, Path, str]] = []
 
         for entry in recents:
             if cancel_event and cancel_event.is_set():
@@ -156,7 +157,7 @@ class VSCodeProvider(BaseProvider):
             path = Path(unquoted)
             name = entry.get("label") or path.name
 
-            score = 0
+            score: float = 0
             if query:
                 query_words = query.split()
                 path_lower = str(path).lower()
@@ -212,11 +213,11 @@ class VSCodeProvider(BaseProvider):
             folders = [item for item in scored_items if item[1]]
             files = [item for item in scored_items if not item[1]]
 
-            def _append_group(group, label):
+            def _append_group(group: list[tuple[float, bool, str, str, Path, str]], label: str) -> None:
                 if not group:
                     return
                 results.append(ProviderResult(title=label, provider=self.name, is_separator=True))
-                for score, is_folder, uri, unquoted, path, name in group:
+                for _score, is_folder, uri, _unquoted, path, name in group:
                     if len(results) >= self.max_results:
                         break
                     action_data = {"uri": uri, "is_folder": is_folder}

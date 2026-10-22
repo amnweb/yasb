@@ -2,6 +2,8 @@
 
 import logging
 import threading
+from functools import partial
+from typing import TYPE_CHECKING, Protocol, TypedDict, override
 
 from PyQt6.QtCore import QObject, Qt, QThread, QTimer, pyqtSignal
 
@@ -10,9 +12,24 @@ from core.widgets.services.update_check import scoop as scoop_mgr
 from core.widgets.services.update_check import windows_update as wu_mgr
 from core.widgets.services.update_check import winget as winget_mgr
 
+if TYPE_CHECKING:
+    from core.widgets.yasb.update_check import UpdateCheckWidget
+
+
+class UpdateResult(TypedDict):
+    count: int
+    names: list[str]
+    ids: list[str]
+
+
+class UpdateSource(Protocol):
+    def check_updates(self) -> list[dict[str, str]]: ...
+    def upgrade_packages(self, package_ids: list[str], /) -> None: ...
+
+
 # Map source name.
 # Each module must expose check_updates() and upgrade_packages().
-_SOURCE_MODULES = {
+_SOURCE_MODULES: dict[str, UpdateSource] = {
     "winget": winget_mgr,
     "scoop": scoop_mgr,
     "windows": wu_mgr,
@@ -24,12 +41,13 @@ class _UpdateWorker(QThread):
 
     finished = pyqtSignal(str, dict)  # (source, result_dict)
 
-    def __init__(self, source: str, exclude_list: list[str] | None = None, parent=None):
+    def __init__(self, source: str, exclude_list: list[str] | None = None, parent: QObject | None = None):
         super().__init__(parent)
         self.source = source
         self.exclude_list = exclude_list or []
 
-    def run(self):
+    @override
+    def run(self) -> None:
         try:
             module = _SOURCE_MODULES.get(self.source)
             if module is None:
@@ -40,19 +58,17 @@ class _UpdateWorker(QThread):
             updates = module.check_updates()
 
             # Build display names
-            if self.source == "winget":
-                names = [f"{u['name']}: {u['version']} -> {u['available']}" for u in updates]
-            elif self.source == "scoop":
-                names = [f"{u['name']}: {u['version']} -> {u['available']}" for u in updates]
-            elif self.source == "windows":
+            if self.source == "windows":
                 names = [u["name"] for u in updates]
+            else:
+                names = [f"{u['name']}: {u['version']} -> {u['available']}" for u in updates]
 
             # Apply exclude filter
             ids = [u["id"] for u in updates]
             if self.exclude_list:
                 valid_excludes = [x.lower() for x in self.exclude_list if x and x.strip()]
-                filtered_names = []
-                filtered_ids = []
+                filtered_names: list[str] = []
+                filtered_ids: list[str] = []
                 for update, name, uid in zip(updates, names, ids):
                     if not any(
                         ex in update.get("id", "").lower() or ex in update.get("name", "").lower()
@@ -80,29 +96,31 @@ class _UpdateWorker(QThread):
 class UpdateCheckService(QObject):
     """Singleton service shared by all update_check widgets."""
 
-    _instance = None
+    _instance: UpdateCheckService | None = None
+    _initialized: bool
 
-    def __new__(cls):
+    def __new__(cls) -> UpdateCheckService:
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+            instance = super().__new__(cls)
+            instance._initialized = False
+            cls._instance = instance
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         if self._initialized:
             return
         self._initialized = True
         super().__init__()
 
-        self._widgets: list = []
+        self._widgets: list[UpdateCheckWidget] = []
         self._workers: dict[str, _UpdateWorker] = {}
         self._timers: dict[str, QTimer] = {}
-        self._results: dict[str, dict] = {}
+        self._results: dict[str, UpdateResult] = {}
         self._lock = threading.Lock()
 
         logging.info("UpdateCheckService initialized...")
 
-    def register_widget(self, widget):
+    def register_widget(self, widget: UpdateCheckWidget) -> None:
         """Register a widget and start polling for its enabled sources."""
         if widget not in self._widgets:
             self._widgets.append(widget)
@@ -115,18 +133,18 @@ class UpdateCheckService(QObject):
         for source, result in self._results.items():
             self._push_to_widget(widget, source, result)
 
-    def unregister_widget(self, widget):
+    def unregister_widget(self, widget: UpdateCheckWidget) -> None:
         """Remove a widget. Stops polling when no widgets remain."""
         if widget in self._widgets:
             self._widgets.remove(widget)
         if not self._widgets:
             self._stop_all()
 
-    def _ensure_source_polling(self, widget):
+    def _ensure_source_polling(self, widget: UpdateCheckWidget) -> None:
         """Start timers for sources that don't have one yet."""
         config = widget.config
 
-        sources = []
+        sources: list[tuple[str, int, list[str]]] = []
         if hasattr(config, "winget_update") and config.winget_update.enabled:
             sources.append(("winget", config.winget_update.interval, config.winget_update.exclude))
         if hasattr(config, "scoop_update") and config.scoop_update.enabled:
@@ -144,12 +162,12 @@ class UpdateCheckService(QObject):
 
         timer = QTimer(self)
         timer.setTimerType(Qt.TimerType.PreciseTimer)
-        timer.timeout.connect(lambda s=source, e=exclude: self._run_check(s, e))
+        timer.timeout.connect(partial(self._run_check, source, exclude))
         self._timers[source] = timer
 
         # Initial check after short delay (stagger to avoid all at once)
         delay = {"winget": 10_000, "scoop": 15_000, "windows": 20_000}.get(source, 10_000)
-        QTimer.singleShot(delay, lambda s=source, e=exclude, t=timer, i=interval_ms: self._initial_check(s, e, t, i))
+        QTimer.singleShot(delay, partial(self._initial_check, source, exclude, timer, interval_ms))
 
     def _initial_check(self, source: str, exclude: list[str], timer: QTimer, interval_ms: int):
         """Run the first check and then start the repeating timer."""
@@ -167,7 +185,7 @@ class UpdateCheckService(QObject):
         self._workers[source] = worker
         worker.start()
 
-    def _on_worker_finished(self, source: str, result: dict):
+    def _on_worker_finished(self, source: str, result: UpdateResult):
         """Handle worker results - cache and push to all widgets."""
         self._results[source] = result
 
@@ -179,7 +197,7 @@ class UpdateCheckService(QObject):
             worker = self._workers.pop(source)
             worker.deleteLater()
 
-    def _push_to_widget(self, widget, source: str, result: dict):
+    def _push_to_widget(self, widget: UpdateCheckWidget, source: str, result: UpdateResult):
         """Call the widget's update method for a specific source."""
         if not is_valid_qobject(widget):
             if widget in self._widgets:
@@ -196,8 +214,8 @@ class UpdateCheckService(QObject):
 
     def handle_left_click(self, source: str):
         """Upgrade packages for the given source."""
-        result = self._results.get(source, {})
-        ids = result.get("ids", [])
+        result = self._results.get(source)
+        ids = result["ids"] if result else []
 
         module = _SOURCE_MODULES.get(source)
         if module:

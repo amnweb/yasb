@@ -1,3 +1,5 @@
+from typing import Any
+
 from core.utils.shell_utils import shell_open
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import (
@@ -14,7 +16,7 @@ from core.widgets.services.quick_launch.providers.resources.icons import (
     ICON_WEB_YOUTUBE,
 )
 
-_ENGINES = {
+_ENGINES: dict[str, dict[str, str]] = {
     "google": {
         "name": "Google",
         "url": "https://www.google.com/search?q={}",
@@ -90,11 +92,11 @@ class WebSearchProvider(BaseProvider):
     input_placeholder = "Search the web..."
     icon = ICON_WEB_SEARCH
 
-    def __init__(self, config=None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         custom_engines = self.config.get("custom_engines")
         engines_to_remove = self.config.get("remove_engines")
-        if custom_engines.count is not None:
+        if custom_engines is not None:
             for engine in custom_engines:
                 _ENGINES[engine["engine"]] = engine
         if engines_to_remove is not None:
@@ -106,10 +108,10 @@ class WebSearchProvider(BaseProvider):
             return text.strip().startswith(self.prefix)
         return True
 
-    def _ordered_engines(self) -> list[tuple[str, dict]]:
+    def _ordered_engines(self) -> list[tuple[str, dict[str, str]]]:
         """Return engines with the preferred one first."""
         preferred = self.config.get("engine", "google")
-        ordered: list[tuple[str, dict]] = []
+        ordered: list[tuple[str, dict[str, str]]] = []
         for key, info in _ENGINES.items():
             if key == preferred:
                 ordered.insert(0, (key, info))
@@ -117,7 +119,7 @@ class WebSearchProvider(BaseProvider):
                 ordered.append((key, info))
         return ordered
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text)
         engines = self._ordered_engines()
 

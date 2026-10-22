@@ -1,8 +1,10 @@
 """About dialog for the application, providing information and update controls."""
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from functools import partial
+from typing import TYPE_CHECKING, NotRequired, TypedDict
 
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import QObject, Qt, QTimer
 from PyQt6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -34,8 +36,15 @@ if TYPE_CHECKING:
     from core.tray import SystemTrayManager
 
 
+class _UpdateButtonState(TypedDict):
+    text: str
+    enabled: bool
+    attr: str
+    tooltip: NotRequired[str]
+
+
 class AboutDialog(ViewBase, QDialog):
-    _STATE_CONFIG = {
+    _STATE_CONFIG: dict[str, _UpdateButtonState] = {
         "idle": {"text": "Check for Updates", "enabled": True, "attr": "idle"},
         "checking": {"text": "Checking for Updates", "enabled": False, "attr": "checking"},
         "available": {"text": "New Update Available", "enabled": True, "attr": "available"},
@@ -107,7 +116,7 @@ class AboutDialog(ViewBase, QDialog):
 
         release_url = self._get_release_notes_url()
         release_label = "View PR Details" if RELEASE_CHANNEL.startswith("pr-") else "View Release Notes"
-        release_note_btn = self._create_link_button(release_label, lambda: self._tray._open_in_browser(release_url))
+        release_note_btn = self._create_link_button(release_label, lambda: self._tray.open_in_browser(release_url))
         layout.addWidget(release_note_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         links_container = QWidget()
@@ -117,10 +126,10 @@ class AboutDialog(ViewBase, QDialog):
         links_layout.setSpacing(0)
         links_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        github_btn = self._create_link_button("GitHub", lambda: self._tray._open_in_browser(GITHUB_URL))
-        themes_btn = self._create_link_button("Themes", lambda: self._tray._open_in_browser(GITHUB_THEME_URL))
+        github_btn = self._create_link_button("GitHub", lambda: self._tray.open_in_browser(GITHUB_URL))
+        themes_btn = self._create_link_button("Themes", lambda: self._tray.open_in_browser(GITHUB_THEME_URL))
         discord_btn = self._create_link_button(
-            "Discord", lambda: self._tray._open_in_browser("https://discord.gg/qkeunvBFgX")
+            "Discord", lambda: self._tray.open_in_browser("https://discord.gg/qkeunvBFgX")
         )
         links_layout.addWidget(github_btn)
         links_layout.addWidget(themes_btn)
@@ -134,13 +143,13 @@ class AboutDialog(ViewBase, QDialog):
 
         self._support_project_button = self._create_action_button(
             "Support the Project",
-            lambda: self._tray._open_in_browser("https://ko-fi.com/amnweb"),
+            lambda: self._tray.open_in_browser("https://ko-fi.com/amnweb"),
         )
         self._contributors_button = self._create_action_button(
             "Contributors",
-            lambda: self._tray._open_in_browser(f"{GITHUB_URL}/graphs/contributors"),
+            lambda: self._tray.open_in_browser(f"{GITHUB_URL}/graphs/contributors"),
         )
-        self._open_config_button = self._create_action_button("Open Config", self._tray._open_config)
+        self._open_config_button = self._create_action_button("Open Config", self._tray.open_config)
         idle_text = self._STATE_CONFIG["idle"]["text"]
         self._update_button = self._create_action_button(idle_text, self._handle_update_clicked)
         if not self._updates_supported:
@@ -170,13 +179,13 @@ class AboutDialog(ViewBase, QDialog):
 
         return f"{GITHUB_URL}/releases/tag/v{BUILD_VERSION}"
 
-    def _create_link_button(self, text: str, callback) -> Link:
+    def _create_link_button(self, text: str, callback: Callable[[], object]) -> Link:
         button = Link(text, font_size=13, font_weight="demibold")
         button.clicked.connect(callback)
         self._link_buttons.append(button)
         return button
 
-    def _create_action_button(self, text: str, callback) -> Button:
+    def _create_action_button(self, text: str, callback: Callable[[], object]) -> Button:
         button = Button(text, font_size=12, font_weight="demibold")
         button.clicked.connect(callback)
         self._secondary_buttons.append(button)
@@ -240,10 +249,10 @@ class AboutDialog(ViewBase, QDialog):
         self._apply_state("checking")
         fetcher = ReleaseFetcher(BUILD_VERSION, self)
         self._release_fetcher = fetcher
-        fetcher.update_available.connect(lambda info, f=fetcher: self._handle_update_available(info, f))
-        fetcher.up_to_date.connect(lambda msg, f=fetcher: self._handle_up_to_date(msg, f))
-        fetcher.error.connect(lambda msg, f=fetcher: self._handle_check_failed(msg, f))
-        fetcher.finished.connect(lambda f=fetcher: self._clear_fetcher(f))
+        fetcher.update_available.connect(partial(self._handle_update_available, fetcher_ref=fetcher))
+        fetcher.up_to_date.connect(partial(self._handle_up_to_date, fetcher_ref=fetcher))
+        fetcher.error.connect(partial(self._handle_check_failed, fetcher_ref=fetcher))
+        fetcher.finished.connect(partial(self._clear_fetcher, fetcher))
         fetcher.finished.connect(fetcher.deleteLater)
         fetcher.start()
 
@@ -281,12 +290,15 @@ class AboutDialog(ViewBase, QDialog):
         dialog = UpdateDialog(None, release_info=release_info)
         self._update_dialog = dialog
 
-        def _handle_finished(_result):
+        def _handle_finished(_result: int) -> None:
             if self._update_dialog is dialog:
                 self._update_dialog = None
 
+        def _handle_destroyed(_obj: QObject | None = None) -> None:
+            self._clear_update_dialog(dialog)
+
         dialog.finished.connect(_handle_finished)
-        dialog.destroyed.connect(lambda _obj=None: self._clear_update_dialog(dialog))
+        dialog.destroyed.connect(_handle_destroyed)
         dialog.present()
         return dialog
 
@@ -297,10 +309,10 @@ class AboutDialog(ViewBase, QDialog):
     def _disable_update_capability(self) -> None:
         if not is_valid_qobject(self._update_button):
             return
-        config = self._STATE_CONFIG.get("unsupported", {})
+        config = self._STATE_CONFIG["unsupported"]
         self._update_button.setEnabled(False)
         self._update_button.setProperty("updateState", "unsupported")
         self._update_button.setProperty("releaseInfo", None)
-        self._update_button.setProperty("state", config.get("attr", "unsupported"))
-        self._update_button.setText(config.get("text", config["text"]))
-        set_tooltip(self._update_button, config["tooltip"], 0, position="top")
+        self._update_button.setProperty("state", config["attr"])
+        self._update_button.setText(config["text"])
+        set_tooltip(self._update_button, config.get("tooltip", ""), 0, position="top")

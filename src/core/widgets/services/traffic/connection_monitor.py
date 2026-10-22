@@ -11,7 +11,7 @@ class ConnectionTestWorker(QThread):
 
     result_ready = pyqtSignal(bool)
 
-    def __init__(self, interface=None):
+    def __init__(self, interface: str | None = None):
         super().__init__()
         self.interface = interface
         self._running = True
@@ -62,8 +62,10 @@ class ConnectionTestWorker(QThread):
 
         return False
 
-    def _get_interface_ip(self):
+    def _get_interface_ip(self) -> str | None:
         """Get the IP address of the specified network interface"""
+        if self.interface is None:
+            return None
         try:
             return NetworkAPI.get_interface_ip(self.interface)
         except Exception as e:
@@ -76,17 +78,18 @@ class InternetChecker(QObject):
 
     connection_changed = pyqtSignal(bool)
 
-    def __init__(self, parent=None, check_interval=10000, interface=None):
+    def __init__(self, parent: QObject | None = None, check_interval: int = 10000, interface: str | None = None):
         super().__init__(parent)
         self.interface = interface
-        self.last_status = None
-        self.worker = None
+        self.last_status: bool | None = None
+        self.worker: ConnectionTestWorker | None = None
         self._is_checking = False
 
         # Set up timer for regular checks
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.check_connection)
-        self.timer.start(check_interval)
+        timer = QTimer(self)
+        timer.timeout.connect(self.check_connection)
+        timer.start(check_interval)
+        self.timer: QTimer | None = timer
 
         # Do initial check after short delay
         QTimer.singleShot(1000, self.check_connection)
@@ -118,12 +121,13 @@ class InternetChecker(QObject):
             self.worker.stop()
 
         # Create new worker thread
-        self.worker = ConnectionTestWorker(self.interface)
-        self.worker.result_ready.connect(self._on_connection_result)
-        self.worker.finished.connect(self._on_worker_finished)
-        self.worker.start()
+        worker = ConnectionTestWorker(self.interface)
+        worker.result_ready.connect(self._on_connection_result)
+        worker.finished.connect(self._on_worker_finished)
+        self.worker = worker
+        worker.start()
 
-    def _on_connection_result(self, is_connected):
+    def _on_connection_result(self, is_connected: bool):
         """Handle connection test result"""
         # Emit signal on first check or when status changes
         if self.last_status is None or is_connected != self.last_status:

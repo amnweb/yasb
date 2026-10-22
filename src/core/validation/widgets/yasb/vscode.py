@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from pydantic import Field, model_validator
 
@@ -53,18 +53,21 @@ class VSCodeConfig(CustomBaseModel):
         if not isinstance(data, dict):
             return data
 
-        icons_data = data.setdefault("icons", {})
-        if not isinstance(icons_data, dict):
+        config = cast(dict[str, Any], data)
+        icons_value = config.setdefault("icons", {})
+        if isinstance(icons_value, dict):
+            icons_data = cast(dict[str, Any], icons_value)
+        else:
             icons_data = {}
-            data["icons"] = icons_data
+            config["icons"] = icons_data
 
-        if "folder_icon" in data:
-            icons_data.setdefault("folder", data["folder_icon"])
-        if "file_icon" in data:
-            icons_data.setdefault("file", data["file_icon"])
-        if data.get("hide_folder_icon") is True:
+        if "folder_icon" in config:
+            icons_data.setdefault("folder", config["folder_icon"])
+        if "file_icon" in config:
+            icons_data.setdefault("file", config["file_icon"])
+        if config.get("hide_folder_icon") is True:
             icons_data["folder"] = ""
-        if data.get("hide_file_icon") is True:
+        if config.get("hide_file_icon") is True:
             icons_data["file"] = ""
 
-        return data
+        return config

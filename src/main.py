@@ -1,14 +1,11 @@
 import asyncio
-import contextlib
-import ctypes
 import logging
 import signal
 import sys
-import time
 from sys import argv
-from types import TracebackType
+from types import FrameType, TracebackType
 
-import qasync
+import qasync  # pyright: ignore[reportMissingTypeStubs]
 
 from core.application import YASBApplication
 from core.bar_manager import BarManager
@@ -18,49 +15,11 @@ from core.log import enable_debug_logging, init_logger
 from core.tray import SystemTrayManager
 from core.ui.views.welcome import run_setup_wizard
 from core.utils.controller import start_cli_server
+from core.utils.single_instance import single_instance_lock
 from core.utils.system_colors import SystemColorsService
 from core.utils.update_service import get_update_service, start_update_checker
-from core.utils.win32.constants import ERROR_ALREADY_EXISTS
 from core.watcher import create_observer
 from env import load_env, set_font_engine
-
-
-@contextlib.contextmanager
-def single_instance_lock(name: str = "yasb_reborn"):
-    """Hold a named mutex so only one YASB instance runs at a time."""
-
-    kernel32 = ctypes.windll.kernel32
-    deadline = time.monotonic() + (10.0 if "--restart-wait" in sys.argv else 0.0)
-    waiting = False
-
-    while True:
-        mutex = kernel32.CreateMutexW(None, False, name)
-        if not mutex:
-            logging.error("Failed to create mutex.")
-            sys.exit(1)
-        if kernel32.GetLastError() != ERROR_ALREADY_EXISTS:
-            break
-
-        kernel32.CloseHandle(mutex)
-        if time.monotonic() >= deadline:
-            logging.error(
-                "Timeout waiting for previous instance. Aborting start."
-                if waiting
-                else "Another instance of the YASB is already running."
-            )
-            sys.exit(1)
-        if not waiting:
-            logging.info("Waiting for previous YASB instance to exit...")
-            waiting = True
-        time.sleep(0.25)
-
-    if waiting:
-        logging.info("Previous instance exited, continuing startup.")
-
-    try:
-        yield mutex
-    finally:
-        kernel32.CloseHandle(mutex)
 
 
 def main():
@@ -72,7 +31,7 @@ def main():
 
     loop = qasync.QEventLoop(app)
     try:
-        loop.run_until_complete(main_async(app))
+        loop.run_until_complete(main_async(app))  # pyright: ignore[reportUnknownMemberType]
     finally:
         loop.close()
 
@@ -96,7 +55,7 @@ async def main_async(app: YASBApplication):
     # Connect the app's aboutToQuit signal to the close event
     app.aboutToQuit.connect(app_close_event.set)
 
-    def handle_sigint(*args):
+    def handle_sigint(_signum: int, _frame: FrameType | None) -> None:
         logging.info("KeyboardInterrupt (Ctrl+C) detected. Initiating graceful shutdown...")
         app_close_event.set()
 
@@ -161,7 +120,6 @@ async def main_async(app: YASBApplication):
 
 if __name__ == "__main__":
     init_logger()
-    start_cli_server()
     load_env()
     set_font_engine()
 
@@ -175,6 +133,7 @@ if __name__ == "__main__":
     try:
         # Acquire the single instance lock before doing any heavy initialization
         with single_instance_lock():
+            start_cli_server()
             main()
     except Exception:
         logging.exception("Exception during application startup")

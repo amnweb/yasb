@@ -235,7 +235,7 @@ class BluetoothSection(QFrame):
             item = self._items.get(device.address)
             if item is None:
                 item = BluetoothItem(self)
-                item.clicked.connect(lambda _=False, i=item: self.item_clicked.emit(i))
+                item.clicked.connect(partial(self.item_clicked.emit, item))
                 item.connect_pressed.connect(self.connect_pressed.emit)
                 item.disconnect_pressed.connect(self.disconnect_pressed.emit)
                 item.settings_pressed.connect(self.settings_pressed.emit)
@@ -272,7 +272,9 @@ class BluetoothList(QScrollArea):
         self.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustIgnored)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setViewportMargins(0, 0, -4, 0)
-        self.viewport().setAutoFillBackground(False)
+        viewport = self.viewport()
+        if viewport is not None:
+            viewport.setAutoFillBackground(False)
 
         container = QFrame(self)
         container.setProperty("class", "bluetooth-list")
@@ -437,15 +439,15 @@ class BluetoothMenu(QObject):
         self.popup.adjustSize()
 
     @override
-    def eventFilter(self, obj: QObject, event) -> bool:
-        if obj is self.popup and event.type() == QEvent.Type.Hide:
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        if a0 is self.popup and a1 is not None and a1.type() == QEvent.Type.Hide:
             self._scanning = False
             if is_valid_qobject(self.progress):
                 self.progress.stop()
             if self.list is not None:
                 self.list.clear_busy()
                 self.list.clear_active()
-        return super().eventFilter(obj, event)
+        return super().eventFilter(a0, a1)
 
     def _open(self) -> None:
         if not is_valid_qobject(self.popup):

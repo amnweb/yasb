@@ -446,7 +446,7 @@ class WeatherWidget(BaseWidget):
         value = round(temp) if self.config.hide_decimal else temp
         return f"{value}{unit}"
 
-    def _format_measurement(self, imperial_val: str, imperial_unit: str, metric_val: str, metric_unit: str) -> str:
+    def _format_measurement(self, imperial_val: float, imperial_unit: str, metric_val: float, metric_unit: str) -> str:
         if self.config.units == "imperial":
             return f"{imperial_val} {imperial_unit}"
         return f"{metric_val} {metric_unit}"
@@ -484,7 +484,7 @@ class WeatherWidget(BaseWidget):
             conditions_code = current.condition.code
 
             # Get the weather icon string and weather text based on the code and time of day
-            weather_icon_string, weather_text = get_weather(conditions_code, current.is_day)
+            weather_icon_string, weather_text = get_weather(conditions_code, bool(current.is_day))
 
             # Load icons images into cache for current and future forecasts if not already cached
             img_icon_keys = [
@@ -507,17 +507,17 @@ class WeatherWidget(BaseWidget):
                 # Current conditions
                 "{temp}": self._format_temp(current.temp_f, current.temp_c),
                 "{feelslike}": self._format_temp(current.feelslike_f, current.feelslike_c),
-                "{humidity}": f"{current.humidity}%",
-                "{cloud}": current.cloud,
+                "{humidity}": f"{current.humidity:g}%",
+                "{cloud}": f"{current.cloud:g}",
                 # Forecast today
                 "{min_temp}": self._format_temp(forecast.mintemp_f, forecast.mintemp_c),
                 "{max_temp}": self._format_temp(forecast.maxtemp_f, forecast.maxtemp_c),
                 # Rain/Snow chances (daily)
-                "{daily_chance_of_rain}": f"{forecast.daily_chance_of_rain}%",
-                "{daily_chance_of_snow}": f"{forecast.daily_chance_of_snow}%",
+                "{daily_chance_of_rain}": f"{forecast.daily_chance_of_rain:g}%",
+                "{daily_chance_of_snow}": f"{forecast.daily_chance_of_snow:g}%",
                 # Rain/Snow chances (hourly)
-                "{hourly_chance_of_rain}": f"{hourly_rain}%",
-                "{hourly_chance_of_snow}": f"{hourly_snow}%",
+                "{hourly_chance_of_rain}": f"{hourly_rain:g}%",
+                "{hourly_chance_of_snow}": f"{hourly_snow:g}%",
                 # Location and conditions
                 "{location}": location.name,
                 "{location_region}": location.region,
@@ -534,7 +534,7 @@ class WeatherWidget(BaseWidget):
                 # Wind data
                 "{wind}": self._format_measurement(current.wind_mph, "mph", current.wind_kph, "km/h"),
                 "{wind_dir}": current.wind_dir,
-                "{wind_degree}": current.wind_degree,
+                "{wind_degree}": f"{current.wind_degree:g}",
                 # Other measurements
                 "{pressure}": self._format_measurement(current.pressure_in, "in", current.pressure_mb, "mb"),
                 "{precip}": self._format_measurement(current.precip_in, "in", current.precip_mm, "mm"),

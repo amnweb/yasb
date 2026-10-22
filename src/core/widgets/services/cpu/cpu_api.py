@@ -13,7 +13,7 @@ import time
 from ctypes import POINTER, byref, wintypes
 from typing import NamedTuple
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.system import get_build_and_ubr
@@ -227,7 +227,7 @@ class CpuAPI:
         cls._counters_per_core = []
 
     @classmethod
-    def _get_counter_double(cls, counter: wintypes.HANDLE) -> float:
+    def _get_counter_double(cls, counter: wintypes.HANDLE | None) -> float:
         """Read a double value from a PDH counter."""
         if counter is None:
             return 0.0
@@ -311,7 +311,7 @@ class CpuWorker(QThread):
             cls._instance = cls(update_interval)
         return cls._instance
 
-    def __init__(self, update_interval: int, parent=None):
+    def __init__(self, update_interval: int, parent: QObject | None = None):
         super().__init__(parent)
         self._update_interval = update_interval
         self._stop_event = threading.Event()

@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from threading import Lock, Thread
-from typing import Any
+from typing import Any, TypedDict
 
 API_BASE_URL = "https://api.github.com"
 # I have set version of GitHub API to a fixed date to avoid unexpected changes
@@ -28,6 +28,11 @@ PLAN_ALLOWANCES = {
 }
 
 
+class DailyUsage(TypedDict):
+    date: str
+    credits: float
+
+
 @dataclass
 class CopilotUsageData:
     """Aggregated Copilot usage data."""
@@ -37,8 +42,8 @@ class CopilotUsageData:
     allowance: int = 0
     plan_type: str = ""
     username: str = ""
-    credits_by_model: dict[str, float] = field(default_factory=dict)
-    daily_usage: list[dict[str, Any]] = field(default_factory=list)
+    credits_by_model: dict[str, float] = field(default_factory=dict[str, float])
+    daily_usage: list[DailyUsage] = field(default_factory=list[DailyUsage])
     last_updated: datetime | None = None
     error: str | None = None
 
@@ -111,6 +116,10 @@ class CopilotDataManager:
         cls.get_instance()._start_update()
 
     @classmethod
+    def has_token(cls) -> bool:
+        return bool(cls._token)
+
+    @classmethod
     def refresh(cls) -> None:
         """Manually trigger a data refresh."""
         cls.get_instance()._start_update()
@@ -138,7 +147,7 @@ class CopilotDataManager:
                     cls._data = CopilotUsageData(error=error)
                     self._notify_callbacks()
                     return
-                cls._username = username
+                cls._username = username or ""
 
             # Fetch monthly usage
             now = datetime.now(UTC)
@@ -236,7 +245,7 @@ class CopilotDataManager:
 
         return usage_data
 
-    def _fetch_daily_data_parallel(self, now: datetime, monthly_data: dict[str, Any]) -> list[dict[str, Any]]:
+    def _fetch_daily_data_parallel(self, now: datetime, monthly_data: dict[str, Any]) -> list[DailyUsage]:
         """Fetch daily usage data for the full month."""
         cls = CopilotDataManager
 
@@ -258,7 +267,7 @@ class CopilotDataManager:
             cls._daily_cache.clear()
 
         # Determine which days need fetching
-        days_to_fetch = []
+        days_to_fetch: list[int] = []
         for day in range(1, current_day + 1):
             date_str = f"{year}-{month:02d}-{day:02d}"
             if day == current_day or date_str not in cls._daily_cache:
@@ -286,7 +295,7 @@ class CopilotDataManager:
                     cls._daily_cache[date_str] = credits_val
 
         # Build result for ALL days in the detected month
-        result = [
+        result: list[DailyUsage] = [
             {
                 "date": f"{year}-{month:02d}-{day:02d}",
                 "credits": cls._daily_cache.get(f"{year}-{month:02d}-{day:02d}", 0.0) if day <= current_day else 0.0,

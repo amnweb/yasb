@@ -4,7 +4,7 @@ The configuration uses the YAML file format and is named `config` or `config.yam
 Valid directories for this file are `C:/Users/{username}/.config/yasb/` or ENV variable `YASB_CONFIG_HOME` if set.
 All valid options for the widgets are listed on the widgets page.
 
-# Environment Variables Support
+## Environment Variables Support
 
 YASB supports loading environment variables from a `.env` file.  
 This allows you to securely store sensitive information (such as API keys or tokens) outside of your main `config.yaml`.
@@ -92,19 +92,39 @@ tooltip:
 
 
 ## Komorebi settings for tray menu
+Adds a Komorebi submenu to the YASB tray icon menu. None of the commands are set by default. The submenu is shown only when Komorebi is installed and at least one command is set, and it only lists the actions you set a command for.
+
 | Option            | Type    | Default       | Description |
 |-------------------|---------|---------------|-------------|
-| `start_command`         | string | `"komorebic start --whkd"` | Start komorebi with --whkd and default config location. |
-| `stop_command`         | string    | `"komorebic stop --whkd"` | Stop komorebi. |
-| `reload_command`      | string  | `"komorebic reload-configuration"` | Reload komorebi configuration.|
+| `start_command`         | string | `None` | Command that starts Komorebi. |
+| `stop_command`         | string    | `None` | Command that stops Komorebi. |
+| `reload_command`      | string  | `None` | Command that reloads the Komorebi configuration. |
+
+**Example Configuration:**
+```yaml
+komorebi:
+  start_command: "komorebic start --whkd"
+  stop_command: "komorebic stop --whkd"
+  reload_command: "komorebic reload-configuration"
+```
 
 
 ## Glazewm settings for tray menu
+Adds a GlazeWM submenu to the YASB tray icon menu. None of the commands are set by default. The submenu is shown only when GlazeWM is installed and at least one command is set, and it only lists the actions you set a command for.
+
 | Option            | Type    | Default       | Description |
 |-------------------|---------|---------------|-------------|
-| `start_command`         | string | `"glazewm.exe start"` | Start
-| `stop_command`         | string    | `"glazewm.exe command wm-exit"` | Stop glazewm. |
-| `reload_command`      | string  | `"glazewm.exe command wm-exit && glazewm.exe start"` | Reload glazewm configuration.|
+| `start_command`         | string | `None` | Command that starts GlazeWM. |
+| `stop_command`         | string    | `None` | Command that stops GlazeWM. |
+| `reload_command`      | string  | `None` | Command that reloads the GlazeWM configuration. |
+
+**Example Configuration:**
+```yaml
+glazewm:
+  start_command: "glazewm.exe start"
+  stop_command: "glazewm.exe command wm-exit"
+  reload_command: "glazewm.exe command wm-exit && glazewm.exe start"
+```
 
 
 ## Status Bar Configuration
@@ -119,8 +139,8 @@ tooltip:
 | `alignment`       | object  | [See below](#bar-alignment) | The alignment settings for the status bar. |
 | `blur_effect`     | object  | [See below](#blur-effect-configuration) | The blur effect settings for the status bar. |
 | `window_flags`    | object  | [See below](#window-flags-configuration) | The window flags for the status bar. |
-| `dimensions`      | object  | `{width: "100%", height: 36}` | The dimensions of the status bar. Width can be a number (pixels), percentage string (e.g., `"100%"`, `"50%"`), or `"auto"` to resize based on content. When using `"auto"`, the bar will automatically resize as widget content changes, with a maximum width of the available screen width minus padding. |
-| `padding`         | object  | `{top: 4, left: 0, bottom: 4, right: 0}` | The padding for the status bar. |
+| `dimensions`      | object  | `{width: "100%", height: 30}` | The dimensions of the status bar. Width can be a number (pixels), percentage string (e.g., `"100%"`, `"50%"`), or `"auto"` to resize based on content. When using `"auto"`, the bar will automatically resize as widget content changes, with a maximum width of the available screen width minus padding. |
+| `padding`         | object  | `{top: 0, left: 0, bottom: 0, right: 0}` | The padding for the status bar. |
 | `animation`       | object  | `{enabled: true, duration: 500}` | The animation settings for the status bar. Duration is in milliseconds. Animation is used to show/hide the bar smoothly. |
 | `widgets`         | list  | `left[], center[], right[]` | Active widgets and position. |
 | `layouts`         | object  | [See below](#layouts-configuration) | Configuration for widget layouts in each section (left, center, right). |
@@ -190,7 +210,6 @@ Customize how the status bar transitions when shown or hidden:
 | Option            | Type    | Default       | Description |
 |-------------------|---------|---------------|-------------|
 | `enabled`         | boolean | `false`       | Whether the blur effect is enabled. |
-| `acrylic`         | boolean | `false`       | Whether to use an acrylic blur effect (Windows 10). |
 | `dark_mode`       | boolean | `false`       | Whether to enable dark mode and more shadow below the bar. |
 | `round_corners`   | boolean | `false`       | Whether to enable rounded corners for the bar. Note: This is only effective on Windows 11. |
 | `round_corners_type` | string | `'normal'` | The type of rounded corners, can be `normal` or `small`. Note: This is only effective on Windows 11. |
@@ -203,7 +222,7 @@ Customize how the status bar transitions when shown or hidden:
 | Option            | Type    | Default       | Description |
 |-------------------|---------|---------------|-------------|
 | `always_on_top`   | boolean | `false`       | Whether the status bar should always stay on top of other windows. |
-| `windows_app_bar` | boolean | `true`        | Whether the status bar should behave like a Windows app bar. |
+| `windows_app_bar` | boolean | `false`       | Whether the status bar should behave like a Windows app bar. |
 | `hide_on_fullscreen` | boolean | `false`    | Whether the status bar should hide when a window is in fullscreen mode. |
 | `hide_on_maximized` | boolean | `false`    | Whether the status bar should auto-hide when any window is maximized on the bar's monitor. Only works when `windows_app_bar` is `false`. |
 | `auto_hide` | boolean | `false`    | Whether the status bar should auto-hide when not in use. |
@@ -230,16 +249,16 @@ layouts:
     stretch: true
 ```
 
-# Multiple Bars Example
+## Multiple Bars Example
 > **Note:**
 > If you want to have different bars on each screen you will need to define on which screen the bar should be displayed, `screens` inside bar config is your monitor name. You can find your monitor names using `yasbc monitor-information` or inside device manager.
 
-## Screen Assignment Options:
+### Screen Assignment Options
 - `screens: ['*']` - Show on all **unassigned** screens (screens not explicitly assigned to other bars)
 - `screens: ['**']` - Show on **all screens** (including screens assigned to other bars)
 - `screens: ['SCREEN_NAME']` - Show on specific screen(s)
 
-```
+```yaml
 bars:
   status-bar:
     screens: ['DELL P2419H (1)']  # Show only on monitor 1

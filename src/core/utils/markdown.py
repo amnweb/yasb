@@ -121,6 +121,14 @@ def _md_table(lines: list[str]) -> str:
     return html + "</table>"
 
 
+def _starts_block(lines: list[str], i: int) -> bool:
+    line = lines[i].strip()
+    if "|" in line and i + 1 < len(lines) and _TABLE_SEP.match(lines[i + 1].strip()):
+        return True
+    blocks = (_HEADING_FENCE, _HR, _UL_ITEM, _OL_ITEM, _HTML_BLOCK_OPEN)
+    return line.startswith(_CODE_BLOCK_PREFIX) or any(block.match(line) for block in blocks)
+
+
 # Public API
 def preprocess_readme(text: str) -> str:
     """Strip block-level HTML wrappers and rewrite GitHub blob URLs to raw URLs."""
@@ -145,7 +153,7 @@ def extract_img_srcs(html: str) -> list[str]:
 def convert_img_tags(text: str) -> str:
     """Convert HTML ``<img>`` tags to markdown ``![alt](url)`` syntax."""
 
-    def _to_md(m: re.Match) -> str:
+    def _to_md(m: re.Match[str]) -> str:
         tag = m.group(0)
         src_m = re.search(r'src\s*=\s*["\']([^"\']+)["\']', tag)
         if not src_m:
@@ -177,7 +185,7 @@ def md_to_html(src: str, *, alert_styles: dict[str, tuple[str, str]] | None = No
     src = src.replace("\r\n", "\n")
     code_blocks: list[str] = []
 
-    def _stash_code(m: re.Match) -> str:
+    def _stash_code(m: re.Match[str]) -> str:
         code = html_escape(m.group(1).rstrip("\n"))
         code_blocks.append(f"<pre><code>{code}</code></pre>")
         return _CODE_BLOCK_PLACEHOLDER.format(index=len(code_blocks) - 1)
@@ -185,7 +193,7 @@ def md_to_html(src: str, *, alert_styles: dict[str, tuple[str, str]] | None = No
     src = _CODE_FENCE.sub(_stash_code, src)
     inline_codes: list[str] = []
 
-    def _stash_ic(m: re.Match) -> str:
+    def _stash_ic(m: re.Match[str]) -> str:
         inline_codes.append(f"<code>{html_escape(m.group(1))}</code>")
         return _INLINE_CODE_PLACEHOLDER.format(index=len(inline_codes) - 1)
 
@@ -247,8 +255,14 @@ def md_to_html(src: str, *, alert_styles: dict[str, tuple[str, str]] | None = No
         # Blockquote
         if _BQ_START.match(stripped):
             bq: list[str] = []
-            while i < n and _BQ_START.match(lines[i].strip()):
-                bq.append(_BQ_PREFIX.sub("", lines[i], count=1))
+            while i < n:
+                cur = lines[i].strip()
+                if _BQ_START.match(cur):
+                    bq.append(_BQ_PREFIX.sub("", lines[i], count=1))
+                elif cur and bq[-1].strip() and not _starts_block(lines, i):
+                    bq.append(cur)
+                else:
+                    break
                 i += 1
             # GFM alert blocks [!NOTE], [!TIP], [!IMPORTANT], [!WARNING], [!CAUTION]
             if bq:

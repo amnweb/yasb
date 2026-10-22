@@ -2,11 +2,11 @@ import logging
 import re
 import subprocess
 from collections.abc import Callable
-from typing import Any
+from typing import Any, override
 
 from pydantic import BaseModel
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QMouseEvent
+from PyQt6.QtGui import QContextMenuEvent, QMouseEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 from core.events.service import EventService
@@ -16,7 +16,7 @@ from core.widgets.registry import register_widget_class
 
 class BaseWidget(QWidget):
     validation_schema: dict[str, Any] | type[BaseModel] | None = None
-    event_listener: QThread = None
+    event_listener: type[QThread] | None = None
 
     _hotkey_signal = pyqtSignal(str, str, str)
 
@@ -25,18 +25,19 @@ class BaseWidget(QWidget):
         super().__init_subclass__(**kwargs)
         register_widget_class(cls)
 
-    def __init__(self, timer_interval: int = None, class_name: str = ""):
+    def __init__(self, timer_interval: int | None = None, class_name: str = ""):
         super().__init__()
         self._widget_frame = QFrame()
         self._widget_frame_layout = QHBoxLayout()
         self.widget_layout = QHBoxLayout()
         self.timer_interval = timer_interval
         self.bar = None
-        self.bar_id = None
-        self.monitor_hwnd = None
-        self.widget_name = None  # Set by WidgetBuilder after construction
-        self.screen_name = None  # Set by BarManager when bar is created
-        self._hotkey_enabled = True  # Set to False by BarManager for duplicate widgets
+        self.bar_id: str | None = None
+        self.monitor_hwnd: int | None = None
+        self.widget_name: str | None = None  # Set by WidgetBuilder after construction
+        self.screen_name: str | None = None  # Set by BarManager when bar is created
+        self.parent_layout_type: str | None = None  # Set by Bar when the widget is placed
+        self.hotkey_enabled = True  # Set to False by BarManager for duplicate widgets
 
         if class_name:
             self._widget_frame.setProperty("class", f"widget {class_name}")
@@ -44,8 +45,6 @@ class BaseWidget(QWidget):
             self._widget_frame.setProperty("class", "widget")
 
         self.timer = QTimer(self)
-        self.mouseReleaseEvent = self._handle_mouse_events
-        self.contextMenuEvent = lambda event: event.accept()
 
         self.widget_layout.setSpacing(0)
         self.widget_layout.setContentsMargins(0, 0, 0, 0)
@@ -57,16 +56,16 @@ class BaseWidget(QWidget):
         self._widget_frame_layout.addWidget(self._widget_frame)
         self.setLayout(self._widget_frame_layout)
 
-        self.callbacks = dict()
+        self.callbacks: dict[str, Callable[..., object]] = {}
         self.register_callback("default", self._cb_do_nothing)
         self.register_callback("do_nothing", self._cb_do_nothing)
         self.register_callback("exec", self._cb_execute_subprocess)
 
-        self.callback_default: str | list[str] = "default"
-        self.callback_timer: str | list[str] = "default"
-        self.callback_left: str | list[str] = self.callback_default
-        self.callback_middle: str | list[str] = self.callback_default
-        self.callback_right: str | list[str] = self.callback_default
+        self.callback_default: str = "default"
+        self.callback_timer: str = "default"
+        self.callback_left: str = self.callback_default
+        self.callback_middle: str = self.callback_default
+        self.callback_right: str = self.callback_default
 
         self._event_service = EventService()
         self._hotkey_signal.connect(self._handle_hotkey_event)
@@ -76,14 +75,16 @@ class BaseWidget(QWidget):
         """Clear stuck :hover CSS state after opening a popup."""
         for w in [self, self._widget_frame, *self._widget_frame.findChildren(QWidget)]:
             w.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
-            w.style().unpolish(w)
-            w.style().polish(w)
+            style = w.style()
+            if style is not None:
+                style.unpolish(w)
+                style.polish(w)
 
     def _handle_hotkey_event(self, widget_name: str, action: str, target_screen: str) -> None:
         """
         Handle incoming hotkey events.
         """
-        if not self._hotkey_enabled:
+        if not self.hotkey_enabled:
             return
 
         # Check if this event is for our widget (by config name)
@@ -98,7 +99,7 @@ class BaseWidget(QWidget):
         if action:
             self._run_callback(action)
 
-    def register_callback(self, callback_name: str, fn: Callable[[], None]):
+    def register_callback(self, callback_name: str, fn: Callable[..., object]):
         self.callbacks[callback_name] = fn
 
     def start_timer(self):
@@ -106,6 +107,16 @@ class BaseWidget(QWidget):
             self.timer.timeout.connect(self._timer_callback)
             self.timer.start(self.timer_interval)
         self._timer_callback()
+
+    @override
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is not None:
+            self._handle_mouse_events(a0)
+
+    @override
+    def contextMenuEvent(self, a0: QContextMenuEvent | None) -> None:
+        if a0 is not None:
+            a0.accept()
 
     def _handle_mouse_events(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -115,9 +126,10 @@ class BaseWidget(QWidget):
         elif event.button() == Qt.MouseButton.RightButton:
             self._run_callback(self.callback_right)
 
-    def _run_callback(self, callback_str: str | list):
+    def _run_callback(self, callback_str: str):
+        callback_args: list[str]
         if " " in callback_str:
-            callback_args = list(map(lambda x: x.strip('"'), re.findall(r'".+?"|[^ ]+', callback_str)))
+            callback_args = [arg.strip('"') for arg in re.findall(r'".+?"|[^ ]+', callback_str)]
             callback_type = callback_args[0]
             callback_args = callback_args[1:]
         else:
@@ -135,7 +147,7 @@ class BaseWidget(QWidget):
     def _timer_callback(self):
         self._run_callback(self.callback_timer)
 
-    def _cb_execute_subprocess(self, cmd: str, *cmd_args: list[str]):
+    def _cb_execute_subprocess(self, cmd: str, *cmd_args: str):
         if cmd in function_map:
             function_map[cmd]()
         else:

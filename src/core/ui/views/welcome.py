@@ -1,11 +1,13 @@
-import ctypes
 import logging
 import os
 import tempfile
 import winreg
 import zipfile
+from collections.abc import Callable
 from enum import Enum, auto
+from functools import partial
 from os import makedirs, path
+from typing import Any, TypedDict, override
 
 from PyQt6.QtCore import (
     QEasingCurve,
@@ -17,7 +19,7 @@ from PyQt6.QtCore import (
     QUrl,
     pyqtSignal,
 )
-from PyQt6.QtGui import QDesktopServices, QFontDatabase
+from PyQt6.QtGui import QCloseEvent, QDesktopServices, QFontDatabase, QMouseEvent
 from PyQt6.QtWidgets import (
     QDialog,
     QGraphicsOpacityEffect,
@@ -49,6 +51,10 @@ from core.ui.components.text_block import TextBlock
 from core.ui.components.toggle_switch import ToggleSwitchWithLabel
 from core.ui.theme import get_tokens
 from core.ui.views.view_base import ViewBase
+from core.utils.win32.bindings.gdi32 import AddFontResourceEx
+from core.utils.win32.bindings.user32 import SendNotifyMessage
+from core.utils.win32.constants import HWND_BROADCAST, WM_FONTCHANGE
+from core.utils.win32.registry_keys import USER_FONTS_KEY
 from settings import (
     APP_NAME,
     DEFAULT_CONFIG_DIRECTORY,
@@ -67,7 +73,13 @@ NERD_FONT_FAMILIES = ["JetBrainsMono NFP", "JetBrainsMono Nerd Font Propo"]
 SEGOE_FLUENT_URL = "https://aka.ms/SegoeFluentIcons"
 SEGOE_FLUENT_FAMILY = "Segoe Fluent Icons"
 
-REQUIRED_FONTS = [
+
+class _RequiredFont(TypedDict):
+    label: str
+    check_families: list[str]
+
+
+REQUIRED_FONTS: list[_RequiredFont] = [
     {"label": "JetBrains Mono Nerd Font", "check_families": NERD_FONT_FAMILIES},
     {"label": "Segoe Fluent Icons", "check_families": [SEGOE_FLUENT_FAMILY]},
 ]
@@ -153,7 +165,7 @@ class FontInstallWorker(QThread):
 
             self.progress.emit("Finalizing installation...")
             try:
-                ctypes.windll.user32.SendNotifyMessageW(0xFFFF, 0x001D, 0, 0)
+                SendNotifyMessage(HWND_BROADCAST, WM_FONTCHANGE, 0, 0)
             except Exception:
                 pass
             self.finished.emit(True, "All fonts installed successfully.", installed)
@@ -240,16 +252,24 @@ class FontInstallWorker(QThread):
     @staticmethod
     def _register(font_name: str, dest: str) -> None:
         try:
-            with winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts", 0, winreg.KEY_SET_VALUE
-            ) as reg_key:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, USER_FONTS_KEY, 0, winreg.KEY_SET_VALUE) as reg_key:
                 winreg.SetValueEx(reg_key, os.path.splitext(font_name)[0] + " (TrueType)", 0, winreg.REG_SZ, dest)
         except OSError:
             pass
         try:
-            ctypes.windll.gdi32.AddFontResourceExW(dest, 0, None)
+            AddFontResourceEx(dest)
         except Exception:
             pass
+
+
+class _ClickableCard(Card):
+    def __init__(self, on_click: Callable[[], object]) -> None:
+        super().__init__()
+        self._on_click = on_click
+
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        self._on_click()
 
 
 def run_setup_wizard() -> bool:
@@ -331,8 +351,10 @@ class WelcomeWizard(ViewBase, QDialog):
         layout.addWidget(desc_label)
         layout.addSpacing(spacing)
 
-    def _card(self, key, label: str, desc: str, on_click, registry: dict) -> Card:
-        card = Card()
+    def _card(
+        self, key: str, label: str, desc: str, on_click: Callable[[str], object], registry: dict[str, Card]
+    ) -> Card:
+        card = _ClickableCard(partial(on_click, key))
         card.setFixedHeight(90)
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(14, 10, 14, 10)
@@ -342,7 +364,6 @@ class WelcomeWizard(ViewBase, QDialog):
             card_label.setWordWrap(cls == "caption")
             card_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
             card_layout.addWidget(card_label)
-        card.mousePressEvent = lambda _ev, k=key: on_click(k)
         registry[key] = card
         return card
 
@@ -359,7 +380,7 @@ class WelcomeWizard(ViewBase, QDialog):
         return nav_layout
 
     @staticmethod
-    def _link(text: str, on_click) -> Link:
+    def _link(text: str, on_click: Callable[[], object]) -> Link:
         link = Link(text)
         link.clicked.connect(on_click)
         return link
@@ -378,7 +399,11 @@ class WelcomeWizard(ViewBase, QDialog):
         row_layout.addLayout(text_layout)
         row_layout.addStretch()
         toggle = ToggleSwitchWithLabel(on_text="On", off_text="Off", checked=checked)
-        toggle.toggled.connect(lambda val, k=option_key: self._option_selected.__setitem__(k, val))
+
+        def on_toggled(checked: bool) -> None:
+            self._option_selected[option_key] = checked
+
+        toggle.toggled.connect(on_toggled)
         row_layout.addWidget(toggle)
         return row_frame
 
@@ -415,7 +440,7 @@ class WelcomeWizard(ViewBase, QDialog):
             default_button=default,
         )
 
-    def _radio(self, registry: dict, key) -> None:
+    def _radio(self, registry: dict[str, Card], key: str) -> None:
         for card_key, card in registry.items():
             card.set_selected(card_key == key)
 
@@ -425,8 +450,8 @@ class WelcomeWizard(ViewBase, QDialog):
         desc: str,
         entries: list[tuple[str, str, str]],
         cols: int,
-        on_click,
-        registry: dict,
+        on_click: Callable[[str], object],
+        registry: dict[str, Card],
         back_page: int,
         next_page: int,
         default: str | None = None,
@@ -592,7 +617,7 @@ class WelcomeWizard(ViewBase, QDialog):
         for col in range(cols):
             grid.setColumnStretch(col, 1)
         entries = list(OPTIONAL_GROUPS)
-        on_click = lambda feature_key: self._toggle_select(feature_key)
+        on_click = self._toggle_select
         for idx, (key, label, card_desc) in enumerate(entries):
             grid.addWidget(self._card(key, label, card_desc, on_click, self._feature_cards), idx // cols, idx % cols)
         page_layout.addLayout(grid)
@@ -623,7 +648,11 @@ class WelcomeWizard(ViewBase, QDialog):
 
         screen_dd = DropDown(items=[("*", "All screens"), ("primary", "Primary")])
         screen_dd.set_current("*")
-        screen_dd.currentChanged.connect(lambda key: setattr(self, "_screen_selected", key))
+
+        def on_screen(key: str) -> None:
+            self._screen_selected = key
+
+        screen_dd.currentChanged.connect(on_screen)
 
         page_layout.addWidget(
             self._option_row(
@@ -636,7 +665,11 @@ class WelcomeWizard(ViewBase, QDialog):
         page_layout.addSpacing(4)
         style_dd = DropDown(items=[("floating", "Floating"), ("taskbar", "Taskbar")])
         style_dd.set_current("floating")
-        style_dd.currentChanged.connect(lambda key: setattr(self, "_bar_style", key))
+
+        def on_style(key: str) -> None:
+            self._bar_style = key
+
+        style_dd.currentChanged.connect(on_style)
         page_layout.addWidget(
             self._option_row(
                 "Bar style",
@@ -654,7 +687,11 @@ class WelcomeWizard(ViewBase, QDialog):
 
         page_layout.addSpacing(4)
         opacity_slider = Slider(minimum=0, maximum=100, value=self._bar_opacity, suffix="%")
-        opacity_slider.valueChanged.connect(lambda v: setattr(self, "_bar_opacity", v))
+
+        def on_opacity(value: int) -> None:
+            self._bar_opacity = value
+
+        opacity_slider.valueChanged.connect(on_opacity)
         page_layout.addWidget(
             self._option_row(
                 "Bar opacity",
@@ -715,7 +752,7 @@ class WelcomeWizard(ViewBase, QDialog):
         self._font_check_worker.finished.connect(self._on_font_check_done)
         self._font_check_worker.start()
 
-    def _on_font_check_done(self, results: dict) -> None:
+    def _on_font_check_done(self, results: dict[str, bool]) -> None:
         self._font_spinner.setVisible(False)
         self._font_status.setText("")
         self._font_check_worker = None
@@ -765,7 +802,7 @@ class WelcomeWizard(ViewBase, QDialog):
         self._font_worker.finished.connect(self._on_font_finished)
         self._font_worker.start()
 
-    def _on_font_finished(self, success: bool, msg: str, paths: list) -> None:
+    def _on_font_finished(self, success: bool, msg: str, paths: list[str]) -> None:
         self._font_spinner.setVisible(False)
         self._font_back_btn.setEnabled(True)
         self._font_install_btn.setEnabled(True)
@@ -774,7 +811,7 @@ class WelcomeWizard(ViewBase, QDialog):
             self._font_install_btn.setVisible(False)
             self._font_next.setEnabled(True)
             self._font_status.setText("")
-            for label, status_lbl in self._font_status_labels.items():
+            for status_lbl in self._font_status_labels.values():
                 status_lbl.setText("Installed")
             self._go(2)
         else:
@@ -795,8 +832,9 @@ class WelcomeWizard(ViewBase, QDialog):
             self._anim_group.stop()
             for i in range(self._stack.count()):
                 w = self._stack.widget(i)
-                w.move(0, 0)
-                w.setGraphicsEffect(None)
+                if w is not None:
+                    w.move(0, 0)
+                    w.setGraphicsEffect(None)
             self._stack.setCurrentIndex(self._anim_target)
             self._anim_group = None
 
@@ -805,7 +843,7 @@ class WelcomeWizard(ViewBase, QDialog):
         current_idx = self._stack.currentIndex()
         current_page = self._stack.currentWidget()
         target_page = self._stack.widget(index)
-        if current_page is not target_page:
+        if current_page is not None and target_page is not None and current_page is not target_page:
             offset = 200 if index > current_idx else -200
             self._stack.setCurrentIndex(index)
             target_page.setGeometry(current_page.geometry())
@@ -839,8 +877,9 @@ class WelcomeWizard(ViewBase, QDialog):
             return
         for i in range(self._stack.count()):
             w = self._stack.widget(i)
-            w.move(0, 0)
-            w.setGraphicsEffect(None)
+            if w is not None:
+                w.move(0, 0)
+                w.setGraphicsEffect(None)
         self._stack.setCurrentIndex(self._anim_target)
         self._anim_group.deleteLater()
         self._anim_group = None
@@ -858,7 +897,7 @@ class WelcomeWizard(ViewBase, QDialog):
     def _write_config(
         self,
         groups: list[str] | None = None,
-        overrides: dict | None = None,
+        overrides: dict[str, Any] | None = None,
     ) -> None:
         if not path.isdir(DEFAULT_CONFIG_DIRECTORY):
             makedirs(DEFAULT_CONFIG_DIRECTORY)
@@ -882,7 +921,7 @@ class WelcomeWizard(ViewBase, QDialog):
 
     def _on_create(self) -> None:
         groups = self._collect_selections()
-        overrides = {
+        overrides: dict[str, Any] = {
             "screens": [self._screen_selected],
             "bar_style": self._bar_style,
             "blur_enabled": self._option_selected["blur"],
@@ -895,7 +934,7 @@ class WelcomeWizard(ViewBase, QDialog):
     def _try_write_config(
         self,
         groups: list[str] | None = None,
-        overrides: dict | None = None,
+        overrides: dict[str, Any] | None = None,
     ) -> bool:
         try:
             self._write_config(groups, overrides)
@@ -911,7 +950,8 @@ class WelcomeWizard(ViewBase, QDialog):
     def result_code(self) -> int:
         return self._result_code
 
-    def closeEvent(self, event) -> None:
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         if self._font_check_worker is not None and self._font_check_worker.isRunning():
             self._font_check_worker.finished.disconnect()
         if self._font_worker is not None and self._font_worker.isRunning():
@@ -920,4 +960,4 @@ class WelcomeWizard(ViewBase, QDialog):
             self._font_worker.request_stop()
         if self._result_code == RESULT_CANCELLED:
             self.reject()
-        super().closeEvent(event)
+        super().closeEvent(a0)

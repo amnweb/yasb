@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import time
+from typing import Any
 from xml.etree import ElementTree
 
 from PyQt6.QtWidgets import QApplication
@@ -66,7 +67,7 @@ class CurrencyProvider(BaseProvider):
     input_placeholder = "Convert currency, e.g. 100 usd eur..."
     icon = ICON_CURRENCY
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self._rates: dict[str, float] | None = None  # rates relative to EUR
         self._rates_timestamp: float = 0
@@ -77,7 +78,7 @@ class CurrencyProvider(BaseProvider):
             return text.strip().startswith(self.prefix)
         return True
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).strip()
         if not query:
             return [
@@ -123,7 +124,7 @@ class CurrencyProvider(BaseProvider):
             if "EUR".startswith(partial):
                 matches.insert(0, "EUR")
             if matches:
-                results = []
+                results: list[ProviderResult] = []
                 for code in matches[:10]:
                     sym = _CURRENCY_SYMBOLS.get(code, code)
                     results.append(
@@ -153,7 +154,7 @@ class CurrencyProvider(BaseProvider):
                 clipboard.setText(value)
         return False  # Keep popup open
 
-    def _convert(self, rates: dict, amount: float, src: str, dst: str) -> list[ProviderResult]:
+    def _convert(self, rates: dict[str, float], amount: float, src: str, dst: str) -> list[ProviderResult]:
         src_rate = self._get_rate(rates, src)
         dst_rate = self._get_rate(rates, dst)
         if src_rate is None:
@@ -203,9 +204,9 @@ class CurrencyProvider(BaseProvider):
             )
         ]
 
-    def _show_overview(self, rates: dict, amount: float, src: str) -> list[ProviderResult]:
+    def _show_overview(self, rates: dict[str, float], amount: float, src: str) -> list[ProviderResult]:
         targets = [c for c in _COMMON_TARGETS if c != src]
-        results = []
+        results: list[ProviderResult] = []
         src_rate = self._get_rate(rates, src)
         if src_rate is None:
             return []
@@ -240,7 +241,7 @@ class CurrencyProvider(BaseProvider):
             )
         return results
 
-    def _get_rate(self, rates: dict, code: str) -> float | None:
+    def _get_rate(self, rates: dict[str, float], code: str) -> float | None:
         if code == "EUR":
             return 1.0
         return rates.get(code)

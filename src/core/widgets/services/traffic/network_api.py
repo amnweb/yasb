@@ -4,8 +4,8 @@ Windows Network API wrapper
 
 import ctypes
 import socket
-from collections import namedtuple
 from ctypes import byref, wintypes
+from typing import Literal, NamedTuple, TypedDict, overload
 
 from core.utils.win32.bindings.iphlpapi import iphlpapi
 from core.utils.win32.constants import (
@@ -22,19 +22,56 @@ from core.utils.win32.constants import (
 from core.utils.win32.structs import (
     IP_ADAPTER_ADDRESSES,
     MIB_IF_ROW2,
+    SOCKADDR,
     SOCKADDR_IN,
 )
-
-# Named tuple for IO counters
-IOCounters = namedtuple(
-    "IOCounters", ["bytes_sent", "bytes_recv", "packets_sent", "packets_recv", "errin", "errout", "dropin", "dropout"]
-)
-
-# Named tuple for address info
-AddressInfo = namedtuple("AddressInfo", ["family", "address", "netmask", "broadcast", "ptp"])
+from core.utils.win32.typecheck import CPointer
 
 
-def _get_interface_stats_by_index(if_index):
+class IOCounters(NamedTuple):
+    bytes_sent: int
+    bytes_recv: int
+    packets_sent: int
+    packets_recv: int
+    errin: int
+    errout: int
+    dropin: int
+    dropout: int
+
+
+class AddressInfo(NamedTuple):
+    family: int
+    address: str
+    netmask: str | None
+    broadcast: str | None
+    ptp: str | None
+
+
+class _InterfaceStats(TypedDict):
+    index: int
+    type: int
+    mtu: int
+    oper_status: int
+    in_octets: int
+    out_octets: int
+    in_ucast_pkts: int
+    out_ucast_pkts: int
+    in_nucast_pkts: int
+    out_nucast_pkts: int
+    in_errors: int
+    out_errors: int
+    in_discards: int
+    out_discards: int
+
+
+class _AdapterInfo(TypedDict):
+    if_index: int
+    if_type: int
+    oper_status: int
+    addresses: list[AddressInfo]
+
+
+def _get_interface_stats_by_index(if_index: int) -> _InterfaceStats | None:
     """Get interface statistics by index using GetIfEntry2 (64-bit counters)"""
     try:
         row = MIB_IF_ROW2()
@@ -64,7 +101,7 @@ def _get_interface_stats_by_index(if_index):
         return None
 
 
-def _extract_ipv4_address(sockaddr_ptr):
+def _extract_ipv4_address(sockaddr_ptr: CPointer[SOCKADDR]) -> str | None:
     """Extract IPv4 address from SOCKADDR pointer"""
     if not sockaddr_ptr:
         return None
@@ -81,7 +118,7 @@ def _extract_ipv4_address(sockaddr_ptr):
     return None
 
 
-def _get_adapters_info():
+def _get_adapters_info() -> dict[str, _AdapterInfo]:
     """
     Get adapter information using GetAdaptersAddresses.
     Returns a dict mapping FriendlyName to adapter info (including IfIndex).
@@ -103,7 +140,7 @@ def _get_adapters_info():
     if result != ERROR_SUCCESS:
         return {}
 
-    adapters = {}
+    adapters: dict[str, _AdapterInfo] = {}
     current = adapter
 
     while current:
@@ -115,7 +152,7 @@ def _get_adapters_info():
             oper_status = adapter_data.OperStatus
 
             # Get IPv4 addresses
-            addr_list = []
+            addr_list: list[AddressInfo] = []
             unicast = adapter_data.FirstUnicastAddress
             while unicast:
                 try:
@@ -152,12 +189,12 @@ def _get_adapters_info():
 class NetworkAPI:
     """Windows Network API wrapper"""
 
-    _cached_adapters = None
-    _cache_time = 0
+    _cached_adapters: dict[str, _AdapterInfo] | None = None
+    _cache_time = 0.0
     _cache_ttl = 1.0  # Cache for 1 second
 
     @classmethod
-    def _get_adapters(cls, force_refresh=False):
+    def _get_adapters(cls, force_refresh: bool = False) -> dict[str, _AdapterInfo]:
         """Get adapter info with caching"""
         import time
 
@@ -174,8 +211,16 @@ class NetworkAPI:
 
         return adapters or {}
 
+    @overload
     @classmethod
-    def net_io_counters(cls, pernic=False):
+    def net_io_counters(cls, pernic: Literal[False] = False) -> IOCounters: ...
+
+    @overload
+    @classmethod
+    def net_io_counters(cls, pernic: Literal[True]) -> dict[str, IOCounters]: ...
+
+    @classmethod
+    def net_io_counters(cls, pernic: bool = False) -> IOCounters | dict[str, IOCounters]:
         """Get network I/O statistics."""
         try:
             adapters = cls._get_adapters()
@@ -184,7 +229,7 @@ class NetworkAPI:
                 return {} if pernic else IOCounters(0, 0, 0, 0, 0, 0, 0, 0)
 
             if pernic:
-                result = {}
+                result: dict[str, IOCounters] = {}
                 for friendly_name, adapter_info in adapters.items():
                     if adapter_info.get("if_type") == IF_TYPE_SOFTWARE_LOOPBACK:
                         continue
@@ -242,7 +287,7 @@ class NetworkAPI:
             return {} if pernic else IOCounters(0, 0, 0, 0, 0, 0, 0, 0)
 
     @classmethod
-    def get_interface_ip(cls, interface_name):
+    def get_interface_ip(cls, interface_name: str) -> str | None:
         """Get the IPv4 address of a specific interface by FriendlyName"""
         try:
             adapters = cls._get_adapters()

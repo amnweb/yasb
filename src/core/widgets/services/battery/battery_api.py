@@ -11,9 +11,14 @@ from dataclasses import dataclass
 from core.utils.win32.bindings.kernel32 import kernel32
 from core.utils.win32.bindings.setupapi import setupapi
 from core.utils.win32.constants import (
+    AC_LINE_ONLINE,
     BATTERY_CHARGING,
+    BATTERY_FLAG_CHARGING,
+    BATTERY_FLAG_NO_BATTERY,
     BATTERY_INFO_LEVEL_INFORMATION,
     BATTERY_INFO_LEVEL_TEMPERATURE,
+    BATTERY_LIFE_UNKNOWN,
+    BATTERY_PERCENTAGE_UNKNOWN,
     BATTERY_UNKNOWN_CAPACITY,
     BATTERY_UNKNOWN_RATE,
     BATTERY_UNKNOWN_VOLTAGE,
@@ -30,8 +35,6 @@ from core.utils.win32.constants import (
     IOCTL_BATTERY_QUERY_STATUS,
     IOCTL_BATTERY_QUERY_TAG,
     OPEN_EXISTING,
-    POWER_TIME_UNKNOWN,
-    POWER_TIME_UNLIMITED,
 )
 from core.utils.win32.structs import (
     BATTERY_INFORMATION,
@@ -43,6 +46,10 @@ from core.utils.win32.structs import (
     SP_DEVICE_INTERFACE_DETAIL_DATA_W,
     SYSTEM_POWER_STATUS,
 )
+
+# BatteryData.time_remaining when there is no estimate in seconds
+POWER_TIME_UNKNOWN = -1
+POWER_TIME_UNLIMITED = -2
 
 
 @dataclass
@@ -168,14 +175,14 @@ class BatteryAPI:
         if not kernel32.GetSystemPowerStatus(byref(status)):
             return None
 
-        if (status.BatteryFlag & 0x80) or status.BatteryLifePercent == 255:
+        if (status.BatteryFlag & BATTERY_FLAG_NO_BATTERY) or status.BatteryLifePercent == BATTERY_PERCENTAGE_UNKNOWN:
             return None
 
         percent = int(status.BatteryLifePercent)
-        power_plugged = status.ACLineStatus == 1
-        is_charging = bool(status.BatteryFlag & 0x08)
+        power_plugged = status.ACLineStatus == AC_LINE_ONLINE
+        is_charging = bool(status.BatteryFlag & BATTERY_FLAG_CHARGING)
 
-        if status.BatteryLifeTime == 0xFFFFFFFF:
+        if status.BatteryLifeTime == BATTERY_LIFE_UNKNOWN:
             time_remaining = POWER_TIME_UNLIMITED if power_plugged else POWER_TIME_UNKNOWN
         else:
             time_remaining = int(status.BatteryLifeTime)
@@ -354,4 +361,6 @@ class BatteryAPI:
         status = SYSTEM_POWER_STATUS()
         if not kernel32.GetSystemPowerStatus(byref(status)):
             return False
-        return not ((status.BatteryFlag & 0x80) or status.BatteryLifePercent == 255)
+        return not (
+            (status.BatteryFlag & BATTERY_FLAG_NO_BATTERY) or status.BatteryLifePercent == BATTERY_PERCENTAGE_UNKNOWN
+        )

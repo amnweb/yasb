@@ -2,27 +2,26 @@ import ctypes
 import logging
 import threading
 import winreg
-from ctypes import byref, c_void_p, windll, wintypes
+from ctypes import byref, c_void_p, wintypes
 from dataclasses import dataclass
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from core.events.service import EventService
+from core.utils.win32.bindings.advapi32 import RegNotifyChangeKeyValue
+from core.utils.win32.bindings.kernel32 import CloseHandle, CreateEvent, LocalFree, SetEvent, WaitForMultipleObjects
 from core.utils.win32.bindings.powrprof import (
     PowerEnumerate,
     PowerGetActiveScheme,
     PowerReadFriendlyName,
     PowerSetActiveScheme,
 )
+from core.utils.win32.constants import INFINITE, REG_NOTIFY_CHANGE_LAST_SET, WAIT_OBJECT_0
+from core.utils.win32.registry_keys import POWER_SCHEMES_KEY
 from core.utils.win32.structs import GUID
 
 logger = logging.getLogger("power_plan_service")
-
-_POWER_SCHEMES_KEY = r"SYSTEM\CurrentControlSet\Control\Power\User\PowerSchemes"
-_REG_NOTIFY_CHANGE_LAST_SET = 0x00000004
-_WAIT_OBJECT_0 = 0x00000000
-_INFINITE = 0xFFFFFFFF
 
 
 @dataclass
@@ -91,19 +90,15 @@ class PowerPlanService:
         if PowerGetActiveScheme(None, byref(active_ptr)) != 0 or not active_ptr:
             return None
         result = GUID.from_buffer_copy(active_ptr.contents)
-        windll.kernel32.LocalFree(active_ptr)
+        LocalFree(active_ptr)
         return result
 
     @classmethod
     def _watch_loop(cls) -> None:
         """Block on RegNotifyChangeKeyValue emit event on every scheme change."""
-        kernel32 = windll.kernel32
-        kernel32.CreateEventW.restype = c_void_p
-        kernel32.WaitForMultipleObjects.restype = wintypes.DWORD
-
         try:
             key = winreg.OpenKey(
-                winreg.HKEY_LOCAL_MACHINE, _POWER_SCHEMES_KEY, access=winreg.KEY_NOTIFY | winreg.KEY_READ
+                winreg.HKEY_LOCAL_MACHINE, POWER_SCHEMES_KEY, access=winreg.KEY_NOTIFY | winreg.KEY_READ
             )
         except OSError:
             logger.exception("PowerPlanService failed to open registry key.")
@@ -111,24 +106,18 @@ class PowerPlanService:
 
         try:
             while True:
-                reg_event = kernel32.CreateEventW(None, True, False, None)
-                ret = windll.advapi32.RegNotifyChangeKeyValue(
-                    ctypes.c_void_p(key.handle),
-                    False,
-                    _REG_NOTIFY_CHANGE_LAST_SET,
-                    ctypes.c_void_p(reg_event),
-                    True,
-                )
+                reg_event = CreateEvent(None, True, False, None)
+                ret = RegNotifyChangeKeyValue(key.handle, False, REG_NOTIFY_CHANGE_LAST_SET, reg_event, True)
                 if ret != 0:
-                    kernel32.CloseHandle(ctypes.c_void_p(reg_event))
+                    CloseHandle(reg_event)
                     logger.warning("PowerPlanService RegNotifyChangeKeyValue failed (%d).", ret)
                     break
 
                 handles = (c_void_p * 2)(reg_event, cls._reg_stop_handle)
-                result = kernel32.WaitForMultipleObjects(2, handles, False, _INFINITE)
-                kernel32.CloseHandle(ctypes.c_void_p(reg_event))
+                result = WaitForMultipleObjects(2, handles, False, INFINITE)
+                CloseHandle(reg_event)
 
-                if result == _WAIT_OBJECT_0:
+                if result == WAIT_OBJECT_0:
                     try:
                         EventService().emit_event("power_plan_changed")
                     except Exception:
@@ -144,9 +133,7 @@ class PowerPlanService:
         if cls._reg_thread and cls._reg_thread.is_alive():
             return
 
-        kernel32 = windll.kernel32
-        kernel32.CreateEventW.restype = c_void_p
-        cls._reg_stop_handle = kernel32.CreateEventW(None, True, False, None)
+        cls._reg_stop_handle = CreateEvent(None, True, False, None) or 0
         if not cls._reg_stop_handle:
             logger.warning("PowerPlanService could not create stop event.")
             return
@@ -157,17 +144,17 @@ class PowerPlanService:
 
         app = QApplication.instance()
         if app:
-            app.aboutToQuit.connect(cls.shutdown_listener, Qt.ConnectionType.UniqueConnection)
+            app.aboutToQuit.connect(cls.shutdown_listener, Qt.ConnectionType.UniqueConnection)  # pyright: ignore[reportCallIssue]
 
     @classmethod
     def shutdown_listener(cls) -> None:
         """Stop the registry watcher."""
         if cls._reg_stop_handle:
-            windll.kernel32.SetEvent(ctypes.c_void_p(cls._reg_stop_handle))
+            SetEvent(cls._reg_stop_handle)
         if cls._reg_thread and cls._reg_thread.is_alive():
             cls._reg_thread.join(timeout=2.0)
         if cls._reg_stop_handle:
-            windll.kernel32.CloseHandle(ctypes.c_void_p(cls._reg_stop_handle))
+            CloseHandle(cls._reg_stop_handle)
             cls._reg_stop_handle = 0
         cls._reg_thread = None
         logger.info("PowerPlanService stopped...")

@@ -1,7 +1,7 @@
 """Multi-monitor region select overlay (physical-pixel selection)."""
 
 from PyQt6.QtCore import QObject, QPoint, QRect, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPen, QPixmap
+from PyQt6.QtGui import QBrush, QColor, QFont, QFontMetrics, QKeyEvent, QPainter, QPen, QPixmap
 
 from core.widgets.services.control_center.api.screenshot.capture import ScreenFreeze
 from core.widgets.services.control_center.api.screenshot.constants import (
@@ -16,7 +16,7 @@ from core.widgets.services.control_center.api.screenshot.crop import (
     local_to_physical,
     physical_to_local_rect,
 )
-from core.widgets.services.control_center.api.screenshot.editor import open_editor
+from core.widgets.services.control_center.api.screenshot.editor import ScreenshotEditorDialog, open_editor
 from core.widgets.services.control_center.api.screenshot.panel import ScreenPanel
 from core.widgets.services.control_center.api.screenshot.toolbar import ScreenshotToolbar
 
@@ -32,13 +32,13 @@ class Overlay(QObject):
         self._freezes = freezes
         # Selection is always in Win32 physical pixels (not Qt logical DIPs).
         self.sel = QRect()
-        self.mode = None
+        self.mode: str | None = None
         self.anchor = QPoint()
         self.origin_sel = QRect()
         self._toolbar: ScreenshotToolbar | None = None
         self._toolbar_host: ScreenPanel | None = None
         self._panels: list[ScreenPanel] = []
-        self._editor = None
+        self._editor: ScreenshotEditorDialog | None = None
         self._exiting = False
 
         virt = freezes[0].physical
@@ -155,7 +155,9 @@ class Overlay(QObject):
             return "move"
         return None
 
-    def _cursor_for(self, hit: str | None):
+    def _cursor_for(self, hit: str | None) -> Qt.CursorShape:
+        if hit is None:
+            return Qt.CursorShape.CrossCursor
         return {
             "n": Qt.CursorShape.SizeVerCursor,
             "s": Qt.CursorShape.SizeVerCursor,
@@ -240,7 +242,7 @@ class Overlay(QObject):
     def on_double_click(self) -> None:
         self._finish("copy")
 
-    def on_key(self, e) -> None:
+    def on_key(self, e: QKeyEvent) -> None:
         if e.key() == Qt.Key.Key_Escape:
             self._finish("cancel")
         elif e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):

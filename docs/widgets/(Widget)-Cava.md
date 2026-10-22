@@ -7,7 +7,7 @@
 | `class_name` | string | "" | Additional CSS class names for the widget container |
 | `source` | string | "auto" | Audio input source device. Use `"auto"` for the default device, or specify a device name to capture from a specific audio device. Requires cava >= 0.10.4 with device selection support |
 | `bar_height` | integer | 20 | The height of bars in pixels |
-| `min_bar_height` | integer | 0 | The minimum height of bars in pixels |
+| `min_bar_height` | integer | 1 | The minimum height of bars in pixels |
 | `bars_number` | integer | 10 | The number of bars (0-512). 0 sets it to auto |
 | `output_bit_format` | string | "16bit" | Binary bit format, can be '8bit' (0-255) or '16bit' (0-65530) |
 | `orientation` | string | `"bottom"` | Visual orientation of the bar. Can be `"top"` or `"bottom"`. |
@@ -27,13 +27,31 @@
 | `waves` | integer | 0 | Related to monstercat, 1 = on, 0 = off |
 | `foreground` | string | "#ffffff" | Foreground color in hex format |
 | `gradient` | integer | 1 | Gradient mode, 1 = on, 0 = off |
-| `gradient_color_1` | string | "#74c7ec" | First gradient color in hex format |
-| `gradient_color_2` | string | "#89b4fa" | Second gradient color in hex format |
-| `gradient_color_3` | string | "#cba6f7" | Third gradient color in hex format |
+| `gradient_color_1` | string | `None` | First gradient color in hex format. Not set by default |
+| `gradient_color_2` | string | `None` | Second gradient color in hex format. Not set by default |
+| `gradient_color_3` | string | `None` | Third gradient color in hex format. Not set by default |
 | `hide_empty` | boolean | false | Hide widget when no audio is playing (requires `sleep_timer` to be enabled) |
 | `bar_type`         | string  | `bars`  | Type of bar display. Can be 'bars', 'bars_mirrored', 'waves', or 'waves_mirrored'. |
 | `edge_fade` | integer or array | 0 | Apply fade effect to edges in pixels. Can be a single integer (applies to both sides) or an array `[left, right]` for separate control. 0 to disable. **Note:** When both sides have fade, each is capped to half the widget width to prevent overlap. When only one side has fade, it can use the full widget width |
-| `callbacks`         | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'reload_cava'}` | Callbacks for mouse events on the widget. |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings) |
+| `callbacks`         | dict    | [See below](#callbacks) | Callbacks for mouse events on the widget. |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "do_nothing"
+  on_middle: "do_nothing"
+  on_right: "reload_cava"
+```
+
+Available actions:
+
+- `reload_cava` - Stop and restart the Cava process.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
 
 ## Example Configuration
 
@@ -81,8 +99,8 @@
 - **waves**: Related to monstercat, 1 = on, 0 = off.
 - **foreground**: Foreground color in hex format.
 - **gradient**: Gradient mode, 1 = on, 0 = off.
-- **gradient_color_1**: First gradient color in hex format.
-- **gradient_color_2**: Second gradient color in hex format.
+- **gradient_color_1**: First gradient color in hex format. (optional)
+- **gradient_color_2**: Second gradient color in hex format. (optional)
 - **gradient_color_3**: Third gradient color in hex format. (optional)
 - **hide_empty**: Hide widget when no audio is playing (requires `sleep_timer` to be enabled).
 - **bar_type**: Type of bar display. Can be 'bars', 'bars_mirrored', 'waves', or 'waves_mirrored'.
@@ -90,7 +108,8 @@
   - **Single value** (e.g., `15`): Applies the same fade width to both left and right edges
   - **Array format** (e.g., `[10, 20]`): Applies different fade widths - first value for left edge, second for right edge
   - Set to `0` or `[0, 0]` to disable. **Important:** When both sides have fade, each is automatically capped to half the widget width to prevent overlapping. When only one side has fade (e.g., `[180, 0]`), it can use the full widget width.
-- **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 > **Note:** The `waves` and `waves_mirrored` ignore the `bar_spacing` option.
 

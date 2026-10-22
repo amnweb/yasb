@@ -3,15 +3,17 @@ import logging
 import os
 import re
 import subprocess
+from functools import partial
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.utilities import ElidedLabel, PopupWidget
 from core.validation.widgets.yasb.vscode import VSCodeConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.vscode.get_vscode_state_db_path import get_state_db_path
-from core.widgets.services.vscode.history import get_history_modified_time, load_recent_workspaces
+from core.widgets.services.vscode.history import RecentWorkspace, get_history_modified_time, load_recent_workspaces
 
 
 class VSCodeWidget(BaseWidget):
@@ -23,12 +25,13 @@ class VSCodeWidget(BaseWidget):
         self._show_alt_label = False
 
         self._state_file_path = self.config.state_storage_path or get_state_db_path()
-        self._menu = None
-        self._last_db_modified_time = 0
+        self._menu: PopupWidget | None = None
+        self._last_db_modified_time: float = 0
         self._active_filter = "all"
-        self._recent_workspaces = []
-        self._item_widgets = []
-        self._no_recents_widget = None
+        self._search_query = ""
+        self._recent_workspaces: list[RecentWorkspace] = []
+        self._item_widgets: list[QFrame] = []
+        self._no_recents_widget: QLabel | None = None
 
         self._init_container()
         self.build_widget_label(self.config.label, self.config.label_alt)
@@ -60,7 +63,7 @@ class VSCodeWidget(BaseWidget):
 
         for part in label_parts:
             part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 if "<span" in part and "</span>" in part:
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(icon)
@@ -68,7 +71,7 @@ class VSCodeWidget(BaseWidget):
                     active_widgets[widget_index].setText(part)
                 widget_index += 1
 
-    def _handle_mouse_press_event(self, event, workspace_data):
+    def _handle_mouse_press_event(self, event: QMouseEvent | None, workspace_data: RecentWorkspace):
         path = workspace_data["path"]
         is_folder = workspace_data["type"] == "folder"
         is_remote = workspace_data.get("is_remote", False)
@@ -90,13 +93,14 @@ class VSCodeWidget(BaseWidget):
             )
         except Exception as e:
             logging.error("Failed to open VS Code with path %s: %s", path, e)
-        self._menu.hide()
+        if self._menu is not None:
+            self._menu.hide()
 
-    def _create_container_mouse_press_event(self, workspace_data):
-        def mouse_press_event(event):
-            self._handle_mouse_press_event(event, workspace_data)
+    def _bind_container_mouse_press(self, container: QFrame, workspace_data: RecentWorkspace) -> None:
+        def mouse_press_event(a0: QMouseEvent | None) -> None:
+            self._handle_mouse_press_event(a0, workspace_data)
 
-        return mouse_press_event
+        container.mousePressEvent = mouse_press_event
 
     def show_menu(self):
         db_mtime = get_history_modified_time(self._state_file_path)
@@ -140,11 +144,11 @@ class VSCodeWidget(BaseWidget):
 
         header_layout.addStretch()
 
-        self._pill_buttons = {}
+        self._pill_buttons: dict[str, QPushButton] = {}
         for filter_name in ("all", "folders", "files", "remotes"):
             btn = QPushButton(filter_name.title())
             btn.setProperty("class", "filter-button active" if filter_name == self._active_filter else "filter-button")
-            btn.clicked.connect(lambda checked, name=filter_name: self._set_filter(name))
+            btn.clicked.connect(partial(self._set_filter, filter_name))
             header_layout.addWidget(btn)
             self._pill_buttons[filter_name] = btn
 
@@ -187,17 +191,19 @@ class VSCodeWidget(BaseWidget):
 
         self._scroll_area.setWidget(self._scroll_widget)
 
-    def _set_filter(self, filter_name):
+    def _set_filter(self, filter_name: str, checked: bool = False):
         self._active_filter = filter_name
 
         for name, btn in self._pill_buttons.items():
             btn.setProperty("class", "filter-button active" if name == filter_name else "filter-button")
-            btn.style().unpolish(btn)
-            btn.style().polish(btn)
+            style = btn.style()
+            if style is not None:
+                style.unpolish(btn)
+                style.polish(btn)
 
         self._refresh_menu_items(reload_db=False)
 
-    def _on_search_changed(self, text):
+    def _on_search_changed(self, text: str):
         self._search_query = text.strip().lower()
         self._refresh_menu_items(reload_db=False)
 
@@ -224,7 +230,7 @@ class VSCodeWidget(BaseWidget):
         no_recent_label.setContentsMargins(0, 20, 0, 20)
         return no_recent_label
 
-    def _create_workspace_item(self, workspace_data):
+    def _create_workspace_item(self, workspace_data: RecentWorkspace) -> QFrame:
         container = QFrame()
         container.setProperty("class", "item")
         container.setContentsMargins(0, 0, 8, 0)
@@ -309,11 +315,11 @@ class VSCodeWidget(BaseWidget):
         text_content_layout.setSpacing(0)
 
         container_layout.addWidget(text_content, 1)
-        container.mousePressEvent = self._create_container_mouse_press_event(workspace_data)
+        self._bind_container_mouse_press(container, workspace_data)
 
         return container
 
-    def _refresh_menu_items(self, reload_db=True):
+    def _refresh_menu_items(self, reload_db: bool = True):
         if reload_db:
             for widget in self._item_widgets:
                 widget.deleteLater()
@@ -338,7 +344,7 @@ class VSCodeWidget(BaseWidget):
                 self._items_layout.addWidget(item_widget)
                 self._item_widgets.append(item_widget)
 
-        search_query = getattr(self, "_search_query", "").lower()
+        search_query = self._search_query.lower()
 
         has_visible_items = False
         for item_widget in self._item_widgets:
@@ -365,16 +371,21 @@ class VSCodeWidget(BaseWidget):
                 has_visible_items = True
 
         show_empty = (not self._recent_workspaces) or (not has_visible_items)
-        self._no_recents_widget.setVisible(show_empty)
+        if self._no_recents_widget is not None:
+            self._no_recents_widget.setVisible(show_empty)
 
-        self._menu.adjustSize()
+        if self._menu is not None:
+            self._menu.adjustSize()
 
     def _position_and_show_menu(self):
-        self._menu.adjustSize()
-        self._menu.setPosition(
+        menu = self._menu
+        if menu is None:
+            return
+        menu.adjustSize()
+        menu.setPosition(
             alignment=self.config.menu.alignment,
             direction=self.config.menu.direction,
             offset_left=self.config.menu.offset_left,
             offset_top=self.config.menu.offset_top,
         )
-        self._menu.show()
+        menu.show()

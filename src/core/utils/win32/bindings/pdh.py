@@ -1,9 +1,9 @@
 """Bindings for PDH (Performance Data Helper) API."""
 
-from ctypes import POINTER, c_void_p, windll
+from ctypes import POINTER, WinDLL, c_void_p
 from ctypes.wintypes import DWORD, HANDLE, LONG, LPCWSTR
 
-pdh = windll.pdh
+pdh = WinDLL("pdh", use_last_error=True)
 
 pdh.PdhOpenQueryW.argtypes = [LPCWSTR, c_void_p, POINTER(HANDLE)]
 pdh.PdhOpenQueryW.restype = LONG

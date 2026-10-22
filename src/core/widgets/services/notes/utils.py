@@ -1,7 +1,7 @@
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
-from PyQt6.QtCore import QEvent, QMimeData, Qt
+from PyQt6.QtCore import QEvent, QMimeData, QObject, Qt
 from PyQt6.QtGui import QContextMenuEvent, QIcon, QKeyEvent, QMouseEvent, QTextCharFormat, QTextCursor
 from PyQt6.QtWidgets import QApplication, QPushButton, QTextEdit, QWidget
 
@@ -112,14 +112,16 @@ class NotesPopup(PopupWidget):
 
         super().setPosition(alignment, direction, offset_left, offset_top)
 
-    def eventFilter(self, obj: Any, event: Any) -> bool:
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
         if self.is_floating or self._block_deactivate:
             return False
-        if obj is None or event is None:
+        if a0 is None or a1 is None:
             return False
-        return bool(super().eventFilter(obj, event))  # type: ignore
+        return super().eventFilter(a0, a1)
 
-    def event(self, a0: Any) -> bool:
+    @override
+    def event(self, a0: QEvent | None) -> bool:
         if a0 and a0.type() == QEvent.Type.WindowDeactivate:
             if self.is_floating or self._block_deactivate:
                 a0.accept()

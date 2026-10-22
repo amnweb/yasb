@@ -1,19 +1,17 @@
 import ctypes
 import logging
-import os
 import re
 import winreg
+from typing import TypedDict
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
-from win32con import WM_INPUTLANGCHANGEREQUEST
 
+from core.utils.shell_utils import shell_open
 from core.utils.utilities import PopupWidget, refresh_widget_style
-from core.utils.win32.bindings import (
-    kernel32,
-    user32,
-)
+from core.utils.win32.bindings.kernel32 import kernel32
+from core.utils.win32.bindings.user32 import user32
 from core.utils.win32.constants import (
     LOCALE_NAME_MAX_LENGTH,
     LOCALE_SCOUNTRY,
@@ -24,9 +22,19 @@ from core.utils.win32.constants import (
     LOCALE_SNAME,
     LOCALE_SNATIVECTRYNAME,
     LOCALE_SNATIVELANGNAME,
+    WM_INPUTLANGCHANGEREQUEST,
 )
+from core.utils.win32.registry_keys import KEYBOARD_LAYOUTS_KEY
 from core.validation.widgets.yasb.language import LanguageConfig
 from core.widgets.base import BaseWidget
+
+
+class _LanguageInfo(TypedDict):
+    id: int
+    handle: int
+    name: str
+    code: str
+    layouts: str
 
 
 class LanguageWidget(BaseWidget):
@@ -55,7 +63,7 @@ class LanguageWidget(BaseWidget):
         self.callback_timer = "update_label"
 
         # Cache for available languages
-        self._available_languages = None
+        self._available_languages: list[_LanguageInfo] | None = None
 
         # Focused window info for activating the layout from the menu
         self._focused_window_hwnd: int | None = None
@@ -97,7 +105,7 @@ class LanguageWidget(BaseWidget):
 
         for part in label_parts:
             part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 if "<span" in part and "</span>" in part:
                     # Ensure the icon is correctly set
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
@@ -114,12 +122,7 @@ class LanguageWidget(BaseWidget):
             self._menu.hide()
 
     def _open_language_settings(self):
-        """Open Windows language settings"""
-        try:
-            os.startfile("ms-settings:regionlanguage")
-        except Exception:
-            # Fallback to the old Control Panel if Settings app fails
-            os.startfile(os.path.join(os.environ["SystemRoot"], "System32", "control.exe"), "intl.cpl")
+        shell_open("ms-settings:regionlanguage")
 
     def _show_language_menu(self):
         """Show popup menu with available languages"""
@@ -168,7 +171,7 @@ class LanguageWidget(BaseWidget):
 
         self._menu.show()
 
-    def _create_language_item(self, layout, lang_info, is_current=False):
+    def _create_language_item(self, layout: QVBoxLayout, lang_info: _LanguageInfo, is_current: bool = False) -> None:
         """Create a language menu item"""
         container = QFrame()
         container.setProperty("class", f"language-item{' active' if is_current else ''}")
@@ -214,12 +217,12 @@ class LanguageWidget(BaseWidget):
 
         layout.addWidget(container)
 
-    def _get_available_languages(self):
+    def _get_available_languages(self) -> list[_LanguageInfo]:
         """Get list of all installed input languages"""
         if self._available_languages is not None:
             return self._available_languages
 
-        languages = []
+        languages: list[_LanguageInfo] = []
 
         # Get number of keyboard layouts
         num_layouts = user32.GetKeyboardLayoutList(0, None)
@@ -232,7 +235,7 @@ class LanguageWidget(BaseWidget):
 
         # Save current layout to restore later
         current_layout = user32.ActivateKeyboardLayout(0, 0)
-        seen_handles = set()
+        seen_handles: set[int] = set()
 
         for i in range(num_layouts):
             layout_handle = layout_array[i]
@@ -270,7 +273,7 @@ class LanguageWidget(BaseWidget):
                         klid = klid_buf.value.upper()
 
                         # Look up in registry
-                        reg_path = rf"SYSTEM\CurrentControlSet\Control\Keyboard Layouts\{klid}"
+                        reg_path = f"{KEYBOARD_LAYOUTS_KEY}\\{klid}"
                         try:
                             with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path) as key:
                                 # Try Layout Text first
@@ -350,7 +353,7 @@ class LanguageWidget(BaseWidget):
             result = user32.ActivateKeyboardLayout(ctypes.c_void_p(target_layout), 0)
         return result
 
-    def _switch_to_language(self, target_lang_id):
+    def _switch_to_language(self, target_lang_id: int) -> bool:
         """Switch to the specified language"""
         try:
             # Get all available layouts

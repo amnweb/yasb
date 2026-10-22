@@ -7,6 +7,7 @@ Supports launching profiles normally or as administrator via context menu.
 import json
 import logging
 import os
+from typing import Any, cast
 
 from core.utils.shell_utils import shell_open
 from core.widgets.services.quick_launch.base_provider import (
@@ -66,7 +67,7 @@ def _find_wt_executable(package_family: str) -> str | None:
     return generic if os.path.isfile(generic) else None
 
 
-def _load_profiles(settings_path: str) -> tuple[list[dict], str]:
+def _load_profiles(settings_path: str) -> tuple[list[dict[str, Any]], str]:
     """Load profiles from a settings.json file.
 
     Returns (profiles_list, default_profile_guid).
@@ -75,7 +76,7 @@ def _load_profiles(settings_path: str) -> tuple[list[dict], str]:
         with open(settings_path, encoding="utf-8") as f:
             raw = f.read()
         # Strip single-line comments (// ...) that WT settings may contain
-        lines = []
+        lines: list[str] = []
         for line in raw.splitlines():
             stripped = line.lstrip()
             if stripped.startswith("//"):
@@ -83,7 +84,9 @@ def _load_profiles(settings_path: str) -> tuple[list[dict], str]:
             lines.append(line)
         data = json.loads("\n".join(lines))
         profiles = data.get("profiles", {})
-        profile_list = profiles.get("list", []) if isinstance(profiles, dict) else []
+        profile_list: list[dict[str, Any]] = (
+            cast(dict[str, Any], profiles).get("list", []) if isinstance(profiles, dict) else []
+        )
         default_guid = data.get("defaultProfile", "")
         return profile_list, default_guid
     except Exception as e:
@@ -102,9 +105,9 @@ class WindowsTerminalProvider(BaseProvider):
     icon = ICON_WINDOWS_TERMINAL
     input_placeholder = "Search terminal profiles..."
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
-        self._terminals: list[dict] = []
+        self._terminals: list[dict[str, Any]] = []
         self._loaded = False
 
     def _discover_terminals(self) -> None:
@@ -145,7 +148,7 @@ class WindowsTerminalProvider(BaseProvider):
         self._loaded = False
         self._terminals = []
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         if not self._loaded:
             self._discover_terminals()
 
@@ -194,7 +197,7 @@ class WindowsTerminalProvider(BaseProvider):
                 )
 
             for t in variant_profiles:
-                desc_parts = []
+                desc_parts: list[str] = []
                 if t["commandline"]:
                     desc_parts.append(t["commandline"])
                 desc = " · ".join(desc_parts)

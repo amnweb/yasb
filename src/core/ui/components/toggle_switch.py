@@ -1,8 +1,15 @@
-from PyQt6.QtCore import QEasingCurve, QParallelAnimationGroup, QPropertyAnimation, QRectF, Qt, pyqtProperty
-from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen
+from collections.abc import Callable
+from typing import Any, override
+
+import PyQt6.QtCore as QtCore
+from PyQt6.QtCore import QEasingCurve, QParallelAnimationGroup, QPropertyAnimation, QRectF, Qt
+from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QAbstractButton, QApplication, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 from core.ui.theme import get_tokens, theme_key
+
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 TRACK_W = 40
 TRACK_H = 20
@@ -28,6 +35,12 @@ class ToggleSwitch(QAbstractButton):
 
     _PAD = 1
     _PRESS_STRETCH = 3
+
+    _anim_knob_x: QPropertyAnimation
+    _anim_track_color: QPropertyAnimation
+    _anim_border_color: QPropertyAnimation
+    _anim_knob_color: QPropertyAnimation
+    _anim_knob_stretch: QPropertyAnimation
 
     def __init__(
         self,
@@ -62,7 +75,9 @@ class ToggleSwitch(QAbstractButton):
         if label is not None:
             self._label = label
         self.toggled.connect(self._on_toggled)
-        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     def _build_colors(self, t: dict[str, str]) -> None:
         self._on_colors = {
@@ -91,50 +106,50 @@ class ToggleSwitch(QAbstractButton):
 
     # Animated properties
 
-    @pyqtProperty(float)
-    def knob_x(self) -> float:
+    def _get_knob_x(self) -> float:
         return self._knob_x
 
-    @knob_x.setter
-    def knob_x(self, value: float) -> None:
+    def _set_knob_x(self, value: float) -> None:
         self._knob_x = value
         self.update()
 
-    @pyqtProperty(QColor)
-    def track_color(self) -> QColor:
+    knob_x: float = pyqtProperty(float, _get_knob_x, _set_knob_x)
+
+    def _get_track_color(self) -> QColor:
         return self._track_color
 
-    @track_color.setter
-    def track_color(self, value: QColor) -> None:
+    def _set_track_color(self, value: QColor) -> None:
         self._track_color = value
         self.update()
 
-    @pyqtProperty(QColor)
-    def border_color(self) -> QColor:
+    track_color: QColor = pyqtProperty(QColor, _get_track_color, _set_track_color)
+
+    def _get_border_color(self) -> QColor:
         return self._border_color
 
-    @border_color.setter
-    def border_color(self, value: QColor) -> None:
+    def _set_border_color(self, value: QColor) -> None:
         self._border_color = value
         self.update()
 
-    @pyqtProperty(QColor)
-    def knob_color(self) -> QColor:
+    border_color: QColor = pyqtProperty(QColor, _get_border_color, _set_border_color)
+
+    def _get_knob_color(self) -> QColor:
         return self._knob_color
 
-    @knob_color.setter
-    def knob_color(self, value: QColor) -> None:
+    def _set_knob_color(self, value: QColor) -> None:
         self._knob_color = value
         self.update()
 
-    @pyqtProperty(float)
-    def knob_stretch(self) -> float:
+    knob_color: QColor = pyqtProperty(QColor, _get_knob_color, _set_knob_color)
+
+    def _get_knob_stretch(self) -> float:
         return self._knob_stretch
 
-    @knob_stretch.setter
-    def knob_stretch(self, value: float) -> None:
+    def _set_knob_stretch(self, value: float) -> None:
         self._knob_stretch = value
         self.update()
+
+    knob_stretch: float = pyqtProperty(float, _get_knob_stretch, _set_knob_stretch)
 
     def _on_toggled(self, checked: bool) -> None:
         on, off = self._on_colors, self._off_colors
@@ -157,17 +172,20 @@ class ToggleSwitch(QAbstractButton):
 
         self._anim_group.start()
 
-    def mousePressEvent(self, e: QMouseEvent) -> None:
-        if e.button() == Qt.MouseButton.LeftButton:
+    @override
+    def mousePressEvent(self, e: QMouseEvent | None) -> None:
+        if e is not None and e.button() == Qt.MouseButton.LeftButton:
             self._knob_stretch = float(self._PRESS_STRETCH)
             self._stretch_left = self.isChecked()
             self.update()
 
-    def mouseReleaseEvent(self, e: QMouseEvent) -> None:
-        if e.button() == Qt.MouseButton.LeftButton and self._knob_stretch > 0:
+    @override
+    def mouseReleaseEvent(self, e: QMouseEvent | None) -> None:
+        if e is not None and e.button() == Qt.MouseButton.LeftButton and self._knob_stretch > 0:
             self.setChecked(not self.isChecked())
 
-    def paintEvent(self, _event) -> None:
+    @override
+    def paintEvent(self, e: QPaintEvent | None) -> None:
         pad = self._PAD
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)

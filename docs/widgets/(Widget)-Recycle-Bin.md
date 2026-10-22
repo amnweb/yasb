@@ -4,12 +4,23 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
 | Option     | Type   | Default | Description                                                                 |
 |------------|--------|---------|-----------------------------------------------------------------------------|
 | `label`   | string | `{icon} {items_count} {items_size}` | Format for displaying recycle bin information. Available variables: `{icon}`, `{items_count}`, `{items_size}`. |
-| `label_alt`   | string | `{icon} {items_count} {items_size}` | Alternative label format that can be toggled with right-click (or configured callback). |
+| `label_alt`   | string | `{icon} {items_count} {items_size}` | Alternative label format that can be toggled with left-click (or configured callback). |
 | `class_name`      | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
-| `icons` | dict | `{"bin_empty": "\udb82\ude7a","bin_filled": "\udb82\ude79"}` | Customize icons used for different recycle bin states. |
+| `icons` | dict | [See below](#icons-options) | Customize icons used for different recycle bin states. |
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `show_confirmation` | boolean | `False` | Show Windows confirmation dialog before emptying. |
-| `callbacks` | dict | See below | Configure widget interaction callbacks. |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks` | dict | [See below](#available-callbacks) | Configure widget interaction callbacks. |
+
+## Icons Options
+
+The `icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+icons:
+  bin_empty: "\udb82\ude7a"
+  bin_filled: "\udb82\ude79"
+```
 
 ## Example Configuration
 
@@ -32,16 +43,28 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
 ## Description of Options
 
 - **label**: Format for displaying recycle bin information. Available variables: `{icon}`, `{items_count}`, `{items_size}`.
-- **label_alt**: Alternative label format that can be toggled with right-click (or configured callback).
+- **label_alt**: Alternative label format that can be toggled with left-click (or configured callback).
 - **class_name**: Additional CSS class name for the widget. This allows for custom styling.
 - **icons**: Customize icons used for different recycle bin states. The default icons are:
   - **bin_empty**: Icon when the recycle bin is empty.
   - **bin_filled**: Icon when the recycle bin has items.
 - **tooltip**: Whether to show the tooltip on hover.
 - **show_confirmation**: Show Windows confirmation dialog before emptying.
-- **callbacks**: Configure what happens when clicking the widget.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#available-callbacks).
 
 ## Available Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "open_bin"
+```
+
+Available actions:
 
 - **toggle_label**: Toggle between main and alternative label format.
 - **empty_bin**: Empty the recycle bin.

@@ -9,11 +9,10 @@ from functools import lru_cache
 from typing import Any
 from urllib.parse import unquote
 
-import win32com.client
-
 from core.utils.win32.aumid import get_aumid_for_window
 from core.utils.win32.bindings.kernel32 import kernel32
 from core.utils.win32.bindings.ntdll import ProcessCommandLineInformation, ntdll
+from core.utils.win32.bindings.ole32 import create_dispatch, get_dispatch
 from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION
 from core.utils.win32.structs import UNICODE_STRING
 
@@ -46,7 +45,7 @@ class WindowContext:
 @lru_cache(maxsize=1)
 def _get_shell_application():
     """Get the Shell.Application COM automation object."""
-    return win32com.client.Dispatch("Shell.Application")
+    return create_dispatch("Shell.Application")
 
 
 def collect_window_context(hwnd: int, window_data: dict[str, Any]) -> WindowContext | None:
@@ -89,7 +88,7 @@ def collect_window_context(hwnd: int, window_data: dict[str, Any]) -> WindowCont
         if explorer_path is None and hwnd:
             try:
                 # Try to get the folder CLSID/GUID for special folders via Document interface
-                shell_windows = win32com.client.Dispatch("Shell.Application").Windows()
+                shell_windows = create_dispatch("Shell.Application").Windows()
                 for window in shell_windows:
                     try:
                         if window.HWND == hwnd:
@@ -157,11 +156,13 @@ def _get_process_command_line(pid: int) -> str | None:
 
     # Fallback to WMI if NtQueryInformationProcess fails
     try:
-        wmi = win32com.client.GetObject("winmgmts:")
+        wmi = get_dispatch("winmgmts:")
         processes = wmi.ExecQuery(f"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {pid}")
         for process in processes:
-            if process.CommandLine:
-                return process.CommandLine
+            # WMI adds class properties at run time, so they are read through Properties_
+            command_line = process.Properties_.Item("CommandLine").Value
+            if command_line:
+                return command_line
     except Exception as exc:
         logging.debug("WMI fallback failed for PID %s: %s", pid, exc)
 

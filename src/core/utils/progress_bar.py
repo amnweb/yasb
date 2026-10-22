@@ -1,6 +1,13 @@
-from PyQt6.QtCore import QEasingCurve, QPointF, QPropertyAnimation, QRectF, Qt, pyqtProperty
-from PyQt6.QtGui import QColor, QConicalGradient, QLinearGradient, QPainter, QPen
-from PyQt6.QtWidgets import QFrame, QVBoxLayout
+from collections.abc import Callable
+from typing import Any, override
+
+import PyQt6.QtCore as QtCore
+from PyQt6.QtCore import QEasingCurve, QPointF, QPropertyAnimation, QRect, QRectF, Qt
+from PyQt6.QtGui import QColor, QConicalGradient, QLinearGradient, QPainter, QPaintEvent, QPen
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QWidget
+
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 
 class ProgressBar(QFrame):
@@ -8,11 +15,11 @@ class ProgressBar(QFrame):
 
     def __init__(
         self,
-        parent=None,
+        parent: QWidget | None = None,
         size: int = 16,
         thickness: int = 2,
         value: float = 0.0,
-        color="#00C800",
+        color: str | list[str] = "#00C800",
         background_color: str = "#3C3C3C",
         animation: bool = True,
         progress_type: str = "circular",
@@ -42,24 +49,24 @@ class ProgressBar(QFrame):
         elif self._progress_type == "linear_vertical":
             self.setFixedSize(self._thickness, self._size)
 
-    @pyqtProperty(float)
-    def animatedValue(self):
+    def _get_animated_value(self) -> float:
         """Get the current animated value."""
         return self._value
 
-    @animatedValue.setter
-    def animatedValue(self, value: float):
+    def _set_animated_value(self, value: float) -> None:
         """Set the animated value and trigger a repaint."""
         self._value = value
         if self._progress_type == "circular":
             self._update_angles()
         self.update()
 
+    animatedValue: float = pyqtProperty(float, _get_animated_value, _set_animated_value)
+
     def _update_angles(self):
         """Update the angle calculations based on current value."""
         self._angle_span = (self._value / 100.0) * 360
 
-    def _create_circular_progress_brush(self, rect):
+    def _create_circular_progress_brush(self, rect: QRect) -> QConicalGradient | QColor:
         """Create a brush for the circular progress arc (solid color or gradient)."""
         if isinstance(self._color_config, list) and len(self._color_config) > 1:
             center = QPointF(rect.center())
@@ -72,7 +79,7 @@ class ProgressBar(QFrame):
             color = self._color_config[0] if isinstance(self._color_config, list) else self._color_config
             return QColor(color)
 
-    def _create_linear_progress_brush(self, rect):
+    def _create_linear_progress_brush(self, rect: QRectF) -> QLinearGradient | QColor:
         """Create a brush for the linear progress bar (solid color or static linear gradient)."""
         if isinstance(self._color_config, list) and len(self._color_config) > 1:
             if self._progress_type == "linear_horizontal":
@@ -88,7 +95,8 @@ class ProgressBar(QFrame):
             color = self._color_config[0] if isinstance(self._color_config, list) else self._color_config
             return QColor(color)
 
-    def paintEvent(self, event):
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         """Paint the progress bar."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -98,7 +106,7 @@ class ProgressBar(QFrame):
         elif self._progress_type in ["linear_horizontal", "linear_vertical"]:
             self._paint_linear(painter)
 
-    def _paint_circular(self, painter):
+    def _paint_circular(self, painter: QPainter) -> None:
         # Calculate margin based on thickness and ensure it is at least 2
         margin = (self._thickness + 1) // 2 + 1
         rect = self.contentsRect().adjusted(margin, margin, -margin, -margin)
@@ -115,7 +123,7 @@ class ProgressBar(QFrame):
             painter.setPen(QPen(progress_brush, self._thickness, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
             painter.drawArc(rect, 90 * 16, -int(self._angle_span * 16))
 
-    def _paint_linear(self, painter):
+    def _paint_linear(self, painter: QPainter) -> None:
         rect = QRectF(self.contentsRect())
         if rect.width() <= 0 or rect.height() <= 0:
             return

@@ -1,8 +1,10 @@
 import re
 from datetime import UTC, datetime
-from typing import Any
+from functools import partial
+from typing import Any, override
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QCloseEvent, QResizeEvent
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
 from core.utils.qobject import is_valid_qobject
@@ -58,8 +60,9 @@ class UsageBar(QFrame):
             fill_width = max(fill_width, self.height())
         self._fill.setGeometry(0, 0, fill_width, self.height())
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         self._update_fill()
 
 
@@ -142,9 +145,10 @@ class ClaudeUsageWidget(BaseWidget):
             except RuntimeError:
                 pass
 
-    def closeEvent(self, event):
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         self._release_service()
-        super().closeEvent(event)
+        super().closeEvent(a0)
 
     def _on_data(self, data: dict[str, Any]) -> None:
         self._data = data
@@ -192,7 +196,7 @@ class ClaudeUsageWidget(BaseWidget):
 
     def _sync_status(self) -> None:
         """Update the menu status dot colour and description in place."""
-        if self._status_dot is None:
+        if self._status_dot is None or self._status_text_label is None:
             return
         try:
             self._status_dot.setProperty("class", f"dot {self._status_level()}")
@@ -410,15 +414,14 @@ class ClaudeUsageWidget(BaseWidget):
         ``persistent=True`` keeps ``PopupWidget`` from tearing it down on hide, so reopening
         never redoes the widget-tree construction and layout pass.
         """
-        if not is_valid_qobject(self._menu):
-            self._build_menu()
-        self._menu.setPosition(
+        menu = self._menu if is_valid_qobject(self._menu) else self._build_menu()
+        menu.setPosition(
             alignment=self.config.menu.alignment,
             direction=self.config.menu.direction,
             offset_left=self.config.menu.offset_left,
             offset_top=self.config.menu.offset_top,
         )
-        self._menu.show()
+        menu.show()
         # The popup ignores refreshes while hidden (see the sync methods' isVisible() guard), so
         # push the latest data in now rather than showing whatever was true when it last closed.
         self._sync_usage_sections()
@@ -545,7 +548,7 @@ class ClaudeUsageWidget(BaseWidget):
         for key, text in _TOKEN_PERIODS:
             btn = QPushButton(text)
             btn.setProperty("class", "period-btn")
-            btn.clicked.connect(lambda _=False, k=key: self._select_period(k))
+            btn.clicked.connect(partial(self._select_period, key))
             toggle_layout.addWidget(btn)
             self._period_buttons[key] = btn
         layout.addWidget(toggle)
@@ -569,7 +572,7 @@ class ClaudeUsageWidget(BaseWidget):
         self._sync_token_section()
         return frame
 
-    def _select_period(self, period: str) -> None:
+    def _select_period(self, period: str, checked: bool = False) -> None:
         self._selected_period = period
         self._sync_token_section()
 
@@ -609,12 +612,12 @@ class ClaudeUsageWidget(BaseWidget):
 
     def _sync_model_rows(self) -> None:
         """Rebuild the per-model bars for the selected period; hide the container when empty."""
-        if self._model_layout is None:
+        if self._model_layout is None or self._model_container is None:
             return
         try:
             while self._model_layout.count():
                 item = self._model_layout.takeAt(0)
-                widget = item.widget()
+                widget = item.widget() if item is not None else None
                 if widget is not None:
                     # Detach now (not just deleteLater) so the popup's size hint reflects the new
                     # row count synchronously, letting the caller resize the popup correctly.
@@ -689,8 +692,8 @@ class ClaudeUsageWidget(BaseWidget):
             self._section_widgets = {}
             self._menu = None
 
-    def _build_menu(self) -> None:
-        self._menu = PopupWidget(
+    def _build_menu(self) -> PopupWidget:
+        menu = PopupWidget(
             self,
             self.config.menu.blur,
             self.config.menu.round_corners,
@@ -699,9 +702,10 @@ class ClaudeUsageWidget(BaseWidget):
             persistent=True,
             pinnable=True,
         )
-        self._menu.setProperty("class", "claude-usage-menu")
+        self._menu = menu
+        menu.setProperty("class", "claude-usage-menu")
 
-        layout = QVBoxLayout(self._menu)
+        layout = QVBoxLayout(menu)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self._menu_layout = layout
@@ -733,7 +737,7 @@ class ClaudeUsageWidget(BaseWidget):
             pin_btn.setProperty("class", "pin-btn pinned" if checked else "pin-btn")
             set_tooltip(pin_btn, "Unpin this window" if checked else "Pin this window")
             refresh_widget_style(pin_btn)
-            self._menu.set_pinned(checked)
+            menu.set_pinned(checked)
 
         pin_btn.toggled.connect(on_pin_toggled)
         header_layout.addWidget(pin_btn)
@@ -746,8 +750,9 @@ class ClaudeUsageWidget(BaseWidget):
         # rather than spreading as gaps between sections; the height resize below then trims it.
         layout.addStretch(1)
 
-        self._menu.adjustSize()
+        menu.adjustSize()
         # Lock the width after the first layout so switching periods only changes the height. This
         # respects the stylesheet min-width (adjustSize already applied it) without letting longer
         # model names reflow the popup - which is what made the bars change length between periods.
-        self._menu.setFixedWidth(self._menu.width())
+        menu.setFixedWidth(menu.width())
+        return menu

@@ -2,7 +2,7 @@ import logging
 import re
 from collections.abc import Callable
 from functools import partial
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from PIL import Image, ImageDraw, ImageOps
 from PIL.ImageQt import ImageQt
@@ -18,27 +18,27 @@ from PyQt6.QtWidgets import (
 )
 
 from core.events.service import EventService
+from core.utils.icons.service import IconService
+from core.utils.icons.sources import AppIcon
 from core.utils.qobject import is_valid_qobject
 from core.utils.system import is_windows_10
 from core.utils.time_utils import get_relative_time
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import ElidedLabel, PopupWidget, refresh_widget_style
-from core.utils.win32.app_icons import get_icon_for_aumid
 from core.utils.win32.aumid import activate_app_by_aumid
+from core.utils.win32.aumid_process import get_process_name_for_aumid
 from core.utils.win32.system_function import notification_center, quick_settings
 from core.utils.win32.toast_activation import activate_toast
 from core.validation.widgets.yasb.notifications import NotificationsConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.dnd.dnd_api import DndService
-from core.widgets.services.media.aumid_process import get_process_name_for_aumid
+
+if TYPE_CHECKING:
+    from core.widgets.services.notifications.windows_notification import NotificationItem
 
 try:
-    from core.widgets.services.notifications.windows_notification import (
-        NotificationItem,
-        WindowsNotificationEventListener,
-    )
+    from core.widgets.services.notifications.windows_notification import WindowsNotificationEventListener
 except ImportError:
-    NotificationItem = None
     WindowsNotificationEventListener = None
     logging.warning("Failed to load Windows Notification Event Listener")
 
@@ -54,6 +54,10 @@ NOTIFICATION_PRIVACY_URI = "ms-settings:privacy-notifications"
 SECTION_ICON_GAP = 6
 # Decodes one toast image, on whichever thread it is handed to
 type ImageDecoder = Callable[[], Image.Image | None]
+# (path, width, height, circle, dpr) of a decoded toast image
+type ImageKey = tuple[str, int, int, bool, float]
+# A key and what decodes the image it names
+type ImageJob = tuple[ImageKey, ImageDecoder]
 
 
 class SectionHeaderLabel(QLabel):
@@ -77,8 +81,8 @@ class SectionHeaderLabel(QLabel):
         return QSizeF(self._icon.width() / ratio, self._icon.height() / ratio)
 
     @override
-    def paintEvent(self, event: QPaintEvent | None) -> None:
-        super().paintEvent(event)
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
+        super().paintEvent(a0)
         size = self._icon_size()
         contents = self.contentsRect()
         # Centred in the box the label centres its line in, so the two share an axis. Not
@@ -93,44 +97,6 @@ class SectionHeaderLabel(QLabel):
             painter.end()
 
 
-class AppIconSignals(QObject):
-    # aumid, device pixel ratio, PIL image or None
-    loaded = pyqtSignal(str, float, object)
-
-
-class AppIconLoader(QRunnable):
-    """Extracts the icon of one sender away from the GUI thread.
-
-    The shell hands these out over COM and takes between ten and a hundred milliseconds per
-    app, which is long enough to be felt when a menu holding half a dozen senders is opened.
-    Nothing here touches a widget: the finished image is handed back and turned into a
-    pixmap by the thread that owns them.
-    """
-
-    def __init__(self, aumid: str, size: int, dpr: float):
-        super().__init__()
-        self._aumid = aumid
-        self._size = size
-        self._dpr = dpr
-        self.signals = AppIconSignals()
-
-    def run(self):
-        image = None
-        try:
-            image = get_icon_for_aumid(self._aumid, size=self._size)
-            if image is not None:
-                # Squared off here rather than on the GUI thread, which then has nothing
-                # left to do but wrap the pixels
-                if image.mode != "RGBA":
-                    image = image.convert("RGBA")
-                if image.size != (self._size, self._size):
-                    image = image.resize((self._size, self._size), Image.LANCZOS)
-        except Exception:
-            logging.exception("Failed to load app icon for %s", self._aumid)
-            image = None
-        self.signals.loaded.emit(self._aumid, self._dpr, image)
-
-
 class ImageSignals(QObject):
     # image cache key, PIL image or None
     loaded = pyqtSignal(object, object)
@@ -140,11 +106,11 @@ class ImageLoader(QRunnable):
     """Decodes and scales one toast image away from the GUI thread.
 
     A photo takes around ten milliseconds, so a menu holding a few dozen of them would
-    spend a noticeable while on the click. Like the app icon loader, this only produces
-    the pixels and leaves turning them into a pixmap to the thread that owns them.
+    spend a noticeable while on the click. This only produces the pixels and leaves
+    turning them into a pixmap to the thread that owns them.
     """
 
-    def __init__(self, cache_key: tuple, decode: ImageDecoder):
+    def __init__(self, cache_key: ImageKey, decode: ImageDecoder):
         super().__init__()
         self._cache_key = cache_key
         self._decode = decode
@@ -178,14 +144,12 @@ class NotificationsWidget(BaseWidget):
         self._scroll_area: QScrollArea | None = None
         self._header_label: QLabel | None = None
         self._dnd_button: QLabel | None = None
-        self._icon_cache: dict[tuple[str, float], QPixmap | None] = {}
-        # (path, width, height, circle, dpr) -> pixmap
-        self._image_cache: dict[tuple[str, int, int, bool, float], QPixmap | None] = {}
-        self._image_pending: set[tuple[str, int, int, bool, float]] = set()
-        self._icon_pending: set[tuple[str, float]] = set()
-        # The icon slots of the menu as it stands, waiting for a loader to fill them in
-        self._icon_labels: dict[tuple[str, float], list[QLabel]] = {}
-        self._placeholders: dict[float, QPixmap] = {}
+        self._image_cache: dict[ImageKey, QPixmap | None] = {}
+        self._image_pending: set[ImageKey] = set()
+        # The app icon slots of the menu as it stands, by sender, asked again when icons load
+        self._icon_labels: dict[str, list[QLabel]] = {}
+        self._icons = IconService.instance()
+        self._icons.icons_changed.connect(self._refresh_app_icons)
         self._icon_pool = QThreadPool()
         self._icon_pool.setMaxThreadCount(4)
 
@@ -290,7 +254,7 @@ class NotificationsWidget(BaseWidget):
             for option, value in label_options:
                 part = part.replace(option, str(value))
 
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 if "<span" in part and "</span>" in part:
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(icon)
@@ -356,7 +320,9 @@ class NotificationsWidget(BaseWidget):
         # stylesheet rule on the QScrollArea itself reaches. Left alone it puts an opaque
         # slab between the popup and the list, so a menu styled to be see-through is not
         self._scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        self._scroll_area.viewport().setAutoFillBackground(False)
+        viewport = self._scroll_area.viewport()
+        if viewport is not None:
+            viewport.setAutoFillBackground(False)
         self._scroll_area.setStyleSheet("""
             QScrollArea { background: transparent; border: none; border-radius:0; }
             QScrollArea > QWidget > QWidget { background: transparent; }
@@ -395,14 +361,14 @@ class NotificationsWidget(BaseWidget):
         if dnd_status != "unknown":
             self._dnd_button = QLabel()
             self._dnd_button.setCursor(Qt.CursorShape.PointingHandCursor)
-            self._dnd_button.mousePressEvent = lambda _event: self._toggle_dnd()
+            self._dnd_button.mousePressEvent = lambda ev: self._toggle_dnd()
             self._update_dnd_button(dnd_status)
             header_layout.addWidget(self._dnd_button)
 
         clear_all_label = QLabel("Clear all")
         clear_all_label.setProperty("class", "label clear-all")
         clear_all_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        clear_all_label.mousePressEvent = lambda _event: self._clear_notifications()
+        clear_all_label.mousePressEvent = lambda ev: self._clear_notifications()
         header_layout.addWidget(clear_all_label)
 
         return header
@@ -417,14 +383,15 @@ class NotificationsWidget(BaseWidget):
         open_center_label = QLabel("Open Notification Center")
         open_center_label.setProperty("class", "label")
         open_center_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        open_center_label.mousePressEvent = lambda _event: self._open_notification_center()
+        open_center_label.mousePressEvent = lambda ev: self._open_notification_center()
         footer_layout.addWidget(open_center_label)
         footer_layout.addStretch()
 
         return footer
 
     def _open_notification_center(self):
-        self._menu.hide_animated()
+        if is_valid_qobject(self._menu):
+            self._menu.hide_animated()
         self._toggle_notification()
 
     def _toggle_dnd(self):
@@ -447,16 +414,21 @@ class NotificationsWidget(BaseWidget):
         """Rebuild the scroll area contents from the cached notification list."""
         # The list is thrown away and built again from scratch, so none of the intermediate
         # states are worth painting
-        self._menu.setUpdatesEnabled(False)
+        menu = self._menu
+        if not is_valid_qobject(menu):
+            return
+        menu.setUpdatesEnabled(False)
         try:
-            self._rebuild_contents()
+            self._rebuild_contents(menu)
         finally:
-            self._menu.setUpdatesEnabled(True)
+            menu.setUpdatesEnabled(True)
 
-    def _rebuild_contents(self):
+    def _rebuild_contents(self, menu: PopupWidget):
+        if self._scroll_area is None or self._header_label is None:
+            return
         notifications = self._notifications[: self.config.menu.max_notifications]
-        # The slots of the menu being replaced go with it, so a loader that finishes late
-        # has nothing left to fill in
+        # The slots of the menu being replaced go with it, so an icon that loads late has
+        # nothing left to fill in
         self._icon_labels.clear()
 
         content = QWidget()
@@ -487,8 +459,8 @@ class NotificationsWidget(BaseWidget):
         content.ensurePolished()
         self._scroll_area.setFixedHeight(min(content.sizeHint().height(), self.config.menu.max_height))
 
-        self._menu.adjustSize()
-        self._menu.setPosition(
+        menu.adjustSize()
+        menu.setPosition(
             alignment=self.config.menu.alignment,
             direction=self.config.menu.direction,
             offset_left=self.config.menu.offset_left,
@@ -561,14 +533,15 @@ class NotificationsWidget(BaseWidget):
             action.setProperty("class", "empty-action")
             action.setAlignment(Qt.AlignmentFlag.AlignCenter)
             action.setCursor(Qt.CursorShape.PointingHandCursor)
-            action.mousePressEvent = lambda _event: self._open_privacy_settings()
+            action.mousePressEvent = lambda ev: self._open_privacy_settings()
             center_layout.addWidget(action, alignment=Qt.AlignmentFlag.AlignCenter)
 
         center_layout.addStretch()
         return center_layout
 
     def _open_privacy_settings(self):
-        self._menu.hide_animated()
+        if is_valid_qobject(self._menu):
+            self._menu.hide_animated()
         QDesktopServices.openUrl(QUrl(NOTIFICATION_PRIVACY_URI))
 
     def _build_section(self, notifications: list[NotificationItem], show_app_name: bool) -> QFrame:
@@ -679,10 +652,10 @@ class NotificationsWidget(BaseWidget):
         self.event_service.emit_event("WindowsNotificationRemove", notification_id)
 
     def _create_dismiss_event(self, notification_id: int):
-        def mouse_press_event(a0: QMouseEvent | None) -> None:
-            if a0 is not None:
+        def mouse_press_event(ev: QMouseEvent | None) -> None:
+            if ev is not None:
                 # Keep the click from bubbling up to the item and activating the app
-                a0.accept()
+                ev.accept()
             self._remove_notification(notification_id)
 
         return mouse_press_event
@@ -690,7 +663,7 @@ class NotificationsWidget(BaseWidget):
     def _create_activate_event(self, notification: NotificationItem):
         """Do with a click what the Notification Center does with one."""
 
-        def mouse_press_event(_a0: QMouseEvent | None) -> None:
+        def mouse_press_event(a0: QMouseEvent | None) -> None:
             if is_valid_qobject(self._menu):
                 self._menu.hide_animated()
             self._activate_notification(notification)
@@ -734,9 +707,9 @@ class NotificationsWidget(BaseWidget):
         A toast can override the app icon with one of its own, a contact photo for example,
         and that one is a local file which is read straight away. Anything else, including
         an override that will not load, falls back to the icon of the app that sent it.
-        That one has to be extracted and may not be ready yet, so its slot holds the space
-        with a transparent stand-in and the picture drops into it when the loader is done,
-        rather than pushing the text along.
+        That one comes from the icon service and may not be ready yet, so its slot holds the
+        space with the transparent stand-in the service hands out and the picture drops into
+        it when the icon has loaded, rather than pushing the text along.
 
         A website is the exception. The app its notifications come through is the browser,
         which is not what sent them, and the shell has no icon for the name the browser
@@ -764,20 +737,12 @@ class NotificationsWidget(BaseWidget):
         if website:
             return None
 
-        dpr = self._device_pixel_ratio()
         aumid = notification.aumid
-        if not aumid:
+        pixmap = self._app_icon(aumid)
+        if pixmap is None:
             return None
-        cache_key = (aumid, dpr)
-        known = cache_key in self._icon_cache
-        pixmap = self._icon_cache.get(cache_key)
-        if known and pixmap is None:
-            return None
-
-        icon_label = self._icon_label(pixmap if known else self._placeholder_pixmap(dpr), "icon")
-        if not known:
-            self._icon_labels.setdefault(cache_key, []).append(icon_label)
-            self._request_app_icon(aumid, dpr)
+        icon_label = self._icon_label(pixmap, "icon")
+        self._icon_labels.setdefault(aumid, []).append(icon_label)
         return icon_label
 
     @staticmethod
@@ -803,36 +768,24 @@ class NotificationsWidget(BaseWidget):
         The list is normally known well before it is looked at, and extracting an icon is
         slow enough that doing it on the click is what makes opening the menu feel slow.
         """
-        dpr = self._device_pixel_ratio()
         # A website never falls back to the icon of the browser it came through
         aumids = {n.aumid for n in notifications if n.aumid and not self._is_from_website(n)}
-        for aumid in aumids:
-            self._request_app_icon(aumid, dpr)
+        self._icons.preload(
+            (AppIcon(aumid) for aumid in aumids), self.config.menu.app_icon_size, self._device_pixel_ratio()
+        )
 
-    def _request_app_icon(self, aumid: str, dpr: float):
-        cache_key = (aumid, dpr)
-        if cache_key in self._icon_cache or cache_key in self._icon_pending:
-            return
-        self._icon_pending.add(cache_key)
-        loader = AppIconLoader(aumid, self._icon_pixels(dpr), dpr)
-        loader.signals.loaded.connect(self._on_app_icon_loaded)
-        self._icon_pool.start(loader)
+    def _app_icon(self, aumid: str) -> QPixmap | None:
+        return self._icons.get_icon(AppIcon(aumid), self.config.menu.app_icon_size, self._device_pixel_ratio())
 
-    def _on_app_icon_loaded(self, aumid: str, dpr: float, image: object):
-        cache_key = (aumid, dpr)
-        self._icon_pending.discard(cache_key)
-        pixmap = self._to_pixmap(image, dpr) if image is not None else None
-        self._icon_cache[cache_key] = pixmap
-
-        for icon_label in self._icon_labels.pop(cache_key, []):
-            if not is_valid_qobject(icon_label):
-                continue
+    def _refresh_app_icons(self):
+        """Put the icons that have loaded since the menu was built into its slots."""
+        for aumid, icon_labels in self._icon_labels.items():
+            pixmap = self._app_icon(aumid)
             if pixmap is None:
-                # There is nothing to draw for this sender, so the slot goes away and the
-                # item reads the way every later rebuild will draw it, without one
-                icon_label.hide()
-            else:
-                icon_label.setPixmap(pixmap)
+                continue
+            for icon_label in icon_labels:
+                if is_valid_qobject(icon_label):
+                    icon_label.setPixmap(pixmap)
 
     @staticmethod
     def _to_pixmap(image: Image.Image, dpr: float) -> QPixmap | None:
@@ -844,17 +797,6 @@ class NotificationsWidget(BaseWidget):
         except Exception:
             logging.exception("Failed to turn an icon or a toast image into a pixmap")
             return None
-
-    def _placeholder_pixmap(self, dpr: float) -> QPixmap:
-        """A transparent pixmap the size of an app icon, holding the space until one lands."""
-        pixmap = self._placeholders.get(dpr)
-        if pixmap is None:
-            size = self._icon_pixels(dpr)
-            pixmap = QPixmap(size, size)
-            pixmap.fill(Qt.GlobalColor.transparent)
-            pixmap.setDevicePixelRatio(dpr)
-            self._placeholders[dpr] = pixmap
-        return pixmap
 
     def _icon_pixels(self, dpr: float, size: int | None = None) -> int:
         """The edge of an icon in device pixels, an app icon's own size unless told otherwise.
@@ -889,13 +831,13 @@ class NotificationsWidget(BaseWidget):
         """A hero or inline image, scaled to fit the menu."""
         return self._cached_image(*self._notification_image_job(path))
 
-    def _app_logo_job(self, path: str, circle: bool, size: int | None = None):
+    def _app_logo_job(self, path: str, circle: bool, size: int | None = None) -> ImageJob:
         """The cache key of an app logo and what decodes it, for the menu and the loader alike."""
         dpr = self._device_pixel_ratio()
         pixels = self._icon_pixels(dpr, size)
         return (path, pixels, pixels, circle, dpr), partial(self._decode_app_logo, path, pixels, circle)
 
-    def _notification_image_job(self, path: str):
+    def _notification_image_job(self, path: str) -> ImageJob:
         """The cache key of a hero or inline image and what decodes it."""
         dpr = self._device_pixel_ratio()
         width = max(1, self.config.menu.width - IMAGE_MARGIN)
@@ -903,7 +845,7 @@ class NotificationsWidget(BaseWidget):
         box = (max(1, int(width * dpr)), max(1, int(height * dpr)))
         return (path, width, height, False, dpr), partial(self._decode_notification_image, path, box)
 
-    def _cached_image(self, cache_key: tuple[str, int, int, bool, float], decode: ImageDecoder) -> QPixmap | None:
+    def _cached_image(self, cache_key: ImageKey, decode: ImageDecoder) -> QPixmap | None:
         """An image from the cache, decoded on the spot if the loader has not got to it yet.
 
         The spot is the GUI thread, which is only ever the case for a picture that arrived
@@ -921,7 +863,7 @@ class NotificationsWidget(BaseWidget):
         """
         menu = self.config.menu
         for notification in notifications[: menu.max_notifications]:
-            jobs = []
+            jobs: list[ImageJob] = []
             if menu.show_images:
                 paths = (notification.hero, *notification.inline_images)
                 jobs.extend(self._notification_image_job(path) for path in paths if path)
@@ -940,7 +882,7 @@ class NotificationsWidget(BaseWidget):
             for cache_key, decode in jobs:
                 self._request_image(cache_key, decode)
 
-    def _request_image(self, cache_key: tuple[str, int, int, bool, float], decode: ImageDecoder):
+    def _request_image(self, cache_key: ImageKey, decode: ImageDecoder):
         if cache_key in self._image_cache or cache_key in self._image_pending:
             return
         self._image_pending.add(cache_key)
@@ -948,13 +890,13 @@ class NotificationsWidget(BaseWidget):
         loader.signals.loaded.connect(self._on_image_loaded)
         self._icon_pool.start(loader)
 
-    def _on_image_loaded(self, cache_key: tuple[str, int, int, bool, float], image: object):
+    def _on_image_loaded(self, cache_key: ImageKey, image: Image.Image | None):
         self._image_pending.discard(cache_key)
         # The menu may have needed it first and decoded it itself
         if cache_key not in self._image_cache:
             self._store_image(cache_key, image)
 
-    def _store_image(self, cache_key: tuple[str, int, int, bool, float], image: Image.Image | None):
+    def _store_image(self, cache_key: ImageKey, image: Image.Image | None):
         pixmap = self._to_pixmap(image, cache_key[-1]) if image is not None else None
         self._cache_image(cache_key, pixmap)
 
@@ -989,7 +931,7 @@ class NotificationsWidget(BaseWidget):
             logging.debug("Failed to load a notification image", exc_info=True)
             return None
 
-    def _cache_image(self, cache_key: tuple[str, int, int, bool, float], pixmap: QPixmap | None):
+    def _cache_image(self, cache_key: ImageKey, pixmap: QPixmap | None):
         # Dropping the lot is enough: the menu rebuilds from the entries it just filled in
         if len(self._image_cache) >= IMAGE_CACHE_SIZE:
             self._image_cache.clear()

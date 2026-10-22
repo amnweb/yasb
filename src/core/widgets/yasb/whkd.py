@@ -22,9 +22,13 @@ from core.validation.widgets.yasb.whkd import WhkdConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
 
+type Keybind = tuple[str | None, str]
+
 
 class KeybindsDialog(QDialog):
-    def __init__(self, content, file_path, config: WhkdConfig, parent=None):
+    def __init__(
+        self, content: list[Keybind], file_path: str, config: WhkdConfig, parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
 
         self.file_path = file_path
@@ -117,47 +121,53 @@ class KeybindsDialog(QDialog):
 
         self.setMinimumWidth(self.calculate_content_width())
 
-        screen = QApplication.primaryScreen().geometry()
-        x = (screen.width() - self.width()) // 2
-        y = (screen.height() - self.height()) // 2
-        self.move(x, y)
+        screen = QApplication.primaryScreen()
+        if screen is not None:
+            geometry = screen.geometry()
+            x = (geometry.width() - self.width()) // 2
+            y = (geometry.height() - self.height()) // 2
+            self.move(x, y)
 
-    def calculate_content_width(self):
+    def calculate_content_width(self) -> int:
         min_width = 400
         # Inspect all keybind rows to find the widest one
         for i in range(self.container_layout.count()):
             item = self.container_layout.itemAt(i)
-            if item and item.widget():
+            widget = item.widget() if item else None
+            if widget:
                 # Get the sizeHint width of each row
-                row_width = item.widget().sizeHint().width()
+                row_width = widget.sizeHint().width()
                 min_width = max(min_width, row_width + 50)
 
                 # If this is a keybind row with buttons and command, check their widths too
-                if isinstance(item.widget(), QWidget) and hasattr(item.widget(), "layout"):
-                    row_layout = item.widget().layout()
-                    if row_layout:
-                        width_sum = 0
-                        for j in range(row_layout.count()):
-                            child_item = row_layout.itemAt(j)
-                            if child_item and child_item.widget():
-                                width_sum += child_item.widget().sizeHint().width()
-                        min_width = max(min_width, width_sum + 70)
+                row_layout = widget.layout()
+                if row_layout:
+                    width_sum = 0
+                    for j in range(row_layout.count()):
+                        child_item = row_layout.itemAt(j)
+                        child = child_item.widget() if child_item else None
+                        if child:
+                            width_sum += child.sizeHint().width()
+                    min_width = max(min_width, width_sum + 70)
 
         # Add margins to account for the dialog's layout
         margins = self.main_layout.contentsMargins()
         min_width += margins.left() + margins.right()
 
         # Cap the width at 80% of screen width
-        screen_width = QApplication.primaryScreen().geometry().width()
-        return min(min_width, int(screen_width * 0.8))
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            return min_width
+        return min(min_width, int(screen.geometry().width() * 0.8))
 
-    def update_display(self):
+    def update_display(self) -> None:
         no_plus_modifiers = {key.lower() for key in self.special_keys.keys()}
         # Clear any existing content
         for i in reversed(range(self.container_layout.count())):
-            self.widget = self.container_layout.itemAt(i).widget()
-            if self.widget:
-                self.widget.deleteLater()
+            item = self.container_layout.itemAt(i)
+            widget = item.widget() if item else None
+            if widget:
+                widget.deleteLater()
 
         filter_text = self.filter_input.text().lower()
         for keybind, command in self.original_content:
@@ -194,7 +204,7 @@ class KeybindsDialog(QDialog):
 
                 buttons_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-                def create_key_button(key_text):
+                def create_key_button(key_text: str) -> QPushButton:
                     btn = QPushButton(self._friendly_key_text(key_text.lower()))
                     if key_text.lower() in self.special_keys:
                         btn.setProperty("class", "keybind-button special")
@@ -294,9 +304,9 @@ class WhkdWidget(BaseWidget):
         dialog = KeybindsDialog(content, file_path, self.config, self)
         dialog.exec()
 
-    def _process_file(self, lines):
+    def _process_file(self, lines: list[str]) -> list[Keybind]:
         # Filter lines: keep headers and non-comment lines
-        filtered_lines = []
+        filtered_lines: list[str] = []
         for line in lines:
             stripped = line.strip()
             if stripped.startswith("##"):
@@ -308,7 +318,7 @@ class WhkdWidget(BaseWidget):
                     filtered_lines.append(line_no_comment)
 
         # Format the filtered lines into content tuples
-        formatted_lines = []
+        formatted_lines: list[Keybind] = []
         for line in filtered_lines:
             # Check if line is a header
             if line.startswith("##"):

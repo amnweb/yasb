@@ -4,11 +4,11 @@ A start button for your status bar that opens a customizable launcher menu. You 
 
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `label`         | string  | `"\udb81\udf17"`                                | Icon or text for button. |
-| `menu_list`     | list    | `[]` | List of menu items. Supports `path`, `uri`, or `command`. |
+| `label`         | string  | `"\ue71a"`                                | Icon or text for button. |
+| `menu_list`     | list    | `None` | List of menu items. Supports `path`, `uri`, or `command`. |
 | `system_menu`   | boolean | `true`                                                                 | Show system menu. |
 | `power_menu`    | boolean | `true`                                                                 | Show power menu. |
-| `blur`          | boolean | `true`                                                                 | Blur background. |
+| `blur`          | boolean | `false`                                                                | Blur background. |
 | `round_corners` | boolean | `true`                                                                 | Round corners. |
 | `round_corners_type`        | string | `'normal'`                                                  | Round corners type. Possible values: `'normal'`, `'small'`. |
 | `border_color`  | string  | `'System'`                                                          |  Border color. |
@@ -16,8 +16,43 @@ A start button for your status bar that opens a customizable launcher menu. You 
 | `direction`     | string  | `"down"`                                                           | Direction of the menu. Possible values: `"up"`, `"down"`. |
 | `offset_top`      | int     | `6`                                                                     | Distance from the top or bottom edge of the bar. |
 | `offset_left`     | int     | `0`                                                                     | Distance from the left or right edge of the bar. |
-| `menu_labels`   | dict | `{'shutdown': 'Shutdown', 'restart': 'Restart', 'logout': 'Logout', 'lock': 'Lock', 'sleep': 'Sleep', 'system': 'System Settings', 'about': 'About This PC', 'task_manager': 'Task Manager'}` | Custom label names for system and power items. | 
-| `callbacks`     | dict | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Mouse event callbacks. |
+| `menu_labels`   | dict | [See below](#menu-labels-options) | Custom label names for system and power items. | 
+| `keybindings`   | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks`     | dict | [See below](#callbacks) | Mouse event callbacks. |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_menu"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_menu` - Open or close the popup menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Menu Labels Options
+
+The `menu_labels` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+menu_labels:
+  shutdown: "Shutdown"
+  restart: "Restart"
+  hibernate: "Hibernate"
+  logout: "Logout"
+  lock: "Lock"
+  sleep: "Sleep"
+  system: "System Settings"
+  about: "About This PC"
+  task_manager: "Task Manager"
+```
 
 ## Example Configuration
 
@@ -78,8 +113,8 @@ home:
 - **offset_top**: Distance from the top or bottom edge of the bar.
 - **offset_left**: Distance from the left or right edge of the bar.
 - **menu_labels**: Custom label names for system and power items. Use this option to change the default labels for system and power menu items.
-- **callbacks**: A dictionary of mouse event callbacks. The keys are `on_left`, `on_middle`, and `on_right`. The values are the callback names.
-  - Available callbacks: `"toggle_menu"`, `"do_nothing"`, or generic program launches using `"exec <command>"`.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 
 ## Example Style
 ```css

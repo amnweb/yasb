@@ -29,7 +29,7 @@ def find_vscode_product_json() -> str | None:
         return None
 
     try:
-        candidates = []
+        candidates: list[tuple[float, str]] = []
         for name in os.listdir(base_path):
             full_path = os.path.join(base_path, name)
             product_path = os.path.join(full_path, "resources", "app", "product.json")

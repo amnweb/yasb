@@ -6,8 +6,10 @@ and the CLI's QCoreApplication provide.
 """
 
 import logging
+from collections.abc import Callable
 from functools import partial
 from pathlib import Path
+from typing import Any
 
 from PyQt6.QtCore import QLockFile, QObject, QThread, pyqtSignal
 from PyQt6.QtNetwork import QNetworkReply
@@ -28,6 +30,8 @@ from core.cloud.workers import (
 from settings import BUILD_VERSION
 
 logger = logging.getLogger(__name__)
+
+_NOT_READY = "Not ready yet. Wait for your account to finish loading and try again."
 
 _winding_down: set[QThread] = set()
 """Live worker threads. Destroying a running QThread aborts the process."""
@@ -52,7 +56,7 @@ class Operation(QObject):
         self._session = session
         self._lock: QLockFile | None = None
         self._thread: QThread | None = None
-        self._worker = None
+        self._worker: PrepareWorker | DecryptWorker | None = None
         self._call: Call | None = None
         self._reply: QNetworkReply | None = None
         self._temp: list[Path] = []
@@ -115,7 +119,7 @@ class Operation(QObject):
         self._temp.append(path)
         return path
 
-    def _start_worker(self, worker) -> None:
+    def _start_worker(self, worker: PrepareWorker | DecryptWorker) -> None:
         thread = QThread()
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
@@ -137,13 +141,16 @@ class Operation(QObject):
         thread.quit()
         thread.wait(SHUTDOWN_WAIT_MS)
 
-    def _send(self, call: Call, then) -> None:
+    def _send(self, call: Call, then: Callable[[dict[str, Any]], object]) -> None:
         """Hold on to an in-flight call so cancelling can abort it."""
         self._call = call
         call.succeeded.connect(then)
-        call.failed.connect(lambda error: self._fail(str(error)))
+        call.failed.connect(self._call_failed)
 
-    def _download(self, snapshot_id: str, target: Path, then) -> None:
+    def _call_failed(self, error: ApiError) -> None:
+        self._fail(str(error))
+
+    def _download(self, snapshot_id: str, target: Path, then: Callable[[], object]) -> None:
         """Fetch a snapshot to `target` and then call `then`. Cancelling aborts it."""
         reply = self._api.download(snapshot_id)
         self._reply = reply
@@ -164,24 +171,36 @@ class Operation(QObject):
 class BackupOperation(Operation):
     """Archive the configuration, reserve a snapshot, upload it."""
 
-    def __init__(self, api, session, *, note: str, max_total_bytes: int, parent=None) -> None:
+    def __init__(
+        self,
+        api: ApiClient,
+        session: Session,
+        *,
+        note: str,
+        max_total_bytes: int,
+        parent: QObject | None = None,
+    ) -> None:
         super().__init__(api, session, parent)
         self._note = note
         self._max_total_bytes = max_total_bytes
 
     def start(self) -> None:
+        master_key = self._session.master_key
+        if master_key is None:
+            self._fail(_NOT_READY)
+            return
         if not self._claim():
             self._fail(BUSY_MESSAGE)
             return
         self.status.emit("Backing up...")
         # Read here rather than at the call sites, so the window, the CLI and the automatic
         # backup all archive with the same rules without each having to remember to load them.
-        worker = PrepareWorker(self._session.master_key, self._note, self._max_total_bytes, load_settings().exclude)
+        worker = PrepareWorker(master_key, self._note, self._max_total_bytes, load_settings().exclude)
         worker.prepared.connect(self._prepared)
         worker.failed.connect(self._fail)
         self._start_worker(worker)
 
-    def _prepared(self, prepared: dict) -> None:
+    def _prepared(self, prepared: dict[str, Any]) -> None:
         if self._settled:
             return
         self._keep(prepared["blob"])
@@ -196,10 +215,10 @@ class BackupOperation(Operation):
                 device_name=prepared["device_name"],
                 app_version=BUILD_VERSION,
             ),
-            lambda ticket: self._upload(prepared, ticket),
+            partial(self._upload, prepared),
         )
 
-    def _upload(self, prepared: dict, ticket: dict) -> None:
+    def _upload(self, prepared: dict[str, Any], ticket: dict[str, Any]) -> None:
         if self._settled:
             return
         # Read once and checked, not indexed twice inside slots: a KeyError escaping a Qt slot
@@ -215,13 +234,17 @@ class BackupOperation(Operation):
         except OSError as exc:
             self._fail(f"The snapshot could not be read for upload: {exc.strerror or exc}")
             return
-        self._send(call, lambda _payload: self._succeed(backup_id))
+
+        def uploaded(_payload: dict[str, Any]) -> None:
+            self._succeed(backup_id)
+
+        self._send(call, uploaded)
 
 
 class RestoreOperation(Operation):
     """Download a snapshot and put it back over the configuration directory."""
 
-    def __init__(self, api, session, snapshot_id: str, parent=None) -> None:
+    def __init__(self, api: ApiClient, session: Session, snapshot_id: str, parent: QObject | None = None) -> None:
         super().__init__(api, session, parent)
         self._snapshot_id = snapshot_id
 
@@ -234,8 +257,12 @@ class RestoreOperation(Operation):
         self._download(self._snapshot_id, blob, lambda: self._apply(blob))
 
     def _apply(self, blob: Path) -> None:
+        master_key = self._session.master_key
+        if master_key is None:
+            self._fail(_NOT_READY)
+            return
         self.status.emit("Restoring...")
-        worker = DecryptWorker(blob, self._session.master_key, restore_config)
+        worker = DecryptWorker(blob, master_key, restore_config)
         worker.done.connect(self._succeed)
         worker.failed.connect(self._fail)
         self._start_worker(worker)
@@ -245,7 +272,9 @@ class SaveCopyOperation(Operation):
     """The same download, unpacked where the user asked. The configuration is untouched, so
     this takes no lock and the bar keeps running."""
 
-    def __init__(self, api, session, snapshot_id: str, target: Path, parent=None) -> None:
+    def __init__(
+        self, api: ApiClient, session: Session, snapshot_id: str, target: Path, parent: QObject | None = None
+    ) -> None:
         super().__init__(api, session, parent)
         self._snapshot_id = snapshot_id
         self._target = target
@@ -256,8 +285,12 @@ class SaveCopyOperation(Operation):
         self._download(self._snapshot_id, blob, lambda: self._apply(blob))
 
     def _apply(self, blob: Path) -> None:
+        master_key = self._session.master_key
+        if master_key is None:
+            self._fail(_NOT_READY)
+            return
         self.status.emit("Saving...")
-        worker = DecryptWorker(blob, self._session.master_key, unpack_into(self._target))
+        worker = DecryptWorker(blob, master_key, unpack_into(self._target))
         worker.done.connect(self._succeed)
         worker.failed.connect(self._fail)
         self._start_worker(worker)
@@ -297,7 +330,7 @@ class Operations(QObject):
 
     def backup(self, note: str) -> None:
         if self._session.master_key is None or self._account is None:
-            self.failed.emit("Not ready yet. Wait for your account to finish loading and try again.")
+            self.failed.emit(_NOT_READY)
             return
         # No fallback to the device name: the row already falls back to it for display.
         note = note.strip()[:NOTE_MAX_LENGTH]
@@ -318,14 +351,14 @@ class Operations(QObject):
     def save_copy(self, snapshot_id: str, target: Path) -> None:
         self._begin(SaveCopyOperation(self._api, self._session, snapshot_id, target, parent=self), self.saved.emit)
 
-    def _begin(self, operation: Operation, on_result) -> None:
+    def _begin(self, operation: Operation, on_result: Callable[[Any], object]) -> None:
         if self._active is not None:
             self.failed.emit(BUSY_MESSAGE)
             return
         self._active = operation
         operation.status.connect(self.status)
         operation.failed.connect(self.failed)
-        operation.finished.connect(lambda result: self._ended(operation, result, on_result))
+        operation.finished.connect(partial(self._ended, operation, on_result=on_result))
         self.busy.emit(True)
         try:
             operation.start()
@@ -333,7 +366,7 @@ class Operations(QObject):
             operation.cancel()
             self.failed.emit(str(exc))
 
-    def _ended(self, operation: Operation, result: object, on_result) -> None:
+    def _ended(self, operation: Operation, result: object, on_result: Callable[[Any], object]) -> None:
         if self._active is operation:
             self._active = None
             self.busy.emit(False)
@@ -343,24 +376,43 @@ class Operations(QObject):
 
     def share(self, snapshot_id: str) -> None:
         call = self._api.share_backup(snapshot_id)
-        call.succeeded.connect(lambda payload: self.shared.emit(snapshot_id, str(payload.get("url", ""))))
-        call.failed.connect(lambda error: self.failed.emit(str(error)))
+
+        def shared(payload: dict[str, Any]) -> None:
+            self.shared.emit(snapshot_id, str(payload.get("url", "")))
+
+        call.succeeded.connect(shared)
+        call.failed.connect(self._call_failed)
 
     def unshare(self, snapshot_id: str) -> None:
         call = self._api.unshare_backup(snapshot_id)
-        call.succeeded.connect(lambda _payload: self.unshared.emit(snapshot_id))
-        call.failed.connect(lambda error: self.failed.emit(str(error)))
+
+        def unshared(_payload: dict[str, Any]) -> None:
+            self.unshared.emit(snapshot_id)
+
+        call.succeeded.connect(unshared)
+        call.failed.connect(self._call_failed)
 
     def save_note(self, snapshot: Snapshot, note: str) -> None:
         note = (note.strip() or snapshot.device_name)[:NOTE_MAX_LENGTH]
         call = self._api.update_note(snapshot.id, note)
-        call.succeeded.connect(lambda _payload: self.note_saved.emit(snapshot.id, note))
-        call.failed.connect(lambda error: self.failed.emit(str(error)))
+
+        def note_saved(_payload: dict[str, Any]) -> None:
+            self.note_saved.emit(snapshot.id, note)
+
+        call.succeeded.connect(note_saved)
+        call.failed.connect(self._call_failed)
 
     def delete(self, snapshot_id: str) -> None:
         call = self._api.delete_backup(snapshot_id)
-        call.succeeded.connect(lambda _payload: self.delete_finished.emit(snapshot_id, True))
-        call.failed.connect(lambda error: self._delete_failed(snapshot_id, error))
+
+        def deleted(_payload: dict[str, Any]) -> None:
+            self.delete_finished.emit(snapshot_id, True)
+
+        call.succeeded.connect(deleted)
+        call.failed.connect(partial(self._delete_failed, snapshot_id))
+
+    def _call_failed(self, error: ApiError) -> None:
+        self.failed.emit(str(error))
 
     def _delete_failed(self, snapshot_id: str, error: ApiError) -> None:
         """The row comes back before the dialog, or it looks deleted behind it."""

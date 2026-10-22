@@ -1,7 +1,8 @@
 from enum import Enum
+from typing import override
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
+from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPaintEvent, QPen
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
@@ -153,7 +154,9 @@ class InfoBar(QFrame):
         self._msg_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(self._msg_label)
 
-        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+        app = QApplication.instance()
+        if app:
+            app.paletteChanged.connect(self._on_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     def _build_colors(self, t: dict[str, str]) -> None:
         bg_key, icon_bg_key = _SEVERITY_TOKENS[self._severity]
@@ -188,7 +191,8 @@ class InfoBar(QFrame):
     def set_message(self, message: str) -> None:
         self._msg_label.setText(message)
 
-    def paintEvent(self, _event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.rect().adjusted(1, 1, -1, -1).toRectF()

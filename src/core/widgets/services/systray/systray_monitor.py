@@ -5,12 +5,30 @@ import logging
 from ctypes import (
     POINTER,
     cast,
-    windll,
 )
 
 from PyQt6.QtCore import QObject, pyqtSignal
-from win32con import (
+
+from core.utils.win32.bindings.user32 import (
+    DefWindowProc,
+    DestroyWindow,
+    GetCursorPos,
+    IsWindow,
+    PostMessage,
+    PostQuitMessage,
+    RegisterWindowMessage,
+    SendMessage,
+    SetProp,
+    SetTimer,
+    SetWindowPos,
+)
+from core.utils.win32.constants import (
     HWND_TOPMOST,
+    NIF_GUID,
+    NIM_ADD,
+    NIM_DELETE,
+    NIM_MODIFY,
+    NIM_SETVERSION,
     SWP_NOACTIVATE,
     SWP_NOMOVE,
     SWP_NOSIZE,
@@ -21,26 +39,6 @@ from win32con import (
     WM_DESTROY,
     WM_TIMER,
     WM_USER,
-)
-
-import core.widgets.services.systray.utils as utils
-from core.utils.win32.bindings import (
-    DefWindowProc,
-    DestroyWindow,
-    IsWindow,
-    PostMessage,
-    RegisterWindowMessage,
-    SendMessage,
-    SetTimer,
-    SetWindowPos,
-)
-from core.utils.win32.bindings.user32 import SetProp
-from core.utils.win32.constants import (
-    NIF_GUID,
-    NIM_ADD,
-    NIM_DELETE,
-    NIM_MODIFY,
-    NIM_SETVERSION,
 )
 from core.utils.win32.structs import (
     COPYDATASTRUCT,
@@ -57,10 +55,6 @@ from core.widgets.services.systray.utils import (
 )
 
 logger = logging.getLogger("systray_widget")
-
-# Load necessary Windows functions
-user32 = windll.user32
-kernel32 = windll.kernel32
 
 WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
 
@@ -127,7 +121,7 @@ class SystrayMonitor(QObject):
             return 0
         elif uMsg == WM_DESTROY:
             logger.debug("WM_DESTROY received for window %s", hwnd)
-            user32.PostQuitMessage(0)
+            PostQuitMessage(0)
             return 0
         if self._is_destroyed:
             return DefWindowProc(hwnd, uMsg, wParam, lParam)
@@ -177,7 +171,7 @@ class SystrayMonitor(QObject):
             return self.forward_message(hwnd, uMsg, wParam, lParam)
         elif copy_data.dwData == 3 and copy_data.lpData:
             icon_identifier = cast(copy_data.lpData, POINTER(WINNOTIFYICONIDENTIFIER)).contents
-            cursor_pos = utils.cursor_position()
+            cursor_pos = GetCursorPos()
             left = cursor_pos[0]
             top = cursor_pos[1] + 1
             right = cursor_pos[0] + 1

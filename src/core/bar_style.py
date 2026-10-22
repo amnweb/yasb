@@ -1,8 +1,14 @@
 import math
+from collections.abc import Callable
+from typing import Any, override
 
-from PyQt6.QtCore import QEvent, QRect, QRectF, Qt, pyqtProperty
-from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPalette, QPen, QTransform
-from PyQt6.QtWidgets import QFrame, QWidget
+import PyQt6.QtCore as QtCore
+from PyQt6.QtCore import QEvent, QRect, QRectF, Qt, QTimer
+from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPaintEvent, QPalette, QPen, QResizeEvent, QTransform
+from PyQt6.QtWidgets import QFrame, QLayout, QWidget
+
+# pyqtProperty exists at runtime but is missing from the PyQt6 type stubs
+pyqtProperty: Callable[..., Any] = getattr(QtCore, "pyqtProperty")
 
 RESTYLE_EVENTS = frozenset({QEvent.Type.Polish, QEvent.Type.StyleChange})
 
@@ -10,7 +16,7 @@ RESTYLE_EVENTS = frozenset({QEvent.Type.Polish, QEvent.Type.StyleChange})
 class BarFrame(QFrame):
     """Bar surface for style "bar"."""
 
-    def __init__(self, parent: QFrame | None = None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         # Windows passes clicks through fully transparent pixels, so we need to prevent this
         # This layer is alpha 1 invisible, but takes clicks.
@@ -29,8 +35,9 @@ class BarFrame(QFrame):
     def _resize_click_floor(self) -> None:
         self._click_floor.setGeometry(self.click_rect())
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         self._resize_click_floor()
 
 
@@ -54,78 +61,91 @@ class AdaptiveBarFrame(BarFrame):
         self._islands: tuple[tuple[int, int], ...] = ()
         self._shape = QPainterPath()
         self._gaps = QPainterPath()
+        self._border_path = QPainterPath()
 
-    @pyqtProperty(int)
-    def railheight(self) -> int:
+    def _get_railheight(self) -> int:
         return self._rail_height
 
-    @railheight.setter
-    def railheight(self, value: int) -> None:
+    def _set_railheight(self, value: int) -> None:
         self._rail_height = max(0, int(value))
         self._update_shape(force=True)
 
-    @pyqtProperty(int)
-    def islandradius(self) -> int:
+    railheight: int = pyqtProperty(int, _get_railheight, _set_railheight)
+
+    def _get_islandradius(self) -> int:
         return self._island_radius
 
-    @islandradius.setter
-    def islandradius(self, value: int) -> None:
+    def _set_islandradius(self, value: int) -> None:
         self._island_radius = max(0, int(value))
         self._update_shape(force=True)
 
-    @pyqtProperty(int)
-    def grouppadding(self) -> int:
+    islandradius: int = pyqtProperty(int, _get_islandradius, _set_islandradius)
+
+    def _get_grouppadding(self) -> int:
         return self._group_padding
 
-    @grouppadding.setter
-    def grouppadding(self, value: int) -> None:
+    def _set_grouppadding(self, value: int) -> None:
         self._group_padding = max(0, int(value))
         self._update_shape(force=True)
 
-    @pyqtProperty(bool)
-    def islands(self) -> bool:
+    grouppadding: int = pyqtProperty(int, _get_grouppadding, _set_grouppadding)
+
+    def _get_islands(self) -> bool:
         return self._islands_enabled
 
-    @islands.setter
-    def islands(self, value: bool) -> None:
+    def _set_islands(self, value: bool) -> None:
         if value == self._islands_enabled:
             return
         self._islands_enabled = value
         self._update_shape(force=True)
 
-    @pyqtProperty(int)
-    def edgeradius(self) -> int:
+    islands: bool = pyqtProperty(bool, _get_islands, _set_islands)
+
+    def _get_edgeradius(self) -> int:
         return self._edge_radius
 
-    @edgeradius.setter
-    def edgeradius(self, value: int) -> None:
+    def _set_edgeradius(self, value: int) -> None:
         value = max(0, int(value))
         if value == self._edge_radius:
             return
         self._edge_radius = value
+        # A translucent window shows its old picture at the new spot until it repaints, and during
+        # a stylesheet reload that is only once every widget is restyled, so move it afterwards
+        window = self.window()
+        if window is not None and window.isVisible():
+            QTimer.singleShot(0, self._apply_edge_radius)
+        else:
+            self._apply_edge_radius()
+
+    edgeradius: int = pyqtProperty(int, _get_edgeradius, _set_edgeradius)
+
+    def _apply_edge_radius(self) -> None:
         self._reserve_edge_space()
         window = self.window()
-        if hasattr(window, "position_bar"):
-            window.position_bar()
+        position_bar = getattr(window, "position_bar", None)
+        if callable(position_bar):
+            position_bar()
         self._update_shape(force=True)
+        if window is not None and window.isVisible():
+            window.repaint()
 
-    @pyqtProperty(int)
-    def borderwidth(self) -> int:
+    def _get_borderwidth(self) -> int:
         return self._border_width
 
-    @borderwidth.setter
-    def borderwidth(self, value: int) -> None:
+    def _set_borderwidth(self, value: int) -> None:
         self._border_width = max(0, int(value))
         self.update()
 
-    @pyqtProperty(QColor)
-    def bordercolor(self) -> QColor:
+    borderwidth: int = pyqtProperty(int, _get_borderwidth, _set_borderwidth)
+
+    def _get_bordercolor(self) -> QColor:
         return self._border_color
 
-    @bordercolor.setter
-    def bordercolor(self, value: QColor) -> None:
+    def _set_bordercolor(self, value: QColor) -> None:
         self._border_color = QColor(value)
         self.update()
+
+    bordercolor: QColor = pyqtProperty(QColor, _get_bordercolor, _set_bordercolor)
 
     @property
     def edge_overhang(self) -> int:
@@ -151,8 +171,9 @@ class AdaptiveBarFrame(BarFrame):
         top = overhang if self._position == "bottom" else 0
         return QRect(0, top, self.width(), self.height() - overhang)
 
-    def setLayout(self, layout) -> None:
-        super().setLayout(layout)
+    @override
+    def setLayout(self, a0: QLayout | None) -> None:
+        super().setLayout(a0)
         self._reserve_edge_space()
 
     def _reserve_edge_space(self) -> None:
@@ -166,10 +187,13 @@ class AdaptiveBarFrame(BarFrame):
         if layout.contentsMargins().top() != above or layout.contentsMargins().bottom() != below:
             layout.setContentsMargins(0, above, 0, below)
 
-    def event(self, event: QEvent) -> bool:
+    @override
+    def event(self, e: QEvent | None) -> bool:
         # super() first, so the layout has run before we measure it
-        handled = super().event(event)
-        kind = event.type()
+        handled = super().event(e)
+        if e is None:
+            return handled
+        kind = e.type()
 
         if kind == QEvent.Type.LayoutRequest:
             self._update_shape()
@@ -178,11 +202,13 @@ class AdaptiveBarFrame(BarFrame):
 
         return handled
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         self._update_shape(force=True)
 
-    def paintEvent(self, event) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         """Cut the gaps out of the background Qt has already painted across the frame."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
@@ -191,12 +217,11 @@ class AdaptiveBarFrame(BarFrame):
         painter.fillRect(QRectF(0.0, 0.0, float(self.width()), self._frame_bottom()), Qt.GlobalColor.transparent)
 
         if self._border_width > 0 and self._border_color.alpha() > 0:
-            # Stroking the gaps leaves the frame's own edges bare clipped to the shape at
-            # twice the width so only the half inside the bar lands
+            # Clipped to the shape at twice the width so only the half inside the bar lands
             painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
             painter.setClipPath(self._shape)
             painter.setPen(QPen(self._border_color, self._border_width * 2))
-            painter.drawPath(self._gaps)
+            painter.drawPath(self._border_path)
 
     def _frame_bottom(self) -> float:
         """The frame's bottom, out to a whole device pixel. On fractional scaling the last
@@ -213,14 +238,14 @@ class AdaptiveBarFrame(BarFrame):
 
         changed = self.rect() if force else self._changed_area(self._islands, islands)
         self._islands = islands
-        self._shape = self._build_shape(islands)
+        self._shape, self._border_path = self._build_shape(islands)
 
         frame = QPainterPath()
         frame.addRect(QRectF(0.0, 0.0, float(self.width()), self._frame_bottom()))
         self._gaps = frame.subtracted(self._shape)
         self.update(changed)
 
-    def _changed_area(self, before: tuple, after: tuple) -> QRect:
+    def _changed_area(self, before: tuple[tuple[int, int], ...], after: tuple[tuple[int, int], ...]) -> QRect:
         """The part of the bar the shape moved in, so a one pixel step does not repaint
         a whole bar and every child in it."""
         if len(before) != len(after):
@@ -253,17 +278,19 @@ class AdaptiveBarFrame(BarFrame):
         skipped: list[int] = []
 
         for index in range(layout.count()):
-            container = layout.itemAt(index).widget()
+            item = layout.itemAt(index)
+            container = item.widget() if item else None
             if container is None:
                 continue
 
             # The container's own layout may not have positioned its widgets yet on the
             # first paint, so force it now instead of reading stale, pre-layout geometry
-            if container.layout() is not None:
-                container.layout().activate()
+            container_layout = container.layout()
+            if container_layout is not None:
+                container_layout.activate()
 
             children = container.findChildren(QWidget, options=Qt.FindChildOption.FindDirectChildrenOnly)
-            run = None
+            run: list[int] | None = None
             for child in sorted(children, key=lambda child: child.x()):
                 if child.isHidden() or child.width() <= 0:
                     continue
@@ -302,7 +329,7 @@ class AdaptiveBarFrame(BarFrame):
 
         return tuple((start, end) for start, end in merged)
 
-    def _build_shape(self, islands: tuple[tuple[int, int], ...]) -> QPainterPath:
+    def _build_shape(self, islands: tuple[tuple[int, int], ...]) -> tuple[QPainterPath, QPainterPath]:
         width = float(self.width())
         # The frame is taller than the bar by edgeradius, that strip holds the edge curves
         bottom = self._frame_bottom()
@@ -314,17 +341,20 @@ class AdaptiveBarFrame(BarFrame):
         full_rect.addRect(0.0, 0.0, width, height)
 
         if width <= 0 or height <= rail:
-            return full_rect
+            inner = 0.0 if self._position == "bottom" else height
+            path = QPainterPath()
+            path.moveTo(width, inner)
+            path.lineTo(0.0, inner)
+            return full_rect, path
 
         # Both curves share the island's side, so together they cannot exceed its height
         radius = min(float(self._island_radius), max(0.0, (height - rail) / 2))
 
         path = QPainterPath()
-        path.moveTo(0.0, 0.0)
-        path.lineTo(width, 0.0)
+        reaches_right = bool(islands) and islands[-1][1] >= width
+        path.moveTo(width, height + overhang if reaches_right else rail)
 
         if not islands:
-            path.lineTo(width, rail)
             path.lineTo(0.0, rail)
 
         last = len(islands) - 1
@@ -335,13 +365,8 @@ class AdaptiveBarFrame(BarFrame):
 
             if x1 >= width:
                 if overhang > 0.0:
-                    path.lineTo(width, height + overhang)
                     path.arcTo(QRectF(width - 2 * overhang, height, 2 * overhang, 2 * overhang), 0.0, 90.0)
-                else:
-                    path.lineTo(width, height)
             else:
-                if index == last:
-                    path.lineTo(width, rail)
                 next_start = float(islands[index + 1][0]) if index < last else width
                 fillet = min(radius, (next_start - x1) / 2)
                 path.lineTo(x1 + fillet, rail)
@@ -351,7 +376,7 @@ class AdaptiveBarFrame(BarFrame):
                 if corner > 0.0:
                     path.arcTo(QRectF(x1 - 2 * corner, height - 2 * corner, 2 * corner, 2 * corner), 0.0, -90.0)
 
-            if x0 <= 0.0:  # closeSubpath draws this side
+            if x0 <= 0.0:
                 if overhang > 0.0:
                     path.lineTo(overhang, height)
                     path.arcTo(QRectF(0.0, height, 2 * overhang, 2 * overhang), 90.0, 90.0)
@@ -369,9 +394,13 @@ class AdaptiveBarFrame(BarFrame):
                 if index == 0:
                     path.lineTo(0.0, rail)
 
-        path.closeSubpath()
+        shape = QPainterPath(path)
+        shape.lineTo(0.0, 0.0)
+        shape.lineTo(width, 0.0)
+        shape.closeSubpath()
 
         if self._position == "bottom":
-            path = QTransform().translate(0.0, height + overhang).scale(1.0, -1.0).map(path)
+            flip = QTransform().translate(0.0, height + overhang).scale(1.0, -1.0)
+            return flip.map(shape), flip.map(path)
 
-        return path
+        return shape, path

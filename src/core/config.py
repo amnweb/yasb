@@ -54,19 +54,19 @@ def get_stylesheet_path() -> str:
     return HOME_STYLES_PATH
 
 
-def parse_env(obj):
+def parse_env(obj: Any) -> Any:
     """
     Recursively expand $env:VARIABLE_NAME or $Env:VARIABLE_NAME patterns in strings,
     dicts, and lists.
     """
     if isinstance(obj, dict):
-        return {k: parse_env(v) for k, v in obj.items()}
+        return {k: parse_env(v) for k, v in cast(dict[Any, Any], obj).items()}
     elif isinstance(obj, list):
-        return [parse_env(item) for item in obj]
+        return [parse_env(item) for item in cast(list[Any], obj)]
     elif isinstance(obj, str):
         pattern = r"\$env:([\w_]+)"
 
-        def repl(match):
+        def repl(match: re.Match[str]) -> str:
             var = match.group(1)
             return os.environ.get(var, "")
 

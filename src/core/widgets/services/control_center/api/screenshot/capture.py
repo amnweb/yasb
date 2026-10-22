@@ -2,9 +2,10 @@
 
 from dataclasses import dataclass
 
-import win32api
 from PyQt6.QtCore import QRect
 from PyQt6.QtGui import QGuiApplication, QPixmap
+
+from core.utils.win32.bindings.user32 import enum_display_monitors
 
 
 @dataclass(frozen=True)
@@ -18,7 +19,7 @@ class ScreenFreeze:
 
 def physical_monitors() -> list[QRect]:
     out: list[QRect] = []
-    for _h, _hdc, rc in win32api.EnumDisplayMonitors(None, None):
+    for _h, rc in enum_display_monitors():
         l, t, r, b = rc
         out.append(QRect(l, t, r - l, b - t))
     return out
@@ -40,7 +41,7 @@ def capture_screens() -> list[ScreenFreeze] | None:
     freezes: list[ScreenFreeze] = []
     for i, s in enumerate(screens_sorted):
         geo = QRect(s.geometry())
-        pm = s.grabWindow(0)
+        pm = s.grabWindow()
         if pm.isNull() or geo.isEmpty():
             return None
         dpr = float(s.devicePixelRatio())

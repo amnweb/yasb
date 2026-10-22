@@ -12,76 +12,44 @@ tuna import_times.log
 import argparse
 import ctypes
 import datetime
-import getpass
-import json
 import os
 import subprocess
 import sys
 import textwrap
 import time
 import winreg
-from ctypes import GetLastError
+from typing import Any
 
-from win32con import (
+from core.cli.pipe import CLI_SERVER_PIPE_NAME, LOG_SERVER_PIPE_NAME, read_message, write_message
+from core.utils.process import is_process_running
+from core.utils.win32.bindings.advapi32 import get_current_user_sid
+from core.utils.win32.bindings.kernel32 import CloseHandle, CreateFile, GetLastError, ReadFile, WriteFile
+from core.utils.win32.bindings.ole32 import create_dispatch
+from core.utils.win32.bindings.shell32 import IsUserAnAdmin
+from core.utils.win32.constants import (
+    ERROR_NO_MORE_ITEMS,
     GENERIC_READ,
     GENERIC_WRITE,
+    INVALID_HANDLE_VALUE,
+    MAX_GUID_CHARS,
+    MINIDUMP_WITH_DATA_SEGS,
+    MINIDUMP_WITH_FULL_MEMORY_INFO,
+    MINIDUMP_WITH_HANDLE_DATA,
+    MINIDUMP_WITH_INDIRECTLY_REFERENCED_MEMORY,
+    MINIDUMP_WITH_PROCESS_THREAD_DATA,
+    MINIDUMP_WITH_THREAD_INFO,
+    MINIDUMP_WITH_UNLOADED_MODULES,
     OPEN_EXISTING,
 )
-
-from core.utils.process import is_process_running
-from core.utils.win32.bindings import (
-    CloseHandle,
-    CreateFile,
-    ReadFile,
-    WriteFile,
-)
-from core.utils.win32.constants import INVALID_HANDLE_VALUE
+from core.utils.win32.registry_keys import RUN_KEY, WER_LOCAL_DUMPS_KEY
 from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL, SCRIPT_PATH
 
-BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION
 YASB_CLI_VERSION = CLI_VERSION
 YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
 
 EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
-
-CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"
-LOG_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_log"
-
-
-def write_message(handle: int, msg_dict: dict[str, str]):
-    try:
-        data = json.dumps(msg_dict).encode("utf-8")
-    except Exception as e:
-        print(f"JSON encode error: {e}")
-        print(f"Data: {msg_dict}")
-        return False
-    success = WriteFile(handle, data)
-    return success
-
-
-def read_message(handle: int) -> dict[str, str] | None:
-    success, data = ReadFile(handle, BUFSIZE)
-    if not success or len(data) == 0:
-        return None
-    try:
-        messages: list[str] = []
-        # This is needed in case there are multiple json objects in one data block
-        for line in data.split(b"\0"):
-            if not line.strip():
-                continue
-            json_object = json.loads(line.decode().strip())
-            if json_object.get("type") == "DATA":
-                messages.append(json_object.get("data"))
-            else:
-                # If it's ping/pong, just return the object as is
-                return json_object
-        return {"type": "DATA", "data": "\n".join(messages)}
-    except json.JSONDecodeError as e:
-        print(f"JSON decode error: {e}")
-        print(f"Data: {data}")
-        return None
 
 
 class Format:
@@ -98,7 +66,7 @@ class Format:
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         kwargs.setdefault("suggest_on_error", True)
         super().__init__(*args, **kwargs)
 
@@ -168,8 +136,7 @@ class CLIHandler:
 
     def _open_startup_registry(self, access_flag: int):
         """Helper function to open the startup registry key."""
-        registry_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
-        return winreg.OpenKey(winreg.HKEY_CURRENT_USER, registry_path, 0, access_flag)
+        return winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, access_flag)
 
     def is_autostart_enabled(self, app_name: str) -> bool:
         """Check if application is in Windows startup."""
@@ -611,7 +578,6 @@ class CLIHandler:
                         print(f"Failed to delete {fpath}: {e}")
 
             # Clear all files in app_data_folder if it exists
-            import tempfile
 
             from core.utils.system import app_data_path
 
@@ -627,14 +593,6 @@ class CLIHandler:
                             print(f"Deleted folder {child}")
                     except Exception as e:
                         print(f"Failed to delete {child}: {e}")
-
-            icons_cache = Path(tempfile.gettempdir()) / "yasb_quick_launch_icons"
-            if icons_cache.exists() and icons_cache.is_dir():
-                try:
-                    shutil.rmtree(icons_cache)
-                    print(f"Deleted folder {icons_cache}")
-                except Exception as e:
-                    print(f"Failed to delete {icons_cache}: {e}")
 
             print("Reset complete.")
             sys.exit(0)
@@ -763,35 +721,26 @@ class CLICrashDumpHandler:
     https://learn.microsoft.com/en-us/windows/win32/wer/collecting-user-mode-dumps
     """
 
-    PARENT_KEY_PATH = "SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps"
-    KEY_PATH = PARENT_KEY_PATH + "\\yasb.exe"
+    KEY_PATH = WER_LOCAL_DUMPS_KEY + "\\yasb.exe"
     DUMP_FOLDER = os.path.join(DEFAULT_CONFIG_DIRECTORY, "dumps")
     # Minidump missing some information, so we use a custom dump type with the following flags.
     # See https://learn.microsoft.com/en-us/windows/win32/wer/collecting-user-mode-dumps#custom-dump-flags
-    _WITH_DATA_SEGS = 0x0001  # module globals                        (WER default)
-    _WITH_HANDLE_DATA = 0x0004  # handle table, so !handle works
-    _WITH_UNLOADED_MODULES = 0x0020  # catches DLL-unload races        (WER default)
-    _WITH_INDIRECT_MEMORY = 0x0040  # heap reachable from registers/stack
-    _WITH_PROCESS_THREAD_DATA = 0x0100  # PEB/TEB                      (WER default)
-    _WITH_FULL_MEMORY_INFO = 0x0800  # VA layout, so !address works
-    _WITH_THREAD_INFO = 0x1000  # thread times and state
-
     DUMP_TYPE = 0  # 0 = custom (CUSTOM_DUMP_FLAGS), 1 = mini dump, 2 = full dump
     CUSTOM_DUMP_FLAGS = (
-        _WITH_DATA_SEGS
-        | _WITH_HANDLE_DATA
-        | _WITH_UNLOADED_MODULES
-        | _WITH_INDIRECT_MEMORY
-        | _WITH_PROCESS_THREAD_DATA
-        | _WITH_FULL_MEMORY_INFO
-        | _WITH_THREAD_INFO
+        MINIDUMP_WITH_DATA_SEGS  # module globals (WER default)
+        | MINIDUMP_WITH_HANDLE_DATA  # handle table, so !handle works
+        | MINIDUMP_WITH_UNLOADED_MODULES  # catches DLL-unload races (WER default)
+        | MINIDUMP_WITH_INDIRECTLY_REFERENCED_MEMORY  # heap reachable from registers/stack
+        | MINIDUMP_WITH_PROCESS_THREAD_DATA  # PEB/TEB (WER default)
+        | MINIDUMP_WITH_FULL_MEMORY_INFO  # VA layout, so !address works
+        | MINIDUMP_WITH_THREAD_INFO  # thread times and state
     )
     DUMP_COUNT = 5
     OWNS_PARENT_VALUE = "YasbCreatedLocalDumps"
 
     def _parent_key_exists(self) -> bool:
         try:
-            winreg.CloseKey(winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, self.PARENT_KEY_PATH))
+            winreg.CloseKey(winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, WER_LOCAL_DUMPS_KEY))
             return True
         except OSError:
             return False
@@ -844,10 +793,10 @@ class CLICrashDumpHandler:
         # nothing else has moved in since.
         if created_parent:
             try:
-                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, self.PARENT_KEY_PATH) as key:
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, WER_LOCAL_DUMPS_KEY) as key:
                     subkeys, values, _ = winreg.QueryInfoKey(key)
                 if not subkeys and not values:
-                    winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, self.PARENT_KEY_PATH)
+                    winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, WER_LOCAL_DUMPS_KEY)
             except OSError:
                 pass
 
@@ -859,22 +808,15 @@ class CLITaskHandler:
 
     def is_admin(self):
         try:
-            return ctypes.windll.shell32.IsUserAnAdmin()
+            return IsUserAnAdmin()
         except BaseException:
             return False
 
     def get_current_user_sid(self):
-        import win32security
-
-        username = getpass.getuser()
-        user, _, _ = win32security.LookupAccountName(None, username)
-        sid = win32security.ConvertSidToStringSid(user)
-        return sid
+        return get_current_user_sid()
 
     def create_task(self):
-        import win32com.client
-
-        scheduler = win32com.client.Dispatch("Schedule.Service")
+        scheduler = create_dispatch("Schedule.Service")
         scheduler.Connect()
         root_folder = scheduler.GetFolder("\\")
         task_def = scheduler.NewTask(0)
@@ -915,9 +857,7 @@ class CLITaskHandler:
             print(f"Failed to create task YASB Reborn. Error: {e}")
 
     def delete_task(self):
-        import win32com.client
-
-        scheduler = win32com.client.Dispatch("Schedule.Service")
+        scheduler = create_dispatch("Schedule.Service")
         scheduler.Connect()
         root_folder = scheduler.GetFolder("\\")
         try:
@@ -942,7 +882,7 @@ class CLIChannelHandler:
         from core.utils.update_service import get_update_service
 
         update_service = get_update_service()
-        current_channel = update_service._current_channel
+        current_channel = update_service.current_channel
         architecture = get_architecture()
 
         # Check if already on target channel
@@ -987,6 +927,9 @@ class CLIChannelHandler:
 
         try:
             release_info = update_service.check_for_updates(channel=target_channel, skip_version_check=True, timeout=15)
+            if release_info is None:
+                print(f"\nError switching channels: no {target_channel} release found.")
+                sys.exit(1)
             if target_channel == "preview":
                 version_display = f"build {release_info.version.replace('preview-', '')}"
             else:
@@ -1026,13 +969,12 @@ class CLIUpdateHandler:
     """Handles the update functionality for the command-line interface."""
 
     def get_installed_product_code(self):
-        ERROR_NO_MORE_ITEMS = 259
-        MAX_GUID_CHARS = 39
-        msi = ctypes.windll.msi
+        from core.utils.win32.bindings.msi import MsiEnumRelatedProducts
+
         product_code = ctypes.create_unicode_buffer(MAX_GUID_CHARS + 1)
         index = 0
         while True:
-            result = msi.MsiEnumRelatedProductsW("{3f620cf5-07b5-47fd-8e37-9ca8ad14b608}", 0, index, product_code)
+            result = MsiEnumRelatedProducts("{3f620cf5-07b5-47fd-8e37-9ca8ad14b608}", index, product_code)
             if result == ERROR_NO_MORE_ITEMS:
                 break
             elif result == 0:
@@ -1072,7 +1014,7 @@ class CLIUpdateHandler:
                 sys.exit(0)
 
             # Update available
-            if update_service._current_channel == "preview":
+            if update_service.current_channel == "preview":
                 print(
                     f"Found {Format.cyan}YASB Reborn{Format.reset} Preview {release_info.version.replace('preview-', '')}"
                 )
@@ -1138,6 +1080,7 @@ class CLIUpdateHandler:
 
                 downloaded = 0
                 chunk_size = 4096
+                bar_length = 30
                 print(f"Downloading {Format.magenta}{msi_url}{Format.reset}")
                 with open(msi_path, "wb") as file:
                     while True:
@@ -1147,7 +1090,6 @@ class CLIUpdateHandler:
                         file.write(chunk)
                         downloaded += len(chunk)
                         percent = downloaded / total_length * 100
-                        bar_length = 30
                         filled = int(bar_length * downloaded / total_length)
                         bar = "\u2588" * filled + "\u2591" * (bar_length - filled)
                         print(f"\r{bar} {percent:.1f}%", end="", flush=True)

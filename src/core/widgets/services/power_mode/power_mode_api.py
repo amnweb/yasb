@@ -1,22 +1,24 @@
 import ctypes
 import uuid
 import winreg
-from ctypes import byref, wintypes
+from ctypes import byref
 
+from core.utils.win32.bindings.kernel32 import LocalFree
+from core.utils.win32.bindings.powrprof import (
+    PowerGetActiveScheme,
+    PowerGetUserConfiguredACPowerMode,
+    PowerSetUserConfiguredACPowerMode,
+    PowerSetUserConfiguredDCPowerMode,
+)
+from core.utils.win32.constants import GUID_POWERSCHEME_PERSONALITY
+from core.utils.win32.registry_keys import POWER_SCHEMES_KEY
 from core.utils.win32.structs import GUID
-
-_powrprof = ctypes.WinDLL("powrprof.dll")
-
-_POWER_SCHEMES_KEY = r"SYSTEM\CurrentControlSet\Control\Power\User\PowerSchemes"
-_PERSONALITY_SETTING = "245d8541-3943-4422-b025-13a784f679b7"
-_BALANCED = GUID.from_buffer_copy(uuid.UUID("00000000-0000-0000-0000-000000000000").bytes_le)
-_BEST_EFFICIENCY = GUID.from_buffer_copy(uuid.UUID("961cc777-2547-4f9d-8174-7d86181b8a7a").bytes_le)
-_BEST_PERFORMANCE = GUID.from_buffer_copy(uuid.UUID("ded574b5-45a0-4f42-8737-46345c09c238").bytes_le)
+from core.utils.win32.undocumented import POWER_MODE_BALANCED, POWER_MODE_BEST_EFFICIENCY, POWER_MODE_BEST_PERFORMANCE
 
 _MODES: list[tuple[str, GUID]] = [
-    ("Best power efficiency", _BEST_EFFICIENCY),
-    ("Balanced", _BALANCED),
-    ("Best performance", _BEST_PERFORMANCE),
+    ("Best power efficiency", POWER_MODE_BEST_EFFICIENCY),
+    ("Balanced", POWER_MODE_BALANCED),
+    ("Best performance", POWER_MODE_BEST_PERFORMANCE),
 ]
 
 
@@ -35,7 +37,7 @@ def is_mode_supported() -> bool:
         return False
 
     try:
-        path = f"{_POWER_SCHEMES_KEY}\\{plan}\\{_PERSONALITY_SETTING}"
+        path = f"{POWER_SCHEMES_KEY}\\{plan}\\{GUID_POWERSCHEME_PERSONALITY.to_uuid()}"
         with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path) as key:
             personality, _ = winreg.QueryValueEx(key, "ACSettingIndex")
             return personality == 2
@@ -45,14 +47,11 @@ def is_mode_supported() -> bool:
 
 def get_active_mode() -> tuple[str, GUID] | None:
     guid = GUID()
-    fn = _powrprof.PowerGetUserConfiguredACPowerMode
-    fn.argtypes = [ctypes.POINTER(GUID)]
-    fn.restype = wintypes.DWORD
-    if fn(byref(guid)) == 0:
+    if PowerGetUserConfiguredACPowerMode(guid) == 0:
         return _mode_name(guid)
 
     try:
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, _POWER_SCHEMES_KEY) as key:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, POWER_SCHEMES_KEY) as key:
             guid_str = winreg.QueryValueEx(key, "ActiveOverlayAcPowerScheme")[0].strip("{}")
             return _mode_name(GUID.from_buffer_copy(uuid.UUID(guid_str).bytes_le))
     except Exception:
@@ -62,16 +61,9 @@ def get_active_mode() -> tuple[str, GUID] | None:
 def set_mode(guid: GUID) -> bool:
     ok = True
 
-    set_ac = _powrprof.PowerSetUserConfiguredACPowerMode
-    set_ac.argtypes = [ctypes.POINTER(GUID)]
-    set_ac.restype = wintypes.DWORD
-    if set_ac(byref(guid)) != 0:
+    if PowerSetUserConfiguredACPowerMode(guid) != 0:
         ok = False
-
-    set_dc = _powrprof.PowerSetUserConfiguredDCPowerMode
-    set_dc.argtypes = [ctypes.POINTER(GUID)]
-    set_dc.restype = wintypes.DWORD
-    if set_dc(byref(guid)) != 0:
+    if PowerSetUserConfiguredDCPowerMode(guid) != 0:
         ok = False
 
     return ok
@@ -83,14 +75,11 @@ def guids_equal(a: GUID, b: GUID) -> bool:
 
 def _get_active_scheme_str() -> str | None:
     """Return the active power scheme GUID as a lowercase string, or None on failure."""
-    PowerGetActiveScheme = _powrprof.PowerGetActiveScheme
-    PowerGetActiveScheme.argtypes = [wintypes.HANDLE, ctypes.POINTER(ctypes.POINTER(GUID))]
-    PowerGetActiveScheme.restype = wintypes.DWORD
     ptr = ctypes.POINTER(GUID)()
     if PowerGetActiveScheme(None, byref(ptr)) != 0 or not ptr:
         return None
     result = str(GUID.from_buffer_copy(ptr.contents))
-    ctypes.windll.kernel32.LocalFree(ptr)
+    LocalFree(ptr)
     return result
 
 

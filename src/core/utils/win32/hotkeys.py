@@ -4,23 +4,14 @@ import logging
 from ctypes import byref
 from ctypes.wintypes import MSG
 from dataclasses import dataclass
+from typing import Any
 
 from PyQt6.QtCore import Q_ARG, QMetaObject, QObject, Qt, QThread, pyqtSlot
 
 from core.events.service import EventService
-from core.utils.win32.bindings import user32
 from core.utils.win32.bindings.kernel32 import GetCurrentThreadId
-
-# Windows message constants
-WM_QUIT = 0x0012
-WM_HOTKEY = 0x0312
-
-# Modifier flags for RegisterHotKey
-MOD_ALT = 0x0001
-MOD_CONTROL = 0x0002
-MOD_SHIFT = 0x0004
-MOD_WIN = 0x0008
-MOD_NOREPEAT = 0x4000
+from core.utils.win32.bindings.user32 import user32
+from core.utils.win32.constants import MOD_ALT, MOD_CONTROL, MOD_NOREPEAT, MOD_SHIFT, MOD_WIN, WM_HOTKEY, WM_QUIT
 
 # Key name to virtual key code mapping
 _KEY_NAME_TO_VK = {
@@ -100,7 +91,7 @@ class HotkeyBinding:
     screen: str = "active"
 
 
-def parse_hotkey(hotkey: str) -> tuple[int, int] | None:
+def parse_hotkey(hotkey: object) -> tuple[int, int] | None:
     """Parse a hotkey string into (modifiers, vk) for RegisterHotKey.
 
     Args:
@@ -273,9 +264,9 @@ class HotkeyListener(QThread):
             user32.PostThreadMessageW(self._thread_id, WM_QUIT, 0, 0)
 
 
-def collect_widget_keybindings(widget_name: str, keybindings: list[dict]) -> list[HotkeyBinding]:
+def collect_widget_keybindings(widget_name: str, keybindings: list[dict[str, Any]]) -> list[HotkeyBinding]:
     """Parse keybinding configs for a widget into HotkeyBinding objects."""
-    bindings = []
+    bindings: list[HotkeyBinding] = []
 
     for kb in keybindings:
         keys = kb.get("keys", "")

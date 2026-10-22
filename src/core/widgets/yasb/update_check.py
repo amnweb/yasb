@@ -1,13 +1,14 @@
 import re
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
 from core.validation.widgets.yasb.update_check import UpdateCheckWidgetConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.update_check.service import UpdateCheckService
+from core.widgets.services.update_check.service import UpdateCheckService, UpdateResult
 
 # Sources and their config attribute names
 _SOURCES = ("winget", "scoop", "windows")
@@ -42,7 +43,7 @@ class UpdateCheckWidget(BaseWidget):
         self._update_visibility()
         self.destroyed.connect(lambda: self._service.unregister_widget(self))
 
-    def on_update(self, source: str, result: dict):
+    def on_update(self, source: str, result: UpdateResult):
         """Receive update data from the service."""
         count = result.get("count", 0)
         names = result.get("names", [])
@@ -82,7 +83,7 @@ class UpdateCheckWidget(BaseWidget):
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(label)
             widgets.append(label)
-            label.mousePressEvent = self._make_mouse_handler(source)
+            self._bind_mouse_handler(label, source)
 
         return container, widgets
 
@@ -111,9 +112,6 @@ class UpdateCheckWidget(BaseWidget):
             if not part or idx >= len(widgets):
                 continue
             w = widgets[idx]
-            if not isinstance(w, QLabel):
-                idx += 1
-                continue
 
             if "<span" in part and "</span>" in part:
                 icon = re.sub(r"<span.*?>|</span>", "", part).strip()
@@ -169,13 +167,15 @@ class UpdateCheckWidget(BaseWidget):
         container.setStyleSheet(container.styleSheet())
         refresh_widget_style(container)
 
-    def _make_mouse_handler(self, source: str):
-        """Create a mouse event handler for a source container."""
+    def _bind_mouse_handler(self, label: QLabel, source: str) -> None:
+        """Attach the mouse event handler for a source container."""
 
-        def handler(event):
-            if event.button() == Qt.MouseButton.LeftButton:
+        def handler(ev: QMouseEvent | None) -> None:
+            if ev is None:
+                return
+            if ev.button() == Qt.MouseButton.LeftButton:
                 self._service.handle_left_click(source)
-            elif event.button() == Qt.MouseButton.RightButton:
+            elif ev.button() == Qt.MouseButton.RightButton:
                 self._service.handle_right_click(source)
 
-        return handler
+        label.mousePressEvent = handler

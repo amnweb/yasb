@@ -1,7 +1,10 @@
 """Backups panel snapshot history and the manual backup control."""
 
+from collections.abc import Callable
+from typing import override
+
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QFontMetrics, QGuiApplication
+from PyQt6.QtGui import QFont, QFontMetrics, QGuiApplication, QResizeEvent
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -28,7 +31,14 @@ class ElidedLabel(QLabel):
     """A label that shortens its text to whatever width it is given. Notes are user text of
     any length and would otherwise push the actions dropdown off the card."""
 
-    def __init__(self, text="", font_size=13, font_weight=600, color_key="text_primary", parent=None):
+    def __init__(
+        self,
+        text: str = "",
+        font_size: int = 13,
+        font_weight: int = 600,
+        color_key: str = "text_primary",
+        parent: QWidget | None = None,
+    ):
         super().__init__(text, parent)
         self._full_text = text
         t = get_tokens()
@@ -37,16 +47,18 @@ class ElidedLabel(QLabel):
         font = self.font()
         font.setFamilies(list(FONT_FAMILIES))
         font.setPixelSize(font_size)
-        font.setWeight(font_weight)
+        font.setWeight(QFont.Weight(font_weight))
         self.setFont(font)
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
 
-    def setText(self, text: str):
-        self._full_text = text
+    @override
+    def setText(self, a0: str | None) -> None:
+        self._full_text = a0 or ""
         self._update_elided_text()
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         self._update_elided_text()
 
     def _update_elided_text(self):
@@ -66,7 +78,7 @@ class BackupItemWidget(Card):
     unshare_requested = pyqtSignal(str)
     copy_link_requested = pyqtSignal(str)
 
-    def __init__(self, snapshot: Snapshot, parent=None):
+    def __init__(self, snapshot: Snapshot, parent: QWidget | None = None):
         super().__init__(parent)
         self.snapshot_id = snapshot.id
 
@@ -163,14 +175,14 @@ class BackupsView(QWidget):
     copy_link_requested = pyqtSignal(str)
     load_more_requested = pyqtSignal(int)  # offset of the next page
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self._can_write = False
         self._empty_message = EMPTY_BACKUPS
         self._running = False
         self._loading = False
         self._total = 0
-        self._dialog = None
+        self._dialog: ContentDialog | None = None
         self._init_ui()
 
     def _init_ui(self):
@@ -218,13 +230,13 @@ class BackupsView(QWidget):
         self.row_layout.setSpacing(4)
         self.row_layout.addStretch(1)
 
-        self.scroll = QScrollArea()
-        self.scroll.setWidget(self.rows)
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.scroll.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll.setStyleSheet(f"""
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidget(self.rows)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_area.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setStyleSheet(f"""
             QScrollArea, QScrollArea > QWidget > QWidget {{ background: transparent; }}
             QScrollBar:vertical {{
                 border: none; background: transparent; width: 4px; margin: 0;
@@ -236,8 +248,12 @@ class BackupsView(QWidget):
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
         """)
-        self.scroll.verticalScrollBar().valueChanged.connect(self._maybe_load_more)
-        layout.addWidget(self.scroll)
+        scroll_bar = self.scroll_area.verticalScrollBar()
+        if scroll_bar is None:
+            raise RuntimeError("QScrollArea has no vertical scroll bar")
+        self._scroll_bar = scroll_bar
+        scroll_bar.valueChanged.connect(self._maybe_load_more)
+        layout.addWidget(self.scroll_area)
 
     def set_can_write(self, can_write: bool) -> None:
         self._can_write = can_write
@@ -265,10 +281,24 @@ class BackupsView(QWidget):
             primary_button_text="Copy link",
             default_button=ContentDialogButton.PRIMARY,
         )
-        self._dialog.primary_button_click.connect(lambda: QGuiApplication.clipboard().setText(url))
+
+        def copy_link() -> None:
+            clipboard = QGuiApplication.clipboard()
+            if clipboard is not None:
+                clipboard.setText(url)
+
+        self._dialog.primary_button_click.connect(copy_link)
         self._dialog.show_dialog()
 
-    def confirm(self, title: str, message: str, action: str, on_accept, *, accent_action: bool = False) -> None:
+    def confirm(
+        self,
+        title: str,
+        message: str,
+        action: str,
+        on_accept: Callable[[], object],
+        *,
+        accent_action: bool = False,
+    ) -> None:
         self._dialog = ContentDialog(
             parent=self.window() or self,
             title=title,
@@ -282,7 +312,8 @@ class BackupsView(QWidget):
 
     def _clear_rows(self) -> None:
         while self.row_layout.count() > 1:
-            widget = self.row_layout.takeAt(0).widget()
+            item = self.row_layout.takeAt(0)
+            widget = item.widget() if item is not None else None
             if widget is not None:
                 widget.setParent(None)
                 widget.deleteLater()
@@ -298,7 +329,8 @@ class BackupsView(QWidget):
         return [
             widget
             for index in range(self.row_layout.count())
-            if isinstance(widget := self.row_layout.itemAt(index).widget(), BackupItemWidget)
+            if (item := self.row_layout.itemAt(index)) is not None
+            and isinstance(widget := item.widget(), BackupItemWidget)
         ]
 
     def _row_for(self, snapshot_id: str) -> BackupItemWidget | None:
@@ -315,7 +347,7 @@ class BackupsView(QWidget):
         """
         if self._loading or len(self._rows()) >= self._total:
             return
-        bar = self.scroll.verticalScrollBar()
+        bar = self._scroll_bar
         if bar.maximum() - value > 240:
             # How near the bottom, in pixels, the next page is asked for.
             return
@@ -340,7 +372,7 @@ class BackupsView(QWidget):
         QTimer.singleShot(0, self._load_if_short)
 
     def _load_if_short(self) -> None:
-        bar = self.scroll.verticalScrollBar()
+        bar = self._scroll_bar
         if bar.maximum() == 0:
             self._maybe_load_more(bar.value())
 
@@ -352,7 +384,7 @@ class BackupsView(QWidget):
         self._empty_message = empty_message
         self._total = max(total, len(snapshots))
         self._loading = False
-        bar = self.scroll.verticalScrollBar()
+        bar = self._scroll_bar
         position = bar.value()
 
         self._clear_rows()

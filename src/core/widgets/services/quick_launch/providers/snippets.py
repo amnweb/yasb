@@ -1,5 +1,3 @@
-import ctypes
-import ctypes.wintypes
 import json
 import logging
 import os
@@ -7,11 +5,15 @@ import re
 import time
 import uuid
 from datetime import datetime
+from typing import Any, cast
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.system import app_data_path
+from core.utils.win32.bindings.user32 import SendInput
+from core.utils.win32.constants import INPUT_KEYBOARD, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, VK_RETURN
+from core.utils.win32.structs import INPUT
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
@@ -41,7 +43,7 @@ def _resolve_variables(text: str) -> str:
     """
     now = datetime.now()
 
-    def _replace(match: re.Match) -> str:
+    def _replace(match: re.Match[str]) -> str:
         name = match.group(1).lower()
         fmt = match.group(2)
         if name == "date":
@@ -60,78 +62,21 @@ def _resolve_variables(text: str) -> str:
     return _VAR_PATTERN.sub(_replace, text)
 
 
-# SendInput constants
-INPUT_KEYBOARD = 1
-KEYEVENTF_UNICODE = 0x0004
-KEYEVENTF_KEYUP = 0x0002
-
-
-class _MOUSEINPUT(ctypes.Structure):
-    _fields_ = [
-        ("dx", ctypes.c_long),
-        ("dy", ctypes.c_long),
-        ("mouseData", ctypes.wintypes.DWORD),
-        ("dwFlags", ctypes.wintypes.DWORD),
-        ("time", ctypes.wintypes.DWORD),
-        ("dwExtraInfo", ctypes.POINTER(ctypes.c_size_t)),
-    ]
-
-
-class _KEYBDINPUT(ctypes.Structure):
-    _fields_ = [
-        ("wVk", ctypes.wintypes.WORD),
-        ("wScan", ctypes.wintypes.WORD),
-        ("dwFlags", ctypes.wintypes.DWORD),
-        ("time", ctypes.wintypes.DWORD),
-        ("dwExtraInfo", ctypes.POINTER(ctypes.c_size_t)),
-    ]
-
-
-class _HARDWAREINPUT(ctypes.Structure):
-    _fields_ = [
-        ("uMsg", ctypes.wintypes.DWORD),
-        ("wParamL", ctypes.wintypes.WORD),
-        ("wParamH", ctypes.wintypes.WORD),
-    ]
-
-
-class _INPUT_UNION(ctypes.Union):
-    _fields_ = [
-        ("mi", _MOUSEINPUT),
-        ("ki", _KEYBDINPUT),
-        ("hi", _HARDWAREINPUT),
-    ]
-
-
-class _INPUT(ctypes.Structure):
-    _fields_ = [
-        ("type", ctypes.wintypes.DWORD),
-        ("_input", _INPUT_UNION),
-    ]
-    _anonymous_ = ("_input",)
-
-
-_SendInput = ctypes.windll.user32.SendInput
-_SendInput.argtypes = [ctypes.wintypes.UINT, ctypes.POINTER(_INPUT), ctypes.c_int]
-_SendInput.restype = ctypes.wintypes.UINT
-
-
 def _send_unicode_string(text: str):
     """Type a string into the focused window using SendInput with KEYEVENTF_UNICODE."""
-    VK_RETURN = 0x0D
-    inputs = []
+    inputs: list[INPUT] = []
     for char in text:
         if char == "\r":
             continue  # skip \r, handle \n as Enter
         if char == "\n":
             # Send a virtual Enter key press for line breaks
-            down = _INPUT(type=INPUT_KEYBOARD)
+            down = INPUT(type=INPUT_KEYBOARD)
             down.ki.wVk = VK_RETURN
             down.ki.wScan = 0
             down.ki.dwFlags = 0
             inputs.append(down)
 
-            up = _INPUT(type=INPUT_KEYBOARD)
+            up = INPUT(type=INPUT_KEYBOARD)
             up.ki.wVk = VK_RETURN
             up.ki.wScan = 0
             up.ki.dwFlags = KEYEVENTF_KEYUP
@@ -139,13 +84,13 @@ def _send_unicode_string(text: str):
             continue
 
         code = ord(char)
-        down = _INPUT(type=INPUT_KEYBOARD)
+        down = INPUT(type=INPUT_KEYBOARD)
         down.ki.wVk = 0
         down.ki.wScan = code
         down.ki.dwFlags = KEYEVENTF_UNICODE
         inputs.append(down)
 
-        up = _INPUT(type=INPUT_KEYBOARD)
+        up = INPUT(type=INPUT_KEYBOARD)
         up.ki.wVk = 0
         up.ki.wScan = code
         up.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP
@@ -153,8 +98,7 @@ def _send_unicode_string(text: str):
 
     if inputs:
         n = len(inputs)
-        arr = (_INPUT * n)(*inputs)
-        _SendInput(n, arr, ctypes.sizeof(_INPUT))
+        SendInput((INPUT * n)(*inputs))
 
 
 class SnippetsProvider(BaseProvider):
@@ -165,19 +109,25 @@ class SnippetsProvider(BaseProvider):
     input_placeholder = "Search snippets..."
     icon = ICON_SNIPPET
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
-        self._snippets: list[dict] = self._load_snippets()
+        self._snippets: list[dict[str, Any]] = self._load_snippets()
         self._type_delay: int = self.config.get("type_delay", 200)
         self._editing_id: str | None = None
 
-    def _load_snippets(self) -> list[dict]:
+    def _load_snippets(self) -> list[dict[str, Any]]:
         try:
             if os.path.isfile(_SNIPPETS_FILE):
                 with open(_SNIPPETS_FILE, encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, list):
-                    return [s for s in data if isinstance(s, dict) and s.get("content")]
+                    snippets: list[dict[str, Any]] = []
+                    for item in cast(list[object], data):
+                        if isinstance(item, dict):
+                            snippet = cast(dict[str, Any], item)
+                            if snippet.get("content"):
+                                snippets.append(snippet)
+                    return snippets
         except Exception as e:
             logging.debug("Failed to load snippets: %s", e)
         return []
@@ -190,13 +140,13 @@ class SnippetsProvider(BaseProvider):
         except Exception as e:
             logging.debug("Failed to save snippets: %s", e)
 
-    def _find_snippet(self, snippet_id: str) -> dict | None:
+    def _find_snippet(self, snippet_id: str) -> dict[str, Any] | None:
         for s in self._snippets:
             if s.get("id") == snippet_id:
                 return s
         return None
 
-    def _edit_preview(self, title: str = "", content: str = "") -> dict:
+    def _edit_preview(self, title: str = "", content: str = "") -> dict[str, Any]:
         """Return a preview dict that renders as an inline edit form."""
         return {
             "kind": "edit",
@@ -218,12 +168,12 @@ class SnippetsProvider(BaseProvider):
             return text.strip().startswith(self.prefix)
         return False
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         query = self.get_query_text(text).strip().lower()
 
         if not query:
-            results = self._sorted_snippets()
-            items = [self._snippet_to_result(s) for s in results]
+            snippets = self._sorted_snippets()
+            items = [self._snippet_to_result(s) for s in snippets]
             items.append(
                 ProviderResult(
                     title="Create new snippet",
@@ -236,7 +186,7 @@ class SnippetsProvider(BaseProvider):
             )
             return items
 
-        results = []
+        results: list[ProviderResult] = []
         for s in self._sorted_snippets():
             title = s.get("title", "").lower()
             content = s.get("content", "").lower()
@@ -244,10 +194,10 @@ class SnippetsProvider(BaseProvider):
                 results.append(self._snippet_to_result(s))
         return results
 
-    def _sorted_snippets(self) -> list[dict]:
+    def _sorted_snippets(self) -> list[dict[str, Any]]:
         return sorted(self._snippets, key=lambda s: s.get("last_used", 0), reverse=True)
 
-    def _snippet_to_result(self, snippet: dict) -> ProviderResult:
+    def _snippet_to_result(self, snippet: dict[str, Any]) -> ProviderResult:
         title = snippet.get("title", "Untitled")
         content = snippet.get("content", "")
         snippet_id = snippet.get("id", "")
@@ -346,7 +296,9 @@ class SnippetsProvider(BaseProvider):
 
         return ProviderMenuActionResult()
 
-    def handle_preview_action(self, action_id: str, result: ProviderResult, data: dict) -> ProviderMenuActionResult:
+    def handle_preview_action(
+        self, action_id: str, result: ProviderResult, data: dict[str, Any]
+    ) -> ProviderMenuActionResult:
         if action_id == "cancel":
             self._editing_id = None
             return ProviderMenuActionResult(refresh_results=True)

@@ -2,10 +2,13 @@ import os
 import platform
 import sys
 from pathlib import Path
+from typing import cast
 from winreg import HKEY_LOCAL_MACHINE, KEY_QUERY_VALUE, OpenKey, QueryValueEx
 
+from core.utils.win32.registry_keys import WINDOWS_NT_CURRENT_VERSION_KEY
 
-def app_data_path(filename: str = None) -> Path:
+
+def app_data_path(filename: str | None = None) -> Path:
     """
     Get the YASB local data folder (creating it if it doesn't exist),
     or a file path inside it if filename is provided.
@@ -31,8 +34,8 @@ def get_build_and_ubr() -> tuple[int, int]:
     build = sys.getwindowsversion().build
     ubr: int
     try:
-        with OpenKey(HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion", KEY_QUERY_VALUE) as key:
-            ubr: int = QueryValueEx(key, "UBR")[0]
+        with OpenKey(HKEY_LOCAL_MACHINE, WINDOWS_NT_CURRENT_VERSION_KEY, KEY_QUERY_VALUE) as key:
+            ubr = QueryValueEx(key, "UBR")[0]
     except Exception:
         ubr = 0
     return (build, ubr)
@@ -73,6 +76,6 @@ def get_architecture() -> str | None:
     try:
         from BUILD_CONSTANTS import ARCHITECTURE  # type: ignore[import-not-found]
 
-        return ARCHITECTURE
+        return cast(str, ARCHITECTURE)
     except ImportError:
         return None

@@ -1,10 +1,26 @@
 # Audio Visualizer Widget Configuration
 
-Native audio visualizer for the default output device (WASAPI loopback). No external audio app or process needed.
+Native audio visualizer for an output device (WASAPI loopback). No external audio app or process needed.
 
 ## How it captures audio
 
-Audio comes from a WASAPI loopback capture on whatever Windows currently has set as the default playback device - the same device shown selected in the Windows volume mixer. This is automatic and dynamic: there is no device picker, and switching outputs (plugging in headphones, disabling a device, changing the default in Windows sound settings) is picked up on its own, with capture rebuilding against the new endpoint.
+Audio comes from a WASAPI loopback capture on an output device. With the default `source: "auto"` that is whatever Windows currently has set as the default playback device - the same device shown selected in the Windows volume mixer. This is automatic and dynamic: switching outputs (plugging in headphones, disabling a device, changing the default in Windows sound settings) is picked up on its own, with capture rebuilding against the new endpoint.
+
+### Picking an output device
+
+Set `source` to the full name of an output device to always capture that one instead. This is useful when an audio mixer such as SteelSeries Sonar, VoiceMeeter or VB-Cable plays music on a device that is not the Windows default:
+
+```yaml
+source: "SteelSeries Sonar - Media (SteelSeries Sonar Virtual Audio Device)"
+```
+or
+```yaml
+source: "Speakers (Realtek(R) Audio)"
+```
+
+The name must match exactly, including the part in brackets. The volume widget's menu lists output devices by this same full name.
+
+If no active output device has that name (a typo, or the device is disabled or unplugged), the widget captures the default device instead and logs a warning. When the named device becomes active again, capture switches back to it on its own.
 
 Because of that, only audio going through the normal Windows shared-mixer path is visible. Anything routed through **ASIO**, or another driver model that bypasses the shared mixer for direct hardware access, never reaches this capture, since that audio doesn't pass through the default device's loopback path at all - a limitation of WASAPI loopback itself, not something specific to this widget. If an app is set to output via ASIO, the visualizer will sit silent for that app's audio while continuing to show anything else still playing through the normal output.
 
@@ -13,22 +29,40 @@ Because of that, only audio going through the normal Windows shared-mixer path i
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `class_name` | string | `""` | Additional CSS class names for the widget container |
+| `source` | string | `"auto"` | Output device to capture. `"auto"` follows the Windows default device, anything else is the device's exact full name. See [Picking an output device](#picking-an-output-device) |
 | `style` | string | `"bars"` | Visual style: `"bars"`, `"waves"`, or `"dots"` |
-| `height` | integer | `14` | Paint surface height in pixels |
+| `height` | integer | `14` | Paint surface height in pixels (4–64) |
 | `smoothness` | integer | `55` | Motion smoothing 0–100 (higher = smoother, slower). Expressed in real time, so the motion looks identical at any `framerate` |
 | `sensitivity` | integer | `50` | Amplitude trim 0–100. With `auto_gain` on it sets how hard the peaks push: `50` = loudest bars ride near the top, lower = calmer, higher = into the ceiling. With `auto_gain` off it is a plain multiplier (`50` = 1×, `100` = 2×) |
 | `auto_gain` | boolean | `true` | Auto-sensitivity: continuously tracks the level so quiet tracks and loud tracks look the same and bars never pin flat at the top. Turn off to set the level yourself with `sensitivity` |
-| `framerate` | integer | `60` | Upper limit on repaints per second. Frames are pushed by the audio stream, so the real rate is also capped by the device period |
-| `freq_min` | integer | `50` | Lowest frequency bucket in Hz (20–24000) |
-| `freq_max` | integer | `12000` | Highest frequency bucket in Hz (must be greater than `freq_min`) |
+| `framerate` | integer | `60` | Upper limit on repaints per second (1–120). Frames are pushed by the audio stream, so the real rate is also capped by the device period |
+| `freq_min` | integer | `50` | Lowest frequency bucket in Hz (20–24000, must be less than `freq_max`) |
+| `freq_max` | integer | `12000` | Highest frequency bucket in Hz (20–24000, must be greater than `freq_min`) |
 | `hide_idle` | boolean | `false` | Collapse the widget once audio stops, freeing its space in the bar. It reappears the moment audio returns |
-| `hide_idle_after` | integer | `2000` | How long audio must be absent before collapsing (ms) |
+| `hide_idle_after` | integer | `2000` | How long audio must be absent before collapsing, in ms (100–60000) |
 | `channels` | string | `"mono"` | Visual channels: `"stereo"` or `"mono"` |
 | `mono_option` | string | `"average"` | Mono input source: `"average"`, `"left"`, or `"right"` (ignored when `channels` is `"stereo"`) |
 | `reverse` | boolean | `false` | Flip frequency direction |
 | `mirror` | boolean | `false` | Grow from the vertical center instead of the bottom edge, symmetric up and down. Applies to all three styles |
-| `edge_fade` | integer or array | `0` | Edge fade in pixels. Single value, or `[left, right]` |
-| `callbacks` | dict | do_nothing | Mouse callbacks: `on_left`, `on_middle`, `on_right` |
+| `edge_fade` | integer or array | `0` | Edge fade in pixels. Single value, or a `[left, right]` list of exactly two values. Negative values are treated as `0` |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings) |
+| `callbacks` | dict | [See below](#callbacks) | Mouse callbacks: `on_left`, `on_middle`, `on_right` |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "do_nothing"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
 
 ## Style blocks
 
@@ -39,22 +73,22 @@ Only the block matching `style` is used; the others are ignored.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `count` | integer | `24` | Number of bar columns (4–128). With `channels: stereo` the count is split between the two channels. Past roughly 40 the extra bars mostly subdivide the low end rather than add detail (see [Levels](#levels)) |
-| `width` | integer | `2` | Bar thickness in pixels |
-| `gap` | integer | `4` | Gap between bars in pixels |
+| `width` | integer | `2` | Bar thickness in pixels (1–32) |
+| `gap` | integer | `4` | Gap between bars in pixels (0–32) |
 
 ### `waves`
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `width` | integer | `80` | Total widget width in pixels. Spectrum point count is derived automatically |
+| `width` | integer | `80` | Total widget width in pixels (16–512). Spectrum point count is derived automatically |
 
 ### `dots`
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `count` | integer | `24` | Number of LED columns (4–128) |
-| `size` | integer | `2` | Block size in pixels |
-| `gap` | integer | `4` | Gap between stacked blocks (also used between columns) |
+| `size` | integer | `2` | Block size in pixels (1–32) |
+| `gap` | integer | `4` | Gap between stacked blocks, also used between columns (0–32) |
 
 ## Example Configuration
 
@@ -62,6 +96,7 @@ Only the block matching `style` is used; the others are ignored.
   audio_visualizer:
     type: "yasb.audio_visualizer.AudioVisualizerWidget"
     options:
+      source: "auto" # Optional. Only change it if you need a specific output device
       style: bars
       height: 16
       smoothness: 80

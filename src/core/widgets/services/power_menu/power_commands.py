@@ -1,26 +1,35 @@
-import ctypes
 import logging
 import subprocess
+from ctypes import WinError
+from typing import Protocol, runtime_checkable
 
-import win32api
-import win32security
 from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtWidgets import QWidget
 
 from core.utils.controller import exit_application
+from core.utils.win32.bindings.advapi32 import OpenProcessToken, enable_token_privilege
+from core.utils.win32.bindings.kernel32 import CloseHandle, GetCurrentProcess, GetLastError
+from core.utils.win32.bindings.powrprof import SetSuspendState
+from core.utils.win32.constants import SE_SHUTDOWN_NAME, TOKEN_ADJUST_PRIVILEGES, TOKEN_QUERY
+
+
+@runtime_checkable
+class Fadeable(Protocol):
+    def fade_out(self) -> None: ...
 
 
 class PowerOperations:
-    def __init__(self, main_window=None, overlay=None):
+    def __init__(self, main_window: QWidget | None = None, overlay: QWidget | None = None) -> None:
         self.main_window = main_window
         self.overlay = overlay
 
-    def clear_widget(self):
+    def clear_widget(self) -> None:
         if self.main_window:
             self.main_window.hide()
         if self.overlay:
             self.overlay.hide()
 
-    def _connect_about_to_quit(self, cmd_args: list):
+    def _connect_about_to_quit(self, cmd_args: list[str]) -> None:
         """Connect a handler to QCoreApplication.aboutToQuit to run cmd_args."""
         app = QCoreApplication.instance()
         if app is None:
@@ -42,12 +51,12 @@ class PowerOperations:
         except Exception:
             pass
 
-    def signout(self):
+    def signout(self) -> None:
         self.clear_widget()
         self._connect_about_to_quit(["shutdown", "/l"])
         exit_application()
 
-    def lock(self):
+    def lock(self) -> None:
         self.clear_widget()
         subprocess.Popen(
             [
@@ -59,20 +68,19 @@ class PowerOperations:
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
 
-    def sleep(self):
+    def sleep(self) -> None:
         self.clear_widget()
         try:
-            access = win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY
-            htoken = win32security.OpenProcessToken(win32api.GetCurrentProcess(), access)
+            htoken = OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY)
             if htoken:
                 try:
-                    priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_SHUTDOWN_NAME)
-                    win32security.AdjustTokenPrivileges(htoken, 0, [(priv_id, win32security.SE_PRIVILEGE_ENABLED)])
-                    success = ctypes.windll.powrprof.SetSuspendState(False, True, False)
+                    if not enable_token_privilege(htoken, SE_SHUTDOWN_NAME):
+                        raise WinError(GetLastError())
+                    success = SetSuspendState(False, True, False)
                     if not success:
                         logging.error("Sleep operation failed")
                 finally:
-                    win32api.CloseHandle(htoken)
+                    CloseHandle(htoken)
             else:
                 logging.error("Sleep operation failed to open process token")
         except Exception:
@@ -87,27 +95,27 @@ class PowerOperations:
             except Exception:
                 pass
 
-    def restart(self):
+    def restart(self) -> None:
         self.clear_widget()
         self._connect_about_to_quit(["shutdown", "/r", "/t", "0"])
         exit_application()
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         self.clear_widget()
         self._connect_about_to_quit(["shutdown", "/s", "/hybrid", "/t", "0"])
         exit_application()
 
-    def force_shutdown(self):
+    def force_shutdown(self) -> None:
         self.clear_widget()
         self._connect_about_to_quit(["shutdown", "/s", "/f", "/t", "0"])
         exit_application()
 
-    def force_restart(self):
+    def force_restart(self) -> None:
         self.clear_widget()
         self._connect_about_to_quit(["shutdown", "/r", "/f", "/t", "0"])
         exit_application()
 
-    def hibernate(self):
+    def hibernate(self) -> None:
         self.clear_widget()
         subprocess.Popen(
             [
@@ -119,19 +127,8 @@ class PowerOperations:
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
 
-    def cancel(self):
-        if self.overlay:
+    def cancel(self) -> None:
+        if isinstance(self.overlay, Fadeable):
             self.overlay.fade_out()
-        self.main_window.fade_out()
-
-        # Find bar and trigger autohide if applicable
-        if hasattr(self.main_window, "parent_button") and self.main_window.parent_button:
-            try:
-                widget = self.main_window.parent_button
-                while widget and not hasattr(widget, "_autohide_bar"):
-                    widget = widget.parent()
-
-                if widget and widget._autohide_bar and widget.isVisible():
-                    widget._hide_timer.start(widget._autohide_delay)
-            except Exception:
-                pass
+        if isinstance(self.main_window, Fadeable):
+            self.main_window.fade_out()

@@ -8,10 +8,22 @@ Window Controls widget provides buttons for minimizing, maximizing/restoring, an
 | `show_app_name`     | boolean | `false`                                                                 | Show the friendly application name (e.g., "Firefox", "Windows Terminal") as a label next to the buttons. |
 | `app_name_position` | string  | `"right"`                                                               | Position of the app name label relative to buttons. Valid values: `left`, `right`. |
 | `maximized_only`    | boolean | `true`                                                                  | When `true`, widget only appears for maximized windows. When `false`, appears for any focused window. |
-| `buttons`           | list    | `["minimize", "maximize", "close"]`                                     | Ordered list of buttons to display. Valid values: `minimize`, `maximize`, `restore`, `close`. |
-| `button_labels`     | dict    | `{minimize: "\uea71", maximize: "\uea71", restore: "\uea71", close: "\uea71"}` | Custom labels/icons for each button. |
+| `buttons`           | list    | `["minimize", "maximize", "close"]`                                     | Ordered list of buttons to display. Valid values: `minimize`, `maximize`, `close`. |
+| `button_labels`     | dict    | [See below](#button-labels-options) | Custom labels/icons for each button. |
 | `monitor_exclusive` | boolean | `true`                                                                  | Whether the widget should only respond to windows on the same monitor. |
 | `animation_duration`| integer | `120`                                                                   | The duration of the show/hide animation in milliseconds. Must be between 0 and 2000. Set to 0 to disable animation. |
+
+## Button Labels Options
+
+The `button_labels` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+button_labels:
+  minimize: "\uea71"
+  maximize: "\uea71"
+  restore: "\uea71"
+  close: "\uea71"
+```
 
 ## Example Configuration
 
@@ -38,10 +50,10 @@ window_controls:
 - **show_app_name:** When `true`, displays the friendly application name (e.g., "Firefox", "Windows Terminal", "Visual Studio Code") as a label next to the buttons.
 - **app_name_position:** Controls where the app name label appears relative to the buttons. Use `left` to show title before buttons, `right` (default) to show it after buttons.
 - **maximized_only:** When `true` (default), the widget only appears when a maximized window is focused, and hides when the window is restored. When `false`, the widget appears for any focused window regardless of its state.
-- **buttons:** An ordered list of buttons to display. You can include any combination of `minimize`, `maximize`, `restore`, and `close` in any order. The `maximize` button automatically toggles between maximize and restore icons based on window state. The `restore` button always restores.
+- **buttons:** An ordered list of buttons to display. You can include any combination of `minimize`, `maximize`, and `close` in any order. The `maximize` button automatically toggles between maximize and restore icons based on window state.
 - **button_labels:** A dictionary mapping each button name to its display text or icon. The `maximize` button uses `maximize` label when the window is normal and `restore` label when maximized.
 - **monitor_exclusive:** When `true`, the widget only appears when the focused window is on the same monitor as the bar containing this widget. When `false`, it appears for any focused window regardless of monitor.
-- **animation_duration:** The duration of the slide+fade animation when the widget appears or disappears, in milliseconds. Must be between 0 and 1000. Set to `0` to disable animation (instant show/hide).
+- **animation_duration:** The duration of the slide+fade animation when the widget appears or disappears, in milliseconds. Must be between 0 and 2000. Set to `0` to disable animation (instant show/hide).
 
 
 ## Available Styles

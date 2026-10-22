@@ -1,16 +1,23 @@
 """Base mixin for top-level views (dialogs, main windows, splash screens)."""
 
 import os
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QWidget
 
 from core.ui.theme import get_tokens, is_dark
 from core.utils.win32.backdrop import enable_mica, is_mica_supported, set_dark_mode
 from settings import SCRIPT_PATH
 
+if TYPE_CHECKING:
+    _ViewHost = QWidget
+else:
+    _ViewHost = object
 
-class ViewBase:
+
+class ViewBase(_ViewHost):
     """Mixin for any top-level QWidget subclass.
 
     Provides:

@@ -12,7 +12,8 @@ Displays the number of unread Windows notifications in your status bar. Clicking
 | `hide_empty`       | boolean  | `false`  | Whether to hide the widget when there are no notifications. |
 | `max_count`       | integer  | `0`  | The highest number shown on the bar, above which the count is written as `9+`. `0` shows the count as it is. |
 | `menu`       | dict  | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'width': 380, 'max_height': 400, 'max_notifications': 30, 'show_app_icons': True, 'app_icon_size': 36, 'section_icon_size': 16, 'show_site_icons': False, 'show_images': True, 'image_max_height': 180, 'group_by_app': True, 'show_dnd_toggle': True, 'show_notification_center': True}`  | Menu settings for the notification popup. |
-| `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the notifications widget. |
+| `keybindings`     | list    | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+| `callbacks`       | dict    | [See below](#available-callbacks) | Callbacks for mouse events on the notifications widget. |
 
 ## Example Configuration
 
@@ -79,10 +80,8 @@ Displays the number of unread Windows notifications in your status bar. Clicking
   - **group_by_app:** Whether to group notifications under a header per sender, the way the Notification Center groups them. A browser is filed one sender per website, so a page's notifications are headed by the page rather than by the browser.
   - **show_dnd_toggle:** Whether to show the Do Not Disturb toggle in the menu header. The toggle is hidden automatically if Windows Focus Assist cannot be reached.
   - **show_notification_center:** Whether to show the footer link that opens the Windows Notification Center.
-- **callbacks:** Callbacks for mouse events on the notifications widget. The following callbacks are available:
-  - `on_left`: Callback for left-click event.
-  - `on_middle`: Callback for middle-click event.
-  - `on_right`: Callback for right-click event.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#available-callbacks).
 
 > [!NOTE]
 > Clicking a notification does what clicking it in the Notification Center does: the app it came from is given that particular notification, so a screenshot notification opens the screenshot and a website notification opens the page behind it. An activated notification is removed, the same way Windows removes it. An app that registered no way of being handed a notification is only brought to the foreground and keeps it. Removing a notification here, by clicking it or by dismissing it, also removes it from the Windows Notification Center.
@@ -101,6 +100,17 @@ Displays the number of unread Windows notifications in your status bar. Clicking
 > The file a notification points at usually belongs to the app that sent it and is deleted as soon as the toast has been drawn, long before the notification leaves the Notification Center. YASB copies each picture to `%LOCALAPPDATA%\YASB\notification_images` the first time it sees it so the menu goes on showing what Windows shows, and deletes a copy once its notification is gone.
 
 ## Available Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_menu"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
 
 - **toggle_menu:** Toggles the YASB notification menu.
 - **toggle_notification:** Toggles the Windows Notification Center.

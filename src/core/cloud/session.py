@@ -81,7 +81,7 @@ class Session:
         carries them.
         """
         try:
-            user = payload.get("user") or {}
+            user: dict[str, Any] = payload.get("user") or {}
             tokens = Tokens(
                 access_token=str(payload.get("access_token", "")),
                 device_token=str(payload.get("device_token") or self.tokens.device_token),

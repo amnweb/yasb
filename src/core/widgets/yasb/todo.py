@@ -4,15 +4,27 @@ import logging
 import os
 import re
 import urllib.parse
+from collections.abc import Callable
 from functools import partial
+from typing import TypedDict, override
 
-from PyQt6.QtCore import QMimeData, QPoint, Qt, QTimer
-from PyQt6.QtGui import QAction, QDrag, QIcon
+from PyQt6.QtCore import QMimeData, QObject, QPoint, Qt, QTimer
+from PyQt6.QtGui import (
+    QAction,
+    QDrag,
+    QDragEnterEvent,
+    QDragLeaveEvent,
+    QDragMoveEvent,
+    QDropEvent,
+    QIcon,
+    QMouseEvent,
+)
 from PyQt6.QtWidgets import (
     QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLayout,
     QLineEdit,
     QMenu,
     QPushButton,
@@ -27,13 +39,23 @@ from core.config import HOME_CONFIGURATION_DIR
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.win32.utils import apply_qmenu_style
-from core.validation.widgets.yasb.todo import TodoConfig
+from core.validation.widgets.yasb.todo import CategoryConfig, TodoConfig, TodoIconsConfig
 from core.widgets.base import BaseWidget
+
+
+class Task(TypedDict):
+    id: int
+    title: str
+    description: str
+    category: str
+    created_at: str
+    completed: bool
+    order: int
 
 
 class TodoWidget(BaseWidget):
     validation_schema = TodoConfig
-    _instances = []
+    _instances: list[TodoWidget] = []
 
     def __init__(self, config: TodoConfig):
         super().__init__(class_name="todo-widget")
@@ -41,13 +63,15 @@ class TodoWidget(BaseWidget):
         self.config = config
 
         self._show_alt_label = False
-        self._tasks = []
-        self._menu = None
+        self._tasks: list[Task] = []
+        self._menu: PopupWidget | None = None
         self._selected_category = "default"
-        self._category_buttons = []
-        self._expanded_task_id = None
+        self._category_buttons: list[tuple[str, QPushButton]] = []
+        self.expanded_task_id: int | None = None
         self._show_completed = False
-        self._category_filter = None
+        self._category_filter: str | None = None
+        self._title_input: QLineEdit
+        self._desc_input: QTextEdit
 
         self._init_container()
         self.build_widget_label(self.config.label, self.config.label_alt)
@@ -62,7 +86,7 @@ class TodoWidget(BaseWidget):
         self._update_label()
 
     @classmethod
-    def update_all(cls):
+    def update_all(cls) -> None:
         for instance in cls._instances:
             instance._load_tasks()
             instance._update_label()
@@ -93,12 +117,12 @@ class TodoWidget(BaseWidget):
         except Exception as e:
             logging.error("Error saving tasks: %s", e)
 
-    def _add_new_task(self, dialog):
+    def _add_new_task(self, dialog: QDialog) -> None:
         title = self._title_input.text().strip()
         description = self._desc_input.toPlainText().strip() if self._desc_input else ""
         if not title:
             return
-        task_data = {
+        task_data: Task = {
             "id": int(datetime.datetime.now().timestamp()),
             "title": title,
             "description": description,
@@ -114,7 +138,7 @@ class TodoWidget(BaseWidget):
         self._show_completed = False
         self._show_menu()
 
-    def _edit_task(self, dialog, task):
+    def _edit_task(self, dialog: QDialog, task: Task) -> None:
         title = self._title_input.text().strip()
         description = self._desc_input.toPlainText().strip() if self._desc_input else ""
         if not title:
@@ -129,11 +153,18 @@ class TodoWidget(BaseWidget):
         TodoWidget.update_all()
         dialog.accept()
         self._show_completed = False
-        self._expanded_task_id = task["id"]
+        self.expanded_task_id = task["id"]
         self._show_menu()
 
-    def _show_task_dialog(self, dialog_title, save_button_text, on_save, task=None):
-        self._menu.hide()
+    def _show_task_dialog(
+        self,
+        dialog_title: str,
+        save_button_text: str,
+        on_save: Callable[..., None],
+        task: Task | None = None,
+    ) -> None:
+        if self._menu is not None:
+            self._menu.hide()
         self._selected_category = task.get("category", "default") if task else "default"
         dialog = QDialog(self._menu)
         dialog.setWindowTitle(dialog_title)
@@ -166,7 +197,12 @@ class TodoWidget(BaseWidget):
         content_layout.addWidget(self._title_input)
 
         self._desc_input = QTextEdit()
-        self._desc_input.insertFromMimeData = lambda source: self._desc_input.insertPlainText(source.text())
+
+        def insert_plain_text(source: QMimeData | None) -> None:
+            if source is not None:
+                self._desc_input.insertPlainText(source.text())
+
+        self._desc_input.insertFromMimeData = insert_plain_text
         self.widget_context_menu(self._desc_input)
         self._desc_input.setPlaceholderText("Task description... (max 500 characters)")
         if task:
@@ -226,7 +262,7 @@ class TodoWidget(BaseWidget):
 
         self._update_label()
 
-    def _get_filtered_tasks(self, completed=None, category=None):
+    def _get_filtered_tasks(self, completed: bool | None = None, category: str | None = None) -> list[Task]:
         """Return tasks filtered by completed status and/or category."""
         tasks = self._tasks
         if completed is not None:
@@ -249,7 +285,7 @@ class TodoWidget(BaseWidget):
         completed_count = len(completed_tasks)
 
         for widget_index, part in enumerate(label_parts):
-            if widget_index >= len(active_widgets) or not isinstance(active_widgets[widget_index], QLabel):
+            if widget_index >= len(active_widgets):
                 continue
 
             current_widget = active_widgets[widget_index]
@@ -267,7 +303,7 @@ class TodoWidget(BaseWidget):
             widget_index += 1
 
         # Tooltip: show number of tasks per category, skip 0s
-        category_counts = {}
+        category_counts: dict[str, int] = {}
         for cat_key, cat_conf in self.config.categories.items():
             count = len([t for t in self._tasks if t.get("category") == cat_key and not t.get("completed", False)])
             if count > 0:
@@ -281,7 +317,7 @@ class TodoWidget(BaseWidget):
 
     def _toggle_menu(self):
         self._show_completed = False
-        self._expanded_task_id = None
+        self.expanded_task_id = None
         self._show_menu()
 
     def _show_menu(self):
@@ -357,8 +393,8 @@ class TodoWidget(BaseWidget):
         scroll_layout.setSpacing(0)
 
         tasks = self._get_filtered_tasks(completed=False, category=self._category_filter)
-        if self._expanded_task_id is None and tasks:
-            self._expanded_task_id = tasks[0]["id"]
+        if self.expanded_task_id is None and tasks:
+            self.expanded_task_id = tasks[0]["id"]
 
         self._refresh_task_list(scroll_layout, tasks)
 
@@ -403,7 +439,7 @@ class TodoWidget(BaseWidget):
             action = QAction(f"Show only {cat_config.label}", self)
             action.setCheckable(True)
             action.setChecked(self._category_filter == cat_key)
-            action.triggered.connect(lambda checked, c=cat_key: self._sort_and_filter_tasks(category_key=c))
+            action.triggered.connect(partial(self._filter_by_category, cat_key))
             menu.addAction(action)
 
         button_pos = self._order_btn.mapToGlobal(self._order_btn.rect().bottomLeft())
@@ -411,7 +447,12 @@ class TodoWidget(BaseWidget):
         pos = button_pos - QPoint(menu_width - self._order_btn.sizeHint().width(), -6)
         menu.exec(pos)
 
-    def _sort_and_filter_tasks(self, sort_mode=None, category_key=None, reverse=False):
+    def _filter_by_category(self, category_key: str, checked: bool = False) -> None:
+        self._sort_and_filter_tasks(category_key=category_key)
+
+    def _sort_and_filter_tasks(
+        self, sort_mode: str | None = None, category_key: str | None = None, reverse: bool = False
+    ) -> None:
         if category_key is not None:
             self._category_filter = category_key
 
@@ -424,7 +465,7 @@ class TodoWidget(BaseWidget):
             self._category_filter = None
 
         # Reset expanded task ID when sorting or filtering
-        self._expanded_task_id = None
+        self.expanded_task_id = None
 
         self._refresh_menu_task_list()
 
@@ -433,19 +474,19 @@ class TodoWidget(BaseWidget):
         TodoWidget.update_all()
         self._refresh_menu_task_list()
 
-    def _set_show_completed(self, show_completed):
+    def _set_show_completed(self, show_completed: bool) -> None:
         self._show_completed = show_completed
         self._in_progress_btn.setChecked(not show_completed)
         self._completed_btn.setChecked(show_completed)
         if show_completed:
-            self._expanded_task_id = None  # Collapse all when switching to completed
+            self.expanded_task_id = None  # Collapse all when switching to completed
         self._refresh_menu_task_list()
 
-    def _refresh_task_list(self, layout, tasks=None):
+    def _refresh_task_list(self, layout: QLayout, tasks: list[Task] | None = None) -> None:
         """Refresh the task list."""
         while layout.count():
             item = layout.takeAt(0)
-            widget = item.widget()
+            widget = item.widget() if item is not None else None
             if widget is not None:
                 widget.setParent(None)
 
@@ -500,23 +541,27 @@ class TodoWidget(BaseWidget):
                         tasks = self._get_filtered_tasks(completed=False, category=self._category_filter)
                     else:
                         tasks = self._get_filtered_tasks(completed=True, category=self._category_filter)
-                    self._refresh_task_list(scroll_widget.layout(), tasks)
+                    layout = scroll_widget.layout()
+                    if layout is not None:
+                        self._refresh_task_list(layout, tasks)
 
-    def _expand_task(self, task_id):
-        self._expanded_task_id = task_id
+    def _expand_task(self, task_id: int) -> None:
+        self.expanded_task_id = task_id
         self._refresh_menu_task_list()
 
-    def _show_add_task_dialog(self):
+    def _show_add_task_dialog(self) -> None:
         self._show_task_dialog(dialog_title="Add New Task", save_button_text="Add Task", on_save=self._add_new_task)
 
-    def _show_edit_task_dialog(self, task):
+    def _show_edit_task_dialog(self, task: Task) -> None:
         self._show_task_dialog(
             dialog_title="Edit Task", save_button_text="Save Changes", on_save=self._edit_task, task=task
         )
 
-    def widget_context_menu(self, widget):
-        def show_custom_menu(point):
+    def widget_context_menu(self, widget: QLineEdit | QTextEdit) -> None:
+        def show_custom_menu(point: QPoint) -> None:
             standard_menu = widget.createStandardContextMenu()
+            if standard_menu is None:
+                return
             menu = QMenu(widget.window())
             menu.setProperty("class", "context-menu")
             menu.addActions(standard_menu.actions())
@@ -530,7 +575,7 @@ class TodoWidget(BaseWidget):
         widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         widget.customContextMenuRequested.connect(show_custom_menu)
 
-    def _limit_text_length(self, field, max_length):
+    def _limit_text_length(self, field: str, max_length: int) -> None:
         """Limit the text length for title or description fields."""
         if field == "title":
             text = self._title_input.text()
@@ -545,12 +590,12 @@ class TodoWidget(BaseWidget):
                 self._desc_input.setPlainText(text[:max_length])
                 self._desc_input.blockSignals(False)
 
-    def _select_category(self, category_name):
+    def _select_category(self, category_name: str) -> None:
         self._selected_category = category_name
         for cat_name, btn in self._category_buttons:
             btn.setChecked(cat_name == category_name)
 
-    def _add_task_to_menu(self, task, layout, completed=False):
+    def _add_task_to_menu(self, task: Task, layout: QLayout, completed: bool = False) -> None:
         container = TaskFrame(
             self,
             task,
@@ -562,7 +607,7 @@ class TodoWidget(BaseWidget):
             delete_callback=self._delete_task,
             reorder_callback=self._reorder_tasks,
         )
-        expanded = self._expanded_task_id == task["id"]
+        expanded = self.expanded_task_id == task["id"]
         class_list = [
             "task-item",
             "completed" if completed else "",
@@ -590,7 +635,7 @@ class TodoWidget(BaseWidget):
             checkbox.setCheckable(True)
             checkbox.setChecked(False)
 
-            def delayed_archive(checked, t=task, cb=checkbox):
+            def delayed_archive(checked: bool, t: Task = task, cb: QPushButton = checkbox) -> None:
                 cb.setChecked(True)
                 cb.setEnabled(False)
                 container.setProperty("class", f"task-item completed {task.get('category', 'default')}")
@@ -627,7 +672,7 @@ class TodoWidget(BaseWidget):
 
         text_layout.addWidget(title_label)
 
-        if self._expanded_task_id == task["id"]:
+        if self.expanded_task_id == task["id"]:
             if task.get("description"):
                 desc_label = QLabel()
                 desc_label.setProperty("class", "description")
@@ -638,7 +683,7 @@ class TodoWidget(BaseWidget):
 
                 if not bool(re.search(r"<a\s+href=", desc, re.IGNORECASE)):
 
-                    def replacer(match):
+                    def replacer(match: re.Match[str]) -> str:
                         url = match.group(1)
                         domain = urllib.parse.urlparse(url).netloc or "link"
                         return f'<a style="text-decoration:none" href="{url}">{domain}</a>'
@@ -681,11 +726,11 @@ class TodoWidget(BaseWidget):
 
                 edit_btn = QPushButton(self.config.icons.edit)
                 edit_btn.setProperty("class", "edit-task-button")
-                edit_btn.clicked.connect(lambda _, t=task: self._show_edit_task_dialog(t))
+                edit_btn.clicked.connect(lambda: self._show_edit_task_dialog(task))
 
                 delete_btn = QPushButton(self.config.icons.delete)
                 delete_btn.setProperty("class", "delete-task-button")
-                delete_btn.clicked.connect(lambda _, t=task: self._delete_task(t))
+                delete_btn.clicked.connect(lambda: self._delete_task(task))
 
                 info_row = QFrame()
                 info_row.setProperty("class", "task-info-row")
@@ -705,13 +750,10 @@ class TodoWidget(BaseWidget):
 
         container_layout.addWidget(text_container)
         container.setAcceptDrops(True)
-        container._drag_start_position = None
-        container._task_id = task["id"]
-        container._drop_highlight = False
 
         layout.addWidget(container)
 
-    def _uncomplete_task(self, task):
+    def _uncomplete_task(self, task: Task) -> None:
         for i, existing_task in enumerate(self._tasks):
             if existing_task["id"] == task["id"]:
                 self._tasks[i]["completed"] = False
@@ -720,7 +762,7 @@ class TodoWidget(BaseWidget):
         TodoWidget.update_all()
         self._refresh_menu_task_list()
 
-    def _archive_task(self, task):
+    def _archive_task(self, task: Task) -> None:
         for i, existing_task in enumerate(self._tasks):
             if existing_task["id"] == task["id"]:
                 self._tasks[i]["completed"] = True
@@ -729,13 +771,13 @@ class TodoWidget(BaseWidget):
         TodoWidget.update_all()
         self._remove_task_widget_from_menu(task["id"])
 
-    def _delete_task(self, task):
+    def _delete_task(self, task: Task) -> None:
         self._tasks = [t for t in self._tasks if t["id"] != task["id"]]
         self._save_tasks()
         TodoWidget.update_all()
         self._remove_task_widget_from_menu(task["id"])
 
-    def _remove_task_widget_from_menu(self, task_id):
+    def _remove_task_widget_from_menu(self, task_id: int) -> None:
         """Remove the widget for a given task_id from the menu, and refresh if needed."""
         if hasattr(self, "_menu") and self._menu:
             scroll_areas = self._menu.findChildren(QScrollArea)
@@ -744,24 +786,16 @@ class TodoWidget(BaseWidget):
                 scroll_widget = scroll_area.widget()
                 if scroll_widget:
                     layout = scroll_widget.layout()
-                    widget_to_remove = None
-                    for i in range(layout.count()):
-                        w = layout.itemAt(i).widget()
-                        if hasattr(w, "_task_id") and w._task_id == task_id:
-                            widget_to_remove = w
-                            break
+                    if layout is None:
+                        return
+                    widget_to_remove = next((w for w in _task_frames(layout) if w.task_id == task_id), None)
                     if widget_to_remove:
                         widget_to_remove.setParent(None)
                     # Only refresh if no task items left after removal
-                    task_items_left = [
-                        layout.itemAt(i).widget()
-                        for i in range(layout.count())
-                        if hasattr(layout.itemAt(i).widget(), "_task_id")
-                    ]
-                    if len(task_items_left) == 0:
+                    if not _task_frames(layout):
                         self._refresh_menu_task_list()
 
-    def _reorder_tasks(self, source_id, target_id):
+    def _reorder_tasks(self, source_id: str, target_id: str) -> None:
         try:
             tasks_sorted = sorted(self._tasks, key=lambda t: t["order"], reverse=True)
             source_index = next((i for i, t in enumerate(tasks_sorted) if str(t["id"]) == source_id), -1)
@@ -779,23 +813,33 @@ class TodoWidget(BaseWidget):
             logging.error("Failed to reorder tasks: %s", e)
 
 
+def _task_frames(layout: QLayout) -> list[TaskFrame]:
+    frames: list[TaskFrame] = []
+    for i in range(layout.count()):
+        item = layout.itemAt(i)
+        widget = item.widget() if item is not None else None
+        if isinstance(widget, TaskFrame):
+            frames.append(widget)
+    return frames
+
+
 class TaskFrame(QFrame):
     def __init__(
         self,
-        main_widget,
-        task,
-        completed,
-        icons,
-        categories,
-        expand_callback,
-        archive_callback,
-        delete_callback,
-        reorder_callback,
-    ):
+        main_widget: TodoWidget,
+        task: Task,
+        completed: bool,
+        icons: TodoIconsConfig,
+        categories: dict[str, CategoryConfig],
+        expand_callback: Callable[[int], None],
+        archive_callback: Callable[[Task], None],
+        delete_callback: Callable[[Task], None],
+        reorder_callback: Callable[[str, str], None],
+    ) -> None:
         super().__init__(main_widget)
         self._main_widget = main_widget
-        self._drag_start_position = None
-        self._task_id = task["id"]
+        self._drag_start_position: QPoint | None = None
+        self.task_id = task["id"]
         self._drop_highlight = False
         self._task = task
         self._completed = completed
@@ -806,58 +850,79 @@ class TaskFrame(QFrame):
         self._delete_callback = delete_callback
         self._reorder_callback = reorder_callback
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_start_position = event.pos()
-            if self._main_widget._expanded_task_id != self._task_id:
-                self._expand_callback(self._task_id)
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is None:
+            return
+        if a0.button() == Qt.MouseButton.LeftButton:
+            self._drag_start_position = a0.pos()
+            if self._main_widget.expanded_task_id != self.task_id:
+                self._expand_callback(self.task_id)
 
-    def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.MouseButton.LeftButton and self._drag_start_position:
-            if (event.pos() - self._drag_start_position).manhattanLength() >= 1:
+    @override
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is None:
+            return
+        if self._drag_start_position is not None and a0.buttons() & Qt.MouseButton.LeftButton:
+            if (a0.pos() - self._drag_start_position).manhattanLength() >= 1:
                 drag = QDrag(self)
                 mime_data = QMimeData()
-                mime_data.setText(str(self._task_id))
+                mime_data.setText(str(self.task_id))
                 drag.setMimeData(mime_data)
                 drag.exec(Qt.DropAction.MoveAction)
 
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasText():
+    @override
+    def dragEnterEvent(self, a0: QDragEnterEvent | None) -> None:
+        if a0 is None:
+            return
+        mime_data = a0.mimeData()
+        if mime_data is not None and mime_data.hasText():
             self._drop_highlight = True
             self.setProperty("class", f"task-item drop-highlight {self._task.get('category', 'default')}")
             refresh_widget_style(self)
             self.update()
-            event.acceptProposedAction()
+            a0.acceptProposedAction()
         else:
-            event.ignore()
+            a0.ignore()
 
-    def dragLeaveEvent(self, event):
+    @override
+    def dragLeaveEvent(self, a0: QDragLeaveEvent | None) -> None:
         self._drop_highlight = False
         self.setProperty("class", f"task-item {self._task.get('category', 'default')}")
         refresh_widget_style(self)
         self.update()
 
-    def dragMoveEvent(self, event):
-        scroll_area = self
+    @override
+    def dragMoveEvent(self, a0: QDragMoveEvent | None) -> None:
+        if a0 is None:
+            return
+        scroll_area: QObject | None = self
         while scroll_area and not isinstance(scroll_area, QScrollArea):
             scroll_area = scroll_area.parent()
-        if scroll_area:
-            global_pos = self.mapToGlobal(event.position().toPoint())
-            viewport_pos = scroll_area.viewport().mapFromGlobal(global_pos)
-            margin = 40
-            if viewport_pos.y() < margin:
-                scroll_area.verticalScrollBar().setValue(scroll_area.verticalScrollBar().value() - 20)
-            elif viewport_pos.y() > scroll_area.viewport().height() - margin:
-                scroll_area.verticalScrollBar().setValue(scroll_area.verticalScrollBar().value() + 20)
-        event.acceptProposedAction()
+        if isinstance(scroll_area, QScrollArea):
+            viewport = scroll_area.viewport()
+            scroll_bar = scroll_area.verticalScrollBar()
+            if viewport is not None and scroll_bar is not None:
+                global_pos = self.mapToGlobal(a0.position().toPoint())
+                viewport_pos = viewport.mapFromGlobal(global_pos)
+                margin = 40
+                if viewport_pos.y() < margin:
+                    scroll_bar.setValue(scroll_bar.value() - 20)
+                elif viewport_pos.y() > viewport.height() - margin:
+                    scroll_bar.setValue(scroll_bar.value() + 20)
+        a0.acceptProposedAction()
 
-    def dropEvent(self, event):
+    @override
+    def dropEvent(self, a0: QDropEvent | None) -> None:
+        if a0 is None:
+            return
         self._drop_highlight = False
         self.setProperty("class", f"task-item {self._task.get('category', 'default')}")
         refresh_widget_style(self)
         self.update()
-        source_id = event.mimeData().text()
-        target_id = str(self._task_id)
-        if source_id != target_id:
+        mime_data = a0.mimeData()
+        source_id = mime_data.text() if mime_data is not None else None
+        target_id = str(self.task_id)
+        if source_id is not None and source_id != target_id:
             self._reorder_callback(source_id, target_id)
-        event.acceptProposedAction()
+        a0.acceptProposedAction()

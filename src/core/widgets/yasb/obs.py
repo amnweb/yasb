@@ -1,6 +1,9 @@
 import time
+from collections.abc import Callable
+from typing import Any, override
 
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QCloseEvent, QMouseEvent
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel
 
 from core.utils.tooltip import set_tooltip
@@ -15,7 +18,7 @@ class ObsWidget(BaseWidget):
 
     _opacity_timer: QTimer | None = None
     _time_timer: QTimer | None = None
-    _subscribers: list = []
+    _subscribers: list[ObsWidget] = []
 
     def __init__(self, config: ObsConfig):
         super().__init__(class_name="obs-widget")
@@ -65,9 +68,7 @@ class ObsWidget(BaseWidget):
         self._record_btn = QLabel(self._icons["stopped"])
         self._record_btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._record_btn.setProperty("class", "icon record stopped")
-        self._record_btn.mousePressEvent = lambda e: (
-            self.toggle_record() if e.button() == Qt.MouseButton.LeftButton else None
-        )
+        self._on_left_click(self._record_btn, self.toggle_record)
         if self._tooltip:
             set_tooltip(self._record_btn, "Toggle Recording", position="top")
         self._opacity_effect = QGraphicsOpacityEffect(self._record_btn)
@@ -79,9 +80,7 @@ class ObsWidget(BaseWidget):
         self._virtual_cam_btn = QLabel(self._icons["virtual_cam_off"])
         self._virtual_cam_btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._virtual_cam_btn.setProperty("class", "icon virtual-cam off")
-        self._virtual_cam_btn.mousePressEvent = lambda e: (
-            self.toggle_virtual_cam() if e.button() == Qt.MouseButton.LeftButton else None
-        )
+        self._on_left_click(self._virtual_cam_btn, self.toggle_virtual_cam)
         if self._tooltip:
             set_tooltip(self._virtual_cam_btn, "Toggle Virtual Camera", position="top")
         self._widget_container_layout.addWidget(self._virtual_cam_btn)
@@ -92,9 +91,7 @@ class ObsWidget(BaseWidget):
         self._studio_mode_btn = QLabel(self._icons["studio_mode_off"])
         self._studio_mode_btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._studio_mode_btn.setProperty("class", "icon studio-mode off")
-        self._studio_mode_btn.mousePressEvent = lambda e: (
-            self.toggle_studio_mode() if e.button() == Qt.MouseButton.LeftButton else None
-        )
+        self._on_left_click(self._studio_mode_btn, self.toggle_studio_mode)
         if self._tooltip:
             set_tooltip(self._studio_mode_btn, "Toggle Studio Mode", position="top")
         self._widget_container_layout.addWidget(self._studio_mode_btn)
@@ -105,9 +102,7 @@ class ObsWidget(BaseWidget):
         self._stream_btn = QLabel(self._icons["streaming_stopped"])
         self._stream_btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._stream_btn.setProperty("class", "icon stream off")
-        self._stream_btn.mousePressEvent = lambda e: (
-            self.toggle_stream() if e.button() == Qt.MouseButton.LeftButton else None
-        )
+        self._on_left_click(self._stream_btn, self.toggle_stream)
         if self._tooltip:
             set_tooltip(self._stream_btn, "Toggle Stream", position="top")
         self._stream_opacity_effect = QGraphicsOpacityEffect(self._stream_btn)
@@ -145,6 +140,14 @@ class ObsWidget(BaseWidget):
         if self._hide_when_not_recording:
             self.hide()
 
+    @staticmethod
+    def _on_left_click(label: QLabel, action: Callable[[], None]) -> None:
+        def mouse_press(ev: QMouseEvent | None) -> None:
+            if ev is not None and ev.button() == Qt.MouseButton.LeftButton:
+                action()
+
+        label.mousePressEvent = mouse_press
+
     def _init_callbacks(self):
         self.register_callback("toggle_record", self.toggle_record)
         self.register_callback("start_record", lambda: self.client and self.client.send("StartRecord"))
@@ -173,7 +176,7 @@ class ObsWidget(BaseWidget):
             self.worker.start()
 
         # Always check if already connected (signal may have been missed)
-        if self.worker._connected and self.worker.client and self.worker.client.connected:
+        if self.worker.connected and self.worker.client and self.worker.client.connected:
             self._on_connection(True)
 
         # Shared timers
@@ -200,7 +203,7 @@ class ObsWidget(BaseWidget):
             if self._hide_when_not_recording:
                 self.hide()
 
-    def _on_state(self, data: dict):
+    def _on_state(self, data: dict[str, Any]) -> None:
         active, paused = self._parse_state(data)
         self._update_record_ui(active, paused)
 
@@ -223,7 +226,7 @@ class ObsWidget(BaseWidget):
             self._scene_label.setText(scene_name)
             self._scene_label.show()
 
-    def _on_stream_state(self, data: dict):
+    def _on_stream_state(self, data: dict[str, Any]) -> None:
         state = str(data.get("outputState", "")).upper()
         active = data.get("outputActive", False)
         if "STARTING" in state:
@@ -366,7 +369,7 @@ class ObsWidget(BaseWidget):
         if self._hide_when_not_recording:
             self.show() if (active or paused) else self.hide()
 
-    def _update_time(self, data: dict):
+    def _update_time(self, data: dict[str, Any]) -> None:
         if not self._time_label:
             return
         duration_ms = data.get("outputDuration", 0)
@@ -417,7 +420,7 @@ class ObsWidget(BaseWidget):
             if not active and not starting:
                 self._stream_opacity_effect.setOpacity(1.0)
 
-    def _update_stream_time(self, data: dict):
+    def _update_stream_time(self, data: dict[str, Any]) -> None:
         if not self._stream_time_label:
             return
         duration_ms = data.get("outputDuration", 0)
@@ -426,7 +429,7 @@ class ObsWidget(BaseWidget):
             self._stream_base_time = time.monotonic()
             self._stream_time_label.setText(self._format_duration(duration_ms))
 
-    def _update_stream_stats(self, data: dict):
+    def _update_stream_stats(self, data: dict[str, Any]) -> None:
         if not self._stream_stats_label or not self._show_stream_stats:
             return
         current_bytes = data.get("outputBytes", 0)
@@ -447,7 +450,7 @@ class ObsWidget(BaseWidget):
         s = total_seconds % 60
         return f"{h:02d}:{m:02d}:{s:02d}"
 
-    def _parse_state(self, data: dict) -> tuple[bool, bool]:
+    def _parse_state(self, data: dict[str, Any]) -> tuple[bool, bool]:
         state = data.get("outputState")
         if state:
             s = str(state).upper()
@@ -560,7 +563,8 @@ class ObsWidget(BaseWidget):
         except Exception:
             pass
 
-    def closeEvent(self, event):
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         if self in ObsWidget._subscribers:
             ObsWidget._subscribers.remove(self)
 
@@ -584,4 +588,5 @@ class ObsWidget(BaseWidget):
                     ObsWidget._time_timer.stop()
                     ObsWidget._time_timer = None
 
-        event.accept()
+        if a0 is not None:
+            a0.accept()

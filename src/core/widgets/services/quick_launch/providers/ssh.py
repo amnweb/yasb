@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import shutil
+from typing import Any
 
 from core.utils.shell_utils import shell_open
 from core.widgets.services.quick_launch.base_provider import (
@@ -13,7 +14,7 @@ from core.widgets.services.quick_launch.base_provider import (
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_SSH
 
 
-def _parse_ssh_config(config_path: str) -> list[dict]:
+def _parse_ssh_config(config_path: str) -> list[dict[str, Any]]:
     """Parse an SSH config file and return a list of host entry dicts.
 
     Each dict may contain: host, hostname, user, port, identityfile.
@@ -22,8 +23,8 @@ def _parse_ssh_config(config_path: str) -> list[dict]:
     if not os.path.isfile(config_path):
         return []
 
-    hosts: list[dict] = []
-    current: dict | None = None
+    hosts: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
 
     try:
         with open(config_path, encoding="utf-8") as f:
@@ -66,7 +67,7 @@ def _parse_ssh_config(config_path: str) -> list[dict]:
     return hosts
 
 
-def _build_ssh_command(entry: dict) -> str:
+def _build_ssh_command(entry: dict[str, Any]) -> str:
     """Build the ssh command string for a host entry."""
     parts = ["ssh"]
     if entry.get("port"):
@@ -88,7 +89,7 @@ def _launch_ssh(host: str, ssh_cmd: str, admin: bool = False) -> None:
         shell_open("cmd.exe", verb=verb, parameters=f"/k {ssh_cmd}")
 
 
-def _build_config_block(entry: dict) -> list[str]:
+def _build_config_block(entry: dict[str, Any]) -> list[str]:
     """Return SSH config file lines for a single host block."""
     lines = [f"Host {entry['host']}\n"]
     for key, ssh_key in (
@@ -102,7 +103,7 @@ def _build_config_block(entry: dict) -> list[str]:
     return lines
 
 
-def _append_ssh_entry(config_path: str, new_entry: dict) -> bool:
+def _append_ssh_entry(config_path: str, new_entry: dict[str, Any]) -> bool:
     """Append a new Host block to the SSH config file, creating it if needed."""
     block = _build_config_block(new_entry)
     try:
@@ -121,7 +122,7 @@ def _append_ssh_entry(config_path: str, new_entry: dict) -> bool:
         return False
 
 
-def _write_ssh_entry(config_path: str, old_host: str, new_entry: dict) -> bool:
+def _write_ssh_entry(config_path: str, old_host: str, new_entry: dict[str, Any]) -> bool:
     """Rewrite a Host block in the SSH config file with updated values.
 
     Other blocks, comments, and blank lines outside the replaced block are
@@ -177,17 +178,17 @@ class SshProvider(BaseProvider):
     icon = ICON_SSH
     input_placeholder = "Search SSH hosts..."
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
-        self._hosts: list[dict] = []
+        self._hosts: list[dict[str, Any]] = []
         self._loaded = False
         self._editing_host: str | None = None
 
-    def _edit_preview(self, entry: dict | None = None) -> dict:
+    def _edit_preview(self, entry: dict[str, Any] | None = None) -> dict[str, Any]:
         """Return a preview dict that renders as an inline SSH connection edit form."""
         e = entry or {}
 
-        def f(id_, label, placeholder):
+        def f(id_: str, label: str, placeholder: str) -> dict[str, Any]:
             return {"id": id_, "type": "text", "label": label, "placeholder": placeholder, "value": e.get(id_, "")}
 
         return {
@@ -217,7 +218,7 @@ class SshProvider(BaseProvider):
         self._hosts = []
         self._editing_host = None
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         if not self._loaded:
             self._discover()
 
@@ -359,7 +360,9 @@ class SshProvider(BaseProvider):
 
         return ProviderMenuActionResult()
 
-    def handle_preview_action(self, action_id: str, result: ProviderResult, data: dict) -> ProviderMenuActionResult:
+    def handle_preview_action(
+        self, action_id: str, result: ProviderResult, data: dict[str, Any]
+    ) -> ProviderMenuActionResult:
         if action_id == "cancel":
             self._editing_host = None
             return ProviderMenuActionResult(refresh_results=True)

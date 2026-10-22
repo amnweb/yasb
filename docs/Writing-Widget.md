@@ -38,63 +38,29 @@ or without alt label:
 self.build_widget_label(self.config.label, None)
 ```
 
--   Or use a custom function if needed - the **build_widget_label()** method:
+-   Full signature:
 
 ```py
- """
- This method creates dynamic QLabel widgets from text content that may include HTML span elements.
-
- # Parameters
- - `content` (str): The primary content string to display, which may contain HTML spans with class attributes.
- - `content_alt` (str): An alternative content string to create hidden labels for later use.
-
- # Behavior
- 1. The method parses both content strings, splitting them at span tags.
- 2. For each part:
-     - If it's a span element, it extracts the class name and text content.
-     - If it's plain text, it creates a standard label with class "label".
- 3. All labels are:
-     - Center-aligned
-     - Given a pointing hand cursor
-     - Added to the widget container layout
- 4. Labels from `content` are visible by default.
- 5. Labels from `content_alt` are hidden by default.
-
- # Returns
- The method stores two lists as instance variables:
- - `self._widgets`: Visible labels created from the primary content
- - `self._widgets_alt`: Hidden labels created from the alternative content
- """
-
- def build_widget_label(self, content: str, content_alt: str):
-     def process_content(content, is_alt=False):
-         label_parts = re.split('(<span.*?>.*?</span>)', content)
-         label_parts = [part for part in label_parts if part]
-         widgets = []
-         for part in label_parts:
-             part = part.strip()
-             if not part:
-                 continue
-             if '<span' in part and '</span>' in part:
-                 class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                 class_result = class_name.group(2) if class_name else 'icon'
-                 icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                 label = QLabel(icon)
-                 label.setProperty("class", class_result)
-             else:
-                 label = QLabel(part)
-                 label.setProperty("class", "label")
-             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-             self._widget_container_layout.addWidget(label)
-             widgets.append(label)
-             if is_alt:
-                 label.hide()
-             else:
-                 label.show()
-         return widgets
-     self._widgets = process_content(content)
-     self._widgets_alt = process_content(content_alt, is_alt=True)
+self.build_widget_label(
+    content,
+    content_alt=None,
+    label_placeholder=None,
+    hide_icons=False,
+)
 ```
+
+-   `content`: the primary label string. It can contain `<span>` elements, usually for icons.
+-   `content_alt`: the optional alternative label string, hidden until you toggle it.
+-   `label_placeholder`: text shown in the text labels until real data arrives.
+-   `hide_icons`: hide the icon labels.
+
+How the string is turned into labels:
+
+1. The string is split at `<span>...</span>` elements.
+2. A span becomes a `QLabel` with the text inside it. Its CSS class comes from the span's `class` attribute and defaults to `icon`.
+3. Any other text becomes a `QLabel` with the class `label` (`label alt` for `content_alt`).
+4. All labels are center-aligned and added to the widget container layout. Cursors and other visuals are styled with CSS, not set in code.
+5. Labels from `content` are stored in `self._widgets` and shown. Labels from `content_alt` are stored in `self._widgets_alt` and hidden.
 
 ## 5. Create validation schema for your widget options:
 
@@ -164,10 +130,6 @@ my_widget:
     type: "yasb.my_widget.MyWidget"
     options:
         label: "<span>\ue71a</span>"
-        animation:
-            enabled: true
-            type: "fadeInOut"
-            duration: 200
 ```
 
 ## 9. Using `PopupWidget` for dropdown menus
@@ -306,7 +268,10 @@ def show_menu(self):
     def on_pin_toggled(checked: bool):
         pin_btn.setText("\ueb8b" if checked else "\ueb8a")
         pin_btn.setProperty("class", "pin-btn pinned" if checked else "pin-btn")
-        set_tooltip(pin_btn, "Unpin this window" if checked else "Pin this window")
+        set_tooltip(
+            pin_btn,
+            "Unpin this window" if checked else "Pin this window",
+        )
         refresh_widget_style(pin_btn)
         self._menu.set_pinned(checked)
 
@@ -335,16 +300,59 @@ When `pinnable=True`:
 
 `set_pinned()` does nothing when `pinnable=False`, so it is safe to call it from a generic callback without checking first.
 
-### 10. Python Code Style
+## 10. Showing app, window and file icons
 
--  Follow PEP 8 guidelines
--  Use type hints where applicable
--  Write docstrings for classes and methods
--  Keep methods focused and concise
--  Comment complex logic
--  Include TODOs for future improvements
+Use `IconService` for every app, window, process or file icon. It loads icons on its own thread, keeps them in memory and picks the right picture for the size, so a widget never calls Windows icon functions itself.
 
-## 11. Test your widget:
+Say where the icon comes from with one of these:
+
+| Source | For |
+|---|---|
+| `WindowIcon(hwnd)` | An open window: the icon the window shows, as on the Windows taskbar. |
+| `ProcessIcon(pid)` | Any running process: the icon of the program it runs, or of its Store app. A process of another account, such as a system service, gives the icon of one of its windows, else the default app icon. |
+| `AppIcon(aumid)` | An app by its App User Model ID, as listed in `shell:AppsFolder`: Store apps and desktop apps such as `MSEdge`. An unknown ID gives the default app icon. |
+| `FileIcon(path)` | A file, folder or shortcut, or a shell item such as `shell:::{20D04FE0-3AEA-1069-A2D8-08002B30309D}` (This PC). |
+
+Use the source that matches what the widget shows:
+
+-   A button or row for an open window, as in the taskbar, window switcher and workspace widgets: `WindowIcon(hwnd)`. A window can show an icon of its own, such as an Explorer window showing the folder it is in, so do not use its process instead.
+-   Something that has a process but no window, such as an app in the volume mixer or a program listening on a port: `ProcessIcon(pid)`.
+-   An app known by its ID, such as a pinned Store app or an app from `shell:AppsFolder`: `AppIcon(aumid)`.
+-   Something the user opens from a path, such as a Start menu shortcut, a pinned folder or an exe: `FileIcon(path)`. Pass the shortcut itself, not its target: a shortcut can have an icon of its own.
+
+```py
+from core.utils.icons.service import IconService, WindowIcon
+
+class MyWidget(BaseWidget):
+    def __init__(self, config: MyWidgetConfig):
+        super().__init__(class_name="my-widget")
+        ...
+        self._icons = IconService.instance()
+        self._icons.icons_changed.connect(self._update_icon)
+
+    def _update_icon(self):
+        pixmap = self._icons.get_icon(WindowIcon(self._hwnd), 16, self.devicePixelRatioF())
+        if pixmap is not None:
+            self._icon_label.setPixmap(pixmap)
+```
+
+-   `get_icon(source, size, dpr, grayscale=False)` returns a `QPixmap` at once: the icon when it is in memory, otherwise a transparent pixmap of the same size while it loads, so the widget keeps its size. `icons_changed` is emitted when the icon is ready, and the widget asks again. Use the same method to show the icon and to handle `icons_changed`, as above.
+-   `get_icon` returns `None` only when there is no icon to show: a size of 0, or a source that names nothing, such as `ProcessIcon(0)` or `AppIcon("")`.
+-   `size` is in logical pixels, like the `icon_size` options. `dpr` is the screen's device pixel ratio: `self.devicePixelRatioF()` or `self.screen().devicePixelRatio()`.
+-   Do not keep your own icon cache. Asking again is cheap, and the service notices when a window handle or process ID is reused by another app.
+-   `preload(sources, size, dpr)` loads icons the widget will show later, such as the items of a popup, after the icons widgets show now.
+-   `grayscale=True` returns a gray version, for example for a muted app.
+-   Call these from the UI thread.
+
+To save an icon to a file, for example when the user adds an app, use `load_icon(source, size).image` from `core.utils.icons.sources`. It returns a PIL image and waits for Windows, so do not call it while painting or on a timer.
+
+## 11. Python Code Style
+
+-  Format and lint with Ruff, see [Contributing](./Contributing) for the commands.
+-  Add type hints. Pyright runs in strict mode.
+-  Keep methods focused and concise.
+
+## 12. Test your widget:
 
 -   Ensure it behaves as expected in the application.
 -   Check for any errors or issues in the console.
@@ -354,12 +362,12 @@ When `pinnable=True`:
 -   Use thread-safe methods for any background tasks or long-running processes.
 -   Ensure that the widget does not block the main thread and remains responsive to user interactions.
 
-## 12. Document your widget:
+## 13. Document your widget:
 
 -   Write clear documentation for your widget, including its purpose, options, and styling.
 -   Doc file should be located in `docs/` folder and linked in the main documentation and readme.
 
-## 13. Submit PR:
+## 14. Submit PR:
 
 -   Once your widget is complete and tested, submit a pull request to the main repository.
 -   Ensure that your code follows the project's coding standards and guidelines.

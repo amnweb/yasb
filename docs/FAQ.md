@@ -41,7 +41,7 @@ yasbc reset
 On the next launch, YASB will automatically start the interactive **Setup Wizard** to help you reinstall fonts and set up your layouts and window managers again.
 
 ### Q: How to change the bar position?
-**A:** Modify the `position` value in `config.yaml`:
+**A:** Modify the `alignment.position` value of your bar in `config.yaml`:
 - `top` - Top of the screen
 - `bottom` - Bottom of the screen
 
@@ -50,12 +50,12 @@ On the next launch, YASB will automatically start the interactive **Setup Wizard
 - **Automatic Background Checks:** If `update_check` is set to `true` in your `config.yaml`, YASB will periodically check for new versions in the background and show a Windows toast notification when an update is found.
 - **System Tray Context Menu:** When an update is available, a red badge will appear on the YASB tray icon. Right-click the YASB icon in your system tray and select the **Update Available** option to open the visual update installer.
 - **CLI Command:** You can manually run updates from your terminal by executing:
-  ```bash
+```bash
   yasbc update
-  ```
+```
 
 ### Q: How to change the bar size?
-**A:** Adjust the bar `width` and `height` value in `config.yaml` to change the bar size.
+**A:** Adjust the bar `dimensions.width` and `dimensions.height` values in `config.yaml` to change the bar size.
 
 ### Q: How to troubleshoot issues or check logs for errors?
 **A:** You can view logs and enable more detailed debug information to help troubleshoot issues:

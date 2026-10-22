@@ -1,8 +1,10 @@
 import asyncio
 import ctypes
 import logging
-from ctypes import POINTER, byref, c_void_p
+from collections.abc import Coroutine
+from ctypes import byref, c_void_p
 from dataclasses import dataclass, replace
+from typing import Any
 
 import winrt.windows.ui.notifications.management as management
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -14,47 +16,14 @@ from winrt.windows.ui.notifications import (
 )
 
 from core.events.service import EventService
-from core.widgets.services.notifications.toast_images import read_toast_details
-
-_ntdll = ctypes.WinDLL("ntdll")
-
-WnfCallbackType = ctypes.WINFUNCTYPE(
-    ctypes.c_long,  # NTSTATUS
-    ctypes.c_uint64,  # StateName
-    ctypes.c_ulong,  # ChangeStamp
-    c_void_p,  # TypeId
-    c_void_p,  # CallbackContext
-    c_void_p,  # Buffer
-    ctypes.c_ulong,  # BufferSize
+from core.utils.win32.bindings.ntdll import (
+    WNF_SUPPORTED,
+    RtlSubscribeWnfStateChangeNotification,
+    RtlUnsubscribeWnfStateChangeNotification,
+    WnfCallbackType,
 )
-
-try:
-    _RtlSubscribeWnfStateChangeNotification = _ntdll.RtlSubscribeWnfStateChangeNotification
-    _RtlSubscribeWnfStateChangeNotification.restype = ctypes.c_long
-    _RtlSubscribeWnfStateChangeNotification.argtypes = [
-        POINTER(c_void_p),
-        ctypes.c_uint64,
-        ctypes.c_ulong,
-        WnfCallbackType,
-        c_void_p,
-        c_void_p,
-        ctypes.c_ulong,
-        ctypes.c_ulong,
-    ]
-
-    _RtlUnsubscribeWnfStateChangeNotification = _ntdll.RtlUnsubscribeWnfStateChangeNotification
-    _RtlUnsubscribeWnfStateChangeNotification.restype = ctypes.c_long
-    _RtlUnsubscribeWnfStateChangeNotification.argtypes = [c_void_p]
-    WNF_SUPPORTED = True
-except AttributeError:
-    _RtlSubscribeWnfStateChangeNotification = None
-    _RtlUnsubscribeWnfStateChangeNotification = None
-    WNF_SUPPORTED = False
-
-# Win11: Action Center toast total
-WNF_SHEL_NOTIFICATION_TOTAL = 0x0D83063EA3B8D035
-# Win10: unread/badge count
-WNF_SHEL_NOTIFICATIONS = 0x0D83063EA3BC1035
+from core.utils.win32.undocumented import WNF_SHEL_NOTIFICATION_TOTAL, WNF_SHEL_NOTIFICATIONS
+from core.widgets.services.notifications.toast_images import read_toast_details
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,7 +70,7 @@ class WindowsNotificationEventListener(QThread):
         self._loop: asyncio.AbstractEventLoop | None = None
         self._async_stop_event: asyncio.Event | None = None
         self._stopped = False
-        self._listener = None
+        self._listener: management.UserNotificationListener | None = None
         self._access_allowed = True
         self._wnf_sub = None
         self._wnf_active = False
@@ -184,15 +153,16 @@ class WindowsNotificationEventListener(QThread):
 
     def _try_subscribe(self, state: int, name: str) -> bool:
         """Subscribe to a WNF state. Returns True on success."""
-        if not WNF_SUPPORTED:
+        callback = self._wnf_cb
+        if not WNF_SUPPORTED or callback is None:
             return False
         try:
             sub = c_void_p()
-            status = _RtlSubscribeWnfStateChangeNotification(
+            status = RtlSubscribeWnfStateChangeNotification(
                 byref(sub),
-                ctypes.c_uint64(state),
+                state,
                 0,
-                self._wnf_cb,
+                callback,
                 None,
                 None,
                 0,
@@ -224,14 +194,22 @@ class WindowsNotificationEventListener(QThread):
         if not self._wnf_active or not WNF_SUPPORTED or not self._wnf_sub:
             return
         try:
-            _RtlUnsubscribeWnfStateChangeNotification(self._wnf_sub)
+            RtlUnsubscribeWnfStateChangeNotification(self._wnf_sub)
         except Exception:
             pass
         self._wnf_sub = None
         self._wnf_active = False
         logging.debug("Unsubscribed from WNF notifications")
 
-    def _wnf_toast_callback(self, _state_name, change_stamp, _type_id, _context, buffer, buffer_size):
+    def _wnf_toast_callback(
+        self,
+        _state_name: int,
+        change_stamp: int,
+        _type_id: int | None,
+        _context: int | None,
+        buffer: int | None,
+        buffer_size: int,
+    ) -> int:
         """Windows wrote the toast counter, which is the signal that the list has changed.
 
         Every write is taken as a reason to read the list again, including one that leaves
@@ -253,7 +231,7 @@ class WindowsNotificationEventListener(QThread):
             logging.exception("Error in WNF callback")
         return 0
 
-    def _schedule(self, coro):
+    def _schedule(self, coro: Coroutine[Any, Any, Any]) -> None:
         """Run a coroutine on the listener loop from any thread."""
         if not (self._loop and self._loop.is_running()):
             coro.close()
@@ -291,6 +269,8 @@ class WindowsNotificationEventListener(QThread):
 
     def _refresh_access(self) -> bool:
         """Re-read the access status, which the user can revoke at any time."""
+        if self._listener is None:
+            return self._access_allowed
         try:
             status = self._listener.get_access_status()
         except Exception as e:
@@ -407,7 +387,8 @@ class WindowsNotificationEventListener(QThread):
         try:
             visual = notification.notification.visual
             binding = visual.get_binding(KnownNotificationBindings.toast_generic)
-            bindings = [binding] if binding is not None else list(visual.bindings)
+            # None when the toast has no generic binding, which the stubs do not say
+            bindings = [binding] if binding is not None else list(visual.bindings)  # pyright: ignore[reportUnnecessaryComparison]
         except Exception as e:
             logging.debug("Notification %s has no readable visual: %s", notification.id, e)
             return []
@@ -419,6 +400,8 @@ class WindowsNotificationEventListener(QThread):
         return []
 
     async def _do_remove_notification(self, notification_id: int):
+        if self._listener is None:
+            return
         try:
             self._listener.remove_notification(notification_id)
         except Exception as e:
@@ -439,8 +422,11 @@ class WindowsNotificationEventListener(QThread):
         and a new toast can arrive while this runs, so the result is read back instead of
         assuming the Action Center is empty, and it is that result the bar is given.
         """
+        listener = self._listener
+        if listener is None:
+            return
         try:
-            notifications = await self._listener.get_notifications_async(NotificationKinds.TOAST)
+            notifications = await listener.get_notifications_async(NotificationKinds.TOAST)
         except Exception as e:
             logging.error("Error clearing notifications: %s", e)
             return
@@ -451,7 +437,7 @@ class WindowsNotificationEventListener(QThread):
             if aumid and aumid not in senders:
                 senders.append(aumid)
             try:
-                self._listener.remove_notification(n.id)
+                listener.remove_notification(n.id)
             except Exception as e:
                 logging.debug("Failed to remove notification %s: %s", n.id, e)
 

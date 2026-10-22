@@ -57,7 +57,7 @@ class CSSProcessor:
         # Handle @import url("..."); and @import "...";
         import_pattern = re.compile(r'@import\s+(?:url\((["\']?)([^)]+?)\1\)|(["\'])(.+?)\3)\s*;', re.IGNORECASE)
 
-        def import_replacer(match):
+        def import_replacer(match: re.Match[str]) -> str:
             path = match.group(2) or match.group(4)
             import_path = path.strip("'\"")
             full_import_path = os.path.normpath(os.path.join(self.base_path, import_path))
@@ -76,7 +76,7 @@ class CSSProcessor:
         # Extract variables from :root
         root_vars: dict[str, str] = {}
 
-        def root_replacer(match):
+        def root_replacer(match: re.Match[str]) -> str:
             content = match.group(1)
             for var_match in re.finditer(r"--([\w-]+)\s*:\s*([^;]+);", content):
                 var_name = f"--{var_match.group(1).strip()}"
@@ -89,12 +89,12 @@ class CSSProcessor:
         # Resolve variables recursively
         resolved_vars = root_vars.copy()
         max_iterations = 10  # Make sure we never get stuck in a loop.
-        for iteration in range(max_iterations):
+        for _ in range(max_iterations):
             changed = False
 
             for var_name, var_value in resolved_vars.items():
 
-                def var_replacer(match):
+                def var_replacer(match: re.Match[str]) -> str:
                     nonlocal changed
                     nested_var_name = match.group(1).strip()
                     if nested_var_name in resolved_vars:
@@ -110,7 +110,7 @@ class CSSProcessor:
             if not changed:
                 break  # No more changes, resolution complete
 
-        def final_var_replacer(match):
+        def final_var_replacer(match: re.Match[str]) -> str:
             var_name = match.group(1).strip()
             return resolved_vars.get(var_name, match.group(0))
 
@@ -135,7 +135,7 @@ class CSSProcessor:
         Converts CSS hex colors with alpha (#RRGGBBAA) to Qt format (#AARRGGBB).
         """
 
-        def hex_alpha_replacer(match):
+        def hex_alpha_replacer(match: re.Match[str]) -> str:
             hex_color = match.group(1)
             if len(hex_color) == 8:
                 rr = hex_color[0:2]
@@ -155,7 +155,7 @@ class CSSProcessor:
         not the CSS file location, so we need to make them absolute.
         """
 
-        def url_replacer(match):
+        def url_replacer(match: re.Match[str]) -> str:
             quote = match.group(1) or ""
             path = match.group(2)
             # Skip data URIs, absolute paths, and URLs with schemes (http, https, qrc, etc.)

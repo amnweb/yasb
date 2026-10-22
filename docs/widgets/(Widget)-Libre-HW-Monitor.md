@@ -5,15 +5,15 @@ Displays hardware stats (like CPU temperatures, fan speeds, and voltages) from a
 | Option                   | Type    | Default                                                                                        | Description                                                                                                                                  |
 |--------------------------|---------|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | `label`                  | string  | `"<span>\udb82\udcae </span> {info[value]}{info[unit]}"`                                       | The primary label format.                                                                                                                    |
-| `label_alt`              | string  | `"<span>\uf4bc </span>{info[histogram]} {info[value]} ({info[min]}/{info[max]}) {info[unit]}"` | Histograms. The alternative label format.                                                                                                    |
+| `label_alt`              | string  | `"<span>\uf437 </span>{info[histogram]} {info[value]} ({info[min]}/{info[max]}) {info[unit]}"` | Histograms. The alternative label format.                                                                                                    |
 | `sensor_id`              | string  | `"/amdcpu/0/load/0"`                                                                           | Libre Hardware Monitor SensorId from http://localhost:8085/data.json                                                                         |
 | `class_name`             | string  | `"libre-monitor-widget"`                                                                       | CSS class name for styling of different widget instances.                                                                                    |
 | `update_interval`        | integer | `1000`                                                                                         | The interval in milliseconds to update the widget.                                                                                           |
 | `precision`              | integer | `2`                                                                                            | Floating point precision of the info[value].                                                                                                 |
 | `history_size`           | integer | `60`                                                                                           | The size of the min/max history.                                                                                                             |
 | `histogram_num_columns`  | integer | `10`                                                                                           | The number of columns in the histogram.                                                                                                      |
-| `histogram_fixed_min`    | integer | `None`                                                                                         | Histogram minimum value. If None - set as history minimum value.                                                                             |
-| `histogram_fixed_max`    | integer | `None`                                                                                         | Histogram maximum value. If None - set as history maximum value.                                                                             |
+| `histogram_fixed_min`    | float   | `None`                                                                                         | Histogram minimum value (-10000 to 10000). If None - set as history minimum value.                                                                             |
+| `histogram_fixed_max`    | float   | `None`                                                                                         | Histogram maximum value (-10000 to 10000). If None - set as history maximum value.                                                                             |
 | `sensor_id_error_label`  | string  | `N/A`                                                                                          | The label shown when the sensor id is invalid or the sensor does not exist/disabled.                                                         |
 | `connection_error_label` | string  | `Connection error...`                                                                          | The label shown when YASB can't connect to the Libre Hardware Monitor Web server. Either the server is not running or the IP/port is wrong.  |
 | `auth_error_label`       | string  | `Auth Failed...`                                                                               | The label shown when there is a username/password issue while connecting to LHM Web server if the authentication is enabled in LHM settings. |
@@ -21,9 +21,67 @@ Displays hardware stats (like CPU temperatures, fan speeds, and voltages) from a
 | `server_port`            | integer | `8085`                                                                                         | Libre Hardware Monitor server port.                                                                                                          |
 | `server_username`        | string  | `""`                                                                                           | Libre Hardware Monitor username. Only needed if auth is enabled.                                                                             |
 | `server_password`        | string  | `""`                                                                                           | Libre Hardware Monitor password. Only needed if auth is enabled.                                                                             |
-| `histogram_icons`        | list    | `["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"]`   | Icons representing CPU usage histograms.                                                                                                     |
-| `callbacks`              | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'toggle_menu'}`             | Callback functions for different mouse button actions.                                                                                       |
-| `libre_menu` |    dict    | See below | Configuration for the Libre Hardware Monitor menu. |
+| `histogram_icons`        | list    | [See below](#histogram-icons) | Exactly 9 icons representing the histogram levels.                                                                                                     |
+| `callbacks`              | dict    | [See below](#callbacks) | Callback functions for different mouse button actions.                                                                                       |
+| `libre_menu` |    dict    | [See below](#libre-menu-options) | Configuration for the Libre Hardware Monitor menu. |
+| `keybindings` | list | `[]` | Optional hotkeys. See [Keybindings](./Keybindings). |
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_label"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
+- `toggle_label` - Switch between `label` and `label_alt`.
+- `update_label` - Refresh the label now.
+- `toggle_menu` - Open or close the popup menu.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
+
+## Libre Menu Options
+
+The `libre_menu` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+libre_menu:
+  blur: true
+  round_corners: true
+  round_corners_type: "normal"
+  border_color: "System"
+  alignment: "right"
+  direction: "down"
+  offset_top: 6
+  offset_left: 0
+  header_label: "YASB HW Monitor"
+  precision: 2
+  columns: 1
+  sensors: []
+```
+
+## Histogram Icons
+
+The default value of `histogram_icons` is:
+
+```yaml
+histogram_icons:
+  - "\u2581"
+  - "\u2581"
+  - "\u2582"
+  - "\u2583"
+  - "\u2584"
+  - "\u2585"
+  - "\u2586"
+  - "\u2587"
+  - "\u2588"
+```
+
 ## Example Configuration (GPU Temperature)
 
 ```yaml
@@ -121,7 +179,8 @@ Displays hardware stats (like CPU temperatures, fan speeds, and voltages) from a
 - **server_port**: The port of the Libre Hardware Monitor server.
 - **server_username**: The username of the Libre Hardware Monitor server. Required if auth is enabled.
 - **server_password**: The password of the Libre Hardware Monitor server. Required if auth is enabled.
-- **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **keybindings**: A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **libre_menu**: Configuration for the Libre Hardware Monitor menu. Controls visibility, appearance, and positioning.
   - **blur**: Enable blur effect for the menu.
   - **round_corners**: Enable round corners for menu.
@@ -134,7 +193,7 @@ Displays hardware stats (like CPU temperatures, fan speeds, and voltages) from a
   - **header_label**: Header label for the menu. Empty string will not show the header (`header_label: ""`).
   - **precision**: Floating point precision of the value.
   - **columns**: Number of columns in the menu. Default is 1.
-  - **sensors**: List of sensors to display in the menu with their IDs and names.
+  - **sensors**: List of sensors to display in the menu. Each item has a required `id` and an optional `name`.
 
 ## Example Style
 ```css

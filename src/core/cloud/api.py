@@ -8,7 +8,7 @@ aborts everything outstanding in closeEvent.
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import quote
 
 from PyQt6.QtCore import QByteArray, QFile, QIODevice, QObject, QTimer, QUrl, pyqtSignal
@@ -50,7 +50,7 @@ def _decode(body: bytes) -> Any:
         return None
 
 
-def approve_uri(payload: dict) -> str:
+def approve_uri(payload: dict[str, Any]) -> str:
     """The device-flow approval page from a /device/code reply, or "" if it is not ours.
 
     Checked because this is opened with ShellExecuteW, which runs a local path, a UNC path or
@@ -64,8 +64,9 @@ def approve_uri(payload: dict) -> str:
 def error_from(status: int, body: bytes) -> ApiError:
     """Read a failed response, preferring whatever the server said about it."""
     payload = _decode(body)
-    if isinstance(payload, dict) and isinstance(payload.get("error"), dict):
-        problem = payload["error"]
+    problem = cast(dict[str, Any], payload).get("error") if isinstance(payload, dict) else None
+    if isinstance(problem, dict):
+        problem = cast(dict[str, Any], problem)
         return ApiError(
             str(problem.get("message", "Something went wrong")),
             code=str(problem.get("code", "server_error")),
@@ -82,7 +83,7 @@ def reply_error(reply: QNetworkReply) -> ApiError:
         # We aborted it, so there is nothing to report.
         return ApiError("", code="cancelled")
     status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute) or 0
-    return error_from(status, bytes(reply.readAll()))
+    return error_from(status, bytes(reply.readAll()))  # pyright: ignore[reportArgumentType]
 
 
 def save_reply(reply: QNetworkReply, path: Path) -> ApiError | None:
@@ -95,7 +96,7 @@ def save_reply(reply: QNetworkReply, path: Path) -> ApiError | None:
         if reply.error() != QNetworkReply.NetworkError.NoError:
             return reply_error(reply)
         try:
-            path.write_bytes(bytes(reply.readAll()))
+            path.write_bytes(bytes(reply.readAll()))  # pyright: ignore[reportArgumentType]
         except OSError as exc:
             return ApiError(f"Could not save the download: {exc.strerror or exc}", code="write_failed")
         return None
@@ -112,7 +113,7 @@ class Call(QObject):
 
     def __init__(self, reply: QNetworkReply, parent: QObject | None = None, device: QIODevice | None = None) -> None:
         super().__init__(parent)
-        self._reply = reply
+        self._reply: QNetworkReply | None = reply
         self._device = device
         self._done = False
         self._timer = QTimer(self)
@@ -135,24 +136,26 @@ class Call(QObject):
             self._reply.abort()
 
     def _on_timeout(self) -> None:
-        if self._done:
+        reply = self._reply
+        if self._done or reply is None:
             return
         self._done = True
         # Before the abort, which re-enters _on_finished and emits finished from there.
-        logger.warning("api timeout: %s", self._reply.request().url().path())
+        logger.warning("api timeout: %s", reply.request().url().path())
         self.failed.emit(ApiError("The server did not respond in time", code="timeout"))
-        self._reply.abort()
+        reply.abort()
 
     def _on_finished(self) -> None:
-        if self._done:
+        reply = self._reply
+        if self._done or reply is None:
             self._cleanup()
             return
         self._done = True
         self._timer.stop()
 
-        reply, self._reply = self._reply, None
+        self._reply = None
         status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute) or 0
-        body = bytes(reply.readAll())
+        body = bytes(reply.readAll())  # pyright: ignore[reportArgumentType]
         error = reply.error()
         # Not on the abort path: Qt reads the device again while the event loop unwinds it.
         if self._device is not None:
@@ -211,7 +214,7 @@ class ApiClient(QObject):
         call.finished.connect(lambda: self._calls.remove(call) if call in self._calls else None)
         return call
 
-    def _send(self, verb: str, path: str, body: dict | None = None, *, authenticated: bool = True) -> Call:
+    def _send(self, verb: str, path: str, body: dict[str, Any] | None = None, *, authenticated: bool = True) -> Call:
         logger.debug("api %s %s", verb, path)
         request = self._request(path, authenticated=authenticated)
         payload = QByteArray(json.dumps(body or {}).encode("utf-8"))
@@ -226,9 +229,11 @@ class ApiClient(QObject):
             reply = self._net.sendCustomRequest(request, b"DELETE")
         else:
             raise ValueError(f"Unsupported verb {verb}")
+        if reply is None:
+            raise RuntimeError(f"No reply for {verb} {path}")
         return self._track(Call(reply, self))
 
-    def _authenticated(self, verb: str, path: str, body: dict | None = None) -> Call:
+    def _authenticated(self, verb: str, path: str, body: dict[str, Any] | None = None) -> Call:
         """`_send`, plus: a 401 from this route ends the session.
 
         The device-flow calls and logout use `_send` instead, on purpose.
@@ -322,6 +327,9 @@ class ApiClient(QObject):
         if not handle.open(QIODevice.OpenModeFlag.ReadOnly):
             raise OSError(handle.errorString())
         reply = self._net.sendCustomRequest(request, b"PUT", handle)
+        if reply is None:
+            handle.close()
+            raise OSError("No reply for the upload")
         handle.setParent(reply)
         return self._track(Call(reply, self, device=handle))
 
@@ -332,6 +340,8 @@ class ApiClient(QObject):
         """
         request = self._request(f"/backups/{backup_id}/content")
         reply = self._net.get(request)
+        if reply is None:
+            raise RuntimeError("No reply for the download")
 
         timer = QTimer(reply)
         timer.setSingleShot(True)

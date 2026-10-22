@@ -1,8 +1,24 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Literal
+from functools import partial
+from typing import Literal, override
 
 from PyQt6.QtCore import QEvent, QObject, QPoint, QPointF, QRect, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QCursor, QGuiApplication, QMouseEvent, QPainter, QPen, QPixmap
+from PyQt6.QtGui import (
+    QColor,
+    QCursor,
+    QEnterEvent,
+    QGuiApplication,
+    QKeyEvent,
+    QMouseEvent,
+    QPainter,
+    QPaintEvent,
+    QPen,
+    QPixmap,
+    QResizeEvent,
+    QShowEvent,
+    QWheelEvent,
+)
 from PyQt6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -203,17 +219,20 @@ class _ColorChip(QPushButton):
     def color(self) -> QColor:
         return QColor(self._color)
 
-    def enterEvent(self, e) -> None:
+    @override
+    def enterEvent(self, event: QEnterEvent | None) -> None:
         self._hover = True
         self.update()
-        super().enterEvent(e)
+        super().enterEvent(event)
 
-    def leaveEvent(self, e) -> None:
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         self._hover = False
         self.update()
-        super().leaveEvent(e)
+        super().leaveEvent(a0)
 
-    def paintEvent(self, _) -> None:
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         r = self.rect().adjusted(1, 1, -1, -1)
@@ -245,11 +264,11 @@ class _ColorPopup(_FramelessPopup):
         cols = 6
         for i, hex_c in enumerate(_PALETTE):
             b = _ColorChip(hex_c, size=26, parent=self._panel)
-            b.clicked.connect(lambda _=False, c=hex_c: self._pick(c))
+            b.clicked.connect(partial(self._pick, hex_c))
             grid.addWidget(b, i // cols, i % cols)
         self._body.addLayout(grid)
 
-    def _pick(self, hex_c: str) -> None:
+    def _pick(self, hex_c: str, checked: bool = False) -> None:
         self.colorPicked.emit(QColor(hex_c))
         self.close()
 
@@ -306,13 +325,13 @@ class _PopupToggleHost(QObject):
         y = max(0, min(y, max(0, parent.height() - ph)))
         popup.move(x, y)
 
-    def toggle(self, factory) -> None:
+    def toggle(self, factory: Callable[[], _FramelessPopup]) -> None:
         if self.is_open():
             self.close()
             return
         self.show_popup(factory())
 
-    def _on_destroyed(self, _obj=None) -> None:
+    def _on_destroyed(self, _obj: QObject | None = None) -> None:
         self._remove_filter()
         self._popup = None
 
@@ -332,14 +351,15 @@ class _PopupToggleHost(QObject):
             app.removeEventFilter(self)
         self._filter_installed = False
 
-    def eventFilter(self, obj: QObject | None, event: QEvent | None) -> bool:
-        if event is None or self._popup is None or not self._popup.isVisible():
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        if a1 is None or self._popup is None or not self._popup.isVisible():
             return False
-        if event.type() != QEvent.Type.MouseButtonPress:
+        if a1.type() != QEvent.Type.MouseButtonPress:
             return False
-        if not isinstance(event, QMouseEvent):
+        if not isinstance(a1, QMouseEvent):
             return False
-        gp = event.globalPosition().toPoint()
+        gp = a1.globalPosition().toPoint()
         pr = QRect(self._popup.mapToGlobal(QPoint(0, 0)), self._popup.size())
         if pr.contains(gp):
             return False
@@ -374,7 +394,7 @@ class ColorSwatchButton(_ColorChip):
         self._host.reanchor()
 
     def _toggle_popup(self) -> None:
-        def factory():
+        def factory() -> _ColorPopup:
             popup = _ColorPopup(self.window())
             popup.colorPicked.connect(self._on_picked)
             return popup
@@ -496,8 +516,10 @@ class EditorCanvas(QWidget):
         target_y = int(round(img_anchor.y() * new_z))
         h = sa.horizontalScrollBar()
         v = sa.verticalScrollBar()
-        h.setValue(target_x - vp_anchor.x())
-        v.setValue(target_y - vp_anchor.y())
+        if h is not None:
+            h.setValue(target_x - vp_anchor.x())
+        if v is not None:
+            v.setValue(target_y - vp_anchor.y())
 
     def zoom(self) -> float:
         return self._zoom
@@ -601,10 +623,9 @@ class EditorCanvas(QWidget):
             self._layer.setDevicePixelRatio(1.0)
             return
 
-        if isinstance(op, ClearOp):
-            self._base = QPixmap(self._original)
-            self._base.setDevicePixelRatio(1.0)
-            self._layer = self._empty_layer(self._base.size())
+        self._base = QPixmap(self._original)
+        self._base.setDevicePixelRatio(1.0)
+        self._layer = self._empty_layer(self._base.size())
 
     def _rebuild(self) -> None:
         """Rebuild base+layer from original + command list."""
@@ -727,10 +748,10 @@ class EditorCanvas(QWidget):
             w = w.parentWidget()
         return None
 
-    def _ctrl_held(self, modifiers: Qt.KeyboardModifier | Qt.KeyboardModifiers) -> bool:
+    def _ctrl_held(self, modifiers: Qt.KeyboardModifier) -> bool:
         return bool(modifiers & Qt.KeyboardModifier.ControlModifier)
 
-    def _update_nav_cursor(self, modifiers: Qt.KeyboardModifier | Qt.KeyboardModifiers) -> None:
+    def update_nav_cursor(self, modifiers: Qt.KeyboardModifier) -> None:
         if self._panning:
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
         elif self._ctrl_held(modifiers) and not self._drawing:
@@ -738,14 +759,14 @@ class EditorCanvas(QWidget):
         else:
             self.setCursor(Qt.CursorShape.CrossCursor)
 
-    def _end_pan(self, modifiers: Qt.KeyboardModifier | Qt.KeyboardModifiers | None = None) -> None:
+    def _end_pan(self, modifiers: Qt.KeyboardModifier | None = None) -> None:
         if not self._panning:
             return
         self._panning = False
         if QWidget.mouseGrabber() is self:
             self.releaseMouse()
         mods = modifiers if modifiers is not None else QApplication.keyboardModifiers()
-        self._update_nav_cursor(mods)
+        self.update_nav_cursor(mods)
 
     def _pan_by(self, delta: QPoint) -> None:
         sa = self._scroll_area()
@@ -753,6 +774,8 @@ class EditorCanvas(QWidget):
             return
         h = sa.horizontalScrollBar()
         v = sa.verticalScrollBar()
+        if h is None or v is None:
+            return
         nx = max(h.minimum(), min(h.maximum(), h.value() - delta.x()))
         ny = max(v.minimum(), min(v.maximum(), v.value() - delta.y()))
         if nx == h.value() and ny == v.value():
@@ -760,58 +783,64 @@ class EditorCanvas(QWidget):
         h.setValue(nx)
         v.setValue(ny)
 
-    def wheelEvent(self, e):
-        if self._ctrl_held(e.modifiers()):
-            delta = e.angleDelta().y()
+    @override
+    def wheelEvent(self, a0: QWheelEvent | None) -> None:
+        if a0 is not None and self._ctrl_held(a0.modifiers()):
+            delta = a0.angleDelta().y()
             if delta == 0:
-                e.ignore()
+                a0.ignore()
                 return
             step = 1.1 if delta > 0 else 1 / 1.1
-            self.set_zoom(self._zoom * step, anchor_global=e.globalPosition().toPoint())
+            self.set_zoom(self._zoom * step, anchor_global=a0.globalPosition().toPoint())
             self.zoom_changed.emit(self._zoom)
-            self._update_nav_cursor(e.modifiers())
-            e.accept()
+            self.update_nav_cursor(a0.modifiers())
+            a0.accept()
             return
-        super().wheelEvent(e)
+        super().wheelEvent(a0)
 
-    def keyPressEvent(self, e):
-        if e.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
-            self._update_nav_cursor(e.modifiers() | Qt.KeyboardModifier.ControlModifier)
-            e.accept()
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is not None and a0.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
+            self.update_nav_cursor(a0.modifiers() | Qt.KeyboardModifier.ControlModifier)
+            a0.accept()
             return
-        super().keyPressEvent(e)
+        super().keyPressEvent(a0)
 
-    def keyReleaseEvent(self, e):
-        if e.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
-            if self._panning and not (e.modifiers() & Qt.KeyboardModifier.ControlModifier):
-                self._end_pan(e.modifiers())
+    @override
+    def keyReleaseEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is not None and a0.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
+            if self._panning and not (a0.modifiers() & Qt.KeyboardModifier.ControlModifier):
+                self._end_pan(a0.modifiers())
             else:
-                self._update_nav_cursor(e.modifiers())
-            e.accept()
+                self.update_nav_cursor(a0.modifiers())
+            a0.accept()
             return
-        super().keyReleaseEvent(e)
+        super().keyReleaseEvent(a0)
 
-    def enterEvent(self, e):
-        self._update_nav_cursor(QApplication.keyboardModifiers())
-        super().enterEvent(e)
+    @override
+    def enterEvent(self, event: QEnterEvent | None) -> None:
+        self.update_nav_cursor(QApplication.keyboardModifiers())
+        super().enterEvent(event)
 
-    def leaveEvent(self, e):
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
         if not self._panning:
             self.setCursor(Qt.CursorShape.CrossCursor)
-        super().leaveEvent(e)
+        super().leaveEvent(a0)
 
-    def mousePressEvent(self, e):
-        if e.button() != Qt.MouseButton.LeftButton or self._base.isNull():
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is None or a0.button() != Qt.MouseButton.LeftButton or self._base.isNull():
             return
-        if self._ctrl_held(e.modifiers()):
+        if self._ctrl_held(a0.modifiers()):
             self._panning = True
-            self._pan_last_global = e.globalPosition().toPoint()
+            self._pan_last_global = a0.globalPosition().toPoint()
             self.grabMouse()
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
             self.setFocus(Qt.FocusReason.MouseFocusReason)
-            e.accept()
+            a0.accept()
             return
-        p = self._to_img(e.position().toPoint())
+        p = self._to_img(a0.position().toPoint())
         self._drawing = True
         self._start = p
         self._current = p
@@ -821,19 +850,22 @@ class EditorCanvas(QWidget):
             self._clear_stroke_temp()
         self.update()
 
-    def mouseMoveEvent(self, e):
+    @override
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is None:
+            return
         if self._panning:
-            global_pos = e.globalPosition().toPoint()
+            global_pos = a0.globalPosition().toPoint()
             delta = global_pos - self._pan_last_global
             if not delta.isNull():
                 self._pan_last_global = global_pos
                 self._pan_by(delta)
-            e.accept()
+            a0.accept()
             return
         if not self._drawing:
-            self._update_nav_cursor(e.modifiers())
+            self.update_nav_cursor(a0.modifiers())
             return
-        p = self._to_img(e.position().toPoint())
+        p = self._to_img(a0.position().toPoint())
         self._current = p
         if self.tool in ("pen", "highlight") and self._points:
             prev = self._points[-1]
@@ -845,15 +877,18 @@ class EditorCanvas(QWidget):
                 self._draw_freehand_to(self._layer, prev, p, alpha=None)
         self.update()
 
-    def mouseReleaseEvent(self, e):
-        if e.button() == Qt.MouseButton.LeftButton and self._panning:
-            self._end_pan(e.modifiers())
-            e.accept()
+    @override
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is None:
             return
-        if e.button() != Qt.MouseButton.LeftButton or not self._drawing:
+        if a0.button() == Qt.MouseButton.LeftButton and self._panning:
+            self._end_pan(a0.modifiers())
+            a0.accept()
+            return
+        if a0.button() != Qt.MouseButton.LeftButton or not self._drawing:
             return
         self._drawing = False
-        p = self._to_img(e.position().toPoint())
+        p = self._to_img(a0.position().toPoint())
         self._current = p
         w = self.stroke_width
         color_name = self.color.name(QColor.NameFormat.HexRgb)
@@ -909,11 +944,12 @@ class EditorCanvas(QWidget):
         self._points = []
         self.update()
 
-    def paintEvent(self, e):
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         p = QPainter(self)
         t = get_tokens()
         bg = QColor(t.get("layer_alt", "#2c2c2c"))
-        dirty = e.rect()
+        dirty = a0.rect() if a0 is not None else self.rect()
         p.fillRect(dirty, bg)
         if self._base.isNull():
             return
@@ -1013,11 +1049,13 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self._scroll.horizontalScrollBar().setSingleStep(1)
-        self._scroll.verticalScrollBar().setSingleStep(1)
+        for scroll_bar in (self._scroll.horizontalScrollBar(), self._scroll.verticalScrollBar()):
+            if scroll_bar is not None:
+                scroll_bar.setSingleStep(1)
         vp = self._scroll.viewport()
-        vp.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
-        vp.setAutoFillBackground(True)
+        if vp is not None:
+            vp.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
+            vp.setAutoFillBackground(True)
         self._canvas = EditorCanvas(self)
         self._canvas.set_image(image)
         self._canvas.tool_finished.connect(self._on_canvas_changed)
@@ -1050,7 +1088,7 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
             ("crop", "Crop"),
         ):
             b = self._make_icon_button(self._tool_svgs[key], tip, checkable=True)
-            b.clicked.connect(lambda _=False, k=key: self._on_tool_clicked(k))
+            b.clicked.connect(partial(self._on_tool_clicked, key))
             self._tool_btns[key] = b
             self._tool_group.addButton(b)
             bar.addWidget(b)
@@ -1104,7 +1142,7 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
 
         app = QApplication.instance()
         if app is not None:
-            app.paletteChanged.connect(self._on_app_theme_changed)
+            app.paletteChanged.connect(self._on_app_theme_changed)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
         self._set_tool("pen")
         self._canvas.color = QColor(_DEFAULT_COLOR)
@@ -1135,8 +1173,9 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
     def _on_app_theme_changed(self) -> None:
         self._refresh_toolbar_icons()
 
-    def showEvent(self, e) -> None:
-        super().showEvent(e)
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
+        super().showEvent(a0)
         self._refresh_toolbar_icons()
         wh = self.windowHandle()
         if wh is not None:
@@ -1183,7 +1222,7 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
 
         if tool == "blur":
 
-            def factory():
+            def factory() -> _SliderPopup:
                 popup = _SliderPopup(
                     self._canvas.blur_strength,
                     minimum=_MIN_BLUR,
@@ -1197,7 +1236,7 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
 
         else:
 
-            def factory():
+            def factory() -> _SliderPopup:
                 popup = _SliderPopup(
                     self._canvas.stroke_width,
                     minimum=_MIN_STROKE,
@@ -1217,7 +1256,7 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
     def _on_blur_strength(self, value: int) -> None:
         self._canvas.blur_strength = max(_MIN_BLUR, min(_MAX_BLUR, int(value)))
 
-    def _on_tool_clicked(self, tool: str) -> None:
+    def _on_tool_clicked(self, tool: str, checked: bool = False) -> None:
         if tool == self._canvas.tool and tool in (
             "pen",
             "highlight",
@@ -1248,7 +1287,10 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
     def _apply_auto_zoom(self) -> None:
         if not self._zoom_auto or self._applying_auto_zoom:
             return
-        vp = self._scroll.viewport().size()
+        viewport = self._scroll.viewport()
+        if viewport is None:
+            return
+        vp = viewport.size()
         if vp.width() < 32 or vp.height() < 32:
             return
         pct = self._fit_zoom_pct_for_size(vp.width(), vp.height())
@@ -1263,8 +1305,9 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
         finally:
             self._applying_auto_zoom = False
 
-    def resizeEvent(self, e) -> None:
-        super().resizeEvent(e)
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        super().resizeEvent(a0)
         if getattr(self, "_scroll", None) is not None:
             self._apply_auto_zoom()
         host = getattr(self, "_stroke_host", None)
@@ -1350,10 +1393,13 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
         self._color_btn.close_popup()
         export_pixmap(self._canvas.composite(), save=True, parent=self)
 
-    def keyPressEvent(self, e):
-        if e.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
-            self._canvas._update_nav_cursor(e.modifiers() | Qt.KeyboardModifier.ControlModifier)
-        if e.key() == Qt.Key.Key_Escape:
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is None:
+            return
+        if a0.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
+            self._canvas.update_nav_cursor(a0.modifiers() | Qt.KeyboardModifier.ControlModifier)
+        if a0.key() == Qt.Key.Key_Escape:
             if self._stroke_host is not None and self._stroke_host.is_open():
                 self._close_stroke_popup()
                 return
@@ -1361,26 +1407,27 @@ class ScreenshotEditorDialog(ViewBase, QDialog):
                 self._color_btn.close_popup()
                 return
             self.close()
-        elif e.key() == Qt.Key.Key_Z and e.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            if e.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+        elif a0.key() == Qt.Key.Key_Z and a0.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            if a0.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 self._canvas.redo()
             else:
                 self._canvas.undo()
-        elif e.key() == Qt.Key.Key_Y and e.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        elif a0.key() == Qt.Key.Key_Y and a0.modifiers() & Qt.KeyboardModifier.ControlModifier:
             self._canvas.redo()
-        elif e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+        elif a0.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self._copy()
-        elif e.key() == Qt.Key.Key_C and e.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        elif a0.key() == Qt.Key.Key_C and a0.modifiers() & Qt.KeyboardModifier.ControlModifier:
             self._copy()
-        elif e.key() == Qt.Key.Key_S and e.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        elif a0.key() == Qt.Key.Key_S and a0.modifiers() & Qt.KeyboardModifier.ControlModifier:
             self._save()
         else:
-            super().keyPressEvent(e)
+            super().keyPressEvent(a0)
 
-    def keyReleaseEvent(self, e):
-        if e.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
-            self._canvas._update_nav_cursor(e.modifiers())
-        super().keyReleaseEvent(e)
+    @override
+    def keyReleaseEvent(self, a0: QKeyEvent | None) -> None:
+        if a0 is not None and a0.key() in (Qt.Key.Key_Control, Qt.Key.Key_Meta):
+            self._canvas.update_nav_cursor(a0.modifiers())
+        super().keyReleaseEvent(a0)
 
 
 # Keep a strong ref so the dialog isn't GC'd when the capture overlay closes.
@@ -1399,7 +1446,7 @@ def open_editor(crop: QPixmap, parent: QWidget | None = None) -> ScreenshotEdito
 
     dlg = ScreenshotEditorDialog(crop, parent=parent)
 
-    def _clear(_obj=None, _dlg=dlg):
+    def _clear(_obj: QObject | None = None, _dlg: ScreenshotEditorDialog = dlg) -> None:
         global _editor_ref
         if _editor_ref is _dlg:
             _editor_ref = None

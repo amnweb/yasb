@@ -1,7 +1,7 @@
 import re
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QWidget
 
 from core.events.service import EventService
 from core.utils.tooltip import set_tooltip
@@ -71,7 +71,7 @@ class DndWidget(BaseWidget):
 
         DndService.set_status(next_mode)
 
-    def _set_status_class(self, widget, status: str):
+    def _set_status_class(self, widget: QWidget, status: str) -> None:
         """Set or update the status class on the widget."""
         current_class = widget.property("class") or ""
         classes = set(current_class.split())
@@ -82,7 +82,7 @@ class DndWidget(BaseWidget):
             widget.setProperty("class", new_class)
             refresh_widget_style(widget)
 
-    def _update_label(self, status: str = None):
+    def _update_label(self, status: str | None = None):
         if status:
             self._current_status = status
         elif self._current_status == "unknown":
@@ -112,7 +112,7 @@ class DndWidget(BaseWidget):
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
 
-                if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                if widget_index < len(active_widgets):
                     active_widgets[widget_index].setText(formatted_text)
                     self._set_status_class(active_widgets[widget_index], self._current_status)
                 widget_index += 1

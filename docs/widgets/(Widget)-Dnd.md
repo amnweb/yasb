@@ -9,8 +9,38 @@ A widget that allows you to monitor and toggle Windows Focus Assist (Do Not Dist
 | `class_name` | `str` | `""` | A custom CSS class added to the widget container. |
 | `tooltip` | `bool` | `true` | Whether to show the status tooltip on hover. |
 | `default_active_mode` | `str` | `"priority"` | The mode that will be activated when toggling from "disabled". Valid options: `"priority"` or `"alarms"`. |
-| `callbacks` | `dict` | `on_left: toggle_status`<br>`on_right: cycle_status` | Custom mouse actions mapped to widget functions. |
-| `icons` | `dict` | `disabled: "\uf0f3"`<br>`priority: "\uf186"`<br>`alarms: "\uf1f6"` | A dictionary mapping statuses to font/icon strings. |
+| `callbacks` | `dict` | [See below](#callbacks) | Custom mouse actions mapped to widget functions. |
+| `icons` | `dict` | [See below](#icons-options) | A dictionary mapping statuses to font/icon strings. |
+
+## Icons Options
+
+The `icons` option accepts the following keys. All keys are optional, the values shown are the defaults.
+
+```yaml
+icons:
+  disabled: "\uf0f3"
+  priority: "\uf186"
+  alarms: "\uf1f6"
+```
+
+## Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "toggle_status"
+  on_middle: "do_nothing"
+  on_right: "cycle_status"
+```
+
+Available actions:
+
+- `toggle_label` - Toggles between `label` and `label_alt`.
+- `toggle_status` - Toggles between "disabled" and the most recent active restricted mode ("priority" or "alarms").
+- `cycle_status` - Cycles the mode sequentially: `disabled` -> `priority` -> `alarms` -> `disabled`.
+- `do_nothing` - Do nothing.
+- `exec <command>` - Run a command, for example `exec cmd.exe /c start ms-settings:network`.
 
 ## Label Placeholders
 
@@ -34,7 +64,7 @@ dnd:
       on_left: "toggle_status"
       on_right: "cycle_status"
     icons:
-      disabled: "\uf0f3" # If you are looking for Segoe Fluent Icons, Windows 11 uses \uf285 for all states
+      disabled: "\uf0f3"
       priority: "\uf186" 
       alarms: "\uf1f6" 
 ```
@@ -46,10 +76,7 @@ dnd:
 - **class_name**: Additional CSS class name for the widget container. This allows for custom styling.
 - **tooltip**: Whether to show the tooltip on hover.
 - **default_active_mode**: The mode that will be activated when toggling from "disabled" for the first time. Valid options are `"priority"` or `"alarms"`. On Windows 11, priority is the default one.
-- **callbacks**: A dictionary specifying the callbacks for mouse events. Available callbacks:
-  - `toggle_label`: Toggles between `label` and `label_alt`.
-  - `toggle_status`: Toggles between "disabled" and the most recent active restricted mode ("priority" or "alarms").
-  - `cycle_status`: Cycles the mode sequentially: `disabled` -> `priority` -> `alarms` -> `disabled`.
+- **callbacks:** Mouse event callbacks. See [Callbacks](#callbacks).
 - **icons**: A dictionary mapping statuses to font/icon strings. It contains:
   - **disabled**: Icon displayed when Do Not Disturb is disabled.
   - **priority**: Icon displayed when "Priority Only" is active.

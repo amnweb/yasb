@@ -1,5 +1,4 @@
 import ctypes
-import ctypes.wintypes
 import datetime
 import fnmatch
 import logging
@@ -8,13 +7,54 @@ import re
 import string
 import struct
 import sys
+import sysconfig
 import winreg
+from collections import deque
+from collections.abc import Callable
+from threading import Event
+from typing import Any
 
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QStandardPaths, QTimer
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.shell_utils import shell_open
-from core.utils.win32.constants import SW_HIDE
+from core.utils.win32.bindings.everything import (
+    EVERYTHING_ERROR_IPC,
+    EVERYTHING_REQUEST_FILE_NAME,
+    EVERYTHING_REQUEST_FULL_PATH_AND_FILE_NAME,
+    EVERYTHING_REQUEST_PATH,
+    EVERYTHING_REQUEST_SIZE,
+    EVERYTHING_SORT_NAME_ASCENDING,
+    EverythingLibrary,
+)
+from core.utils.win32.bindings.kernel32 import (
+    FindClose,
+    FindFirstFileEx,
+    FindNextFile,
+    GetDriveType,
+    GetLastError,
+    GetLogicalDrives,
+    GlobalAlloc,
+    GlobalFree,
+    GlobalLock,
+    GlobalUnlock,
+)
+from core.utils.win32.bindings.user32 import CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData
+from core.utils.win32.constants import (
+    CF_HDROP,
+    DRIVE_CDROM,
+    DRIVE_REMOTE,
+    DRIVE_REMOVABLE,
+    FILE_ATTRIBUTE_DIRECTORY,
+    FILE_ATTRIBUTE_HIDDEN,
+    FILE_ATTRIBUTE_SYSTEM,
+    FIND_EX_INFO_BASIC,
+    FIND_FIRST_EX_LARGE_FETCH,
+    GHND,
+    SW_HIDE,
+)
+from core.utils.win32.registry_keys import EVERYTHING_KEY, EVERYTHING_WOW64_KEY
+from core.utils.win32.structs import WIN32_FIND_DATAW
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
@@ -103,22 +143,16 @@ def _get_file_icon(name: str, is_folder: bool) -> str:
     return _EXT_ICON_MAP.get(ext, ICON_FILE)
 
 
-# Everything SDK constants
-EVERYTHING_REQUEST_FILE_NAME = 0x00000001
-EVERYTHING_REQUEST_PATH = 0x00000002
-EVERYTHING_REQUEST_FULL_PATH_AND_FILE_NAME = 0x00000004
-EVERYTHING_REQUEST_SIZE = 0x00000010
-EVERYTHING_SORT_NAME_ASCENDING = 1
-EVERYTHING_OK = 0
-EVERYTHING_ERROR_IPC = 2
-
-
+from core.utils.win32.bindings.ole32 import create_dispatch
 from settings import IS_FROZEN
 
-if IS_FROZEN:
-    _BUNDLED_DLL = os.path.join(os.path.dirname(sys.executable), "lib", "Everything64.dll")
-else:
-    _BUNDLED_DLL = os.path.join(os.path.dirname(__file__), "resources", "Everything64.dll")
+# Loaded into YASB's own process, so it follows the Python build's architecture, not the host's.
+_EVERYTHING_DLL = "EverythingARM64.dll" if sysconfig.get_platform() == "win-arm64" else "Everything64.dll"
+_BUNDLED_DLL = (
+    os.path.join(os.path.dirname(sys.executable), "lib", _EVERYTHING_DLL)
+    if IS_FROZEN
+    else os.path.join(os.path.dirname(__file__), "resources", _EVERYTHING_DLL)
+)
 
 
 class _EverythingBackend:
@@ -127,10 +161,10 @@ class _EverythingBackend:
     _EXE_NAMES = ("Everything64.exe", "Everything32.exe", "Everything.exe")
 
     def __init__(self):
-        self._dll = None
+        self._dll: EverythingLibrary | None = None
         self._available: bool | None = None
         self._buf = ctypes.create_unicode_buffer(520)
-        self._size_val = ctypes.c_ulonglong(0)
+        self._size_val = ctypes.c_longlong(0)
         self._exe_path: str | None = None
         self._ipc_error = False
 
@@ -143,31 +177,7 @@ class _EverythingBackend:
             return False
         dll_path = _BUNDLED_DLL
         try:
-            dll = ctypes.WinDLL(dll_path)
-            dll.Everything_SetSearchW.argtypes = [ctypes.c_wchar_p]
-            dll.Everything_SetMax.argtypes = [ctypes.c_ulong]
-            dll.Everything_SetOffset.argtypes = [ctypes.c_ulong]
-            dll.Everything_SetRequestFlags.argtypes = [ctypes.c_ulong]
-            dll.Everything_SetSort.argtypes = [ctypes.c_ulong]
-            dll.Everything_QueryW.argtypes = [ctypes.c_int]
-            dll.Everything_QueryW.restype = ctypes.c_int
-            dll.Everything_GetNumResults.restype = ctypes.c_ulong
-            dll.Everything_GetLastError.restype = ctypes.c_ulong
-            dll.Everything_GetResultFullPathNameW.argtypes = [
-                ctypes.c_ulong,
-                ctypes.c_wchar_p,
-                ctypes.c_ulong,
-            ]
-            dll.Everything_IsFolderResult.argtypes = [ctypes.c_ulong]
-            dll.Everything_IsFolderResult.restype = ctypes.c_int
-            dll.Everything_GetResultSize.argtypes = [
-                ctypes.c_ulong,
-                ctypes.POINTER(ctypes.c_ulonglong),
-            ]
-            dll.Everything_GetResultSize.restype = ctypes.c_int
-            dll.Everything_Reset.argtypes = []
-            dll.Everything_Reset.restype = None
-            self._dll = dll
+            self._dll = EverythingLibrary(dll_path)
             self._available = True
             logging.info("Everything SDK loaded: %s", dll_path)
         except Exception as e:
@@ -179,10 +189,20 @@ class _EverythingBackend:
     def available(self) -> bool:
         return self._load()
 
-    def search(self, query: str, max_results: int = 20) -> list[dict]:
+    def is_running(self) -> bool:
+        """True when the Everything app answers; the bundled SDK DLL loads either way."""
+        if not self._load() or self._dll is None:
+            return False
+        running = self._dll.Everything_GetMajorVersion() != 0
+        self._ipc_error = not running
+        return running
+
+    def search(self, query: str, max_results: int = 20) -> list[dict[str, Any]]:
         if not self._load():
             return []
         dll = self._dll
+        if dll is None:
+            return []
         try:
             dll.Everything_SetSearchW(query)
             dll.Everything_SetMax(max_results)
@@ -195,7 +215,7 @@ class _EverythingBackend:
             )
             dll.Everything_SetSort(EVERYTHING_SORT_NAME_ASCENDING)
 
-            if not dll.Everything_QueryW(1):
+            if not dll.Everything_QueryW(True):
                 err = dll.Everything_GetLastError()
                 if err == EVERYTHING_ERROR_IPC:
                     self._ipc_error = True
@@ -203,13 +223,13 @@ class _EverythingBackend:
                 return []
 
             num = min(dll.Everything_GetNumResults(), max_results)
-            results = []
+            results: list[dict[str, Any]] = []
             buf = self._buf
             size_val = self._size_val
             for i in range(num):
                 dll.Everything_GetResultFullPathNameW(i, buf, 520)
                 full_path = buf.value
-                is_folder = bool(dll.Everything_IsFolderResult(i))
+                is_folder = dll.Everything_IsFolderResult(i)
                 file_size = 0
                 if not is_folder and dll.Everything_GetResultSize(i, ctypes.byref(size_val)):
                     file_size = size_val.value
@@ -228,15 +248,12 @@ class _EverythingBackend:
             logging.debug("Everything search error: %s", e)
             return []
 
-    def _find_exe(self) -> str | None:
+    def find_exe(self) -> str | None:
         """Locate the Everything executable from registry or common paths."""
         if self._exe_path is not None:
             return self._exe_path or None
         # Check registry
-        for key_path in (
-            r"SOFTWARE\voidtools\Everything",
-            r"SOFTWARE\WOW6432Node\voidtools\Everything",
-        ):
+        for key_path in (EVERYTHING_KEY, EVERYTHING_WOW64_KEY):
             try:
                 with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
                     install_dir = winreg.QueryValueEx(key, "InstallFolder")[0]
@@ -282,13 +299,12 @@ class _EverythingBackend:
 
     def launch_everything(self) -> bool:
         """Attempt to start the Everything process."""
-        exe = self._find_exe()
+        exe = self.find_exe()
         if not exe:
             return False
         try:
             shell_open(exe, parameters="-startup", show_cmd=SW_HIDE)
             self._ipc_error = False
-            self._available = None  # Reset so next query retries
             return True
         except Exception as e:
             logging.debug("Failed to launch Everything: %s", e)
@@ -347,9 +363,6 @@ class _DiskSearchBackend:
             ".vscode",
         }
     )
-    _FILE_ATTRIBUTE_HIDDEN = 0x2
-    _FILE_ATTRIBUTE_SYSTEM = 0x4
-    _FILE_ATTRIBUTE_DIRECTORY = 0x10
 
     _SKIP_FILES = frozenset(
         {
@@ -369,128 +382,103 @@ class _DiskSearchBackend:
             "thumbs.db",
         }
     )
-    _FIND_FIRST_EX_LARGE_FETCH = 2
-    _FIND_EX_INFO_BASIC = 1
-    _INVALID_HANDLE = ctypes.wintypes.HANDLE(-1).value
-
-    class _WIN32_FIND_DATAW(ctypes.Structure):
-        _fields_ = [
-            ("dwFileAttributes", ctypes.wintypes.DWORD),
-            ("ftCreationTime", ctypes.wintypes.FILETIME),
-            ("ftLastAccessTime", ctypes.wintypes.FILETIME),
-            ("ftLastWriteTime", ctypes.wintypes.FILETIME),
-            ("nFileSizeHigh", ctypes.wintypes.DWORD),
-            ("nFileSizeLow", ctypes.wintypes.DWORD),
-            ("dwReserved0", ctypes.wintypes.DWORD),
-            ("dwReserved1", ctypes.wintypes.DWORD),
-            ("cFileName", ctypes.c_wchar * 260),
-            ("cAlternateFileName", ctypes.c_wchar * 14),
-        ]
 
     def __init__(self):
         self._available = True
-        try:
-            k32 = ctypes.windll.kernel32
-            self._FindFirstFileExW = k32.FindFirstFileExW
-            self._FindFirstFileExW.argtypes = [
-                ctypes.c_wchar_p,
-                ctypes.c_int,
-                ctypes.POINTER(self._WIN32_FIND_DATAW),
-                ctypes.c_int,
-                ctypes.c_void_p,
-                ctypes.wintypes.DWORD,
-            ]
-            self._FindFirstFileExW.restype = ctypes.wintypes.HANDLE
-            self._FindNextFileW = k32.FindNextFileW
-            self._FindNextFileW.argtypes = [ctypes.wintypes.HANDLE, ctypes.POINTER(self._WIN32_FIND_DATAW)]
-            self._FindNextFileW.restype = ctypes.wintypes.BOOL
-            self._FindClose = k32.FindClose
-            self._FindClose.argtypes = [ctypes.wintypes.HANDLE]
-            self._FindClose.restype = ctypes.wintypes.BOOL
-        except Exception:
-            self._available = False
 
     @property
     def available(self) -> bool:
         return self._available
 
-    # Drive types to skip (GetDriveTypeW return values)
-    _DRIVE_REMOVABLE = 2
-    _DRIVE_REMOTE = 4
-    _DRIVE_CDROM = 5
-    _SKIP_DRIVE_TYPES = frozenset({_DRIVE_REMOVABLE, _DRIVE_REMOTE, _DRIVE_CDROM})
+    _SKIP_DRIVE_TYPES = frozenset({DRIVE_REMOVABLE, DRIVE_REMOTE, DRIVE_CDROM})
 
     def _get_drives(self) -> list[str]:
-        bitmask = ctypes.windll.kernel32.GetLogicalDrives()
-        get_type = ctypes.windll.kernel32.GetDriveTypeW
-        drives = []
+        bitmask = GetLogicalDrives()
+        drives: list[str] = []
         for i, letter in enumerate(string.ascii_uppercase):
             if bitmask & (1 << i):
                 d = f"{letter}:\\"
-                if get_type(d) not in self._SKIP_DRIVE_TYPES and os.path.isdir(d):
+                if GetDriveType(d) not in self._SKIP_DRIVE_TYPES and os.path.isdir(d):
                     drives.append(d)
         return drives
 
-    def _recurse(self, path: str, match_fn, results: list[dict], max_results: int, cancel_event=None):
-        if len(results) >= max_results or (cancel_event and cancel_event.is_set()):
-            return
-        data = self._WIN32_FIND_DATAW()
-        handle = self._FindFirstFileExW(
-            os.path.join(path, "*"),
-            self._FIND_EX_INFO_BASIC,
-            ctypes.byref(data),
-            0,
-            None,
-            self._FIND_FIRST_EX_LARGE_FETCH,
-        )
-        if handle == self._INVALID_HANDLE:
-            return
-        try:
-            while True:
-                if cancel_event and cancel_event.is_set():
-                    return
-                name = data.cFileName
-                if name not in (".", ".."):
-                    attrs = data.dwFileAttributes
-                    if attrs & self._FILE_ATTRIBUTE_DIRECTORY:
+    _PROFILE_LOCATIONS = (
+        QStandardPaths.StandardLocation.DesktopLocation,
+        QStandardPaths.StandardLocation.DownloadLocation,
+        QStandardPaths.StandardLocation.DocumentsLocation,
+        QStandardPaths.StandardLocation.PicturesLocation,
+        QStandardPaths.StandardLocation.MoviesLocation,
+        QStandardPaths.StandardLocation.MusicLocation,
+    )
+
+    def _profile_folders(self) -> list[str]:
+        folders: list[str] = []
+        for location in self._PROFILE_LOCATIONS:
+            path = QStandardPaths.writableLocation(location)
+            if path and os.path.isdir(path):
+                folders.append(os.path.normpath(path))
+        return folders
+
+    def _search_from(
+        self,
+        starts: list[str],
+        match_fn: Callable[[str], bool],
+        results: list[dict[str, Any]],
+        max_results: int,
+        cancel_event: Event | None = None,
+    ) -> None:
+        # Breadth-first from every start at once, so a shallow match on any drive comes before a deep one.
+        queue = deque(starts)
+        visited: set[str] = set()
+        data = WIN32_FIND_DATAW()
+        while queue:
+            path = queue.popleft()
+            key = os.path.normcase(path.rstrip("\\"))
+            if key in visited:
+                continue
+            visited.add(key)
+            handle = FindFirstFileEx(
+                os.path.join(path, "*"),
+                FIND_EX_INFO_BASIC,
+                ctypes.byref(data),
+                0,
+                FIND_FIRST_EX_LARGE_FETCH,
+            )
+            if handle is None:
+                continue
+            try:
+                while True:
+                    if cancel_event and cancel_event.is_set():
+                        return
+                    name = data.cFileName
+                    if name not in (".", ".."):
+                        attrs = data.dwFileAttributes
                         low = name.lower()
-                        if (
-                            not (attrs & (self._FILE_ATTRIBUTE_HIDDEN | self._FILE_ATTRIBUTE_SYSTEM))
-                            and low not in self._SKIP_FOLDERS
-                            and not low.startswith("$")
-                        ):
-                            if match_fn(low):
-                                results.append(
-                                    {
-                                        "path": os.path.join(path, name),
-                                        "name": name,
-                                        "is_folder": True,
-                                        "size": 0,
-                                    }
-                                )
-                                if len(results) >= max_results:
-                                    return
-                            self._recurse(os.path.join(path, name), match_fn, results, max_results, cancel_event)
-                    else:
-                        low = name.lower()
-                        if not (attrs & self._FILE_ATTRIBUTE_SYSTEM) and low not in self._SKIP_FILES and match_fn(low):
+                        if attrs & FILE_ATTRIBUTE_DIRECTORY:
+                            if (
+                                not (attrs & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM))
+                                and low not in self._SKIP_FOLDERS
+                                and not low.startswith("$")
+                            ):
+                                full_path = os.path.join(path, name)
+                                queue.append(full_path)
+                                if match_fn(low):
+                                    results.append({"path": full_path, "name": name, "is_folder": True, "size": 0})
+                                    if len(results) >= max_results:
+                                        return
+                        elif not (attrs & FILE_ATTRIBUTE_SYSTEM) and low not in self._SKIP_FILES and match_fn(low):
                             size = (data.nFileSizeHigh << 32) | data.nFileSizeLow
                             results.append(
-                                {
-                                    "path": os.path.join(path, name),
-                                    "name": name,
-                                    "is_folder": False,
-                                    "size": size,
-                                }
+                                {"path": os.path.join(path, name), "name": name, "is_folder": False, "size": size}
                             )
                             if len(results) >= max_results:
                                 return
-                if not self._FindNextFileW(handle, ctypes.byref(data)):
-                    break
-        finally:
-            self._FindClose(handle)
+                    if not FindNextFile(handle, ctypes.byref(data)):
+                        break
+            finally:
+                FindClose(handle)
 
-    def search(self, query: str, max_results: int = 20, cancel_event=None) -> list[dict]:
+    def search(self, query: str, max_results: int = 20, cancel_event: Event | None = None) -> list[dict[str, Any]]:
         if not self._available:
             return []
         # Parse drive/path prefix: "d: foo", "d:\ foo", "c:\users\ bar"
@@ -507,21 +495,18 @@ class _DiskSearchBackend:
         query_lower = query.lower()
         # Detect glob patterns
         has_wildcard = any(c in query for c in "*?[]")
+        match_fn: Callable[[str], bool]
         if has_wildcard:
             match_fn = lambda name: fnmatch.fnmatch(name, query_lower)
         else:
             match_fn = lambda name: query_lower in name
-        results: list[dict] = []
+        if search_dir and os.path.isdir(search_dir):
+            starts = [search_dir]
+        else:
+            starts = [*self._profile_folders(), *self._get_drives(), os.path.expanduser("~")]
+        results: list[dict[str, Any]] = []
         try:
-            if search_dir and os.path.isdir(search_dir):
-                self._recurse(search_dir, match_fn, results, max_results, cancel_event)
-            else:
-                for drive in self._get_drives():
-                    if cancel_event and cancel_event.is_set():
-                        break
-                    self._recurse(drive, match_fn, results, max_results, cancel_event)
-                    if len(results) >= max_results:
-                        break
+            self._search_from(starts, match_fn, results, max_results, cancel_event)
         except Exception as e:
             logging.debug("Disk search error: %s", e)
         return results
@@ -538,9 +523,7 @@ class _WindowsSearchBackend:
         if self._available is not None:
             return self._available
         try:
-            import win32com.client
-
-            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn = create_dispatch("ADODB.Connection")
             conn.Open("Provider=Search.CollatorDSO;Extended Properties='Application=Windows';")
             conn.Close()
             self._available = True
@@ -548,11 +531,9 @@ class _WindowsSearchBackend:
             self._available = False
         return self._available
 
-    def search(self, query: str, max_results: int = 20) -> list[dict]:
+    def search(self, query: str, max_results: int = 20) -> list[dict[str, Any]]:
         try:
-            import win32com.client
-
-            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn = create_dispatch("ADODB.Connection")
             conn.Open("Provider=Search.CollatorDSO;Extended Properties='Application=Windows';")
             # Strip to safe filename characters only, ADODB doesn't support parameterized queries
             # Convert glob wildcards (* ?) to SQL LIKE equivalents (% _)
@@ -572,8 +553,8 @@ class _WindowsSearchBackend:
                 f"AND SCOPE='file:' "
                 f"ORDER BY System.Search.Rank DESC"
             )
-            rs, _ = conn.Execute(sql)
-            results = []
+            rs = conn.Execute(sql)
+            results: list[dict[str, Any]] = []
             while not rs.EOF:
                 path = rs.Fields("System.ItemPathDisplay").Value
                 item_type = rs.Fields("System.ItemType").Value or ""
@@ -615,7 +596,7 @@ class FileSearchProvider(BaseProvider):
     input_placeholder = "Search files and folders..."
     icon = ICON_SEARCH
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self._backend_name = (config or {}).get("backend", "auto")
         self._everything = _EverythingBackend()
@@ -623,7 +604,31 @@ class FileSearchProvider(BaseProvider):
         self._disk_search = _DiskSearchBackend()
         self._active_backend = None
 
+    def _fallback_backend(self):
+        if self._windows_search.available:
+            return self._windows_search
+        if self._disk_search.available:
+            return self._disk_search
+        return None
+
+    @staticmethod
+    def _backend_label(backend: object) -> str:
+        if isinstance(backend, _EverythingBackend):
+            return "Everything"
+        if isinstance(backend, _WindowsSearchBackend):
+            return "Windows Search"
+        if isinstance(backend, _DiskSearchBackend):
+            return "Disk Search"
+        return "unavailable"
+
     def _get_backend(self):
+        if self._backend_name == "auto":
+            backend = self._everything if self._everything.is_running() else self._fallback_backend()
+            if backend is not self._active_backend:
+                self._active_backend = backend
+                reason = "" if backend is self._everything else " (Everything is not running)"
+                logging.info("File search: using %s backend%s", self._backend_label(backend), reason)
+            return backend
         if self._active_backend is not None:
             return self._active_backend
         if self._backend_name == "everything":
@@ -642,40 +647,22 @@ class FileSearchProvider(BaseProvider):
                 logging.info("File search: using disk search backend")
             else:
                 logging.warning("Disk search backend not available")
-        else:  # auto
-            if self._everything.available:
-                self._active_backend = self._everything
-                logging.info("File search: using Everything backend")
-            elif self._windows_search.available:
-                self._active_backend = self._windows_search
-                logging.info("File search: using Windows Search backend")
-            elif self._disk_search.available:
-                self._active_backend = self._disk_search
-                logging.info("File search: using disk search backend (fallback)")
-            else:
-                logging.warning("No file search backend available")
         return self._active_backend
 
-    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
+    def _search(self, backend: Any, query: str, cancel_event: Event | None) -> list[dict[str, Any]]:
+        if isinstance(backend, _DiskSearchBackend):
+            return backend.search(query, self.max_results, cancel_event=cancel_event)
+        return backend.search(query, self.max_results)
+
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         cancel_event = kwargs.get("cancel_event")
         query = self.get_query_text(text) if self.prefix and text.strip().startswith(self.prefix) else text.strip()
 
         if not query:
             backend = self._get_backend()
-            # Check if Everything is configured but not running
-            if self._everything.has_ipc_error or (
-                self._backend_name in ("auto", "everything") and self._everything._available and not backend
-            ):
+            if self._backend_name == "everything" and not self._everything.is_running():
                 return self._everything_not_running_results()
-            backend_label = (
-                "Everything"
-                if isinstance(backend, _EverythingBackend)
-                else "Windows Search"
-                if isinstance(backend, _WindowsSearchBackend)
-                else "Disk Search"
-                if isinstance(backend, _DiskSearchBackend)
-                else "unavailable"
-            )
+            backend_label = self._backend_label(backend)
             return [
                 ProviderResult(
                     title="Search files and folders",
@@ -699,16 +686,15 @@ class FileSearchProvider(BaseProvider):
                 )
             ]
 
-        raw = (
-            backend.search(query, self.max_results, cancel_event=cancel_event)
-            if isinstance(backend, _DiskSearchBackend)
-            else backend.search(query, self.max_results)
-        )
-        # Check if Everything returned empty due to IPC error
+        raw = self._search(backend, query, cancel_event)
         if not raw and isinstance(backend, _EverythingBackend) and backend.has_ipc_error:
-            return self._everything_not_running_results()
+            if self._backend_name != "auto":
+                return self._everything_not_running_results()
+            # Everything quit after the check above; auto searches with the fallback instead.
+            backend = self._get_backend()
+            raw = self._search(backend, query, cancel_event) if backend else []
 
-        results = []
+        results: list[ProviderResult] = []
         show_path = self.config.get("show_path", True)
         home = os.path.expanduser("~")
         for item in raw:
@@ -738,14 +724,14 @@ class FileSearchProvider(BaseProvider):
             )
         return results
 
-    def _build_file_preview(self, path: str, name: str, is_folder: bool, size: int) -> dict:
+    def _build_file_preview(self, path: str, name: str, is_folder: bool, size: int) -> dict[str, Any]:
         """Build a toggleable preview dict with file/folder metadata."""
-        metadata = []
+        metadata: list[list[str]] = []
         try:
             st = os.stat(path)
             if not is_folder:
                 metadata.append(["File Size", _format_size(st.st_size) or _format_size(size)])
-            metadata.append(["Created", datetime.datetime.fromtimestamp(st.st_ctime).strftime("%Y-%m-%d %H:%M")])
+            metadata.append(["Created", datetime.datetime.fromtimestamp(st.st_birthtime).strftime("%Y-%m-%d %H:%M")])
             metadata.append(["Last Modified", datetime.datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")])
         except OSError:
             if size and not is_folder:
@@ -824,30 +810,6 @@ class FileSearchProvider(BaseProvider):
     @staticmethod
     def _copy_file_to_clipboard(path: str):
         """Place a file on the clipboard via CF_HDROP, like Explorer's Copy."""
-        CF_HDROP = 15
-        GHND = 0x0042
-
-        user32 = ctypes.WinDLL("user32", use_last_error=True)
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-
-        user32.OpenClipboard.argtypes = [ctypes.wintypes.HWND]
-        user32.OpenClipboard.restype = ctypes.wintypes.BOOL
-        user32.EmptyClipboard.argtypes = []
-        user32.EmptyClipboard.restype = ctypes.wintypes.BOOL
-        user32.SetClipboardData.argtypes = [ctypes.wintypes.UINT, ctypes.c_void_p]
-        user32.SetClipboardData.restype = ctypes.c_void_p
-        user32.CloseClipboard.argtypes = []
-        user32.CloseClipboard.restype = ctypes.wintypes.BOOL
-
-        kernel32.GlobalAlloc.argtypes = [ctypes.wintypes.UINT, ctypes.c_size_t]
-        kernel32.GlobalAlloc.restype = ctypes.c_void_p
-        kernel32.GlobalLock.argtypes = [ctypes.c_void_p]
-        kernel32.GlobalLock.restype = ctypes.c_void_p
-        kernel32.GlobalUnlock.argtypes = [ctypes.c_void_p]
-        kernel32.GlobalUnlock.restype = ctypes.wintypes.BOOL
-        kernel32.GlobalFree.argtypes = [ctypes.c_void_p]
-        kernel32.GlobalFree.restype = ctypes.c_void_p
-
         # DROPFILES header (20 bytes): pFiles, pt.x, pt.y, fNC, fWide
         dropfiles_fmt = "IiiII"
         dropfiles_size = struct.calcsize(dropfiles_fmt)
@@ -857,29 +819,29 @@ class FileSearchProvider(BaseProvider):
         file_bytes = path.encode("utf-16-le") + b"\x00\x00\x00\x00"
         data = header + file_bytes
 
-        hMem = kernel32.GlobalAlloc(GHND, len(data))
+        hMem = GlobalAlloc(GHND, len(data))
         if not hMem:
-            raise ctypes.WinError(ctypes.get_last_error())
+            raise ctypes.WinError(GetLastError())
 
-        pMem = kernel32.GlobalLock(hMem)
+        pMem = GlobalLock(hMem)
         if not pMem:
-            kernel32.GlobalFree(hMem)
-            raise ctypes.WinError(ctypes.get_last_error())
+            GlobalFree(hMem)
+            raise ctypes.WinError(GetLastError())
 
         ctypes.memmove(pMem, data, len(data))
-        kernel32.GlobalUnlock(hMem)
+        GlobalUnlock(hMem)
 
-        if not user32.OpenClipboard(None):
-            kernel32.GlobalFree(hMem)
-            raise ctypes.WinError(ctypes.get_last_error())
+        if not OpenClipboard(None):
+            GlobalFree(hMem)
+            raise ctypes.WinError(GetLastError())
 
         try:
-            user32.EmptyClipboard()
-            if not user32.SetClipboardData(CF_HDROP, hMem):
-                kernel32.GlobalFree(hMem)
-                raise ctypes.WinError(ctypes.get_last_error())
+            EmptyClipboard()
+            if not SetClipboardData(CF_HDROP, hMem):
+                GlobalFree(hMem)
+                raise ctypes.WinError(GetLastError())
         finally:
-            user32.CloseClipboard()
+            CloseClipboard()
 
     def _wait_for_everything_ipc(self, retries: int = 10, interval: int = 500):
         """Poll for Everything IPC availability after launch, then trigger a refresh."""
@@ -892,8 +854,7 @@ class FileSearchProvider(BaseProvider):
 
     def _check_everything_ipc(self):
         """Check if Everything IPC is ready, retry or trigger refresh."""
-        self._everything._available = None
-        if self._everything.available:
+        if self._everything.is_running():
             self._active_backend = self._everything
             if self.request_refresh:
                 self.request_refresh()
@@ -905,7 +866,7 @@ class FileSearchProvider(BaseProvider):
             logging.debug("Everything IPC not available after 10 retries")
 
     def _everything_not_running_results(self) -> list[ProviderResult]:
-        exe = self._everything._find_exe()
+        exe = self._everything.find_exe()
         if exe:
             return [
                 ProviderResult(

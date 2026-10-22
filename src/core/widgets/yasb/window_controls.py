@@ -1,15 +1,24 @@
 import logging
 import os
+from collections.abc import Callable
+from typing import override
 
-import win32api
-import win32gui
-import win32process
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QPushButton, QWidget
+from PyQt6.QtGui import QCloseEvent
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QPushButton
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
-from core.utils.win32.utils import get_app_name_from_pid, get_monitor_hwnd, is_window_maximized
+from core.utils.win32.bindings.user32 import (
+    FindWindowEx,
+    GetClassName,
+    GetForegroundWindow,
+    GetMonitorInfo,
+    GetWindowText,
+    MonitorFromWindow,
+    get_window_thread_process_id,
+)
+from core.utils.win32.utils import get_app_name_from_pid, get_widget_monitor_hwnd, is_window_maximized
 from core.utils.win32.window_actions import (
     close_application,
     maximize_window,
@@ -59,7 +68,7 @@ class _ForegroundPoller:
         return cls._instance
 
     def __init__(self):
-        self._callbacks: list = []
+        self._callbacks: list[Callable[[_ForegroundPollResult], None]] = []
         self._timer = QTimer()
         self._timer.setInterval(200)
         self._timer.timeout.connect(self._poll)
@@ -67,14 +76,14 @@ class _ForegroundPoller:
         self._last_hwnd: int = 0
         self._last_result: _ForegroundPollResult | None = None
 
-    def register(self, callback):
+    def register(self, callback: Callable[[_ForegroundPollResult], None]) -> None:
         if callback in self._callbacks:
             return
         self._callbacks.append(callback)
         if len(self._callbacks) == 1:
             self._timer.start()
 
-    def unregister(self, callback):
+    def unregister(self, callback: Callable[[_ForegroundPollResult], None]) -> None:
         try:
             self._callbacks.remove(callback)
         except ValueError:
@@ -94,14 +103,14 @@ class _ForegroundPoller:
 
     def _poll(self):
         try:
-            hwnd = win32gui.GetForegroundWindow()
+            hwnd = GetForegroundWindow()
             if not hwnd:
                 self._last_hwnd = 0
                 self._broadcast(_ForegroundPollResult(0, False, False, 0, ""))
                 return
 
             # If foreground is our own process (bar), all widgets keep current state
-            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            _, pid = get_window_thread_process_id(hwnd)
             if pid == CURRENT_PROCESS_ID:
                 return
 
@@ -109,7 +118,7 @@ class _ForegroundPoller:
             if hwnd == self._last_hwnd and self._last_result is not None and self._last_result.valid:
                 try:
                     maximized = is_window_maximized(hwnd)
-                    fg_monitor_hwnd = int(win32api.MonitorFromWindow(hwnd))
+                    fg_monitor_hwnd = MonitorFromWindow(hwnd) or 0
                 except Exception:
                     # Window was likely destroyed
                     self._last_hwnd = 0
@@ -123,27 +132,27 @@ class _ForegroundPoller:
 
             self._last_hwnd = hwnd
 
-            title = win32gui.GetWindowText(hwnd)
+            title = GetWindowText(hwnd)
             if not title or title in IGNORED_TITLES or title in IGNORED_YASB_TITLES:
                 self._broadcast(_ForegroundPollResult(hwnd, False, False, 0, ""))
                 return
 
-            class_name = win32gui.GetClassName(hwnd)
+            class_name = GetClassName(hwnd)
             if class_name in IGNORED_CLASSES:
                 self._broadcast(_ForegroundPollResult(hwnd, False, False, 0, ""))
                 return
 
             maximized = is_window_maximized(hwnd)
-            fg_monitor_hwnd = int(win32api.MonitorFromWindow(hwnd))
+            fg_monitor_hwnd = MonitorFromWindow(hwnd) or 0
 
             # For UWP apps, ApplicationFrameHost.exe owns the window find the real child PID
             pid_for_name = pid
             is_uwp = class_name == "ApplicationFrameWindow"
             if is_uwp:
                 try:
-                    child_hwnd = win32gui.FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
+                    child_hwnd = FindWindowEx(hwnd, 0, "Windows.UI.Core.CoreWindow", None)
                     if child_hwnd:
-                        _, child_pid = win32process.GetWindowThreadProcessId(child_hwnd)
+                        _, child_pid = get_window_thread_process_id(child_hwnd)
                         if child_pid:
                             pid_for_name = child_pid
                 except Exception:
@@ -230,10 +239,11 @@ class WindowControlsWidget(BaseWidget):
             pass
         self._poller_registered = False
 
-    def closeEvent(self, event):
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         self._cleanup_poller()
         self._stop_running_animations()
-        super().closeEvent(event)
+        super().closeEvent(a0)
 
     def _make_button_handler(self, btn_name: str):
         """Create a clicked handler for a specific button."""
@@ -286,10 +296,11 @@ class WindowControlsWidget(BaseWidget):
         # Per-widget monitor exclusivity check
         if self.config.monitor_exclusive:
             try:
-                widget_monitor = get_monitor_hwnd(int(QWidget.winId(self)))
+                widget_monitor = get_widget_monitor_hwnd(self)
                 if result.fg_monitor_hwnd != widget_monitor:
-                    mon_info = win32api.GetMonitorInfo(result.fg_monitor_hwnd)
-                    if self.screen().name() != mon_info.get("Device"):
+                    mon_info = GetMonitorInfo(result.fg_monitor_hwnd)
+                    screen = self.screen()
+                    if screen is not None and mon_info is not None and screen.name() != mon_info.szDevice:
                         if self._is_visible:
                             self._tracked_hwnd = None
                             self._tracked_maximized = False

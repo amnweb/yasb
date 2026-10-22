@@ -7,19 +7,19 @@ A player control widget that shows you what song or video is currently playing. 
 
 | Option                                | Type      | Default                                                   | Description                                                         |
 | -------------------------             | --------- | ---------                                                 | -------------------------------------                               |
-| `label`                               | string    | `"{artist}{s}{title}"`                                    | The main label format for the media widget.                         |
-| `label_alt`                           | string    | `"{title}"`                                               | The alternative label format for the media widget.                  |
+| `label`                               | string    | `"{title}"`                                               | The main label format for the media widget.                         |
+| `label_alt`                           | string    | `"{artist} - {title}"`                                    | The alternative label format for the media widget.                  |
 | `separator`                           | string    | `" - "`                                                   | The dynamic separator. Automatically stripped. More below.          |
 | `class_name`                          | string    | `""`                                                      | The custom CSS class name for the widget.                           |
 | `max_field_size`                      | dict      |                                                           | Maximum field sizes for labels.                                     |
-| `max_field_size.label`                | integer   | 20                                                        | Maximum size for the main label.                                    |
+| `max_field_size.label`                | integer   | 15                                                        | Maximum size for the main label.                                    |
 | `max_field_size.label_alt`            | integer   | 30                                                        | Maximum size for the alternative label.                             |
-| `max_field_size.truncate_whole_label` | boolean   | false                                                     | Whether to truncate the whole label if it exceeds the maximum size. |
+| `max_field_size.truncate_whole_label` | boolean   | true                                                      | Whether to truncate the whole label if it exceeds the maximum size. |
 | `show_thumbnail`                      | boolean   | true                                                      | Whether to show the media thumbnail.                                |
 | `controls_only`                       | boolean   | false                                                     | Whether to show only the media controls.                            |
 | `controls_left`                       | boolean   | true                                                      | Whether to position the controls on the left.                       |
 | `controls_hide`                       | boolean   | false                                                     | Whether to hide the media controls buttons                          |
-| `hide_empty`                          | boolean   | true                                                      | Whether to hide the widget when there is no media information.      |
+| `hide_empty`                          | boolean   | false                                                     | Whether to hide the widget when there is no media information.      |
 | `thumbnail_alpha`                     | integer   | 50                                                        | The alpha transparency value for the thumbnail.                     |
 | `thumbnail_padding`                   | integer   | 8                                                         | The padding around the thumbnail.                                   |
 | `thumbnail_corner_radius`             | integer   | 0                                                         | The corner radius for the thumbnail.                                |
@@ -32,9 +32,10 @@ A player control widget that shows you what song or video is currently playing. 
 | `icons.pause`                         | string    | `\uf04c`                                                  | Icon for the pause button.                                          |
 | `media_menu`                          | dict      | [See below](#media-menu-options)                          | Media menu popup.                                                   |
 | `media_menu_icons`                    | dict      | [See below](#media-menu-icons)                            | Media menu icons for popup.                                         |
-| `scrolling_label`                     | dict      | [See below](#scrolling-label)                             | Widget label scrolling options                                      |
-| `progress_bar`                        | dict      | [See below](#progress-bar)                                | On widget progress bar options.                                     |
-| `callbacks`                           | dict      | [See below](#available-callbacks)                         | Callbacks for mouse events on the widget.                           |
+| `scrolling_label`                     | dict      | [See below](#scrolling-label-options)                             | Widget label scrolling options                                      |
+| `progress_bar`                        | dict      | [See below](#widget-progress-bar)                                | On widget progress bar options.                                     |
+| `keybindings`                         | list      | `[]`                                                      | Optional hotkeys. See [Keybindings](./Keybindings).                 |
+| `callbacks`                           | dict      | [See below](#available-callbacks) | Callbacks for mouse events on the widget.                           |
 
 ## Example Configuration
 
@@ -135,6 +136,7 @@ media:
       enabled: false          # Whether to enable the scrolling label.
       update_interval_ms: 33  # The update interval for the scrolling label in milliseconds.
       style: "left"           # The style of the scrolling label. Can be "left", "right", "bounce", or "bounce-ease".
+      always_scroll: false    # Whether to always scroll the label regardless of the text length in "left" or "right" style.
       separator: " | "        # The separator between repeating text in "left" or "right" scrolling style.
       label_padding: 1        # The padding around the label in "bounce" and "bounce-ease" style. By default it's one character on each side.
       ease_slope: 20          # The easing slope for the bounce effect. Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
@@ -150,6 +152,18 @@ media:
 ```
 
 ## Available Callbacks
+
+The `callbacks` option maps mouse buttons (`on_left`, `on_middle`, `on_right`) to actions. All keys are optional, the values shown are the defaults.
+
+```yaml
+callbacks:
+  on_left: "do_nothing"
+  on_middle: "do_nothing"
+  on_right: "do_nothing"
+```
+
+Available actions:
+
 - `toggle_label`: Toggles the visibility of the label.
 - `toggle_play_pause`: Toggles between play and pause states.
 - `toggle_media_menu`: Toggles the visibility of the media menu popup.
@@ -162,7 +176,8 @@ media:
 - **separator:** The dynamic separator `{s}` that will be stripped from the label if it's at the end or start of the label. Useful when parts of the label are not present at the source to avoid having separator at the end/beginning of the label.
 - **class_name:** The CSS class name for the widget. This allows you to apply custom styles to the widget. (optional)
 - **hide_empty:** Whether to hide the widget when there is no media information available.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`.
+- **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
+- **callbacks:** Mouse event callbacks. See [Callbacks](#available-callbacks).
 - **max_field_size:** Maximum field sizes for the labels.
   - **label:** Maximum size for the main label. If the label exceeds this size, it will be truncated.
   - **label_alt:** Maximum size for the alternative label. If the label exceeds this size, it will be truncated.
@@ -208,7 +223,7 @@ media:
   - **enabled:** Whether to enable the scrolling label.
   - **update_interval_ms:** The update interval for the scrolling label in milliseconds. Min 4 max 1000.
   - **style:** The style of the scrolling label. Can be `left`, `right`, `bounce`, or `bounce-ease`.
-  - **separator:** The separator between repeating text in `left` or `rignt` scrolling style.
+  - **separator:** The separator between repeating text in `left` or `right` scrolling style.
   - **label_padding:** The padding around the label in `bounce` and `bounce-ease` style. By default it's one character on each side.
   - **always_scroll:** Whether to always scroll the label regardless of the text length in `left` or `right` style.
   - **ease_slope:** The easing slope for the bounce effect. Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
@@ -517,4 +532,4 @@ Example: "Windows Media" becomes "windows-media" */
 
 
 ## Preview of the Widget
-![YASB Media Widget](assets/f1c8a395-6b4e7d21-8a5c-9f3b-4d7e2a9c5f8b.png)
+![Media YASB Widget](assets/f1c8a395-6b4e7d21-8a5c-9f3b-4d7e2a9c5f8b.png)

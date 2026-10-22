@@ -3,11 +3,12 @@
 import logging
 import sys
 from dataclasses import replace
+from typing import Any
 
 from PyQt6.QtCore import QCoreApplication
 
 from core.cloud import schedule
-from core.cloud.api import ApiClient
+from core.cloud.api import ApiClient, ApiError
 from core.cloud.autobackup import decide, differences, entries, mark_backed_up
 from core.cloud.constants import BASE_URL
 from core.cloud.models import Account
@@ -24,10 +25,19 @@ logger = logging.getLogger(__name__)
 
 def _account(client: ApiClient, app: QCoreApplication) -> Account | None:
     """Fetch the account, or None. Needed for the plan limits before archiving."""
-    result: dict = {}
+    result: dict[str, Any] = {}
     call = client.me()
-    call.succeeded.connect(lambda payload: (result.update(payload=payload), app.quit()))
-    call.failed.connect(lambda error: (result.update(error=error), app.quit()))
+
+    def succeeded(payload: dict[str, Any]) -> None:
+        result["payload"] = payload
+        app.quit()
+
+    def failed(error: ApiError) -> None:
+        result["error"] = error
+        app.quit()
+
+    call.succeeded.connect(succeeded)
+    call.failed.connect(failed)
     # A cancelled reply emits only `finished`, and without this the loop never returns.
     call.finished.connect(app.quit)
     app.exec()
@@ -120,7 +130,7 @@ def run_auto_backup() -> int:
 
     logger.debug("check: settled and not uploaded, backing up (%s files)", len(now))
 
-    outcome: list = []
+    outcome: list[object] = []
     problem: list[str] = []
 
     operation = BackupOperation(
@@ -130,7 +140,12 @@ def run_auto_backup() -> int:
         max_total_bytes=account.limits.max_snapshot_bytes,
     )
     operation.failed.connect(problem.append)
-    operation.finished.connect(lambda result: (outcome.append(result), app.quit()))
+
+    def on_finished(result: object) -> None:
+        outcome.append(result)
+        app.quit()
+
+    operation.finished.connect(on_finished)
     operation.start()
     if not outcome:  # start() settles on the spot when the lock is held
         app.exec()
