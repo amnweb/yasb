@@ -182,7 +182,7 @@ def _get_lnk_description(lnk_path: str) -> str | None:
 class DescriptionResolverWorker(QThread):
     """Background thread to resolve app descriptions."""
 
-    finished = pyqtSignal(dict)
+    descriptions_ready = pyqtSignal(dict)
 
     def __init__(self, apps: list[AppEntry]):
         super().__init__()
@@ -218,7 +218,7 @@ class DescriptionResolverWorker(QThread):
                 cache[path] = _get_lnk_description(path) or path
             elif os.path.isfile(path):
                 cache[path] = _get_exe_description(path) or path
-        self.finished.emit(cache)
+        self.descriptions_ready.emit(cache)
 
 
 def _is_subfolder_app(path: str) -> bool:
@@ -245,6 +245,8 @@ class AppsProvider(BaseProvider):
         self._history = LaunchHistory()
         self._desc_cache: dict[str, str] = {}
         self._desc_worker: DescriptionResolverWorker | None = None
+        self._desc_apps: list[AppEntry] | None = None
+        self._pending_desc_apps: list[AppEntry] | None = None
 
     @property
     def service(self) -> QuickLaunchService:
@@ -259,15 +261,32 @@ class AppsProvider(BaseProvider):
 
     def start_description_resolution(self, apps: list[AppEntry]):
         """Start background thread to resolve app descriptions."""
-        if self._desc_worker and self._desc_worker.isRunning():
-            self._desc_worker.finished.disconnect()
-            self._desc_worker.wait()
-        self._desc_worker = DescriptionResolverWorker(apps)
-        self._desc_worker.finished.connect(self._on_descriptions_ready)
+        if apps == self._desc_apps:
+            self._pending_desc_apps = None
+            return
+        if self._desc_worker is not None:
+            self._pending_desc_apps = list(apps)
+            return
+        self._desc_apps = list(apps)
+        self._desc_worker = DescriptionResolverWorker(self._desc_apps)
+        self._desc_worker.descriptions_ready.connect(self._on_descriptions_ready)
+        self._desc_worker.finished.connect(self._on_description_worker_finished)
         self._desc_worker.start()
 
     def _on_descriptions_ready(self, cache: dict[str, str]):
         self._desc_cache = cache
+        if self.request_refresh:
+            self.request_refresh()
+
+    def _on_description_worker_finished(self):
+        worker = self._desc_worker
+        self._desc_worker = None
+        if worker is not None:
+            worker.deleteLater()
+        pending = self._pending_desc_apps
+        self._pending_desc_apps = None
+        if pending is not None:
+            self.start_description_resolution(pending)
 
     def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         svc = self.service
