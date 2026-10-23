@@ -2,8 +2,8 @@
 
 Window: its own icon if it's big enough, else its app's icon, else its class icon.
 Process: its app's icon, else one of its windows' icons.
-App: the icon shell:AppsFolder shows for the AUMID. For a window or process only Store apps go this way, the rest
-use their exe.
+App: the icon shell:AppsFolder shows for the AUMID, else the one registered for its toasts. For a window or process
+only Store apps go this way, the rest use their exe.
 File: the icon inside the file (exe, dll, cpl, ico), or the one a shortcut, .msc or Control Panel item points to;
 anything else gets the shell's icon.
 
@@ -13,9 +13,10 @@ the biggest.
 
 import os
 import re
+import winreg
 from dataclasses import dataclass
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from core.utils.icons.extract import (
     get_class_icons,
@@ -70,7 +71,7 @@ def load_icon(source: IconSource, size: int) -> LoadedIcon:
         case ProcessIcon(pid):
             return LoadedIcon(_process_icon(pid, size) or get_default_app_icon())
         case AppIcon(aumid):
-            return LoadedIcon(_store_app_icon(aumid, size) or get_default_app_icon())
+            return LoadedIcon(_store_app_icon(aumid, size) or _toast_app_icon(aumid, size) or get_default_app_icon())
         case FileIcon(path):
             return LoadedIcon(_file_icon(path, size) or get_default_app_icon())
 
@@ -105,6 +106,29 @@ def _app_icon(aumid: str | None, exe: str | None, size: int) -> Image.Image | No
 
 def _store_app_icon(aumid: str, size: int) -> Image.Image | None:
     return get_shell_icon(f"shell:AppsFolder\\{aumid}", size)
+
+
+def _toast_app_icon(aumid: str, size: int) -> Image.Image | None:
+    # unpackaged toast senders (Firefox, Windows system toasts) register an AUMID that shell:AppsFolder doesn't list
+    for root in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+        try:
+            with winreg.OpenKey(root, f"Software\\Classes\\AppUserModelId\\{aumid}") as key:
+                icon: object = winreg.QueryValueEx(key, "IconUri")[0]
+        except OSError:
+            continue
+        # ms-resource:// and @{...} need the package resource loader
+        if not isinstance(icon, str) or not icon or "://" in icon or icon.startswith("@"):
+            continue
+        try:
+            with Image.open(os.path.expandvars(icon)) as source:
+                image = source.convert("RGBA")
+        except OSError, ValueError:
+            continue
+        # tile assets carry a margin that shell icons don't
+        drawing = image.getchannel("A").getbbox()
+        if drawing is not None:
+            return ImageOps.pad(image.crop(drawing), (size, size), Image.Resampling.LANCZOS, (0, 0, 0, 0))
+    return None
 
 
 def _file_icon(path: str, size: int) -> Image.Image | None:
