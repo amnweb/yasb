@@ -392,6 +392,27 @@ class ITipInvocation(comtypes.IUnknown):
         def Toggle(self, wnd: int) -> None: ...
 
 
+# https://learn.microsoft.com/en-us/windows/win32/api/notificationactivationcallback/nn-notificationactivationcallback-inotificationactivationcallback
+class INotificationActivationCallback(comtypes.IUnknown):
+    _iid_ = GUID("{53E31837-6600-4A81-9395-75CFFE746F94}")
+    _methods_ = [
+        COMMETHOD(
+            [],
+            HRESULT,
+            "Activate",
+            (["in"], LPCWSTR, "appUserModelId"),
+            (["in"], LPCWSTR, "invokedArgs"),
+            # const NOTIFICATION_USER_INPUT_DATA*
+            (["in"], c_void_p, "data"),
+            (["in"], ULONG, "count"),
+        ),
+    ]
+
+    if TYPE_CHECKING:
+
+        def Activate(self, appUserModelId: str, invokedArgs: str, data: int | None, count: int) -> None: ...
+
+
 CLSID_QuietHoursSettings = GUID("{F53321FA-34F8-4B7F-B9A3-361877CB94CF}")
 
 

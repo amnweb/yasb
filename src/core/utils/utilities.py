@@ -460,42 +460,46 @@ class PopupWidget(QWidget):
 
     @override
     def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
-        if not isinstance(a0, QObject) or a1 is None:
+        # This filter sits on the whole application while the popup is open, so every event
+        # of every widget passes through it. Anything that is not the click we are watching
+        # for has to leave again before it costs anything, or filling a popup with widgets
+        # pays for this on each one of them
+        if a1 is None or a1.type() != QEvent.Type.MouseButtonPress:
+            return super().eventFilter(a0, a1)
+        if not isinstance(a0, QObject):
             return False
         if self._suspend_close or self._pinned:
             return super().eventFilter(a0, a1)
-        if a1.type() == QEvent.Type.MouseButtonPress:
-            global_pos = cast(QMouseEvent, a1).globalPosition().toPoint()
+        global_pos = cast(QMouseEvent, a1).globalPosition().toPoint()
 
-            # Check if click is inside popup
-            try:
-                popup_global_geom = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
-            except Exception:
-                popup_global_geom = self.geometry()
-            if popup_global_geom.contains(global_pos):
-                return super().eventFilter(a0, a1)
+        # Check if click is inside popup
+        try:
+            popup_global_geom = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
+        except Exception:
+            popup_global_geom = self.geometry()
+        if popup_global_geom.contains(global_pos):
+            return super().eventFilter(a0, a1)
 
-            # Check if click is inside any visible QMenu or QDialog (file dialogs, etc.)
-            try:
-                for w in QApplication.topLevelWidgets():
-                    if isinstance(w, (QMenu, QDialog)) and w.isVisible():
-                        try:
-                            w_global_geom = QRect(w.mapToGlobal(QPoint(0, 0)), w.size())
-                            if w_global_geom.contains(global_pos):
-                                return super().eventFilter(a0, a1)
-                        except Exception:
-                            continue
-            except Exception:
-                pass
+        # Check if click is inside any visible QMenu or QDialog (file dialogs, etc.)
+        try:
+            for w in QApplication.topLevelWidgets():
+                if isinstance(w, (QMenu, QDialog)) and w.isVisible():
+                    try:
+                        w_global_geom = QRect(w.mapToGlobal(QPoint(0, 0)), w.size())
+                        if w_global_geom.contains(global_pos):
+                            return super().eventFilter(a0, a1)
+                    except Exception:
+                        continue
+        except Exception:
+            pass
 
-            # Otherwise, close all open QMenus first
-            for menu in self.findChildren(QMenu):
-                if menu.isVisible():
-                    menu.close()
+        # Otherwise, close all open QMenus first
+        for menu in self.findChildren(QMenu):
+            if menu.isVisible():
+                menu.close()
 
-            self.hide_animated()
-            return True
-        return super().eventFilter(a0, a1)
+        self.hide_animated()
+        return True
 
     def set_auto_close_enabled(self, enabled: bool):
         """Enable/disable auto-close behavior when clicking outside."""
