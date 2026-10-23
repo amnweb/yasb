@@ -274,8 +274,7 @@ class WindowsNotificationEventListener(QThread):
         except Exception as e:
             logging.error("Error reading notifications: %s", e)
             return []
-        # the listener returns the oldest first
-        return _read_items(reversed(list(notifications)))
+        return _read_items(sorted(notifications, key=lambda n: n.creation_time, reverse=True))
 
     async def _activate(self, item: NotificationItem):
         handled = activate_toast(item.aumid, item.launch, item.activation_type)
