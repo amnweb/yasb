@@ -1,8 +1,11 @@
 import logging
 import re
 import winreg
+import xml.etree.ElementTree as ET
+from pathlib import Path
 
 from comtypes import GUID, COMError  # pyright: ignore[reportMissingTypeStubs]
+from winrt.windows.applicationmodel import AppInfo
 
 from core.utils.shell_utils import shell_open
 from core.utils.win32.aumid import activate_app_by_aumid
@@ -80,4 +83,28 @@ def _find_activator(aumid: str) -> GUID | None:
         pass
     shortcut = find_shortcut_by_aumid(aumid)
     store = SHGetPropertyStoreFromParsingName(shortcut[0]) if shortcut is not None else None
-    return get_clsid_property(store, PKEY_AppUserModel_ToastActivatorCLSID) if store is not None else None
+    clsid = get_clsid_property(store, PKEY_AppUserModel_ToastActivatorCLSID) if store is not None else None
+    return clsid if clsid is not None else _manifest_activator(get_install_folder(aumid))
+
+
+def _manifest_activator(folder: Path | None) -> GUID | None:
+    """The toast activator a packaged app declares in its AppxManifest.xml."""
+    if folder is None:
+        return None
+    try:
+        for element in ET.parse(folder / "AppxManifest.xml").iter():
+            if element.tag.rpartition("}")[2] == "ToastNotificationActivation":
+                return GUID("{" + element.get("ToastActivatorCLSID", "") + "}")
+    except OSError, ET.ParseError, ValueError:
+        pass
+    return None
+
+
+def get_install_folder(aumid: str) -> Path | None:
+    # the listener's AppInfo doesn't implement Package (E_NOINTERFACE), a fresh lookup does
+    try:
+        folder = AppInfo.get_from_app_user_model_id(aumid).package.installed_path
+    except Exception as e:
+        logging.debug("No install folder for %s: %s", aumid, e)
+        return None
+    return Path(folder) if folder else None

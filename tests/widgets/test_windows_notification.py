@@ -206,7 +206,7 @@ def test_package_images_stay_inside_the_install_folder(tmp_path: Path, monkeypat
     def get_install_folder(_aumid: str) -> Path:
         return install
 
-    monkeypatch.setattr(windows_notification, "_get_install_folder", get_install_folder)
+    monkeypatch.setattr(windows_notification, "get_install_folder", get_install_folder)
     logo = str((install / "Assets" / "logo.png").resolve())
     assert _get_image_path(image("ms-appx:///Assets/logo.png"), "app", "Family") == logo
     assert _get_image_path(image("ms-appx:///../outside.png"), "app", "Family") == ""

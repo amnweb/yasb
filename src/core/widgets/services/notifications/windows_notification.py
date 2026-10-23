@@ -14,7 +14,6 @@ from urllib.parse import unquote, urlparse
 
 import winrt.windows.ui.notifications.management as management
 from PyQt6.QtCore import QThread, pyqtSignal
-from winrt.windows.applicationmodel import AppInfo
 from winrt.windows.ui.notifications import (
     KnownNotificationBindings,
     NotificationKinds,
@@ -30,7 +29,7 @@ from core.utils.win32.bindings.ntdll import (
     WnfCallbackType,
 )
 from core.utils.win32.undocumented import WNF_SHEL_NOTIFICATION_TOTAL, WNF_SHEL_NOTIFICATIONS
-from core.widgets.services.notifications.toast_activation import activate_toast, show_app
+from core.widgets.services.notifications.toast_activation import activate_toast, get_install_folder, show_app
 
 # seconds to wait after a change, so a burst of changes is read once
 REFRESH_DELAY = 0.1
@@ -464,7 +463,7 @@ def _get_image_path(image: ET.Element | None, aumid: str, family: str) -> str:
         case scheme if len(scheme) == 1:
             path = Path(src)
         case "ms-appx" if family:
-            root = _get_install_folder(aumid)
+            root = get_install_folder(aumid)
             if root is None:
                 return ""
             path = root / relative
@@ -482,13 +481,3 @@ def _get_image_path(image: ET.Element | None, aumid: str, family: str) -> str:
         return str(path) if path.is_file() else ""
     except OSError, ValueError:
         return ""
-
-
-def _get_install_folder(aumid: str) -> Path | None:
-    # the listener's AppInfo doesn't implement Package (E_NOINTERFACE), a fresh lookup does
-    try:
-        folder = AppInfo.get_from_app_user_model_id(aumid).package.installed_path
-    except Exception as e:
-        logging.debug("No install folder for %s: %s", aumid, e)
-        return None
-    return Path(folder) if folder else None
