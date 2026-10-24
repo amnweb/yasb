@@ -2,6 +2,7 @@ import asyncio
 import ctypes
 import logging
 import os
+import winreg
 import xml.etree.ElementTree as ET
 from collections import Counter
 from collections.abc import Callable, Coroutine, Iterable
@@ -33,6 +34,8 @@ from core.widgets.services.notifications.toast_activation import activate_toast,
 
 # seconds to wait after a change, so a burst of changes is read once
 REFRESH_DELAY = 0.1
+# where Windows records the web images it downloaded for toasts
+WPNIDM_KEY = r"Software\Microsoft\Windows\CurrentVersion\PushNotifications\wpnidm"
 
 
 @dataclass(frozen=True, slots=True)
@@ -445,7 +448,7 @@ def _find_image(toast: ET.Element, placement: str | None) -> ET.Element | None:
 
 
 def _get_image_path(image: ET.Element | None, aumid: str, family: str) -> str:
-    """The local file an image src points to, "" for a web image or a missing file.
+    """The local file an image src points to, "" for a web image Windows didn't download or a missing file.
 
     https://learn.microsoft.com/uwp/schemas/tiles/toastschema/element-image lists the sources.
     """
@@ -470,6 +473,10 @@ def _get_image_path(image: ET.Element | None, aumid: str, family: str) -> str:
         case "ms-appdata" if family and relative.lower().startswith("local/"):
             root = Path(os.environ.get("LOCALAPPDATA", ""), "Packages", family, "LocalState")
             path = root / relative[len("local/") :]
+        # Windows downloaded it to draw the toast, we only read that copy
+        case "http" | "https":
+            root = Path(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "Windows", "Notifications", "wpnidm")
+            path = Path(_get_downloaded_image(src))
         case _:
             return ""
     if not path.is_absolute() or path.drive.startswith(("\\\\", "//")):
@@ -481,3 +488,16 @@ def _get_image_path(image: ET.Element | None, aumid: str, family: str) -> str:
         return str(path) if path.is_file() else ""
     except OSError, ValueError:
         return ""
+
+
+def _get_downloaded_image(url: str) -> str:
+    """The file Windows saved for a web image, "" when it has none."""
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, WPNIDM_KEY) as key:
+            for index in range(winreg.QueryInfoKey(key)[0]):
+                with winreg.OpenKey(key, winreg.EnumKey(key, index)) as entry:
+                    if str(winreg.QueryValueEx(entry, "Url")[0]).removeprefix("wpnidm:") == url:
+                        return str(winreg.QueryValueEx(entry, "LocalPath")[0])
+    except OSError:
+        pass
+    return ""

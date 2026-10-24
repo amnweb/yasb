@@ -213,6 +213,27 @@ def test_package_images_stay_inside_the_install_folder(tmp_path: Path, monkeypat
     assert _get_image_path(image("ms-appx:///Assets/logo.png"), "app", "") == ""
 
 
+def test_web_images_come_from_the_copy_windows_downloaded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    wpnidm = tmp_path / "Microsoft" / "Windows" / "Notifications" / "wpnidm"
+    wpnidm.mkdir(parents=True)
+    (wpnidm / "photo.jpg").write_bytes(b"jpg")
+    (tmp_path / "outside.jpg").write_bytes(b"jpg")
+    downloads = {
+        "https://cdn.example.com/photo.jpg?x=1": str(wpnidm / "photo.jpg"),
+        "https://cdn.example.com/outside.jpg": str(tmp_path / "outside.jpg"),
+    }
+
+    def get_downloaded_image(url: str) -> str:
+        return downloads.get(url, "")
+
+    monkeypatch.setattr(windows_notification, "_get_downloaded_image", get_downloaded_image)
+    photo = str((wpnidm / "photo.jpg").resolve())
+    assert _get_image_path(image("https://cdn.example.com/photo.jpg?x=1"), "app", "") == photo
+    assert _get_image_path(image("https://cdn.example.com/other.jpg"), "app", "") == ""
+    assert _get_image_path(image("https://cdn.example.com/outside.jpg"), "app", "") == ""
+
+
 def test_items_get_launch_and_images_from_their_own_toast(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     logo = tmp_path / "logo.png"
     logo.write_bytes(b"png")
