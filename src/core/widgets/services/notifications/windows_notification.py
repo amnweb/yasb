@@ -2,6 +2,7 @@ import asyncio
 import ctypes
 import logging
 import os
+import winreg
 import xml.etree.ElementTree as ET
 from collections import Counter
 from collections.abc import Callable, Coroutine, Iterable
@@ -14,7 +15,6 @@ from urllib.parse import unquote, urlparse
 
 import winrt.windows.ui.notifications.management as management
 from PyQt6.QtCore import QThread, pyqtSignal
-from winrt.windows.applicationmodel import AppInfo
 from winrt.windows.ui.notifications import (
     KnownNotificationBindings,
     NotificationKinds,
@@ -30,10 +30,12 @@ from core.utils.win32.bindings.ntdll import (
     WnfCallbackType,
 )
 from core.utils.win32.undocumented import WNF_SHEL_NOTIFICATION_TOTAL, WNF_SHEL_NOTIFICATIONS
-from core.widgets.services.notifications.toast_activation import activate_toast, show_app
+from core.widgets.services.notifications.toast_activation import activate_toast, get_install_folder, show_app
 
 # seconds to wait after a change, so a burst of changes is read once
 REFRESH_DELAY = 0.1
+# where Windows records the web images it downloaded for toasts
+WPNIDM_KEY = r"Software\Microsoft\Windows\CurrentVersion\PushNotifications\wpnidm"
 
 
 @dataclass(frozen=True, slots=True)
@@ -446,7 +448,7 @@ def _find_image(toast: ET.Element, placement: str | None) -> ET.Element | None:
 
 
 def _get_image_path(image: ET.Element | None, aumid: str, family: str) -> str:
-    """The local file an image src points to, "" for a web image or a missing file.
+    """The local file an image src points to, "" for a web image Windows didn't download or a missing file.
 
     https://learn.microsoft.com/uwp/schemas/tiles/toastschema/element-image lists the sources.
     """
@@ -464,13 +466,17 @@ def _get_image_path(image: ET.Element | None, aumid: str, family: str) -> str:
         case scheme if len(scheme) == 1:
             path = Path(src)
         case "ms-appx" if family:
-            root = _get_install_folder(aumid)
+            root = get_install_folder(aumid)
             if root is None:
                 return ""
             path = root / relative
         case "ms-appdata" if family and relative.lower().startswith("local/"):
             root = Path(os.environ.get("LOCALAPPDATA", ""), "Packages", family, "LocalState")
             path = root / relative[len("local/") :]
+        # Windows downloaded it to draw the toast, we only read that copy
+        case "http" | "https":
+            root = Path(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "Windows", "Notifications", "wpnidm")
+            path = Path(_get_downloaded_image(src))
         case _:
             return ""
     if not path.is_absolute() or path.drive.startswith(("\\\\", "//")):
@@ -484,11 +490,14 @@ def _get_image_path(image: ET.Element | None, aumid: str, family: str) -> str:
         return ""
 
 
-def _get_install_folder(aumid: str) -> Path | None:
-    # the listener's AppInfo doesn't implement Package (E_NOINTERFACE), a fresh lookup does
+def _get_downloaded_image(url: str) -> str:
+    """The file Windows saved for a web image, "" when it has none."""
     try:
-        folder = AppInfo.get_from_app_user_model_id(aumid).package.installed_path
-    except Exception as e:
-        logging.debug("No install folder for %s: %s", aumid, e)
-        return None
-    return Path(folder) if folder else None
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, WPNIDM_KEY) as key:
+            for index in range(winreg.QueryInfoKey(key)[0]):
+                with winreg.OpenKey(key, winreg.EnumKey(key, index)) as entry:
+                    if str(winreg.QueryValueEx(entry, "Url")[0]).removeprefix("wpnidm:") == url:
+                        return str(winreg.QueryValueEx(entry, "LocalPath")[0])
+    except OSError:
+        pass
+    return ""

@@ -206,11 +206,32 @@ def test_package_images_stay_inside_the_install_folder(tmp_path: Path, monkeypat
     def get_install_folder(_aumid: str) -> Path:
         return install
 
-    monkeypatch.setattr(windows_notification, "_get_install_folder", get_install_folder)
+    monkeypatch.setattr(windows_notification, "get_install_folder", get_install_folder)
     logo = str((install / "Assets" / "logo.png").resolve())
     assert _get_image_path(image("ms-appx:///Assets/logo.png"), "app", "Family") == logo
     assert _get_image_path(image("ms-appx:///../outside.png"), "app", "Family") == ""
     assert _get_image_path(image("ms-appx:///Assets/logo.png"), "app", "") == ""
+
+
+def test_web_images_come_from_the_copy_windows_downloaded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    wpnidm = tmp_path / "Microsoft" / "Windows" / "Notifications" / "wpnidm"
+    wpnidm.mkdir(parents=True)
+    (wpnidm / "photo.jpg").write_bytes(b"jpg")
+    (tmp_path / "outside.jpg").write_bytes(b"jpg")
+    downloads = {
+        "https://cdn.example.com/photo.jpg?x=1": str(wpnidm / "photo.jpg"),
+        "https://cdn.example.com/outside.jpg": str(tmp_path / "outside.jpg"),
+    }
+
+    def get_downloaded_image(url: str) -> str:
+        return downloads.get(url, "")
+
+    monkeypatch.setattr(windows_notification, "_get_downloaded_image", get_downloaded_image)
+    photo = str((wpnidm / "photo.jpg").resolve())
+    assert _get_image_path(image("https://cdn.example.com/photo.jpg?x=1"), "app", "") == photo
+    assert _get_image_path(image("https://cdn.example.com/other.jpg"), "app", "") == ""
+    assert _get_image_path(image("https://cdn.example.com/outside.jpg"), "app", "") == ""
 
 
 def test_items_get_launch_and_images_from_their_own_toast(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
