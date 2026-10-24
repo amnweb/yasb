@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 from core.utils.system import is_windows_10
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.win32.utils import apply_qmenu_style
+from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.windows_desktops import WindowsDesktopsConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.windows_desktops.service import WindowsDesktopService
@@ -223,8 +224,6 @@ class WorkspaceButton(QPushButton):
         name_edit.setText(current_name)
         name_edit.setPlaceholderText("Desktop name")
         name_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
-        name_edit.selectAll()
-        name_edit.setFocus()
         container_layout.addWidget(name_edit)
 
         rename_btn = QPushButton("Rename")
@@ -263,6 +262,10 @@ class WorkspaceButton(QPushButton):
             offset_top=6,
         )
         popup.show()
+        # The bar never takes foreground, so without this the popup shows but keystrokes go to the previous app.
+        force_foreground_focus(int(popup.winId()))
+        name_edit.setFocus()
+        name_edit.selectAll()
 
     def move_active_window_to(self, desktop_number: int, hwnd: int, checked: bool = False):
         try:
