@@ -45,6 +45,7 @@ from core.utils.qobject import is_valid_qobject
 from core.utils.system import is_windows_10
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.registry_keys import APP_USER_MODEL_ID_KEY
+from core.utils.win32.system_function import close_quick_settings
 
 if TYPE_CHECKING:
     from core.utils.progress_bar import ProgressWidget
@@ -412,6 +413,8 @@ class PopupWidget(QWidget):
                     pass
                 PopupWidget._open_popups.pop(parent_id, None)
 
+        # Windows Quick Settings would take focus straight back and close this popup.
+        close_quick_settings()
         super().show()
 
     @override
