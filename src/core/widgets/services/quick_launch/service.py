@@ -3,6 +3,7 @@ from typing import Any
 
 from PyQt6.QtCore import QFileSystemWatcher, QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication
+from winrt.windows.applicationmodel import PackageCatalog
 
 from core.utils.icons.service import IconService
 from core.utils.win32.app_loader import AppEntry, AppListLoader, app_icon_source
@@ -72,6 +73,7 @@ class QuickLaunchService(QObject):
 
     request_refresh = pyqtSignal()
     query_finished = pyqtSignal(str, list)
+    _package_changed = pyqtSignal()
 
     _instance: QuickLaunchService | None = None
 
@@ -207,6 +209,18 @@ class QuickLaunchService(QObject):
         self._watcher_thread = StartMenuWatcherThread()
         self._watcher_thread.dirs_ready.connect(self._on_watch_dirs_ready)
         self._watcher_thread.start()
+        self._package_changed.connect(self._fs_debounce.start)
+        try:
+            self._package_catalog = PackageCatalog.open_for_current_user()
+            self._package_catalog.add_package_installing(self._on_package_event)
+            self._package_catalog.add_package_uninstalling(self._on_package_event)
+            self._package_catalog.add_package_updating(self._on_package_event)
+        except Exception as e:
+            logging.warning("Quick Launch could not watch for app package changes: %s", e)
+
+    def _on_package_event(self, _catalog: PackageCatalog, args: Any) -> None:
+        if args.is_complete:
+            self._package_changed.emit()
 
     def _on_directory_changed(self, path: str) -> None:
         self._fs_debounce.start()
