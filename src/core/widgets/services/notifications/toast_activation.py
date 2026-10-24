@@ -73,7 +73,7 @@ def _call_activator(aumid: str, launch: str) -> bool:
 
 
 def _find_activator(aumid: str) -> GUID | None:
-    """The COM class an app registered for its toasts, in the registry or on its Start menu shortcut."""
+    """The COM class an app registered for its toasts, in the registry, on its Start menu shortcut or in its manifest."""
     if not aumid:
         return None
     try:
@@ -84,17 +84,18 @@ def _find_activator(aumid: str) -> GUID | None:
     shortcut = find_shortcut_by_aumid(aumid)
     store = SHGetPropertyStoreFromParsingName(shortcut[0]) if shortcut is not None else None
     clsid = get_clsid_property(store, PKEY_AppUserModel_ToastActivatorCLSID) if store is not None else None
-    return clsid if clsid is not None else _manifest_activator(get_install_folder(aumid))
+    return clsid if clsid is not None else _manifest_activator(get_install_folder(aumid), aumid.partition("!")[2])
 
 
-def _manifest_activator(folder: Path | None) -> GUID | None:
-    """The toast activator a packaged app declares in its AppxManifest.xml."""
-    if folder is None:
+def _manifest_activator(folder: Path | None, app_id: str) -> GUID | None:
+    """The toast activator a packaged app declares for app_id in its AppxManifest.xml."""
+    if folder is None or not app_id:
         return None
     try:
-        for element in ET.parse(folder / "AppxManifest.xml").iter():
-            if element.tag.rpartition("}")[2] == "ToastNotificationActivation":
-                return GUID("{" + element.get("ToastActivatorCLSID", "") + "}")
+        for app in ET.parse(folder / "AppxManifest.xml").getroot().iterfind("{*}Applications/{*}Application"):
+            if app.get("Id") == app_id:
+                activation = app.find("{*}Extensions/{*}Extension/{*}ToastNotificationActivation")
+                return GUID("{" + activation.get("ToastActivatorCLSID", "") + "}") if activation is not None else None
     except OSError, ET.ParseError, ValueError:
         pass
     return None
