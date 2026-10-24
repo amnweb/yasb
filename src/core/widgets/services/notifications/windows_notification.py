@@ -77,6 +77,8 @@ class WindowsNotificationEventListener(QThread):
         self._refresh_pending = False
         # the last list read, kept on the loop thread
         self._items: list[NotificationItem] = []
+        # app_info is a slow cross-process call, and a notification's app never changes
+        self._app_info: dict[int, tuple[str, str, str]] = {}
 
         self._events = (
             ("WindowsNotificationClear", self.clear_notifications, self._clear_notifications),
@@ -276,7 +278,9 @@ class WindowsNotificationEventListener(QThread):
         except Exception as e:
             logging.error("Error reading notifications: %s", e)
             return []
-        return _read_items(sorted(notifications, key=lambda n: n.creation_time, reverse=True))
+        notifications = sorted(notifications, key=lambda n: n.creation_time, reverse=True)
+        self._app_info = {n.id: self._app_info.get(n.id) or _get_app_info(n) for n in notifications}
+        return _read_items(notifications, self._app_info)
 
     async def _activate(self, item: NotificationItem):
         handled = activate_toast(item.aumid, item.launch, item.activation_type)
@@ -326,9 +330,11 @@ def _log_task_error(future: Future[None]):
         logging.error("Notification service task failed", exc_info=error)
 
 
-def _read_items(notifications: Iterable[UserNotification]) -> list[NotificationItem]:
+def _read_items(
+    notifications: Iterable[UserNotification], app_info: dict[int, tuple[str, str, str]]
+) -> list[NotificationItem]:
     """Expects newest first, the order the toast history comes in."""
-    entries = [(n, *_get_app_info(n)) for n in notifications]
+    entries = [(n, *app_info[n.id]) for n in notifications]
     counts = Counter(aumid for _, aumid, _, _ in entries)
     history: dict[str, list[ET.Element]] = {}
     items: list[NotificationItem] = []

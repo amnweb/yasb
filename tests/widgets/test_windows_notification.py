@@ -1,5 +1,6 @@
 # pyright: reportPrivateUsage=false
 
+import asyncio
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from pathlib import Path
@@ -8,11 +9,13 @@ from typing import cast
 from urllib.parse import quote
 
 import pytest
+import winrt.windows.ui.notifications.management as management
 from winrt.windows.ui.notifications import UserNotification
 
 from core.widgets.services.notifications import windows_notification
 from core.widgets.services.notifications.windows_notification import (
     _find_image,
+    _get_app_info,
     _get_image_path,
     _get_xml_texts,
     _pop_toast,
@@ -73,7 +76,8 @@ def notification(notification_id: int, aumid: str, texts: list[str], family: str
 
 
 def read_items(*notifications: object) -> list[windows_notification.NotificationItem]:
-    return _read_items(cast(list[UserNotification], list(notifications)))
+    listed = cast(list[UserNotification], list(notifications))
+    return _read_items(listed, {n.id: _get_app_info(n) for n in listed})
 
 
 def test_xml_text_is_what_the_listener_returns():
@@ -276,3 +280,40 @@ def test_a_sender_windows_cannot_name_still_shows(monkeypatch: pytest.MonkeyPatc
 
     [item] = read_items(Nameless())
     assert (item.id, item.aumid, item.app_name, item.title) == (7, "", "", "Hello")
+
+
+def test_app_info_is_read_once_and_dropped_with_its_notification(monkeypatch: pytest.MonkeyPatch):
+    use_history(monkeypatch, {})
+    reads: list[int] = []
+
+    class Counted:
+        creation_time = CREATED
+        notification = notification(0, "", ["Hello"]).notification
+
+        def __init__(self, notification_id: int):
+            self.id = notification_id
+
+        @property
+        def app_info(self) -> SimpleNamespace:
+            reads.append(self.id)
+            return notification(0, "app", []).app_info
+
+    shown = [Counted(1)]
+
+    async def get_notifications_async(_kinds: object) -> list[Counted]:
+        return list(shown)
+
+    listener = SimpleNamespace(
+        get_access_status=lambda: management.UserNotificationListenerAccessStatus.ALLOWED,
+        get_notifications_async=get_notifications_async,
+    )
+    service = windows_notification.WindowsNotificationEventListener()
+    service._listener = cast(management.UserNotificationListener, listener)
+
+    asyncio.run(service._read_notifications())
+    shown.append(Counted(2))
+    asyncio.run(service._read_notifications())
+    assert reads == [1, 2]
+    shown.clear()
+    assert asyncio.run(service._read_notifications()) == []
+    assert service._app_info == {}
