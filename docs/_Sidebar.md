@@ -41,6 +41,7 @@
     - [Language](./(Widget)-Language)
     - [Launchpad](./(Widget)-Launchpad)
     - [Libre Hardware Monitor](./(Widget)-Libre-HW-Monitor)
+    - [Lyrics](./(Widget)-Lyrics)
     - [Media](./(Widget)-Media)
     - [Media Lite](./(Widget)-Media-Lite)
     - [Memory](./(Widget)-Memory)
