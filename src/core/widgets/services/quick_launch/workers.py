@@ -10,7 +10,7 @@ from core.widgets.services.quick_launch.base_provider import BaseProvider, Provi
 
 
 class StartMenuWatcherThread(QThread):
-    """Collects Start Menu and UWP package directories for file system watching."""
+    """Collects Start Menu directories for file system watching."""
 
     dirs_ready = pyqtSignal(list)
 
@@ -19,17 +19,12 @@ class StartMenuWatcherThread(QThread):
             os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Start Menu\Programs"),
             os.path.expandvars(r"%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs"),
         ]
-        uwp_packages = os.path.expandvars(r"%LOCALAPPDATA%\Packages")
-        if os.path.isdir(uwp_packages):
-            start_dirs.append(uwp_packages)
-
         dirs: list[str] = []
         for d in start_dirs:
             if os.path.isdir(d):
                 dirs.append(d)
-                if "Packages" not in d:
-                    for root, subdirs, _ in os.walk(d):
-                        dirs.extend(os.path.join(root, sd) for sd in subdirs)
+                for root, subdirs, _ in os.walk(d):
+                    dirs.extend(os.path.join(root, sd) for sd in subdirs)
         self.dirs_ready.emit(dirs)
 
 
