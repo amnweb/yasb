@@ -882,6 +882,7 @@ class PROPVARIANT_UNION(ct.Union):
         ("ulVal", ULONG),
         ("uhVal", c_ulonglong),
         ("boolVal", wintypes.VARIANT_BOOL),
+        ("puuid", ct.POINTER(GUID)),
         ("blob", BLOB),
     ]
 

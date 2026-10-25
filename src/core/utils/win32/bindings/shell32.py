@@ -37,6 +37,7 @@ from core.utils.win32.constants import (
     SHGFI_PIDL,
     STGM_READ,
     SW_SHOWNORMAL,
+    VT_CLSID,
     VT_LPWSTR,
 )
 from core.utils.win32.structs import (
@@ -221,6 +222,19 @@ def get_string_property(store: IPropertyStore, key: PROPERTYKEY) -> str | None:
         PropVariantClear(value)
 
 
+def get_clsid_property(store: IPropertyStore, key: PROPERTYKEY) -> GUID | None:
+    try:
+        value = store.GetValue(key)
+    except COMError:
+        return None
+    try:
+        if value.vt == VT_CLSID and value.puuid:
+            return GUID.from_buffer_copy(value.puuid.contents)
+        return None
+    finally:
+        PropVariantClear(value)
+
+
 IID_IShellItemImageFactory = GUID("{BCC18B79-BA16-442F-80C4-8A59C30C463B}")
 
 
@@ -390,6 +404,27 @@ class ITipInvocation(comtypes.IUnknown):
     if TYPE_CHECKING:
 
         def Toggle(self, wnd: int) -> None: ...
+
+
+# https://learn.microsoft.com/en-us/windows/win32/api/notificationactivationcallback/nn-notificationactivationcallback-inotificationactivationcallback
+class INotificationActivationCallback(comtypes.IUnknown):
+    _iid_ = GUID("{53E31837-6600-4A81-9395-75CFFE746F94}")
+    _methods_ = [
+        COMMETHOD(
+            [],
+            HRESULT,
+            "Activate",
+            (["in"], LPCWSTR, "appUserModelId"),
+            (["in"], LPCWSTR, "invokedArgs"),
+            # const NOTIFICATION_USER_INPUT_DATA*
+            (["in"], c_void_p, "data"),
+            (["in"], ULONG, "count"),
+        ),
+    ]
+
+    if TYPE_CHECKING:
+
+        def Activate(self, appUserModelId: str, invokedArgs: str, data: int | None, count: int) -> None: ...
 
 
 CLSID_QuietHoursSettings = GUID("{F53321FA-34F8-4B7F-B9A3-361877CB94CF}")

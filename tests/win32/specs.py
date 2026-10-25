@@ -128,7 +128,7 @@ struct WINNOTIFYICONIDENTIFIER {
 
 // The members of the anonymous unions inside PROPVARIANT (propidlbase.h) and INPUT (winuser.h)
 // that the Python code uses.
-union PROPVARIANT_UNION { LPWSTR pwszVal; LPSTR pszVal; ULONG ulVal; ULARGE_INTEGER uhVal; VARIANT_BOOL boolVal; BLOB blob; };
+union PROPVARIANT_UNION { LPWSTR pwszVal; LPSTR pszVal; ULONG ulVal; ULARGE_INTEGER uhVal; VARIANT_BOOL boolVal; CLSID *puuid; BLOB blob; };
 union INPUT_UNION { MOUSEINPUT mi; KEYBDINPUT ki; HARDWAREINPUT hi; };
 
 // adl_structures.h, AMD Display Library SDK.

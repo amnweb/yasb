@@ -15,6 +15,7 @@ HEADERS = (
     "shlobj.h",
     "shobjidl.h",
     "shobjidl_core.h",
+    "notificationactivationcallback.h",
     "shlwapi.h",
     "propsys.h",
     "propidl.h",
