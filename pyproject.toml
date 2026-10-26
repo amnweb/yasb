@@ -63,7 +63,7 @@ Changelog = "https://github.com/amnweb/yasb/releases/latest"
 dev = [
     "YASB[test,packaging]",
     "pre-commit",
-    "ruff==0.17.1",
+    "ruff==0.17.2",
     "pyright==1.1.414",
     "pyqt6-stubs==20250824",
     "pycaw-stubs==20260927.20261008",
