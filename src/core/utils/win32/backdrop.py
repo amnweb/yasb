@@ -52,8 +52,8 @@ def set_accent_policy(hwnd: int, accent_state: int, gradient_color: int = 0, acc
         raise ctypes.WinError(GetLastError())
 
 
-def set_dark_mode(hwnd: int) -> None:
-    value = ctypes.c_int(1)
+def set_dark_mode(hwnd: int, enabled: bool = True) -> None:
+    value = ctypes.c_int(int(enabled))
     result = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(value), ctypes.sizeof(value))
     if result != 0:
         raise ctypes.WinError(result)
@@ -67,7 +67,7 @@ def set_window_corner_preference(hwnd: int, preference: int, border_color: str) 
     if result != 0:
         raise ctypes.WinError(result)
 
-    if border_color == "None":
+    if border_color.lower() == "none":
         border_color_value = ctypes.c_int(DWMWA_COLOR_NONE)
     elif border_color.lower() == "system":
         border_color_value = ctypes.c_int(DWMWA_COLOR_DEFAULT)
@@ -102,6 +102,21 @@ def enable_blur(
             set_accent_policy(hwnd, ACCENT_ENABLE_ACRYLICBLURBEHIND, gradient_color=0x01202020)
     except Exception as e:
         logging.debug("Failed to apply settings: %s", e)
+
+
+def apply_backdrop(hwnd: int, kind: str, corners: str, border: str, dark: bool) -> None:
+    windows_11 = sys.getwindowsversion().build >= 22000
+    try:
+        if kind == "acrylic" or (kind == "blur" and not windows_11):
+            set_accent_policy(hwnd, ACCENT_ENABLE_ACRYLICBLURBEHIND, gradient_color=0x01202020)
+        elif kind == "blur":
+            set_accent_policy(hwnd, ACCENT_ENABLE_BLURBEHIND, gradient_color=0x01202020)
+        if windows_11:
+            set_dark_mode(hwnd, dark)
+            if corners != "square":
+                set_window_corner_preference(hwnd, DWMWCP_ROUND if corners == "round" else DWMWCP_ROUNDSMALL, border)
+    except Exception as e:
+        logging.debug("Failed to apply backdrop: %s", e)
 
 
 def is_mica_supported() -> bool:

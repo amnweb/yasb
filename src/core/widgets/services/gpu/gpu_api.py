@@ -429,8 +429,18 @@ class GpuWorker(QThread):
             cls._instance = cls(update_interval)
         return cls._instance
 
-    def add_index(self, index: int) -> None:
+    def watch(self, index: int) -> None:
+        """Collect this GPU too. Sensor libraries load when the worker starts, so a new index restarts it."""
+        if index in self._gpu_indices and self.isRunning():
+            return
         self._gpu_indices.add(index)
+        if self.isRunning():
+            self._stop_event.set()
+            self.wait(2000)
+        self.start()
+
+    def set_update_interval(self, update_interval: int) -> None:
+        self._update_interval = update_interval
 
     def __init__(self, update_interval: int, parent: QObject | None = None):
         super().__init__(parent)

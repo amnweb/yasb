@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import ElidedLabel, refresh_widget_style
-from core.validation.widgets.yasb.control_center import MediaSectionConfig
+from core.widgets.services.control_center.config import MediaSectionConfig
 from core.widgets.services.media.media import SessionState, WindowsMedia
 from settings import SCRIPT_PATH
 

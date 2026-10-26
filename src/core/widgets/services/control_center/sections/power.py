@@ -6,13 +6,13 @@ from PyQt6.QtCore import QPoint, Qt, pyqtSignal
 from PyQt6.QtGui import QAction, QMouseEvent
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QMenu, QVBoxLayout, QWidget
 
-from core.bar_helper import GlobalState
+from core.utils.global_state import GlobalState
 from core.utils.qobject import is_valid_qobject
 from core.utils.system import is_windows_10
 from core.utils.utilities import ElidedLabel, refresh_widget_style
 from core.utils.win32.structs import GUID
 from core.utils.win32.utils import apply_qmenu_style
-from core.validation.widgets.yasb.control_center import PowerSectionConfig
+from core.widgets.services.control_center.config import PowerSectionConfig
 from core.widgets.services.power_mode import power_mode_api
 from core.widgets.services.power_plan.power_plan_api import PowerPlanInfo, PowerPlanService
 

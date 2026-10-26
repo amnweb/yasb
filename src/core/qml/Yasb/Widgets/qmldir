@@ -1,0 +1,6 @@
+module Yasb.Widgets
+ActiveWindow 1.0 ActiveWindow/ActiveWindow.qml
+Clock 1.0 Clock/Clock.qml
+Cpu 1.0 Cpu/Cpu.qml
+Gpu 1.0 Gpu/Gpu.qml
+Memory 1.0 Memory/Memory.qml

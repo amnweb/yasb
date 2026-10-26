@@ -3,7 +3,7 @@ import logging
 import time
 from ctypes import wintypes
 
-from PyQt6.QtCore import QThread
+from PyQt6.QtCore import QCoreApplication, QObject, QThread, pyqtBoundSignal, pyqtSignal
 
 from core.events.service import EventService
 from core.events.win32 import WinEvent
@@ -100,3 +100,42 @@ class SystemEventListener(QThread):
         self._hooks = []
         # Post WM_QUIT to unblock GetMessageW
         user32.PostThreadMessageW(self._thread_id, 0x0012, 0, 0)
+
+
+class _WinEventSignal(QObject):
+    triggered = pyqtSignal(int, WinEvent)
+
+
+_listener: SystemEventListener | None = None
+_signals: dict[WinEvent, _WinEventSignal] = {}
+
+
+def win_event(event: WinEvent) -> pyqtBoundSignal:
+    """The shared hook's signal for one WinEvent. Its object lives as long as the app, so the hook thread never
+    emits into an object QML is destroying; Qt drops a connection when its receiver is destroyed."""
+    if event not in _signals:
+        _signals[event] = _WinEventSignal()
+        EventService().register_event(event, _signals[event].triggered)
+    ensure_system_event_listener()
+    return _signals[event].triggered
+
+
+def ensure_system_event_listener() -> None:
+    """Start the one shared WinEvent hook the first time a widget needs it."""
+    global _listener
+    if _listener is not None:
+        return
+    _listener = SystemEventListener()
+    _listener.start()
+    app = QCoreApplication.instance()
+    if app is not None:
+        app.aboutToQuit.connect(_stop_system_event_listener)
+
+
+def _stop_system_event_listener() -> None:
+    global _listener
+    if _listener is None:
+        return
+    _listener.stop()
+    _listener.wait(1000)
+    _listener = None

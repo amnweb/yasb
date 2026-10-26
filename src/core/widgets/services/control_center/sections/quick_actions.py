@@ -10,10 +10,10 @@ from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayou
 from core.utils.shell_utils import shell_open
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import ElidedLabel
-from core.validation.widgets.yasb.control_center import ControlCenterActionConfig, QuickActionsSectionConfig
 from core.widgets.services.control_center.api.keyboard import TouchKeyboardService
 from core.widgets.services.control_center.api.screenshot.service import ScreenshotService
 from core.widgets.services.control_center.api.theme import ThemeService
+from core.widgets.services.control_center.config import ControlCenterActionConfig, QuickActionsSectionConfig
 from core.widgets.services.dnd.dnd_api import DndService
 from core.widgets.services.microphone.service import AudioInputService
 from core.widgets.services.volume.service import AudioOutputService

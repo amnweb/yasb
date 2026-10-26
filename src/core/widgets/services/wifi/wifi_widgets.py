@@ -34,7 +34,7 @@ from core.ui.components.loader import LoaderLine
 from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import ElidedLabel, PopupWidget, refresh_widget_style
 from core.utils.win32.utils import apply_qmenu_style
-from core.validation.widgets.yasb.wifi import WifiMenuConfig  # type: ignore
+from core.widgets.services.wifi.config import WifiMenuConfig  # type: ignore
 from core.widgets.services.wifi.wifi_managers import (
     NetworkInfo,
     ScanResultStatus,

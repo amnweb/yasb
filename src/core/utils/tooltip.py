@@ -15,7 +15,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QCursor, QGuiApplication
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
-from core.bar_helper import GlobalState
+from core.utils.global_state import GlobalState
 from core.utils.win32.backdrop import enable_blur
 
 # pyqtProperty exists at runtime but is missing from the PyQt6 type stubs

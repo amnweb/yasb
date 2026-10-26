@@ -1,70 +1,36 @@
 import hashlib
 import logging
 import os
-from os.path import basename
+from pathlib import Path
 from typing import override
 
-from watchdog.events import DirModifiedEvent, FileModifiedEvent, PatternMatchingEventHandler
+from watchdog.events import (
+    DirCreatedEvent,
+    DirDeletedEvent,
+    DirModifiedEvent,
+    DirMovedEvent,
+    FileCreatedEvent,
+    FileDeletedEvent,
+    FileModifiedEvent,
+    FileMovedEvent,
+    PatternMatchingEventHandler,
+)
 from watchdog.observers import Observer
 from watchdog.observers.api import BaseObserver
 
-from core.bar_manager import BarManager
-from core.config import get_config_dir, get_config_path, get_stylesheet_path
-from core.utils.css_processor import CSSProcessor
-from settings import DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME
+from core.bar.manager import BarManager
+from core.bar.revisions import path_key
+from core.config import get_config_dir, get_config_path
+from settings import DEFAULT_CONFIG_FILENAME
 
 
 class FileModifiedEventHandler(PatternMatchingEventHandler):
-    styles_file = DEFAULT_STYLES_FILENAME
-    config_file = DEFAULT_CONFIG_FILENAME
-
     def __init__(self, bar_manager: BarManager):
-        super().__init__()
+        super().__init__(patterns=[DEFAULT_CONFIG_FILENAME, "*.qml"], ignore_directories=True, case_sensitive=False)
         self.bar_manager = bar_manager
-        self._patterns = [self.styles_file, self.config_file]
-        self._ignore_patterns: list[str] = []
-        self._ignore_directories = True
-        self._case_sensitive = False
-        self._last_styles_hash: str | None = None
+        self._config_key = path_key(get_config_path())
         self._last_config_hash = self._file_hash(get_config_path())
-        self._stylesheet_path = self._normalize_path(get_stylesheet_path())
-        self._imported_stylesheets: set[str] = set()
-        self._imported_hashes: dict[str, str] = {}
-        self._observer: BaseObserver | None = None
-        self._watched_dirs: set[str] = set()
-        self._refresh_imported_stylesheets()
-
-    def _normalize_path(self, path: str) -> str:
-        return os.path.normcase(os.path.normpath(path))
-
-    def _refresh_imported_stylesheets(self) -> None:
-        try:
-            processor = CSSProcessor(self._stylesheet_path)
-            processor.process()
-            self._imported_stylesheets = {self._normalize_path(path) for path in processor.imported_files}
-            if self._stylesheet_path:
-                self._imported_stylesheets.add(self._stylesheet_path)
-            self._patterns = [self.styles_file, self.config_file, *self._imported_stylesheets]
-            self._ensure_watch_paths()
-        except Exception:
-            logging.exception("Failed to refresh imported stylesheets list")
-
-    def set_observer(self, observer: BaseObserver) -> None:
-        self._observer = observer
-        self._ensure_watch_paths()
-
-    def _ensure_watch_paths(self) -> None:
-        if not self._observer:
-            return
-        paths = {get_config_dir()}
-        for css_path in self._imported_stylesheets:
-            if css_path:
-                paths.add(os.path.dirname(css_path))
-        for path in {self._normalize_path(path) for path in paths}:
-            if path and path not in self._watched_dirs and os.path.isdir(path):
-                self._observer.schedule(self, path=path, recursive=False)
-                self._watched_dirs.add(path)
-                logging.info("Watching directory: %s", path)
+        self._qml_hashes: dict[str, str | None] = {}
 
     def _file_hash(self, path: str) -> str | None:
         try:
@@ -73,37 +39,51 @@ class FileModifiedEventHandler(PatternMatchingEventHandler):
         except Exception:
             return None
 
-    @override
-    def on_modified(self, event: DirModifiedEvent | FileModifiedEvent) -> None:
-        src_path = os.fsdecode(event.src_path)
-        modified_file = basename(src_path)
-        normalized_path = self._normalize_path(src_path)
-
-        if modified_file == self.styles_file and self.bar_manager.config.watch_stylesheet:
-            new_hash = self._file_hash(src_path)
-            if new_hash and new_hash != self._last_styles_hash:
-                self._last_styles_hash = new_hash
-                self._refresh_imported_stylesheets()
-                self.bar_manager.styles_modified.emit()
-                logging.debug("Stylesheet modified: %s", event.src_path)
-        elif modified_file == self.config_file and self.bar_manager.config.watch_config:
-            new_hash = self._file_hash(src_path)
+    def _changed(self, path: str) -> None:
+        if not self.bar_manager.config.watch:
+            return
+        key = path_key(path)
+        if key == self._config_key:
+            new_hash = self._file_hash(path)
             if new_hash and new_hash != self._last_config_hash:
                 self._last_config_hash = new_hash
                 self.bar_manager.config_modified.emit()
-                logging.debug("Config file modified: %s", event.src_path)
-        elif normalized_path in self._imported_stylesheets and self.bar_manager.config.watch_stylesheet:
-            new_hash = self._file_hash(src_path)
-            if new_hash and self._imported_hashes.get(normalized_path) != new_hash:
-                self._imported_hashes[normalized_path] = new_hash
-                self._refresh_imported_stylesheets()
-                self.bar_manager.styles_modified.emit()
-                logging.debug("Imported stylesheet modified: %s", event.src_path)
+                logging.debug("Config file modified: %s", path)
+        elif path.lower().endswith(".qml"):
+            new_hash = self._file_hash(path)
+            if key in self._qml_hashes and self._qml_hashes[key] == new_hash:
+                return
+            self._qml_hashes[key] = new_hash
+            self.bar_manager.qml_changed.emit(path)
+            logging.debug("QML file changed: %s", path)
+
+    @override
+    def on_modified(self, event: DirModifiedEvent | FileModifiedEvent) -> None:
+        self._changed(os.fsdecode(event.src_path))
+
+    @override
+    def on_created(self, event: DirCreatedEvent | FileCreatedEvent) -> None:
+        self._changed(os.fsdecode(event.src_path))
+
+    @override
+    def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent) -> None:
+        self._changed(os.fsdecode(event.src_path))
+
+    @override
+    def on_moved(self, event: DirMovedEvent | FileMovedEvent) -> None:
+        self._changed(os.fsdecode(event.src_path))
+        self._changed(os.fsdecode(event.dest_path))
 
 
 def create_observer(bar_manager: BarManager) -> BaseObserver:
-    event_handler = FileModifiedEventHandler(bar_manager)
     observer = Observer()
-    event_handler.set_observer(observer)
-    logging.info("Created file watcher")
+    handler = FileModifiedEventHandler(bar_manager)
+    config_dir = Path(get_config_dir())
+    observer.schedule(handler, path=str(config_dir), recursive=True)
+    watched = [config_dir]
+    for folder in sorted(bar_manager.qml_folders()):
+        if folder.is_dir() and not any(folder.is_relative_to(parent) for parent in watched):
+            observer.schedule(handler, path=str(folder), recursive=False)
+            watched.append(folder)
+    logging.info("Watching for changes: %s", ", ".join(str(folder) for folder in watched))
     return observer

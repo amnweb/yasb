@@ -337,6 +337,14 @@ def _monitor_device(monitor: int | None) -> str | None:
     return info.szDevice if info else None
 
 
+def screen_monitor(screen_name: str) -> int | None:
+    for screen in QApplication.screens():
+        if screen.name() == screen_name:
+            geo = screen.geometry()
+            return MonitorFromRect((geo.left(), geo.top(), geo.right(), geo.bottom()))
+    return None
+
+
 def find_focused_screen(
     follow_mouse: bool, follow_window: bool, follow_primary: bool = False, screens: Collection[str] | None = None
 ) -> str | None:

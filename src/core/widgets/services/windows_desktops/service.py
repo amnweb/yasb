@@ -37,7 +37,6 @@ from core.widgets.services.windows_desktops.notification import DesktopEvent, De
 
 if TYPE_CHECKING:
     import PyQt6.sip as sip
-
     from core.widgets.yasb.windows_desktops import WorkspaceWidget
 
 logger = logging.getLogger("windows_desktop_service")

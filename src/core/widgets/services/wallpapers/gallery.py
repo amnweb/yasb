@@ -39,10 +39,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.bar_helper import GlobalState
+from core.utils.global_state import GlobalState
 from core.utils.win32.utils import apply_qmenu_style
 from core.utils.win32.window_actions import force_foreground_focus
-from core.validation.widgets.yasb.wallpapers import GalleryConfig
+from core.widgets.services.wallpapers.config import GalleryConfig
 from core.widgets.services.wallpapers.images import FolderScanner, ImageLoader
 from core.widgets.services.wallpapers.manager import WallpaperManager
 

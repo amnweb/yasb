@@ -74,7 +74,7 @@ class Win32AppBar:
         self,
         hwnd: int,
         edge: int,
-        app_bar_height: int,
+        thickness: int,
         screen: QScreen,
         scale_screen: bool = False,
         bar_name: str | None = None,
@@ -93,37 +93,42 @@ class Win32AppBar:
             updated_ex_style |= WS_EX_TOPMOST
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, updated_ex_style)
 
-        self.position_bar(app_bar_height, screen, scale_screen, bar_name)
+        self.position_bar(thickness, screen, scale_screen, bar_name)
         # Only reserve screen space if requested windows_app_bar: true
         if reserve_space:
             self.set_position()
 
     def position_bar(
-        self, app_bar_height: int, screen: QScreen, scale_screen: bool = False, bar_name: str | None = None
+        self, thickness: int, screen: QScreen, scale_screen: bool = False, bar_name: str | None = None
     ) -> None:
         data = self.app_bar_data
         if data is None:
             return
         geometry = screen.geometry()
-        bar_height = int(app_bar_height * screen.devicePixelRatio())
-        screen_height = int(geometry.height() * screen.devicePixelRatio() if scale_screen else geometry.height())
+        ratio = screen.devicePixelRatio()
+        size = int(thickness * ratio)
+        screen_width = int(geometry.width() * ratio if scale_screen else geometry.width())
+        screen_height = int(geometry.height() * ratio if scale_screen else geometry.height())
 
         data.rc.left = geometry.x()
-        data.rc.right = geometry.x() + geometry.width()
-
+        data.rc.top = geometry.y()
+        data.rc.right = geometry.x() + screen_width
+        data.rc.bottom = geometry.y() + screen_height
         if data.uEdge == AppBarEdge.Top:
-            data.rc.top = screen.geometry().y()
-            data.rc.bottom = screen.geometry().y() + bar_height
+            data.rc.bottom = geometry.y() + size
+        elif data.uEdge == AppBarEdge.Bottom:
+            data.rc.top = geometry.y() + screen_height - size
+        elif data.uEdge == AppBarEdge.Left:
+            data.rc.right = geometry.x() + size
         else:
-            data.rc.top = screen.geometry().y() + screen_height - bar_height
-            data.rc.bottom = screen.geometry().y() + screen_height
+            data.rc.left = geometry.x() + screen_width - size
         bar_info = f"Bar {bar_name}" if bar_name else "Bar"
         logging.debug(
-            "%s Created on Screen: %s [Bar Height: %spx, DPI Scale: %s]",
+            "%s Created on Screen: %s [Bar Thickness: %spx, DPI Scale: %s]",
             bar_info,
             screen.name(),
-            app_bar_height,
-            screen.devicePixelRatio(),
+            thickness,
+            ratio,
         )
 
     def _send(self, message: int) -> None:

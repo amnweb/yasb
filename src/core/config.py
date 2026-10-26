@@ -4,14 +4,12 @@ import re
 import sys
 from os import makedirs, path
 from typing import Any, cast
-from xml.dom import SyntaxErr
 
 from pydantic import ValidationError
 from yaml import safe_load
 from yaml.parser import ParserError
 
 from core.utils.alert_dialog import raise_info_alert
-from core.utils.css_processor import CSSProcessor
 from core.utils.validation_errors import format_pydantic_errors_to_yaml
 from core.validation.config import YasbConfig
 from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME, GITHUB_URL
@@ -48,10 +46,6 @@ def get_config_dir() -> str:
 
 def get_config_path() -> str:
     return HOME_CONFIG_PATH
-
-
-def get_stylesheet_path() -> str:
-    return HOME_STYLES_PATH
 
 
 def parse_env(obj: Any) -> Any:
@@ -117,43 +111,12 @@ def get_config(show_error_dialog: bool = False) -> YasbConfig | None:
         logging.error("The file '%s' could not be read. Do you have read/write permissions?", config_path)
 
 
-def get_stylesheet(show_error_dialog: bool = False) -> str | None:
-    styles_path = get_stylesheet_path()
-    try:
-        css_processor = CSSProcessor(styles_path)
-        css_content = css_processor.process()
-        return css_content
-
-    except SyntaxErr as e:
-        logging.error("The file '%s' contains Syntax Error(s). Please fix:\n%s", styles_path, e)
-        if show_error_dialog:
-            raise_info_alert(
-                title="Failed to load recently updated stylesheet file.",
-                msg=f"The file '{styles_path}' contains syntax error(s) and has not been loaded.",
-                informative_msg="For more information, click 'Show Details'.",
-                additional_details=str(e),
-            )
-    except FileNotFoundError:
-        logging.error("The file '%s' could not be found. Does it exist?", styles_path)
-    except OSError:
-        logging.error("The file '%s' could not be read. Do you have read/write permissions?", styles_path)
-    return None
-
-
-def get_config_and_stylesheet() -> tuple[YasbConfig, str]:
+def load_config() -> YasbConfig:
     config = get_config()
-    stylesheet = get_stylesheet()
-    error_msg: str | None = None
-
-    if not config:
-        error_msg = "User config file could not be loaded. Exiting Application."
-    elif not stylesheet:
-        error_msg = "User stylesheet could not be loaded. Exiting Application."
-    elif not config.bars:
-        error_msg = "No bars have been configured. Please edit the config to add a status bar."
-    else:
-        return config, stylesheet
-
-    if error_msg:
-        logging.error(error_msg)
+    if config is None:
+        logging.error("User config file could not be loaded. Exiting Application.")
         sys.exit(1)
+    if not config.bars:
+        logging.error("No bars have been configured. Please edit the config to add a status bar.")
+        sys.exit(1)
+    return config

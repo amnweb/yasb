@@ -8,12 +8,12 @@ from PyQt6.QtCore import QEvent, QPoint, QSize, Qt
 from PyQt6.QtGui import QAction, QIcon, QPainter, QPainterPath, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPushButton, QWidget
 
-from core.bar_helper import GlobalState
+from core.utils.global_state import GlobalState
 from core.utils.qobject import is_valid_qobject
 from core.utils.shell_utils import shell_open
 from core.utils.tooltip import set_tooltip
 from core.utils.win32.utils import apply_qmenu_style
-from core.validation.widgets.yasb.control_center import SystemControlsConfig
+from core.widgets.services.control_center.config import SystemControlsConfig
 from core.widgets.services.power_menu.power_commands import PowerOperations
 from core.widgets.services.power_menu.user_info import get_user_avatar_path, get_windows_username
 

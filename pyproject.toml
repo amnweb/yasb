@@ -13,12 +13,11 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">= 3.14"
 dependencies = [
-    "pyqt6==6.10.2",
+    "pyqt6==6.12.0",
     "pydantic==2.14.1",
     "certifi==2026.10.19",
     "humanize==4.16.0",
     "pyyaml==6.0.3",
-    "holidays==0.107",
     "watchdog==6.0.0",
     "pycaw==20260927",
     "pillow==13.0.0",
@@ -49,7 +48,6 @@ dependencies = [
     "winrt.windows.devices.wifi==3.2.1",
     "winrt.windows.security.credentials==3.2.1",
     "winrt.windows.ui.viewmanagement==3.2.1",
-    "qt-css-engine @ git+https://github.com/Video-Nomad/qt-css-engine@dev",
 ]
 
 [project.urls]
@@ -65,7 +63,6 @@ dev = [
     "pre-commit",
     "ruff==0.17.1",
     "pyright==1.1.414",
-    "pyqt6-stubs==20250824",
     "pycaw-stubs==20260927.20261008",
     "types-pillow==10.2.0.20240822",
 ]

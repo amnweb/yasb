@@ -23,6 +23,8 @@ def pytest_configure(config: pytest.Config) -> None:
         target.mkdir()
         os.environ[name] = str(target)
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    os.environ.setdefault("QT_QUICK_BACKEND", "software")
+    os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Basic")
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:

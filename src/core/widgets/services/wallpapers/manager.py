@@ -10,7 +10,7 @@ from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from core.events.service import EventService
 from core.utils.win32.bindings.ole32 import CoInitialize
 from core.utils.win32.bindings.shell32 import CLSID_DesktopWallpaper, IDesktopWallpaper
-from core.validation.widgets.yasb.wallpapers import EngineConfig
+from core.widgets.services.wallpapers.config import EngineConfig
 from core.widgets.services.wallpapers.engine import WallpaperEngine
 from core.widgets.services.wallpapers.images import collect_image_files
 

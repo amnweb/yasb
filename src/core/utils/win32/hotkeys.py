@@ -4,7 +4,6 @@ import logging
 from ctypes import byref
 from ctypes.wintypes import MSG
 from dataclasses import dataclass
-from typing import Any
 
 from PyQt6.QtCore import Q_ARG, QMetaObject, QObject, Qt, QThread, pyqtSlot
 
@@ -84,8 +83,6 @@ class HotkeyBinding:
     """Single hotkey binding configuration."""
 
     hotkey: str
-    widget_name: str
-    action: str
     vk: int
     modifiers: int
     screen: str = "active"
@@ -158,10 +155,10 @@ class HotkeyDispatcher(QObject):
         super().__init__()
         self._event_service = EventService()
 
-    @pyqtSlot(str, str, str)
-    def dispatch(self, widget_name: str, action: str, screen_name: str) -> None:
-        """Dispatch a hotkey event to the target widget."""
-        self._event_service.emit_event("handle_widget_hotkey", widget_name, action, screen_name)
+    @pyqtSlot(str, str)
+    def dispatch(self, hotkey: str, screen_name: str) -> None:
+        """Dispatch a hotkey event to the widgets of the target screen."""
+        self._event_service.emit_event("handle_widget_hotkey", hotkey, screen_name)
 
 
 class HotkeyListener(QThread):
@@ -218,8 +215,7 @@ class HotkeyListener(QThread):
             self._dispatcher,
             "dispatch",
             Qt.ConnectionType.QueuedConnection,
-            Q_ARG(str, binding.widget_name),
-            Q_ARG(str, binding.action),
+            Q_ARG(str, binding.hotkey),
             Q_ARG(str, screen_name or ""),
         )
 
@@ -262,33 +258,3 @@ class HotkeyListener(QThread):
         self._unregister_hotkeys()
         if self._thread_id is not None:
             user32.PostThreadMessageW(self._thread_id, WM_QUIT, 0, 0)
-
-
-def collect_widget_keybindings(widget_name: str, keybindings: list[dict[str, Any]]) -> list[HotkeyBinding]:
-    """Parse keybinding configs for a widget into HotkeyBinding objects."""
-    bindings: list[HotkeyBinding] = []
-
-    for kb in keybindings:
-        keys = kb.get("keys", "")
-        action = kb.get("action", "")
-
-        if not keys or not action:
-            logging.warning("Invalid keybinding for %s: missing 'keys' or 'action'", widget_name)
-            continue
-
-        parsed = parse_hotkey(keys)
-        if parsed is None:
-            continue
-
-        modifiers, vk = parsed
-        binding = HotkeyBinding(
-            hotkey=keys,
-            widget_name=widget_name,
-            action=action,
-            vk=vk,
-            modifiers=modifiers,
-            screen=kb.get("screen", "active"),
-        )
-        bindings.append(binding)
-
-    return bindings

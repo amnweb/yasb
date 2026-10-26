@@ -24,8 +24,9 @@ from core.utils.win32.utils import apply_qmenu_style
 from core.utils.win32.window_actions import close_application
 
 if TYPE_CHECKING:
-    from core.widgets.services.recycle_bin.recycle_bin_monitor import EmptyBinThread
     from core.widgets.yasb.taskbar import TaskbarWidget
+
+    from core.widgets.services.recycle_bin.recycle_bin_monitor import EmptyBinThread
 
 # Global reference to keep thread alive
 _empty_bin_thread_ref: EmptyBinThread | None = None

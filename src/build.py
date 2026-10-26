@@ -25,11 +25,6 @@ hook_dll_name = "YASBTrayHook_arm64.dll" if display_arch == "ARM64" else "YASBTr
 everything_dll_name = "EverythingARM64.dll" if display_arch == "ARM64" else "Everything64.dll"
 
 build_options = {
-    "packages": [
-        "core.widgets.yasb",
-        "core.widgets.komorebi",
-        "core.widgets.glazewm",
-    ],
     "constants": [f"ARCHITECTURE='{display_arch}'"],
     "silent_level": 1,
     "silent": True,
@@ -42,7 +37,6 @@ build_options = {
     "build_exe": "dist",
     "include_msvcr": True,
     "includes": [
-        "holidays.countries",
         "winrt.windows.applicationmodel",
     ],
     "optimize": 1,
@@ -52,6 +46,7 @@ build_options = {
         ("assets/images/media.png", "assets/images/media.png"),
         ("assets/sound/notification01.wav", "assets/sound/notification01.wav"),
         ("assets/sound/notification02.wav", "assets/sound/notification02.wav"),
+        ("core/qml", "core/qml"),
         (f"core/widgets/services/quick_launch/providers/resources/{everything_dll_name}", f"lib/{everything_dll_name}"),
         (f"core/widgets/services/systray/hook/{hook_dll_name}", f"lib/{hook_dll_name}"),
         ("core/widgets/services/quick_launch/providers/resources/emoji.json", "lib/emoji.json"),

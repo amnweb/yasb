@@ -8,18 +8,17 @@ from types import FrameType, TracebackType
 import qasync  # pyright: ignore[reportMissingTypeStubs]
 
 from core.application import YASBApplication
-from core.bar_manager import BarManager
-from core.config import get_config_and_stylesheet, is_first_run
+from core.bar.manager import BarManager
+from core.config import is_first_run, load_config
 from core.events.service import EventService
 from core.log import enable_debug_logging, init_logger
 from core.tray import SystemTrayManager
 from core.ui.views.welcome import run_setup_wizard
 from core.utils.controller import start_cli_server
 from core.utils.single_instance import single_instance_lock
-from core.utils.system_colors import SystemColorsService
 from core.utils.update_service import get_update_service, start_update_checker
 from core.watcher import create_observer
-from env import load_env, set_font_engine
+from env import load_env, set_qt_quick_defaults
 
 
 def main():
@@ -65,19 +64,19 @@ async def main_async(app: YASBApplication):
         pass
 
     # Initialize configuration early after the single instance check
-    config, stylesheet = get_config_and_stylesheet()
+    config = load_config()
 
     if config.debug:
         enable_debug_logging()
         logging.info("Debug mode enabled.")
 
     # Initialise bars and background event listeners
-    manager = BarManager(config, stylesheet)
+    manager = BarManager(config)
 
     try:
-        manager.initialize_bars(init=True)
+        manager.initialize_bars()
         # Initialise file watcher if needed
-        observer = create_observer(manager) if config.watch_config or config.watch_stylesheet else None
+        observer = create_observer(manager) if config.watch else None
         if observer:
             observer.start()
 
@@ -87,10 +86,6 @@ async def main_async(app: YASBApplication):
                 observer.join()
 
         app.aboutToQuit.connect(stop_observer)
-
-        # Initialize system colors service
-        if config.system_colors:
-            SystemColorsService.start_service()
 
         # Build system tray icon
         if config.show_systray:
@@ -121,7 +116,7 @@ async def main_async(app: YASBApplication):
 if __name__ == "__main__":
     init_logger()
     load_env()
-    set_font_engine()
+    set_qt_quick_defaults()
 
     def exception_hook(_exctype: type, value: BaseException, _traceback: TracebackType | None):
         EventService().clear()

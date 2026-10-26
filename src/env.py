@@ -2,6 +2,7 @@ import logging
 import os
 
 from dotenv import load_dotenv
+from PyQt6.QtQuick import QQuickWindow, QSGRendererInterface
 
 from settings import DEFAULT_CONFIG_DIRECTORY
 
@@ -22,13 +23,5 @@ def load_env():
             logging.info("Loaded environment variables from %s", env_path)
 
 
-def set_font_engine():
-    """
-    Set the font engine for the application based on the YASB_FONT_ENGINE environment variable.
-    """
-    valid_engines = {"native", "freetype", "gdi"}
-    font_engine = os.getenv("YASB_FONT_ENGINE", "gdi").lower()
-    if font_engine not in valid_engines:
-        logging.warning("Unknown font engine '%s', falling back to 'gdi'", font_engine)
-        font_engine = "gdi"
-    os.environ["QT_QPA_PLATFORM"] = f"windows:fontengine={font_engine}"
+def set_qt_quick_defaults():
+    QQuickWindow.setGraphicsApi(QSGRendererInterface.GraphicsApi.Direct3D11)

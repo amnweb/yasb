@@ -20,13 +20,13 @@ from PyQt6.QtWidgets import (
 from core.ui.components.loader import LoaderLine
 from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import PopupWidget, refresh_widget_style
-from core.validation.widgets.yasb.bluetooth import BluetoothBatteryIconsConfig, BluetoothMenuConfig
 from core.widgets.services.bluetooth.bluetooth_managers import BluetoothManager
 from core.widgets.services.bluetooth.bluetooth_types import (
     BluetoothStatus,
     DeviceInfo,
     ScanResultStatus,
 )
+from core.widgets.services.bluetooth.config import BluetoothBatteryIconsConfig, BluetoothMenuConfig
 
 _BATTERY_BANDS: tuple[tuple[int, str], ...] = (
     (10, "empty"),

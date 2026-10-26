@@ -228,6 +228,9 @@ class MemoryWorker(QThread):
         if app_inst is not None:
             app_inst.aboutToQuit.connect(self.stop)
 
+    def set_update_interval(self, update_interval: int) -> None:
+        self._update_interval = update_interval
+
     def stop(self):
         """Signal the worker to stop."""
         self._stop_event.set()

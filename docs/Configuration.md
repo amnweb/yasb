@@ -25,18 +25,6 @@ QT_SCREEN_SCALE_FACTORS="1.25;1"
 QT_SCALE_FACTOR_ROUNDING_POLICY="PassThrough"
 ```
 
-## YASB Font Engine
-YASB supports different font engines to improve text rendering quality.
-You can set the font engine by defining the `YASB_FONT_ENGINE` environment variable in your `.env` file or in OS environment variables.
-Valid options are:
-- `native`: Uses the DirectWrite font rendering engine.
-- `gdi`: Uses the GDI font rendering engine.
-- `freetype`: Uses the FreeType font rendering engine.
-
-> **Note:**
-> The default font engine is GDI, changing the font engine may cause different font rendering quality. You can experiment with different engines to see which one works best for you. Font names can be different between engines, example: gdi `"font-family: 'JetBrainsMono NFP';"` may need to be changed to `"font-family: 'JetBrainsMono Nerd Font Propo'"` for DirectWrite.
-
-
 ## Status Bar Root Configuration
 | Option            | Type    | Default       | Description |
 |-------------------|---------|---------------|-------------|

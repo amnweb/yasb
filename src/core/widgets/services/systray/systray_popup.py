@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QApplication, QFrame, QPushButton, QVBoxLayout, QWid
 
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.bindings.user32 import GetAsyncKeyState
-from core.validation.widgets.yasb.systray import SystrayPopupConfig
+from core.widgets.services.systray.config import SystrayPopupConfig
 from core.widgets.services.systray.systray_widget import DropWidget, IconWidget
 
 

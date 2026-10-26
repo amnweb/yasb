@@ -17,14 +17,12 @@ from collections import Counter, OrderedDict
 from collections.abc import Callable
 from datetime import datetime
 from html import escape as html_escape
-from importlib import import_module
-from textwrap import indent
 from typing import Any, cast, overload, override
 from urllib.parse import urlencode
 
 import certifi
 from PIL import Image, ImageFilter
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 from PyQt6.QtCore import (
     QAbstractListModel,
     QEasingCurve,
@@ -110,7 +108,7 @@ from core.utils.single_instance import wait_for_bar_exit
 from core.utils.system import get_architecture
 from core.utils.validation_errors import format_pydantic_errors_to_yaml
 from core.validation.config import YasbConfig
-from core.validation.widgets.yasb.grouper import GrouperWidgetConfig
+from core.widget_files import undefined_widgets
 from core.widgets.services.quick_launch.icon_utils import svg_to_pixmap
 from settings import BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL
 
@@ -680,17 +678,6 @@ def _download_theme(theme_id: str) -> dict[str, bytes]:
     raise last_err or RuntimeError("Failed to download theme files")
 
 
-def _widget_schema(widget_type: str) -> type[BaseModel]:
-    # Each validation file mirrors its widget's module and defines the widget's config last, after the models it uses.
-    module = import_module(f"core.validation.widgets.{widget_type.rsplit('.', 1)[0]}")
-    models = [
-        value
-        for value in vars(module).values()
-        if isinstance(value, type) and issubclass(value, BaseModel) and value.__module__ == module.__name__
-    ]
-    return models[-1]
-
-
 def _theme_config_errors(raw: bytes) -> str:
     try:
         data = safe_load(raw.decode("utf-8"))
@@ -699,39 +686,7 @@ def _theme_config_errors(raw: bytes) -> str:
         return format_pydantic_errors_to_yaml(e)
     except (UnicodeDecodeError, YAMLError) as e:
         return str(e)
-
-    errors: list[str] = []
-    pending = [
-        name
-        for bar in config.bars.values()
-        if bar.enabled
-        for name in bar.widgets.left + bar.widgets.center + bar.widgets.right
-    ]
-    checked: set[str] = set()
-    while pending:
-        name = pending.pop(0)
-        if name in checked:
-            continue
-        checked.add(name)
-        widget = config.widgets.get(name)
-        if not widget:
-            errors.append(f' - The widget "{name}" is undefined.')
-            continue
-        if not isinstance(widget, dict) or "type" not in widget:
-            errors.append(f" - {name} has no widget type defined.")
-            continue
-        widget_type = widget["type"]
-        try:
-            options = _widget_schema(widget_type).model_validate(widget.get("options", {}))
-        except ValidationError as e:
-            errors.append(f" - {name}\n{indent(format_pydantic_errors_to_yaml(e), '      ').rstrip()}")
-            continue
-        except Exception:
-            errors.append(f' - {name} has unknown type "{widget_type}"')
-            continue
-        if isinstance(options, GrouperWidgetConfig):
-            pending.extend(options.widgets)
-    return "\n".join(errors)
+    return "\n".join(f' - The widget "{name}" is undefined.' for name in undefined_widgets(config))
 
 
 class ThemeInstallWorker(QThread):
