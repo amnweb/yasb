@@ -73,7 +73,7 @@ test = [
     "pytest==9.1.1",
 ]
 packaging = [
-    "cx-freeze==8.6.4"
+    "cx-freeze==8.7.3"
 ]
 [tool.hatch.metadata]
 allow-direct-references = true
