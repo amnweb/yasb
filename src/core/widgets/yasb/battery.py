@@ -146,6 +146,7 @@ class BatteryWidget(BaseWidget):
         time_remaining = self._get_time_remaining()
         is_charging_str = "yes" if self._battery_state.is_charging else "no"
         charging_icon = self._get_charging_icon(original_threshold)
+        power_class = "" if self._battery_state.power_plugged else "discharging"
 
         # Extended battery info formatting
         state = self._battery_state
@@ -192,8 +193,8 @@ class BatteryWidget(BaseWidget):
                     widget_label.setText(icon)
                     # apply status‐class
                     existing_classes = widget_label.property("class") or ""
-                    new_classes = re.sub(r"status-\w+", "", existing_classes).strip()
-                    target_class = f"{new_classes} status-{threshold}"
+                    new_classes = re.sub(r"status-\w+|\bdischarging\b", "", existing_classes)
+                    target_class = " ".join(f"{new_classes} status-{threshold} {power_class}".split())
                     if existing_classes != target_class:
                         widget_label.setProperty("class", target_class)
                         refresh_widget_style(widget_label)
@@ -217,7 +218,7 @@ class BatteryWidget(BaseWidget):
                     alt_class = "alt" if self._show_alt_label else ""
                     formatted_text = battery_status.format(battery_status)
                     active_widgets[widget_index].setText(formatted_text)
-                    target_class = f"label {alt_class} status-{threshold}"
+                    target_class = " ".join(f"label {alt_class} status-{threshold} {power_class}".split())
                     if active_widgets[widget_index].property("class") != target_class:
                         active_widgets[widget_index].setProperty("class", target_class)
                         refresh_widget_style(active_widgets[widget_index])
