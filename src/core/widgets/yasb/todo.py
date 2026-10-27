@@ -11,6 +11,7 @@ from typing import TypedDict, override
 from PyQt6.QtCore import QMimeData, QObject, QPoint, Qt, QTimer
 from PyQt6.QtGui import (
     QAction,
+    QCursor,
     QDrag,
     QDragEnterEvent,
     QDragLeaveEvent,
@@ -20,6 +21,7 @@ from PyQt6.QtGui import (
     QMouseEvent,
 )
 from PyQt6.QtWidgets import (
+    QApplication,
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -36,8 +38,11 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
+from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
+from core.utils.win32.bindings.user32 import GetWindowLongPtr, SetWindowLongPtr
+from core.utils.win32.constants import GWL_EXSTYLE, WS_EX_DLGMODALFRAME
 from core.utils.win32.utils import apply_qmenu_style
 from core.validation.widgets.yasb.todo import CategoryConfig, TodoConfig, TodoIconsConfig
 from core.widgets.base import BaseWidget
@@ -72,6 +77,11 @@ class TodoWidget(BaseWidget):
         self._category_filter: str | None = None
         self._title_input: QLineEdit
         self._desc_input: QTextEdit
+        self._task_dialog: QDialog | None = None
+        # Dialog parent that survives the menu, keeps `.todo-menu .app-dialog` selectors matching
+        self._dialog_host = QWidget(self)
+        self._dialog_host.setProperty("class", "todo-menu")
+        self._dialog_host.hide()
 
         self._init_container()
         self.build_widget_label(self.config.label, self.config.label_alt)
@@ -163,10 +173,15 @@ class TodoWidget(BaseWidget):
         on_save: Callable[..., None],
         task: Task | None = None,
     ) -> None:
+        if is_valid_qobject(self._task_dialog) and self._task_dialog.isVisible():
+            self._task_dialog.activateWindow()
+            return
         if self._menu is not None:
             self._menu.hide()
         self._selected_category = task.get("category", "default") if task else "default"
-        dialog = QDialog(self._menu)
+        dialog = QDialog(self._dialog_host)
+        self._task_dialog = dialog
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         dialog.setWindowTitle(dialog_title)
         dialog.setMinimumSize(500, 200)
         dialog.setProperty("class", "app-dialog")
@@ -248,7 +263,19 @@ class TodoWidget(BaseWidget):
         dialog_layout.addWidget(button_container)
 
         self._title_input.setFocus()
-        dialog.exec()
+        dialog.adjustSize()
+        pos = QCursor.pos()
+        x = pos.x() - dialog.width() // 2
+        screen = QApplication.screenAt(pos)
+        if screen is not None:
+            area = screen.availableGeometry()
+            x = max(area.left(), min(x, area.right() - dialog.width()))
+        dialog.move(x, pos.y())
+        # Skips tiling managers to get this window.
+        hwnd = int(dialog.winId())
+        SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_DLGMODALFRAME)
+
+        dialog.show()
 
     def _toggle_label(self):
 
