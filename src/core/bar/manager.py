@@ -3,7 +3,7 @@ import os
 from contextlib import suppress
 from pathlib import Path
 
-from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QCoreApplication, QEvent, QObject, Qt, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QGuiApplication, QScreen
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 
@@ -163,3 +163,5 @@ class BarManager(QObject):
         for bar in self.bars:
             bar.close()
         self.bars.clear()
+        # The QML engine goes with this manager, so the bars' QML items are deleted while it still exists
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)

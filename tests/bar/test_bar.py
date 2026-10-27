@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 from PyQt6.QtCore import QPoint, QPointF, QUrl
-from PyQt6.QtGui import QColor, QGuiApplication
+from PyQt6.QtGui import QColor, QContextMenuEvent, QGuiApplication, QWindow
 from PyQt6.QtQml import QQmlEngine
 from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtWidgets import QApplication
@@ -59,6 +59,7 @@ BAR_CONFIGS: dict[str, dict[str, Any]] = {
     "fade-animation": {"animation": {"type": "fade"}},
     "blur": {"backdrop": {"type": "blur", "corners": "round"}},
     "acrylic": {"backdrop": {"type": "acrylic", "corners": "small", "border": "none"}},
+    "mica": {"backdrop": {"type": "mica-alt", "border": "#336699"}},
     "always-on-top": {"always_on_top": True},
     "reserve-space": {"reserve_space": True},
     "hide-on-fullscreen": {"always_on_top": True, "hide_on_fullscreen": True},
@@ -566,3 +567,51 @@ def test_the_app_bar_reserves_its_screen_edge(qapp: QApplication, edge: str):
     reservation.position_bar(40, screen)
     rc = reservation.app_bar_data.rc
     assert (rc.left, rc.top, rc.right, rc.bottom) == expected[edge]
+
+
+def _open_windows() -> set[QWindow]:
+    return {window for window in QGuiApplication.topLevelWindows() if window.isVisible()}
+
+
+def _right_click(bar: BarWindow, x: float) -> None:
+    point = QPoint(round(x), bar.height() // 2)
+    QApplication.sendEvent(bar, QContextMenuEvent(QContextMenuEvent.Reason.Mouse, point, bar.mapToGlobal(point)))
+    wait(100)
+
+
+def test_the_bar_menu_opens_off_widgets_only(make_bar: MakeBar, widget_dir: Path):
+    bar = make_bar(length=600, widgets={"left": ["a"]})
+    wait(50)
+    before = _open_windows()
+    _right_click(bar, _left(bar, "a") + 5)
+    assert _open_windows() == before
+
+    _right_click(bar, 400)
+    menus = _open_windows() - before
+    assert len(menus) == 1
+    for menu in menus:
+        menu.close()
+
+
+def test_the_bar_context_switches_auto_hide(make_bar: MakeBar):
+    bar = make_bar()
+    context = bar.context
+    assert context is not None
+    context.setProperty("autoHide", True)
+    assert bar.autohide_enabled and context.property("autoHide")
+    context.setProperty("autoHide", False)
+    assert not bar.autohide_enabled
+
+
+def test_the_bar_context_switches_the_backdrop(make_bar: MakeBar):
+    bar = make_bar(backdrop={"type": "blur"})
+    context = bar.context
+    assert context is not None and context.property("backdrop") == "blur"
+    context.setProperty("backdrop", "mica")
+    assert bar.backdrop == "mica" and context.property("backdrop") == "mica"
+
+
+def test_a_screenshot_of_the_bar_is_saved(make_bar: MakeBar, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(window, "SCREENSHOT_DIR", tmp_path)
+    path = make_bar().save_screenshot()
+    assert path is not None and path.parent == tmp_path and path.is_file()

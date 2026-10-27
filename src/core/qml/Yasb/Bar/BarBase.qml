@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 
 Item {
     id: base
@@ -25,6 +26,12 @@ Item {
     property list<string> slotNames: []
     property list<Item> slots: []
 
+    // Opened by a right-click on the bar: null for no menu, or a Component of your own with the same properties
+    property Component contextMenu: Component {
+        BarMenu {}
+    }
+    property Window openedMenu: null
+
     default property alias content: contentArea.data
 
     function longestContent(): real {
@@ -41,8 +48,25 @@ Item {
         slotNames = [...slotNames, slot.name]
     }
 
+    function openContextMenu(position: point) {
+        openedMenu?.close()
+        if (contextMenu)
+            openedMenu = contextMenu.createObject(null, {
+                bar: base,
+                position: mapToGlobal(position),
+                area: Qt.rect(Screen.virtualX, Screen.virtualY, Screen.width, Screen.height)
+            })
+    }
+
     implicitWidth: vertical ? 0 : 2 * padding + contentImplicitLength
     implicitHeight: vertical ? 2 * padding + contentImplicitLength : 0
+
+    ContextMenu.onRequested: position => base.openContextMenu(position)
+
+    TapHandler {
+        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+        onTapped: base.openedMenu?.close()
+    }
 
     Rectangle {
         id: surface

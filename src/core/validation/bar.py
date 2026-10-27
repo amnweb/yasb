@@ -19,7 +19,7 @@ class BarMargin(CustomBaseModel):
 
 
 class BarBackdrop(CustomBaseModel):
-    type: Literal["none", "blur", "acrylic"] = "none"
+    type: Literal["none", "blur", "acrylic", "mica", "mica-alt"] = "none"
     corners: Literal["square", "round", "small"] = "square"
     border: str = "system"
 
@@ -28,9 +28,9 @@ class BarBackdrop(CustomBaseModel):
     def validate_border(cls, v: str) -> str:
         if v.lower() in ("system", "none"):
             return v.lower()
-        if re.fullmatch(r"#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?", v):
+        if re.fullmatch(r"#[0-9A-Fa-f]{6}", v):
             return v
-        raise ValueError("Border must be 'system', 'none' or a hex color like '#RRGGBB' or '#RRGGBBAA'")
+        raise ValueError("Border must be 'system', 'none' or a hex color like '#RRGGBB'")
 
 
 class BarAnimation(CustomBaseModel):

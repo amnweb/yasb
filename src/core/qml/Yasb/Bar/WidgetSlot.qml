@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 
 Item {
     id: slot
@@ -53,6 +54,9 @@ Item {
             height: slot.vertical ? undefined : slot.height
             visible: status === Loader.Ready
             source: modelData.url
+
+            // Accepting the request keeps the bar's menu off widgets, a widget's own menu still opens first
+            ContextMenu.onRequested: {}
 
             onLoaded: {
                 if (item.bar !== undefined)

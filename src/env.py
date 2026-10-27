@@ -25,3 +25,4 @@ def load_env():
 
 def set_qt_quick_defaults():
     QQuickWindow.setGraphicsApi(QSGRendererInterface.GraphicsApi.Direct3D11)
+    os.environ["QT_QUICK_CONTROLS_STYLE"] = "FluentWinUI3"

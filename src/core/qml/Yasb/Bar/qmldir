@@ -1,7 +1,7 @@
 module Yasb.Bar
-BarBase 1.0 BarBase.qml
-Bar 1.0 Bar.qml
+
+BarBase   1.0 BarBase.qml
+BarMenu   1.0 BarMenu.qml
+Bar       1.0 Bar.qml
 IslandBar 1.0 IslandBar.qml
 WidgetSlot 1.0 WidgetSlot.qml
-import QtQuick
-import QtQuick.Shapes

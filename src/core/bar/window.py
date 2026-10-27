@@ -4,14 +4,16 @@ import os
 import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import override
 
-from PyQt6.QtCore import QObject, QRect, QSizeF, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QObject, QRect, QSizeF, Qt, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QCloseEvent, QColor, QGuiApplication, QRegion, QScreen
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtQuick import QQuickItem, QQuickWindow
 
+from core import backdrop_new
 from core.bar.animation import BarAnimationManager
 from core.bar.appbar import AppBarManager
 from core.bar.autohide import AutoHideManager, MaximizedWindowWatcher
@@ -19,14 +21,19 @@ from core.bar.geometry import bar_geometry, bar_length
 from core.bar.revisions import Revisions, path_key
 from core.events.service import EventService
 from core.utils.alert_dialog import raise_info_alert
+from core.utils.controller import exit_application, reload_application
 from core.utils.qml import qml_property
-from core.utils.win32 import app_bar, backdrop
+from core.utils.win32 import app_bar
 from core.utils.win32.bindings.user32 import MonitorFromWindow
 from core.validation.bar import BarConfig
 from core.widget_files import bar_widget_files
 from settings import APP_BAR_TITLE, DEFAULT_CONFIG_DIRECTORY, SCRIPT_PATH
 
 BAR_QML = Path(SCRIPT_PATH) / "core" / "qml" / "Yasb" / "Bar" / "Bar.qml"
+SCREENSHOT_DIR = Path.home() / "Pictures" / "YASB_Screenshots"
+SCREENSHOT_MARGIN = 10
+# Long enough for the menu that asked for a screenshot to leave the screen
+SCREENSHOT_DELAY_MS = 200
 
 APP_BAR_EDGES = {
     "top": app_bar.AppBarEdge.Top,
@@ -56,6 +63,9 @@ def is_dark_scheme() -> bool:
 
 
 class BarContext(QObject):
+    autoHideChanged = pyqtSignal()
+    backdropChanged = pyqtSignal()
+
     def __init__(self, window: BarWindow):
         super().__init__(window)
         self._window = window
@@ -81,6 +91,39 @@ class BarContext(QObject):
     @qml_property("QVariantMap", constant=True)
     def widgets(self) -> dict[str, list[dict[str, str]]]:
         return self._widgets
+
+    def _get_auto_hide(self) -> bool:
+        return self._window.autohide_enabled
+
+    def _set_auto_hide(self, enabled: bool) -> None:
+        if enabled != self._window.autohide_enabled:
+            if enabled:
+                self._window.enable_autohide()
+            else:
+                self._window.disable_autohide()
+
+    autoHide = pyqtProperty(bool, _get_auto_hide, _set_auto_hide, notify=autoHideChanged)
+
+    def _get_backdrop(self) -> str:
+        return self._window.backdrop
+
+    def _set_backdrop(self, backdrop: str) -> None:
+        if backdrop != self._window.backdrop:
+            self._window.set_backdrop(backdrop)
+
+    backdrop = pyqtProperty(str, _get_backdrop, _set_backdrop, notify=backdropChanged)
+
+    @pyqtSlot()
+    def screenshot(self) -> None:
+        QTimer.singleShot(SCREENSHOT_DELAY_MS, self._window.save_screenshot)
+
+    @pyqtSlot()
+    def reload(self) -> None:
+        reload_application("Reloading Application from the bar menu...")
+
+    @pyqtSlot()
+    def exit(self) -> None:
+        exit_application("Exiting Application from the bar menu...")
 
 
 class BarWindow(QQuickWindow):
@@ -111,6 +154,7 @@ class BarWindow(QQuickWindow):
         self.shown_file: Path | None = None
         self.load_errors: list[str] = []
         self.overhang = 0
+        self.backdrop: str = config.backdrop.type
         self.bar_file = self._resolve_bar_file()
 
         flags = Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint
@@ -312,7 +356,13 @@ class BarWindow(QQuickWindow):
 
     def apply_backdrop(self, dark: bool) -> None:
         settings = self.config.backdrop
-        backdrop.apply_backdrop(self.hwnd, settings.type, settings.corners, settings.border, dark)
+        backdrop_new.apply_backdrop(self.hwnd, self.backdrop, settings.corners, settings.border, dark)
+
+    def set_backdrop(self, backdrop: str) -> None:
+        self.backdrop = backdrop
+        backdrop_new.set_backdrop(self.hwnd, backdrop)
+        if self.context is not None:
+            self.context.backdropChanged.emit()
 
     def update_app_bar(self) -> None:
         margin = self.config.margin
@@ -342,6 +392,8 @@ class BarWindow(QQuickWindow):
             self.autohide_manager = AutoHideManager(self, self)
         if not self.autohide_manager.is_enabled():
             self.autohide_manager.setup_autohide()
+        if self.context is not None:
+            self.context.autoHideChanged.emit()
 
     def disable_autohide(self) -> None:
         if self.autohide_manager is not None:
@@ -349,6 +401,37 @@ class BarWindow(QQuickWindow):
             self.autohide_manager = None
         if not self.isVisible():
             self.show()
+        if self.context is not None:
+            self.context.autoHideChanged.emit()
+
+    def save_screenshot(self) -> Path | None:
+        screen = self.target_screen
+        area, bar = screen.geometry(), self.geometry()
+        edge = self.config.edge
+        if edge == "top":
+            area.setBottom(bar.bottom() + SCREENSHOT_MARGIN)
+        elif edge == "bottom":
+            area.setTop(bar.top() - SCREENSHOT_MARGIN)
+        elif edge == "left":
+            area.setRight(bar.right() + SCREENSHOT_MARGIN)
+        else:
+            area.setLeft(bar.left() - SCREENSHOT_MARGIN)
+        # With no window, grabWindow takes coordinates relative to the screen
+        origin = screen.geometry().topLeft()
+        shot = screen.grabWindow(
+            0,  # pyright: ignore[reportArgumentType]
+            area.x() - origin.x(),
+            area.y() - origin.y(),
+            area.width(),
+            area.height(),
+        )
+        SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+        path = SCREENSHOT_DIR / f"yasb_bar_{self.name}_{datetime.now():%Y%m%d_%H%M%S}.png"
+        if not shot.save(str(path), "PNG"):
+            logging.error("Failed to save a screenshot of bar %s to %s", self.name, path)
+            return None
+        logging.info("Saved a screenshot of bar %s to %s", self.name, path)
+        return path
 
     def handle_cli(self, action: str, screen_name: str) -> None:
         if screen_name and self.target_screen.name() != screen_name:
@@ -372,6 +455,10 @@ class BarWindow(QQuickWindow):
             self.autohide_manager.cleanup()
         self._animation.cleanup()
         self.remove_app_bar()
+        if self.item is not None:
+            self.item.setParentItem(None)
+            self.item.deleteLater()
+            self.item = None
 
     @override
     def closeEvent(self, a0: QCloseEvent | None) -> None:

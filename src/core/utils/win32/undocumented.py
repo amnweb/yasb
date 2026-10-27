@@ -6,6 +6,7 @@ from core.utils.win32.structs import DEVPROPKEY, GUID
 
 # SetWindowCompositionAttribute
 WCA_ACCENT_POLICY = 19
+ACCENT_DISABLED = 0
 ACCENT_ENABLE_BLURBEHIND = 3
 ACCENT_ENABLE_ACRYLICBLURBEHIND = 4
 
