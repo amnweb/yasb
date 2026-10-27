@@ -224,7 +224,7 @@ class WorkspaceButton(QPushButton):
         name_edit.setPlaceholderText("Desktop name")
         name_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         name_edit.selectAll()
-        name_edit.setFocus()
+
         container_layout.addWidget(name_edit)
 
         rename_btn = QPushButton("Rename")
@@ -254,6 +254,8 @@ class WorkspaceButton(QPushButton):
 
         layout.addWidget(container_frame)
         layout.addWidget(footer_frame)
+
+        name_edit.setFocus()
 
         popup.adjustSize()
         popup.setPosition(
@@ -390,8 +392,11 @@ class WorkspaceWidget(BaseWidget):
         self._svc.notify_desktops_updated(update_buttons=False)
 
     def _cb_rename_desktop(self):
-        if self.clicked_button:
-            self.clicked_button.rename_desktop()
+        button = self.clicked_button or next(
+            (b for b in self.workspace_buttons if b.workspace_index == self._curr_workspace_index), None
+        )
+        if button:
+            button.rename_desktop()
 
     def _cb_switch_desktop(self, number: str) -> None:
         self._activate_desktop(int(number))
