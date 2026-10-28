@@ -1557,6 +1557,7 @@ class TaskbarWidget(BaseWidget):
             if hwnd in members:
                 members.remove(hwnd)
             if members:
+                self._animating_widgets.pop(hwnd, None)
                 self.pin_manager.running_pinned.pop(hwnd, None)
                 self.hwnd_to_widget.pop(hwnd, None)
                 self.window_buttons.pop(hwnd, None)
