@@ -18,6 +18,7 @@ from .snippets import *
 from .ssh import *
 from .system_commands import *
 from .unit_converter import *
+from .volume import *
 from .vscode import *
 from .web_search import *
 from .window_switcher import *
