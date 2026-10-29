@@ -124,7 +124,7 @@ class SystemCommandsProvider(BaseProvider):
                 ProviderResult(
                     title=cmd["title"],
                     description=cmd["description"],
-                    icon_char=cmd["icon"],
+                    icon_path=cmd["icon"],
                     provider=self.name,
                     action_data={"action": cmd["action"]},
                 )
@@ -150,7 +150,7 @@ class SystemCommandsProvider(BaseProvider):
                         ProviderResult(
                             title=cmd["title"],
                             description=cmd["description"],
-                            icon_char=cmd["icon"],
+                            icon_path=cmd["icon"],
                             provider=self.name,
                             action_data={"action": cmd["action"]},
                         ),

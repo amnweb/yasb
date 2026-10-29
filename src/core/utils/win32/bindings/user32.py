@@ -24,6 +24,7 @@ from ctypes.wintypes import (
     HINSTANCE,
     HMENU,
     HMONITOR,
+    HRGN,
     HWND,
     INT,
     LPARAM,
@@ -158,6 +159,15 @@ user32.SetWindowPos.restype = c_int
 
 user32.DestroyWindow.argtypes = [HWND]
 user32.DestroyWindow.restype = c_int
+
+user32.SetWindowRgn.argtypes = [HWND, HRGN, BOOL]
+user32.SetWindowRgn.restype = c_int
+
+user32.SetLayeredWindowAttributes.argtypes = [HWND, DWORD, BYTE, DWORD]
+user32.SetLayeredWindowAttributes.restype = BOOL
+
+user32.SetWindowDisplayAffinity.argtypes = [HWND, DWORD]
+user32.SetWindowDisplayAffinity.restype = BOOL
 
 user32.RegisterWindowMessageW.argtypes = [LPCWSTR]
 user32.RegisterWindowMessageW.restype = UINT

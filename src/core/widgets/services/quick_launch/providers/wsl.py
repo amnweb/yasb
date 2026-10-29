@@ -205,7 +205,7 @@ class WslProvider(BaseProvider):
                 ProviderResult(
                     title="Loading WSL distributions...",
                     description="Please wait",
-                    icon_char=ICON_WSL,
+                    icon_path=ICON_WSL,
                     provider=self.name,
                     is_loading=True,
                 )
@@ -217,7 +217,7 @@ class WslProvider(BaseProvider):
                 ProviderResult(
                     title="WSL is not installed",
                     description="Press Enter to run: wsl --install",
-                    icon_char=ICON_WARNING,
+                    icon_path=ICON_WARNING,
                     provider=self.name,
                     action_data={"action": "wsl_install"},
                 )
@@ -229,7 +229,7 @@ class WslProvider(BaseProvider):
                 ProviderResult(
                     title="WSL timed out",
                     description="WSL is installed but not responding",
-                    icon_char=ICON_WARNING,
+                    icon_path=ICON_WARNING,
                     provider=self.name,
                 )
             ]
@@ -240,7 +240,7 @@ class WslProvider(BaseProvider):
                 ProviderResult(
                     title="WSL error",
                     description=self._load_error,
-                    icon_char=ICON_WARNING,
+                    icon_path=ICON_WARNING,
                     provider=self.name,
                 )
             ]
@@ -266,7 +266,7 @@ class WslProvider(BaseProvider):
                 ProviderResult(
                     title=d["name"],
                     description=f"{state}{version_part}{badge} · Enter to {enter_hint}",
-                    icon_char=ICON_WSL_RUNNING if is_running else ICON_WSL_STOPPED,
+                    icon_path=ICON_WSL_RUNNING if is_running else ICON_WSL_STOPPED,
                     provider=self.name,
                     id=f"installed:{d['name']}",
                     is_loading=is_pending,
@@ -284,7 +284,7 @@ class WslProvider(BaseProvider):
                 ProviderResult(
                     title="No distributions installed",
                     description="Install one from the list below",
-                    icon_char=ICON_WSL,
+                    icon_path=ICON_WSL,
                     provider=self.name,
                 )
             )
@@ -300,7 +300,7 @@ class WslProvider(BaseProvider):
                         ProviderResult(
                             title=d["name"],
                             description=d["friendly"],
-                            icon_char=ICON_WSL_ONLINE,
+                            icon_path=ICON_WSL_ONLINE,
                             provider=self.name,
                             id=f"online:{d['name']}",
                             action_data={"action": "install", "name": d["name"]},
@@ -312,7 +312,7 @@ class WslProvider(BaseProvider):
                 ProviderResult(
                     title="No WSL distributions found",
                     description="Try a different search term",
-                    icon_char=ICON_WSL,
+                    icon_path=ICON_WSL,
                     provider=self.name,
                 )
             ]

@@ -5,8 +5,11 @@ import time
 import urllib.error
 from typing import Any
 
+from PyQt6.QtGui import QGuiApplication
+
 from core.utils.shell_utils import shell_open
 from core.utils.time_utils import get_relative_time
+from core.widgets.services.github import auth
 from core.widgets.services.github.api import GitHubDataManager
 from core.widgets.services.github.auth import get_saved_token
 from core.widgets.services.quick_launch.base_provider import (
@@ -95,7 +98,11 @@ class GithubNotificationsProvider(BaseProvider):
         self._fetch_error: str | None = None
         self._cache_time: float = 0
         self._cache_ttl: float = 60  # Keep cache for 60 seconds after popup closes
-        self._auth_dialog = None
+        # A sign-in in progress: waiting for a code, then the code the user enters on GitHub
+        self._signing_in = False
+        self._sign_in_code: dict[str, str] | None = None
+        self._sign_in_error = ""
+        self._sign_in_session = 0
 
     def _resolve_token(self) -> str:
         """Resolve the effective token at call time so OAuth tokens are picked up immediately."""
@@ -150,16 +157,8 @@ class GithubNotificationsProvider(BaseProvider):
 
     def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
         token = self._resolve_token()
-        if not token:
-            return [
-                ProviderResult(
-                    title="Sign in to GitHub",
-                    description="Click to authorize YASB via GitHub OAuth",
-                    icon_char=ICON_GITHUB,
-                    provider=self.name,
-                    action_data={"action": "oauth"},
-                )
-            ]
+        if not token or self._signing_in:
+            return self._sign_in_results()
 
         # Invalidate stale cache
         if (
@@ -179,7 +178,7 @@ class GithubNotificationsProvider(BaseProvider):
                 ProviderResult(
                     title="Fetching notifications...",
                     description="Loading from GitHub",
-                    icon_char=ICON_GITHUB,
+                    icon_path=ICON_GITHUB,
                     provider=self.name,
                     is_loading=True,
                 )
@@ -191,7 +190,7 @@ class GithubNotificationsProvider(BaseProvider):
                 ProviderResult(
                     title="Failed to fetch notifications",
                     description=self._fetch_error,
-                    icon_char=ICON_GITHUB,
+                    icon_path=ICON_GITHUB,
                     provider=self.name,
                 )
             ]
@@ -249,7 +248,7 @@ class GithubNotificationsProvider(BaseProvider):
                 ProviderResult(
                     title="No notifications",
                     description="You're all caught up!",
-                    icon_char=ICON_GITHUB,
+                    icon_path=ICON_GITHUB,
                     provider=self.name,
                 )
             ]
@@ -259,28 +258,22 @@ class GithubNotificationsProvider(BaseProvider):
     def execute(self, result: ProviderResult) -> bool | None:
         data = result.action_data
 
-        # No token open the OAuth dialog
-        if data.get("action") == "oauth":
-            if self._auth_dialog is not None:
-                self._auth_dialog.activateWindow()
-                return True
-
-            from core.widgets.services.github.auth_dialog import GitHubAuthDialog
-
-            def _on_auth_completed(token: str):
-                GitHubDataManager.set_token(token)
-                self._cached_data = None
-                if self.request_refresh:
-                    self.request_refresh()
-
-            def _on_dialog_closed():
-                self._auth_dialog = None
-
-            self._auth_dialog = GitHubAuthDialog()
-            self._auth_dialog.auth_completed.connect(_on_auth_completed)
-            self._auth_dialog.finished.connect(_on_dialog_closed)
-            self._auth_dialog.show()
-            return True
+        match data.get("action"):
+            case "sign_in":
+                self._start_sign_in()
+                return False
+            case "enter_code" if self._sign_in_code:
+                clipboard = QGuiApplication.clipboard()
+                if clipboard is not None:
+                    clipboard.setText(self._sign_in_code["user_code"])
+                shell_open(self._sign_in_code["verification_uri"])
+                return None
+            case "cancel_sign_in":
+                self._sign_in_session += 1
+                self._signing_in, self._sign_in_code = False, None
+                return False
+            case _:
+                pass
 
         url = data.get("url", "")
         notification_id = data.get("notification_id", "")
@@ -317,9 +310,7 @@ class GithubNotificationsProvider(BaseProvider):
         if action_id == "copy_url":
             url = data.get("url", "")
             if url:
-                from PyQt6.QtWidgets import QApplication
-
-                clipboard = QApplication.clipboard()
+                clipboard = QGuiApplication.clipboard()
                 if clipboard:
                     clipboard.setText(url)
             return ProviderMenuActionResult()
@@ -349,6 +340,80 @@ class GithubNotificationsProvider(BaseProvider):
             return ProviderMenuActionResult(refresh_results=True)
 
         return ProviderMenuActionResult()
+
+    def _sign_in_results(self) -> list[ProviderResult]:
+        if self._sign_in_code:
+            return [
+                ProviderResult(
+                    title=f"Enter {self._sign_in_code['user_code']} on GitHub",
+                    description="Copies the code and opens GitHub, then this list updates on its own",
+                    icon_path=ICON_GITHUB,
+                    provider=self.name,
+                    action_data={"action": "enter_code"},
+                ),
+                ProviderResult(
+                    title="Cancel sign-in",
+                    icon_path=ICON_GITHUB,
+                    provider=self.name,
+                    action_data={"action": "cancel_sign_in"},
+                ),
+            ]
+        if self._signing_in:
+            return [
+                ProviderResult(
+                    title="Connecting to GitHub...",
+                    icon_path=ICON_GITHUB,
+                    provider=self.name,
+                    is_loading=True,
+                )
+            ]
+        return [
+            ProviderResult(
+                title="Sign in to GitHub",
+                description=self._sign_in_error or "Authorize YASB with a code on GitHub",
+                icon_path=ICON_GITHUB,
+                provider=self.name,
+                action_data={"action": "sign_in"},
+            )
+        ]
+
+    def _start_sign_in(self) -> None:
+        self._sign_in_session += 1
+        session = self._sign_in_session
+        self._signing_in, self._sign_in_code, self._sign_in_error = True, None, ""
+
+        def refresh() -> None:
+            if self.request_refresh:
+                self.request_refresh()
+
+        def finish(error: str = "") -> None:
+            if session == self._sign_in_session:
+                self._signing_in, self._sign_in_code, self._sign_in_error = False, None, error
+                self._cached_data = None
+                refresh()
+
+        def run() -> None:
+            try:
+                code = auth.request_device_code()
+            except RuntimeError as e:
+                finish(str(e))
+                return
+            if "device_code" not in code:
+                finish(code.get("error_description") or "Could not start GitHub sign-in.")
+                return
+            if session != self._sign_in_session:
+                return
+            self._sign_in_code = {"user_code": code["user_code"], "verification_uri": code["verification_uri"]}
+            refresh()
+            auth.poll_for_token(
+                code["device_code"],
+                int(code.get("interval", 5)),
+                lambda _token: finish(),
+                finish,
+                lambda: session != self._sign_in_session,
+            )
+
+        threading.Thread(target=run, daemon=True).start()
 
     def get_query_text(self, text: str) -> str:
         if self.prefix and text.strip().startswith(self.prefix):
@@ -390,7 +455,7 @@ class GithubNotificationsProvider(BaseProvider):
         return ProviderResult(
             title=f"{ntype}: {title}" if ntype else title,
             description=desc,
-            icon_char=icon_svg,
+            icon_path=icon_svg,
             provider=self.name,
             action_data={
                 "url": notification.get("url", ""),

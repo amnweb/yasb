@@ -1,0 +1,4 @@
+module Yasb.Common
+
+AlertDialog 1.0 AlertDialog.qml
+BackdropPopup 1.0 BackdropPopup.qml

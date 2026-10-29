@@ -339,7 +339,7 @@ class SettingsProvider(BaseProvider):
                 ProviderResult(
                     title=page["title"],
                     description=page["description"],
-                    icon_char=page["icon"],
+                    icon_path=page["icon"],
                     provider=self.name,
                     action_data={"uri": page["uri"]},
                 )
@@ -356,7 +356,7 @@ class SettingsProvider(BaseProvider):
                     ProviderResult(
                         title=page["title"],
                         description=page["description"],
-                        icon_char=page["icon"],
+                        icon_path=page["icon"],
                         provider=self.name,
                         action_data={"uri": page["uri"]},
                     )

@@ -79,7 +79,7 @@ class KillProcessProvider(BaseProvider):
                 ProviderResult(
                     title="Type a process name to kill",
                     description="e.g. !notepad, !chrome, kill firefox",
-                    icon_char=ICON_KILL_PROCESS,
+                    icon_path=ICON_KILL_PROCESS,
                     provider=self.name,
                 )
             ]
@@ -116,7 +116,7 @@ class KillProcessProvider(BaseProvider):
                 ProviderResult(
                     title=f"Kill {entry['name']}",
                     description=f"{count_str}, {mem_mb:.1f} MB",
-                    icon_char=ICON_KILL_PROCESS,
+                    icon_path=ICON_KILL_PROCESS,
                     provider=self.name,
                     action_data={"name": entry["name"], "pids": entry["pids"]},
                 )

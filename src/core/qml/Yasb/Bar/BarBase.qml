@@ -17,6 +17,10 @@ Item {
     property alias gradient: surface.gradient
     property alias radius: surface.radius
     property alias border: surface.border
+    // Where the backdrop blurs, as {x, y, width, height, radius} in the bar's coordinates
+    property var backdropShapes: [{ x: 0, y: 0, width: width, height: height, radius: radius }]
+    // A custom silhouette, including any edge overhang outside this item.
+    property string backdropPath: ""
 
     property int padding: 8
     property int spacing: 8

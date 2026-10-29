@@ -101,7 +101,7 @@ from core.ui.components.loader import Spinner
 from core.ui.components.text_box import TextBox
 from core.ui.theme import FONT_FAMILIES, get_tokens, is_dark
 from core.ui.views.view_base import ViewBase
-from core.utils.alert_dialog import raise_info_alert
+from core.utils.alert_dialog import show_alert
 from core.utils.markdown import md_to_html, preprocess_readme
 from core.utils.shell_utils import shell_open
 from core.utils.single_instance import wait_for_bar_exit
@@ -2592,11 +2592,10 @@ class DetailsPage(QWidget):
         btn.setEnabled(True)
 
     def _on_install_incompatible(self, details: str) -> None:
-        raise_info_alert(
+        show_alert(
             title="Theme not compatible",
-            msg="This theme can't be loaded by your YASB version. Please update YASB and try again.",
-            informative_msg="For more information, click 'Show Details'.",
-            additional_details=details,
+            message="This theme can't be loaded by your YASB version. Please update YASB and try again.",
+            details=details,
         )
 
     def _on_install_failed(self, error: str) -> None:

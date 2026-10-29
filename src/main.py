@@ -2,18 +2,20 @@ import asyncio
 import logging
 import signal
 import sys
+import traceback
 from sys import argv
 from types import FrameType, TracebackType
 
 import qasync  # pyright: ignore[reportMissingTypeStubs]
+from PyQt6.QtCore import QEventLoop
 
 from core.application import YASBApplication
 from core.bar.manager import BarManager
-from core.config import is_first_run, load_config
-from core.events.service import EventService
+from core.config import ConfigError, is_first_run, load_config
 from core.log import enable_debug_logging, init_logger
 from core.tray import SystemTrayManager
 from core.ui.views.welcome import run_setup_wizard
+from core.utils.alert_dialog import close_alerts, show_alert
 from core.utils.controller import start_cli_server
 from core.utils.single_instance import single_instance_lock
 from core.utils.update_service import get_update_service, start_update_checker
@@ -31,6 +33,13 @@ def main():
     loop = qasync.QEventLoop(app)
     try:
         loop.run_until_complete(main_async(app))  # pyright: ignore[reportUnknownMemberType]
+    except Exception as e:
+        logging.exception("YASB stopped while starting")
+        closed = QEventLoop()
+        show_alert("YASB stopped while starting", str(e) or type(e).__name__, traceback.format_exc(), closed.quit)
+        closed.exec()
+        close_alerts()
+        sys.exit(1)
     finally:
         loop.close()
 
@@ -64,7 +73,15 @@ async def main_async(app: YASBApplication):
         pass
 
     # Initialize configuration early after the single instance check
-    config = load_config()
+    try:
+        config = load_config()
+    except ConfigError as e:
+        logging.error("YASB could not start: %s\n%s", e, e.details)
+        closed = asyncio.Event()
+        show_alert("YASB could not start", str(e), e.details, closed.set)
+        await closed.wait()
+        app.quit()
+        return
 
     if config.debug:
         enable_debug_logging()
@@ -118,10 +135,9 @@ if __name__ == "__main__":
     load_env()
     set_qt_quick_defaults()
 
+    # PyQt drops the callback that raised and YASB keeps running; exiting here would skip the shutdown
     def exception_hook(_exctype: type, value: BaseException, _traceback: TracebackType | None):
-        EventService().clear()
         logging.error("Unhandled exception", exc_info=value)
-        sys.exit(1)
 
     sys.excepthook = exception_hook
 

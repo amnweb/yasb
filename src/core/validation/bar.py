@@ -1,4 +1,3 @@
-import re
 from typing import Annotated, Literal, Self
 
 from pydantic import Field, StringConstraints, field_validator, model_validator
@@ -16,21 +15,6 @@ class BarMargin(CustomBaseModel):
     left: int = 0
     bottom: int = 0
     right: int = 0
-
-
-class BarBackdrop(CustomBaseModel):
-    type: Literal["none", "blur", "acrylic", "mica", "mica-alt"] = "none"
-    corners: Literal["square", "round", "small"] = "square"
-    border: str = "system"
-
-    @field_validator("border")
-    @classmethod
-    def validate_border(cls, v: str) -> str:
-        if v.lower() in ("system", "none"):
-            return v.lower()
-        if re.fullmatch(r"#[0-9A-Fa-f]{6}", v):
-            return v
-        raise ValueError("Border must be 'system', 'none' or a hex color like '#RRGGBB'")
 
 
 class BarAnimation(CustomBaseModel):
@@ -51,7 +35,7 @@ class BarConfig(CustomBaseModel):
     always_on_top: bool = False
     hide_on_fullscreen: bool = False
     auto_hide: Literal["never", "always", "maximized"] = "never"
-    backdrop: BarBackdrop = BarBackdrop()
+    backdrop: bool = False
     animation: BarAnimation = BarAnimation()
     widgets: dict[SlotName, list[WidgetName]] = {}
 

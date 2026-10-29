@@ -4,12 +4,12 @@ from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtWidgets import QApplication
 
-from core.bar.manager import QML_IMPORT_PATH
 from core.qml_types import register_qml_types
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from core.widgets.services.cpu import monitor as monitor_module
 from core.widgets.services.cpu.cpu_api import CpuData, CpuFreq
 from core.widgets.services.cpu.monitor import CpuMonitor
+from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 
 SAMPLE = CpuData(CpuFreq(3000.0, 0.0, 4000.0), 42.5, [40.0, 45.0], 1, 2)

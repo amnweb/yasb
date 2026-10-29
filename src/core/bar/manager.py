@@ -1,9 +1,8 @@
 import logging
-import os
 from contextlib import suppress
 from pathlib import Path
 
-from PyQt6.QtCore import QCoreApplication, QEvent, QObject, Qt, QTimer, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QCoreApplication, QEvent, QObject, Qt, QTimer, QUrl, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QGuiApplication, QScreen
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 
@@ -13,13 +12,14 @@ from core.bar.revisions import Revisions, path_key
 from core.bar.window import BAR_QML, BarWindow, is_dark_scheme
 from core.config import get_config
 from core.qml_types import register_qml_types
+from core.utils.alert_dialog import show_alert
 from core.utils.controller import reload_application
 from core.utils.global_state import GlobalState
 from core.utils.icons.image_provider import ICON_PROVIDER, IconImageProvider
+from core.utils.win32.composition import shutdown_composition
 from core.validation.config import YasbConfig
-from settings import SCRIPT_PATH
+from settings import QML_IMPORT_PATH
 
-QML_IMPORT_PATH = os.path.join(SCRIPT_PATH, "core", "qml")
 QML_RELOAD_DELAY_MS = 200
 
 
@@ -49,7 +49,7 @@ class BarManager(QObject):
         if not isinstance(app, QGuiApplication):
             raise RuntimeError("BarManager requires a running QGuiApplication")
         self._app = app
-        self._app.aboutToQuit.connect(self.close_bars)
+        self._app.aboutToQuit.connect(self.shutdown)
         self._app.screenAdded.connect(self.on_screens_update)
         self._app.screenRemoved.connect(self.on_screens_update)
         self.config_modified.connect(self.on_config_modified)
@@ -93,19 +93,21 @@ class BarManager(QObject):
         self._changed_qml.add(path)
         self._qml_timer.start()
 
-    def _compile_errors(self, path: Path) -> list[str]:
-        component = QQmlComponent(self.engine, self.revisions.next_url(path))
+    def _compile_errors(self, url: QUrl) -> list[str]:
+        component = QQmlComponent(self.engine, url)
         return [error.toString() for error in component.errors()] if component.isError() else []
 
     def _reload_changed_qml(self) -> None:
         paths = [Path(path) for path in self._changed_qml]
         self._changed_qml.clear()
         changed: set[str] = set()
+        failed: list[str] = []
         for path in paths:
             if not path.is_file():
                 self.revisions.bump(path)
-            elif errors := self._compile_errors(path):
-                logging.error("%s has errors, bars keep the current version:\n%s", path, "\n".join(errors))
+            elif errors := self._compile_errors(self.revisions.next_url(path)):
+                logging.error("%s has errors, bars keep the current version: %s", path, "; ".join(errors))
+                failed.extend(errors)
                 continue
             else:
                 self.revisions.accept(path)
@@ -117,15 +119,35 @@ class BarManager(QObject):
                 reloaded = True
         if reloaded:
             self.hotkeys.restart(self.bars)
+        if failed:
+            show_alert(
+                title="A QML file has errors",
+                message="The bars keep the version they show now. Fix the file and save it again.",
+                details="\n".join(failed),
+            )
+
+    def _report_widget_errors(self) -> None:
+        paths = {
+            file.path
+            for bar in self.bars
+            for files in widget_files.bar_widget_files(bar.config).values()
+            for file in files
+        }
+        errors = [error for path in sorted(paths) for error in self._compile_errors(self.revisions.url(path))]
+        if errors:
+            details = "\n".join(errors)
+            logging.error("Some widgets have errors and were left out of the bars:\n%s", details)
+            show_alert(
+                title="Some widgets could not load",
+                message="Their QML files have errors, so the bars show them without these widgets.",
+                details=details,
+            )
 
     def qml_folders(self) -> set[Path]:
         return {bar.bar_file.parent for bar in self.bars if bar.bar_file != BAR_QML}
 
     def _on_color_scheme_changed(self, scheme: Qt.ColorScheme) -> None:
-        dark = scheme == Qt.ColorScheme.Dark
-        GlobalState.set_dark(dark)
-        for bar in self.bars:
-            bar.apply_backdrop(dark)
+        GlobalState.set_dark(scheme == Qt.ColorScheme.Dark)
 
     def _find_screen(self, name: str) -> QScreen | None:
         primary = QGuiApplication.primaryScreen()
@@ -156,12 +178,24 @@ class BarManager(QObject):
                 self.bars.append(BarWindow(self.engine, name, screen, bar, self.revisions))
 
         widget_files.report_undefined_widgets(self.config)
+        self._report_widget_errors()
         self.hotkeys.restart(self.bars)
+
+    @pyqtSlot()
+    def shutdown(self) -> None:
+        """Close bars before releasing their shared composition runtime."""
+        self._qml_timer.stop()
+        self.close_bars()
+        # Qt threads that load images can still call or delete Python objects while the engine goes,
+        # which hangs for good once Python itself is shutting down
+        self.engine.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+        shutdown_composition()
 
     def close_bars(self) -> None:
         self.hotkeys.stop()
         for bar in self.bars:
             bar.close()
         self.bars.clear()
-        # The QML engine goes with this manager, so the bars' QML items are deleted while it still exists
+        # The bars' QML items must be deleted while their engine still exists
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)

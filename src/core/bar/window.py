@@ -1,30 +1,27 @@
 import logging
 import math
-import os
 import uuid
-from collections.abc import Generator
-from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import override
 
-from PyQt6.QtCore import QObject, QRect, QSizeF, Qt, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QCloseEvent, QColor, QGuiApplication, QRegion, QScreen
+from PyQt6.QtCore import QObject, QPointF, QRect, QRectF, QSizeF, Qt, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt6.QtGui import QCloseEvent, QColor, QGuiApplication, QMouseEvent, QRegion, QScreen
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtQuick import QQuickItem, QQuickWindow
 
-from core import backdrop_new
 from core.bar.animation import BarAnimationManager
 from core.bar.appbar import AppBarManager
 from core.bar.autohide import AutoHideManager, MaximizedWindowWatcher
 from core.bar.geometry import bar_geometry, bar_length
 from core.bar.revisions import Revisions, path_key
 from core.events.service import EventService
-from core.utils.alert_dialog import raise_info_alert
+from core.utils.alert_dialog import show_alert
 from core.utils.controller import exit_application, reload_application
 from core.utils.qml import qml_property
 from core.utils.win32 import app_bar
 from core.utils.win32.bindings.user32 import MonitorFromWindow
+from core.utils.win32.composition import BackdropWindow
 from core.validation.bar import BarConfig
 from core.widget_files import bar_widget_files
 from settings import APP_BAR_TITLE, DEFAULT_CONFIG_DIRECTORY, SCRIPT_PATH
@@ -46,17 +43,6 @@ APP_BAR_EDGES = {
 OVERHANG_SIDES = {"top": (0, 0, 0, 1), "bottom": (0, -1, 0, 0), "left": (0, 0, 1, 0), "right": (-1, 0, 0, 0)}
 
 
-@contextmanager
-def _without_redirection_surface() -> Generator[None]:
-    # Qt reads this when it creates a native window. Without the GDI redirection surface some systems no
-    # longer paint an opaque layer over the backdrop, but QWidget windows created meanwhile would draw nothing.
-    os.environ["QT_QPA_DISABLE_REDIRECTION_SURFACE"] = "1"
-    try:
-        yield
-    finally:
-        del os.environ["QT_QPA_DISABLE_REDIRECTION_SURFACE"]
-
-
 def is_dark_scheme() -> bool:
     hints = QGuiApplication.styleHints()
     return hints is not None and hints.colorScheme() == Qt.ColorScheme.Dark
@@ -64,7 +50,6 @@ def is_dark_scheme() -> bool:
 
 class BarContext(QObject):
     autoHideChanged = pyqtSignal()
-    backdropChanged = pyqtSignal()
 
     def __init__(self, window: BarWindow):
         super().__init__(window)
@@ -104,15 +89,6 @@ class BarContext(QObject):
 
     autoHide = pyqtProperty(bool, _get_auto_hide, _set_auto_hide, notify=autoHideChanged)
 
-    def _get_backdrop(self) -> str:
-        return self._window.backdrop
-
-    def _set_backdrop(self, backdrop: str) -> None:
-        if backdrop != self._window.backdrop:
-            self._window.set_backdrop(backdrop)
-
-    backdrop = pyqtProperty(str, _get_backdrop, _set_backdrop, notify=backdropChanged)
-
     @pyqtSlot()
     def screenshot(self) -> None:
         QTimer.singleShot(SCREENSHOT_DELAY_MS, self._window.save_screenshot)
@@ -128,6 +104,8 @@ class BarContext(QObject):
 
 class BarWindow(QQuickWindow):
     cli_requested = pyqtSignal(str, str)
+    # A mouse press on the bar, in window coordinates
+    pressed = pyqtSignal(QPointF)
 
     def __init__(
         self,
@@ -139,6 +117,10 @@ class BarWindow(QQuickWindow):
     ):
         super().__init__()
         self._engine = engine
+        # A child of the engine, so a trim still pending when the engine is deleted goes with it
+        self._trim_timer = QTimer(engine)
+        self._trim_timer.setSingleShot(True)
+        self._trim_timer.timeout.connect(engine.trimComponentCache)
         self.revisions = revisions or Revisions()
         self.name = name
         self.config = config
@@ -154,7 +136,7 @@ class BarWindow(QQuickWindow):
         self.shown_file: Path | None = None
         self.load_errors: list[str] = []
         self.overhang = 0
-        self.backdrop: str = config.backdrop.type
+        self._backdrop_window: BackdropWindow | None = None
         self.bar_file = self._resolve_bar_file()
 
         flags = Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint
@@ -168,13 +150,17 @@ class BarWindow(QQuickWindow):
         self.heightChanged.connect(self._fit_item)
         self._load_bar()
 
-        with _without_redirection_surface():
-            self.create()
+        self.create()
         self.hwnd = int(self.winId())
         self.monitor_hwnd = MonitorFromWindow(self.hwnd)
 
         self.reposition()
-        self.apply_backdrop(is_dark_scheme())
+        if config.backdrop:
+            try:
+                self._backdrop_window = BackdropWindow(self)
+                self._fit_backdrop()
+            except OSError:
+                logging.exception("Could not create the backdrop for bar %s", self.name)
         self._animation = BarAnimationManager(self, self)
 
         if self.hide_on_fullscreen or config.reserve_space:
@@ -219,17 +205,18 @@ class BarWindow(QQuickWindow):
         old_item, old_context = self.item, self.context
         self.item, self.context, self.shown_file = item, context, path
         item.setParentItem(self.contentItem())
-        self._fit_item()
         if self.config.length == "auto":
             (item.implicitHeightChanged if self.config.vertical else item.implicitWidthChanged).connect(self.reposition)
         if item.property("edgeRadius") is not None:
             getattr(item, "edgeRadiusChanged").connect(self.reposition)
+        getattr(item, "backdropShapesChanged").connect(self._fit_backdrop)
+        getattr(item, "backdropPathChanged").connect(self._fit_backdrop)
         if old_item is not None:
             old_item.setParentItem(None)
             old_item.deleteLater()
         if old_context is not None:
             old_context.deleteLater()
-        QTimer.singleShot(0, self._engine.trimComponentCache)
+        self._trim_timer.start()
         self._warn_about_missing_slots(path)
 
     def _fit_item(self) -> None:
@@ -242,6 +229,24 @@ class BarWindow(QQuickWindow):
             self.item.setSize(QSizeF(self.width() - overhang, self.height()))
         else:
             self.item.setSize(QSizeF(self.width(), self.height() - overhang))
+        self._fit_backdrop()
+
+    def _fit_backdrop(self) -> None:
+        item = self.item
+        if self._backdrop_window is not None and item is not None:
+            try:
+                shapes = [
+                    (QRectF(shape["x"], shape["y"], shape["width"], shape["height"]), float(shape["radius"]))
+                    for shape in item.property("backdropShapes").toVariant()
+                ]
+            except AttributeError, KeyError, TypeError, ValueError:
+                logging.warning("Bar %s has invalid backdropShapes, so it has no blur", self.name)
+                shapes = []
+            self._backdrop_window.set_shapes(
+                QRectF(item.x(), item.y(), item.width(), item.height()),
+                shapes,
+                str(item.property("backdropPath") or ""),
+            )
 
     def _load_bar(self) -> None:
         path = self.bar_file
@@ -249,11 +254,10 @@ class BarWindow(QQuickWindow):
         if item is None and path != BAR_QML:
             details = "\n".join(errors)
             logging.error("Bar %s could not load %s, using the built-in bar:\n%s", self.name, path, details)
-            raise_info_alert(
+            show_alert(
                 title=f"Failed to load the bar file of bar '{self.name}'",
-                msg="YASB is showing its built-in bar instead.",
-                informative_msg="Please click 'Show Details' to find out more.",
-                additional_details=details,
+                message="YASB is showing its built-in bar instead.",
+                details=details,
             )
             path = BAR_QML
             item, context, errors = self._create(path)
@@ -273,6 +277,11 @@ class BarWindow(QQuickWindow):
             details = "\n".join(errors)
             logging.error(
                 "Bar %s kept its current content, %s could not be loaded:\n%s", self.name, self.bar_file, details
+            )
+            show_alert(
+                title=f"Failed to reload the bar file of bar '{self.name}'",
+                message="The bar keeps the version it shows now.",
+                details=details,
             )
             return
         self._show(item, context, path)
@@ -353,16 +362,6 @@ class BarWindow(QQuickWindow):
         self.update_app_bar()
         if self.autohide_manager is not None and self.autohide_manager.is_enabled():
             self.autohide_manager.setup_detection_zone()
-
-    def apply_backdrop(self, dark: bool) -> None:
-        settings = self.config.backdrop
-        backdrop_new.apply_backdrop(self.hwnd, self.backdrop, settings.corners, settings.border, dark)
-
-    def set_backdrop(self, backdrop: str) -> None:
-        self.backdrop = backdrop
-        backdrop_new.set_backdrop(self.hwnd, backdrop)
-        if self.context is not None:
-            self.context.backdropChanged.emit()
 
     def update_app_bar(self) -> None:
         margin = self.config.margin
@@ -455,10 +454,21 @@ class BarWindow(QQuickWindow):
             self.autohide_manager.cleanup()
         self._animation.cleanup()
         self.remove_app_bar()
+        if self._backdrop_window is not None:
+            self._backdrop_window.close()
+            self._backdrop_window = None
         if self.item is not None:
             self.item.setParentItem(None)
             self.item.deleteLater()
             self.item = None
+
+    @override
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        # WS_EX_NOACTIVATE keeps a click on the bar from taking focus, so popups that close when they lose
+        # focus learn about bar clicks from this signal
+        if a0 is not None:
+            self.pressed.emit(a0.position())
+        super().mousePressEvent(a0)
 
     @override
     def closeEvent(self, a0: QCloseEvent | None) -> None:

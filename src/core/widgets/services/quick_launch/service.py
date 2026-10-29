@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 from PyQt6.QtCore import QFileSystemWatcher, QObject, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 from winrt.windows.applicationmodel import PackageCatalog
 
 from core.utils.icons.service import IconService
@@ -99,7 +99,7 @@ class QuickLaunchService(QObject):
         self._query_worker.start()
         self._query_counter = 0
 
-        app_inst = QApplication.instance()
+        app_inst = QGuiApplication.instance()
         if app_inst:
             app_inst.aboutToQuit.connect(self._stop_workers)
 
@@ -130,7 +130,7 @@ class QuickLaunchService(QObject):
         self._providers.clear()
         apps_enabled = False
         for name, cls in PROVIDER_REGISTRY.items():
-            provider_cfg = providers_config.get(name, {})
+            provider_cfg = dict(providers_config.get(name, {}))
             if not provider_cfg.get("enabled", True):
                 continue
             if name == "apps":
@@ -195,7 +195,7 @@ class QuickLaunchService(QObject):
                 break
 
     def _preload_icons(self):
-        screen = QApplication.primaryScreen()
+        screen = QGuiApplication.primaryScreen()
         dpr = screen.devicePixelRatio() if screen else 1.0
         IconService.instance().preload((app_icon_source(path) for _, path, _ in self._apps), self._icon_size, dpr)
 

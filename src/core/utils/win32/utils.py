@@ -181,13 +181,13 @@ def get_process_window(pid: int) -> int:
 def _find_package(full_name: str) -> Package | None:
     # The direct lookup is much faster; listing every package is the fallback when it fails
     try:
-        package = PackageManager().find_package_by_user_security_id_package_full_name("", full_name)
+        package = PackageManager().find_package_for_user("", full_name)
         if package:
             return package
     except Exception as e:
         logging.debug("Direct UWP lookup failed for %s: %s", full_name, e)
     try:
-        for package in PackageManager().find_packages_by_user_security_id(""):
+        for package in PackageManager().find_packages_for_user(""):
             if package.id.full_name == full_name:
                 return package
     except Exception as e:
@@ -239,7 +239,7 @@ def get_app_name_from_aumid(aumid: str) -> str | None:
     """The Store app name of an AUMID, such as a Microsoft Store app or an Edge PWA."""
     family = aumid.split("!")[0]
     try:
-        for package in PackageManager().find_packages_by_user_security_id(""):
+        for package in PackageManager().find_packages_for_user(""):
             with suppress(Exception):
                 if package.id.family_name == family and (name := _package_app_name(package, aumid)):
                     return name

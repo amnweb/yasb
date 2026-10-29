@@ -15,7 +15,7 @@ from threading import Event
 from typing import Any
 
 from PyQt6.QtCore import QStandardPaths, QTimer
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.utils.shell_utils import shell_open
 from core.utils.win32.bindings.everything import (
@@ -667,7 +667,7 @@ class FileSearchProvider(BaseProvider):
                 ProviderResult(
                     title="Search files and folders",
                     description=f"Backend: {backend_label}",
-                    icon_char=ICON_SEARCH,
+                    icon_path=ICON_SEARCH,
                     provider=self.name,
                 )
             ]
@@ -681,7 +681,7 @@ class FileSearchProvider(BaseProvider):
                 ProviderResult(
                     title="No search backend available",
                     description="Install Everything or enable Windows Search indexer",
-                    icon_char=ICON_SEARCH,
+                    icon_path=ICON_SEARCH,
                     provider=self.name,
                 )
             ]
@@ -716,7 +716,7 @@ class FileSearchProvider(BaseProvider):
                 ProviderResult(
                     title=name,
                     description=description,
-                    icon_char=_get_file_icon(name, is_folder),
+                    icon_path=_get_file_icon(name, is_folder),
                     provider=self.name,
                     action_data={"path": path, "is_folder": is_folder},
                     preview=preview,
@@ -793,7 +793,7 @@ class FileSearchProvider(BaseProvider):
             return ProviderMenuActionResult(close_popup=True)
 
         if action_id == "copy_path":
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(path)
             return ProviderMenuActionResult()
@@ -872,7 +872,7 @@ class FileSearchProvider(BaseProvider):
                 ProviderResult(
                     title="Everything is not running",
                     description="Click to launch Everything",
-                    icon_char=ICON_WARNING,
+                    icon_path=ICON_WARNING,
                     provider=self.name,
                     action_data={"action": "launch_everything"},
                 )
@@ -881,7 +881,7 @@ class FileSearchProvider(BaseProvider):
             ProviderResult(
                 title="Everything is not installed",
                 description="Click to download from voidtools.com",
-                icon_char=ICON_WARNING,
+                icon_path=ICON_WARNING,
                 provider=self.name,
                 action_data={"action": "install_everything"},
             )

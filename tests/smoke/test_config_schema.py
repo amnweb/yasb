@@ -40,8 +40,7 @@ REJECTED: dict[str, dict[str, Any]] = {
     "path_in_slot_name": {"bars": {"main": {"widgets": {"../left": ["clock"]}}}},
     "path_in_widget_name": {"bars": {"main": {"widgets": {"left": ["../clock"]}}}},
     "widget_name_starts_with_digit": {"bars": {"main": {"widgets": {"left": ["2fa"]}}}},
-    "named_border_color": {"bars": {"main": {"backdrop": {"border": "red"}}}},
-    "border_color_with_alpha": {"bars": {"main": {"backdrop": {"border": "#ff000080"}}}},
+    "old_backdrop_settings": {"bars": {"main": {"backdrop": {"type": "acrylic"}}}},
     "unknown_length": {"bars": {"main": {"length": "wide"}}},
 }
 
@@ -50,12 +49,3 @@ REJECTED: dict[str, dict[str, Any]] = {
 def test_invalid_config_is_rejected(config: dict[str, Any]):
     with pytest.raises(ValidationError):
         YasbConfig.model_validate(config)
-
-
-@pytest.mark.parametrize(
-    ("border", "stored"),
-    [("system", "system"), ("None", "none"), ("#FF0000", "#FF0000"), ("#ff0000", "#ff0000")],
-)
-def test_backdrop_border_accepts_keywords_and_hex(border: str, stored: str):
-    config = YasbConfig.model_validate({"bars": {"main": {"backdrop": {"border": border}}}})
-    assert config.bars["main"].backdrop.border == stored

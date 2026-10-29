@@ -257,7 +257,7 @@ class ExampleProvider(BaseProvider):
                 ProviderResult(
                     title="Example provider",
                     description="Type something to search",
-                    icon_char=ICON_EXAMPLE,
+                    icon_path=ICON_EXAMPLE,
                     provider=self.name,
                 )
             ]
@@ -270,7 +270,7 @@ class ExampleProvider(BaseProvider):
                     ProviderResult(
                         title=item["title"],
                         description=item["description"],
-                        icon_char=ICON_EXAMPLE,
+                        icon_path=ICON_EXAMPLE,
                         provider=self.name,
                         action_data={"url": item["url"]},
                     )
@@ -306,9 +306,9 @@ class ExampleProvider(BaseProvider):
             shell_open(url)
             return ProviderMenuActionResult(close_popup=True)
         if action_id == "copy_url" and url:
-            from PyQt6.QtWidgets import QApplication
+            from PyQt6.QtGui import QGuiApplication
 
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(url)
             return ProviderMenuActionResult()

@@ -10,7 +10,7 @@ from threading import Event
 from typing import Any
 from xml.etree import ElementTree
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.utils.shell_utils import shell_open
 from core.utils.system import app_data_path
@@ -151,7 +151,7 @@ class HackerNewsProvider(BaseProvider):
         if action_id == "copy_url":
             url = data.get("url", "")
             if url:
-                clipboard = QApplication.clipboard()
+                clipboard = QGuiApplication.clipboard()
                 if clipboard:
                     clipboard.setText(url)
             return ProviderMenuActionResult()
@@ -170,7 +170,7 @@ class HackerNewsProvider(BaseProvider):
                 ProviderResult(
                     title=info["name"],
                     description=info["description"],
-                    icon_char=ICON_HACKER_NEWS,
+                    icon_path=ICON_HACKER_NEWS,
                     provider=self.name,
                     action_data={"_home": True, "prefix": self.prefix, "initial_text": key},
                 )
@@ -186,7 +186,7 @@ class HackerNewsProvider(BaseProvider):
                     ProviderResult(
                         title=info["name"],
                         description=info["description"],
-                        icon_char=ICON_HACKER_NEWS,
+                        icon_path=ICON_HACKER_NEWS,
                         provider=self.name,
                         action_data={"_home": True, "prefix": self.prefix, "initial_text": key},
                     )
@@ -233,7 +233,7 @@ class HackerNewsProvider(BaseProvider):
             ProviderResult(
                 title="Failed to load stories",
                 description="Check your internet connection and try again",
-                icon_char=ICON_HACKER_NEWS,
+                icon_path=ICON_HACKER_NEWS,
                 provider=self.name,
             )
         ]
@@ -301,7 +301,7 @@ class HackerNewsProvider(BaseProvider):
                 ProviderResult(
                     title=item["title"],
                     description=desc,
-                    icon_char=ICON_HACKER_NEWS,
+                    icon_path=ICON_HACKER_NEWS,
                     provider=self.name,
                     action_data={
                         "url": item["link"],

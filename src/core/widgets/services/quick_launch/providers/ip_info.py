@@ -7,7 +7,7 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
@@ -150,7 +150,7 @@ class IpInfoProvider(BaseProvider):
         data = result.action_data
         copy_text = data.get("copy")
         if copy_text is not None:
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(str(copy_text))
             return True
@@ -167,7 +167,7 @@ class IpInfoProvider(BaseProvider):
         data = result.action_data
         if action_id == "copy":
             copy_text = data.get("copy", "")
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(str(copy_text))
             return ProviderMenuActionResult(close_popup=True)
@@ -185,7 +185,7 @@ class IpInfoProvider(BaseProvider):
                 ProviderResult(
                     title=info["name"],
                     description=info["description"],
-                    icon_char=ICON_IP_INFO,
+                    icon_path=ICON_IP_INFO,
                     provider=self.name,
                     action_data={"_home": True, "prefix": self.prefix, "initial_text": key},
                 )
@@ -201,7 +201,7 @@ class IpInfoProvider(BaseProvider):
                     ProviderResult(
                         title=info["name"],
                         description=info["description"],
-                        icon_char=ICON_IP_INFO,
+                        icon_path=ICON_IP_INFO,
                         provider=self.name,
                         action_data={"_home": True, "prefix": self.prefix, "initial_text": key},
                     )
@@ -212,7 +212,7 @@ class IpInfoProvider(BaseProvider):
         return ProviderResult(
             title=title,
             description=description,
-            icon_char=ICON_IP_INFO,
+            icon_path=ICON_IP_INFO,
             provider=self.name,
             action_data={"copy": copy_text},
         )

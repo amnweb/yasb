@@ -7,7 +7,7 @@ import urllib.request
 import webbrowser
 from typing import Any
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_BINANCE
@@ -50,7 +50,7 @@ class BinanceProvider(BaseProvider):
                     ProviderResult(
                         title="Loading crypto prices...",
                         description="Fetching latest data from Binance",
-                        icon_char=ICON_BINANCE,
+                        icon_path=ICON_BINANCE,
                         provider=self.name,
                         is_loading=True,
                     )
@@ -63,7 +63,7 @@ class BinanceProvider(BaseProvider):
                     ProviderResult(
                         title="Crypto prices unavailable",
                         description=desc,
-                        icon_char=ICON_BINANCE,
+                        icon_path=ICON_BINANCE,
                         provider=self.name,
                     )
                 ]
@@ -111,7 +111,7 @@ class BinanceProvider(BaseProvider):
                 ProviderResult(
                     title=title,
                     description=f"{'Open Binance' if self._open_url else 'Copy'}",
-                    icon_char=ICON_BINANCE,
+                    icon_path=ICON_BINANCE,
                     provider=self.name,
                     action_data={
                         "pair": pair,
@@ -127,7 +127,7 @@ class BinanceProvider(BaseProvider):
                 ProviderResult(
                     title="No matching pairs",
                     description=f"No results for '{symbol}' in configured pairs",
-                    icon_char=ICON_BINANCE,
+                    icon_path=ICON_BINANCE,
                     provider=self.name,
                 )
             ]
@@ -145,7 +145,7 @@ class BinanceProvider(BaseProvider):
             url = f"https://www.binance.com/en/trade/{trade_pair}"
             webbrowser.open(url)
 
-        clipboard = QApplication.clipboard()
+        clipboard = QGuiApplication.clipboard()
         if clipboard:
             clipboard.setText(title)
         return True

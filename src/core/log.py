@@ -1,13 +1,12 @@
 import faulthandler
 import logging
-import sys
+import re
 import warnings
-from collections.abc import Callable
 from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from os.path import join
 
-from PyQt6.QtCore import QMessageLogContext, QtMsgType, qFormatLogMessage, qInstallMessageHandler
+from PyQt6.QtCore import QMessageLogContext, QtMsgType, qInstallMessageHandler
 
 from core.config import get_config_dir
 from settings import APP_NAME, BUILD_VERSION, DEFAULT_LOG_FILENAME
@@ -65,24 +64,26 @@ def _suppress_third_party_warnings():
 
 # Suppress Qt internal messages (e.g. QObject::disconnect wildcard warnings from QWebSocket)
 _QT_SUPPRESSED_PREFIXES = ("QObject::disconnect", "Could not create pixmap from")
-_original_qt_handler: Callable[[QtMsgType, QMessageLogContext, str | None], None] | None = None
+_QT_LEVELS = {
+    QtMsgType.QtDebugMsg: logging.DEBUG,
+    QtMsgType.QtInfoMsg: logging.INFO,
+    QtMsgType.QtWarningMsg: logging.WARNING,
+    QtMsgType.QtCriticalMsg: logging.ERROR,
+    QtMsgType.QtFatalMsg: logging.CRITICAL,
+}
+# Hot reload loads each QML file under a URL with its revision
+_QML_REVISION = re.compile(r"\?revision=\d+")
+_qt_logger = logging.getLogger("qt")
 
 
-def _qt_message_handler(msg_type: QtMsgType, context: QMessageLogContext, message: str | None) -> None:
-    if message and message.startswith(_QT_SUPPRESSED_PREFIXES):
+def _qt_message_handler(msg_type: QtMsgType, _context: QMessageLogContext, message: str | None) -> None:
+    if not message or message.startswith(_QT_SUPPRESSED_PREFIXES):
         return
-    if _original_qt_handler:
-        _original_qt_handler(msg_type, context, message)
-    else:
-        # qInstallMessageHandler returns None when replacing the default C++ handler.
-        formatted = qFormatLogMessage(msg_type, context, message)
-        if sys.stderr is not None:
-            sys.stderr.write(formatted + "\n")
+    _qt_logger.log(_QT_LEVELS.get(msg_type, logging.WARNING), _QML_REVISION.sub("", message))
 
 
 def _install_qt_message_filter():
-    global _original_qt_handler
-    _original_qt_handler = qInstallMessageHandler(_qt_message_handler)
+    qInstallMessageHandler(_qt_message_handler)
 
 
 def init_logger():

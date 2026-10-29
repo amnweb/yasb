@@ -1,15 +1,13 @@
 import logging
 import os
 import re
-import sys
 from os import makedirs, path
 from typing import Any, cast
 
 from pydantic import ValidationError
-from yaml import safe_load
-from yaml.parser import ParserError
+from yaml import YAMLError, safe_load
 
-from core.utils.alert_dialog import raise_info_alert
+from core.utils.alert_dialog import show_alert
 from core.utils.validation_errors import format_pydantic_errors_to_yaml
 from core.validation.config import YasbConfig
 from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME, GITHUB_URL
@@ -68,55 +66,50 @@ def parse_env(obj: Any) -> Any:
     return obj
 
 
-def get_config(show_error_dialog: bool = False) -> YasbConfig | None:
-    config_path = get_config_path()
+class ConfigError(Exception):
+    """The config can't be used: the message says why and details holds the errors."""
 
+    def __init__(self, message: str, details: str = ""):
+        super().__init__(message)
+        self.details = details
+
+
+def read_config() -> YasbConfig:
+    config_path = get_config_path()
     try:
         with open(config_path, encoding="utf-8") as yaml_stream:
             config = safe_load(yaml_stream)
-
-        if config is None:
-            config = {}
-
-        try:
-            # Parse environment variables in raw config
-            config = parse_env(config)
-
-            # Validate and normalize with Pydantic
-            validated_config = YasbConfig(**cast(dict[str, Any], config if isinstance(config, dict) else {}))
-
-            # Return as dict for compatibility with the rest of the app
-            return validated_config
-
-        except ValidationError as e:
-            validation_errors = format_pydantic_errors_to_yaml(e)
-            logging.error(
-                "The config file '%s' contains validation errors. Please fix:\n%s",
-                config_path,
-                validation_errors,
-            )
-            if show_error_dialog:
-                raise_info_alert(
-                    title="Failed to load recently updated config file.",
-                    msg=f"The file '{config_path}' contains validation error(s) and has not been loaded.",
-                    informative_msg="For more information, click 'Show Details'.",
-                    additional_details=validation_errors,
-                )
-            return None
-    except ParserError as e:
-        logging.error("The file '%s' contains Parser Error(s). Please fix:\n%s", config_path, e)
     except FileNotFoundError:
-        logging.error("The file '%s' could not be found. Does it exist?", config_path)
-    except OSError:
-        logging.error("The file '%s' could not be read. Do you have read/write permissions?", config_path)
+        raise ConfigError(f"The file '{config_path}' could not be found.") from None
+    except OSError as e:
+        raise ConfigError(f"The file '{config_path}' could not be read.", str(e)) from None
+    except YAMLError as e:
+        raise ConfigError(f"The file '{config_path}' is not valid YAML.", str(e)) from None
+    try:
+        config = parse_env(config or {})
+        return YasbConfig(**cast(dict[str, Any], config if isinstance(config, dict) else {}))
+    except ValidationError as e:
+        raise ConfigError(
+            f"The file '{config_path}' contains validation error(s).", format_pydantic_errors_to_yaml(e)
+        ) from None
+
+
+def get_config(show_error_dialog: bool = False) -> YasbConfig | None:
+    try:
+        return read_config()
+    except ConfigError as e:
+        logging.error("%s\n%s", e, e.details)
+        if show_error_dialog:
+            show_alert(
+                title="Failed to load recently updated config file.",
+                message=f"{e} It has not been loaded.",
+                details=e.details,
+            )
+        return None
 
 
 def load_config() -> YasbConfig:
-    config = get_config()
-    if config is None:
-        logging.error("User config file could not be loaded. Exiting Application.")
-        sys.exit(1)
+    config = read_config()
     if not config.bars:
-        logging.error("No bars have been configured. Please edit the config to add a status bar.")
-        sys.exit(1)
+        raise ConfigError("No bars are configured. Add a bar to config.yaml.")
     return config

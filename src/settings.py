@@ -12,6 +12,7 @@ APP_BAR_TITLE = "YasbBar"
 APP_ID = "YASB.YetAnotherStatusBar"
 IS_FROZEN = getattr(sys, "frozen", False)
 SCRIPT_PATH = os.path.dirname(sys.executable) if IS_FROZEN else os.path.dirname(os.path.abspath(__file__))
+QML_IMPORT_PATH = os.path.join(SCRIPT_PATH, "core", "qml")
 # URLs
 GITHUB_URL = "https://github.com/amnweb/yasb"
 GITHUB_WIKI_URL = "https://github.com/amnweb/yasb/wiki"

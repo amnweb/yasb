@@ -3,7 +3,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.utils.icons.service import ProcessIcon
 from core.utils.process import terminate_process
@@ -138,7 +138,7 @@ class PortViewerProvider(BaseProvider):
                 ProviderResult(
                     title="Port Viewer",
                     description="e.g. pv 80, pv tcp 443, pv chrome, pv kill 80",
-                    icon_char=ICON_PORT,
+                    icon_path=ICON_PORT,
                     provider=self.name,
                 )
             ]
@@ -196,7 +196,7 @@ class PortViewerProvider(BaseProvider):
                 ProviderResult(
                     title="No ports found",
                     description="netstat returned no results or failed to run",
-                    icon_char=ICON_PORT,
+                    icon_path=ICON_PORT,
                     provider=self.name,
                 )
             ]
@@ -258,7 +258,7 @@ class PortViewerProvider(BaseProvider):
                     ProviderResult(
                         title=title,
                         description=description,
-                        icon_char="" if pid else ICON_PORT,
+                        icon_path="" if pid else ICON_PORT,
                         icon_source=ProcessIcon(pid) if pid else None,
                         provider=self.name,
                         action_data={"mode": "kill", "pid": pid, "proc": proc_display},
@@ -282,7 +282,7 @@ class PortViewerProvider(BaseProvider):
                     ProviderResult(
                         title=title,
                         description=description,
-                        icon_char="" if pid else ICON_PORT,
+                        icon_path="" if pid else ICON_PORT,
                         icon_source=ProcessIcon(pid) if pid else None,
                         provider=self.name,
                         action_data={"mode": "copy", "text": copy_text},
@@ -297,7 +297,7 @@ class PortViewerProvider(BaseProvider):
                 ProviderResult(
                     title="No matching ports",
                     description="Try: pv 80, pv tcp 443, pv chrome, pv kill 80",
-                    icon_char=ICON_PORT,
+                    icon_path=ICON_PORT,
                     provider=self.name,
                 )
             ]
@@ -309,7 +309,7 @@ class PortViewerProvider(BaseProvider):
         if mode == "copy":
             text = result.action_data.get("text", "")
             try:
-                clipboard = QApplication.clipboard()
+                clipboard = QGuiApplication.clipboard()
                 if clipboard and text:
                     clipboard.setText(text)
             except Exception as e:

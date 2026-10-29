@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PyQt6.QtCore import QPoint, QPointF, QUrl
+from PyQt6.QtCore import QCoreApplication, QEvent, QMetaObject, QPoint, QPointF, QRectF, QUrl
 from PyQt6.QtGui import QColor, QContextMenuEvent, QGuiApplication, QWindow
 from PyQt6.QtQml import QQmlEngine
 from PyQt6.QtQuick import QQuickItem
@@ -14,13 +14,14 @@ from PyQt6.QtWidgets import QApplication
 
 from core import widget_files
 from core.bar import window
+from core.bar.backdrop import Backdrop
 from core.bar.hotkeys import WidgetHotkeys, widget_items
-from core.bar.manager import QML_IMPORT_PATH
 from core.bar.window import BarWindow
 from core.qml_types import register_qml_types
 from core.utils.win32 import app_bar
 from core.utils.win32.structs import APPBARDATA
 from core.validation.bar import BarConfig
+from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 from tests.support.widgets import write_widget
 
@@ -44,6 +45,10 @@ def make_bar(qapp: QApplication, fake_app_bar: None) -> Iterator[MakeBar]:
     yield make
     for bar in bars:
         bar.close()
+        # A closed bar left alive crashes Qt once a later bar opens a popup window
+        bar.deleteLater()
+    # Like close_bars: a closed backdrop left alive until Python exits crashes the process there
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
 
 
 # One entry per option that switches on its own code path
@@ -57,9 +62,7 @@ BAR_CONFIGS: dict[str, dict[str, Any]] = {
     "width-percent": {"length": "50%"},
     "no-animation": {"animation": {"type": "none"}},
     "fade-animation": {"animation": {"type": "fade"}},
-    "blur": {"backdrop": {"type": "blur", "corners": "round"}},
-    "acrylic": {"backdrop": {"type": "acrylic", "corners": "small", "border": "none"}},
-    "mica": {"backdrop": {"type": "mica-alt", "border": "#336699"}},
+    "backdrop": {"backdrop": True},
     "always-on-top": {"always_on_top": True},
     "reserve-space": {"reserve_space": True},
     "hide-on-fullscreen": {"always_on_top": True, "hide_on_fullscreen": True},
@@ -248,6 +251,36 @@ def test_a_bar_file_sets_the_look(make_bar: MakeBar, widget_dir: Path):
     assert _left(bar, "a") == 20
 
 
+def test_invalid_backdrop_shapes_leave_the_bar_without_blur(make_bar: MakeBar, widget_dir: Path):
+    file = _bar_file(widget_dir, "import Yasb.Bar\n\nBar {\n    backdropShapes: [{ x: 0, y: 0 }]\n}\n")
+    backdrop = make_bar(backdrop=True, file=file)._backdrop_window
+    assert backdrop is not None and backdrop._shapes == []
+
+
+def _opened_backdrop_popup(make_bar: MakeBar, widget_dir: Path, backdrop: bool) -> Backdrop:
+    file = _bar_file(
+        widget_dir,
+        "import QtQuick\nimport Yasb.Bar\nimport Yasb.Common\n\nBar {\n    id: root\n    property alias popup: popup\n"
+        "    BackdropPopup {\n        id: popup\n        width: 200\n        height: 120\n        anchor: root\n"
+        "        backdropItem: panel\n        Rectangle { id: panel; anchors.fill: parent; radius: 8 }\n    }\n}\n",
+    )
+    popup = _root(make_bar(backdrop=backdrop, file=file)).property("popup")
+    QMetaObject.invokeMethod(popup, "open")
+    wait(50)
+    helper = popup.findChild(Backdrop)
+    assert helper is not None
+    return helper
+
+
+def test_a_backdrop_popup_blurs_behind_its_backdrop_item(make_bar: MakeBar, widget_dir: Path):
+    backdrop = _opened_backdrop_popup(make_bar, widget_dir, backdrop=True)._backdrop_window
+    assert backdrop is not None and backdrop._shapes == [(QRectF(100, 50, 200, 120), 8.0)]
+
+
+def test_a_backdrop_popup_has_no_blur_when_its_bar_has_none(make_bar: MakeBar, widget_dir: Path):
+    assert _opened_backdrop_popup(make_bar, widget_dir, backdrop=False)._backdrop_window is None
+
+
 def test_a_custom_layout_places_its_own_slots(make_bar: MakeBar, widget_dir: Path):
     file = _bar_file(
         widget_dir,
@@ -280,7 +313,7 @@ def test_a_bad_bar_file_falls_back_to_the_built_in_bar(
     def alert(**kwargs: str) -> None:
         alerts.append(kwargs["title"])
 
-    monkeypatch.setattr(window, "raise_info_alert", alert)
+    monkeypatch.setattr(window, "show_alert", alert)
     file = str(widget_dir / "bars" / "missing.qml") if body is None else _bar_file(widget_dir, body)
 
     bar = make_bar(widgets=WIDGETS, file=file)
@@ -601,14 +634,6 @@ def test_the_bar_context_switches_auto_hide(make_bar: MakeBar):
     assert bar.autohide_enabled and context.property("autoHide")
     context.setProperty("autoHide", False)
     assert not bar.autohide_enabled
-
-
-def test_the_bar_context_switches_the_backdrop(make_bar: MakeBar):
-    bar = make_bar(backdrop={"type": "blur"})
-    context = bar.context
-    assert context is not None and context.property("backdrop") == "blur"
-    context.setProperty("backdrop", "mica")
-    assert bar.backdrop == "mica" and context.property("backdrop") == "mica"
 
 
 def test_a_screenshot_of_the_bar_is_saved(make_bar: MakeBar, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

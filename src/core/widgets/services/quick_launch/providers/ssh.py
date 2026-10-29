@@ -227,7 +227,7 @@ class SshProvider(BaseProvider):
                 ProviderResult(
                     title="No SSH hosts found",
                     description="Add Host entries to ~/.ssh/config to see them here",
-                    icon_char=ICON_SSH,
+                    icon_path=ICON_SSH,
                     provider=self.name,
                 ),
                 self._new_connection_result(),
@@ -250,7 +250,7 @@ class SshProvider(BaseProvider):
                 ProviderResult(
                     title="No matching SSH hosts",
                     description="Try a different search term",
-                    icon_char=ICON_SSH,
+                    icon_path=ICON_SSH,
                     provider=self.name,
                 )
             ]
@@ -278,7 +278,7 @@ class SshProvider(BaseProvider):
                 ProviderResult(
                     title=host,
                     description=description,
-                    icon_char=ICON_SSH,
+                    icon_path=ICON_SSH,
                     provider=self.name,
                     action_data={
                         "host": host,
@@ -302,7 +302,7 @@ class SshProvider(BaseProvider):
         return ProviderResult(
             title="Add new connection",
             description="Create a new SSH host entry",
-            icon_char=ICON_SSH,
+            icon_path=ICON_SSH,
             provider=self.name,
             action_data={"action": "create"},
             preview=self._edit_preview(),
@@ -345,9 +345,9 @@ class SshProvider(BaseProvider):
 
         if action_id == "copy_cmd" and ssh_cmd:
             try:
-                from PyQt6.QtWidgets import QApplication
+                from PyQt6.QtGui import QGuiApplication
 
-                cb = QApplication.clipboard()
+                cb = QGuiApplication.clipboard()
                 if cb:
                     cb.setText(ssh_cmd)
             except Exception:

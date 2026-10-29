@@ -204,7 +204,7 @@ class VSCodeProvider(BaseProvider):
                     ProviderResult(
                         title=name,
                         description=str(path),
-                        icon_char=icon,
+                        icon_path=icon,
                         provider=self.name,
                         action_data=action_data,
                     )
@@ -226,7 +226,7 @@ class VSCodeProvider(BaseProvider):
                         ProviderResult(
                             title=name,
                             description=str(path),
-                            icon_char=icon,
+                            icon_path=icon,
                             provider=self.name,
                             action_data=action_data,
                         )

@@ -6,7 +6,7 @@ import re
 from collections.abc import Callable
 from typing import Any
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_CALCULATOR
@@ -107,7 +107,7 @@ class CalculatorProvider(BaseProvider):
                 ProviderResult(
                     title="Type a math expression",
                     description="e.g. 2+2, sqrt(144), 15% of 200",
-                    icon_char=ICON_CALCULATOR,
+                    icon_path=ICON_CALCULATOR,
                     provider=self.name,
                 )
             ]
@@ -134,7 +134,7 @@ class CalculatorProvider(BaseProvider):
                 ProviderResult(
                     title=display,
                     description=f"{query} - press Enter to copy",
-                    icon_char=ICON_CALCULATOR,
+                    icon_path=ICON_CALCULATOR,
                     provider=self.name,
                     action_data={"value": display},
                 )
@@ -144,7 +144,7 @@ class CalculatorProvider(BaseProvider):
                 ProviderResult(
                     title=query,
                     description="Continue typing a valid expression",
-                    icon_char=ICON_CALCULATOR,
+                    icon_path=ICON_CALCULATOR,
                     provider=self.name,
                 )
             ]
@@ -152,7 +152,7 @@ class CalculatorProvider(BaseProvider):
     def execute(self, result: ProviderResult) -> bool:
         value = result.action_data.get("value", "")
         if value:
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(value)
         return True

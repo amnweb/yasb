@@ -7,7 +7,6 @@ from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtWidgets import QApplication
 
-from core.bar.manager import QML_IMPORT_PATH
 from core.events.service import EventService
 from core.events.win32 import WinEvent
 from core.qml_types import register_qml_types
@@ -15,6 +14,7 @@ from core.utils.win32 import event_listener
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from core.widgets.services.active_window import tracker as tracker_module
 from core.widgets.services.active_window.tracker import ActiveWindowTracker
+from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 
 SCREEN = "\\\\.\\DISPLAY1"

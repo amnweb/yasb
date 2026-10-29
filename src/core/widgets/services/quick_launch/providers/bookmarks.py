@@ -187,7 +187,7 @@ class BookmarksProvider(BaseProvider):
                 ProviderResult(
                     title="No bookmarks found",
                     description="Check browser setting in Quick Launch config",
-                    icon_char=ICON_BOOKMARK,
+                    icon_path=ICON_BOOKMARK,
                     provider=self.name,
                 )
             ]
@@ -209,7 +209,7 @@ class BookmarksProvider(BaseProvider):
                 ProviderResult(
                     title=f"No bookmarks matching {query}",
                     description="Try a different search",
-                    icon_char=ICON_BOOKMARK,
+                    icon_path=ICON_BOOKMARK,
                     provider=self.name,
                 )
             ]
@@ -231,7 +231,7 @@ class BookmarksProvider(BaseProvider):
         return ProviderResult(
             title=title,
             description=desc,
-            icon_char=ICON_BOOKMARK,
+            icon_path=ICON_BOOKMARK,
             provider=self.name,
             action_data={"url": url},
         )

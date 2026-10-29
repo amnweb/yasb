@@ -10,6 +10,7 @@ from ctypes.wintypes import (
     DWORD,
     HANDLE,
     HDC,
+    HRGN,
     LPCWSTR,
     LPVOID,
 )
@@ -17,6 +18,8 @@ from ctypes.wintypes import (
 from core.utils.win32.structs import (
     BITMAPINFO,
     HBITMAP,
+    RGNDATA,
+    XFORM,
 )
 from core.utils.win32.typecheck import CArgObject
 
@@ -30,6 +33,12 @@ gdi32.GetDIBits.restype = c_int
 
 gdi32.DeleteObject.argtypes = [HANDLE]
 gdi32.DeleteObject.restype = BOOL
+
+gdi32.CreateRectRgn.argtypes = [c_int, c_int, c_int, c_int]
+gdi32.CreateRectRgn.restype = HRGN
+
+gdi32.ExtCreateRegion.argtypes = [POINTER(XFORM), DWORD, POINTER(RGNDATA)]
+gdi32.ExtCreateRegion.restype = HRGN
 
 gdi32.AddFontResourceExW.argtypes = [LPCWSTR, DWORD, LPVOID]
 gdi32.AddFontResourceExW.restype = c_int

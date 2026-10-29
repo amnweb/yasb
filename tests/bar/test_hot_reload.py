@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import QApplication
 from watchdog.events import FileModifiedEvent, FileMovedEvent
 
 from core import watcher, widget_files
+from core.bar import manager as bar_manager
 from core.bar import window
 from core.bar.manager import QML_RELOAD_DELAY_MS, BarManager
 from core.bar.window import BAR_QML, BarWindow
@@ -27,12 +28,19 @@ def folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (tmp_path / "bars").mkdir()
     monkeypatch.setattr(widget_files, "USER_WIDGETS_DIR", tmp_path / "widgets")
     monkeypatch.setattr(widget_files, "BUILTIN_WIDGETS_DIR", tmp_path / "builtin")
-
-    def no_alert(**kwargs: str) -> None:
-        pass
-
-    monkeypatch.setattr(widget_files, "raise_info_alert", no_alert)
     return tmp_path
+
+
+@pytest.fixture(autouse=True)
+def alerts(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    titles: list[str] = []
+
+    def alert(title: str, message: str, details: str = "") -> None:
+        titles.append(title)
+
+    for module in (widget_files, window, bar_manager):
+        monkeypatch.setattr(module, "show_alert", alert)
+    return titles
 
 
 @pytest.fixture
@@ -91,7 +99,7 @@ def test_editing_the_bar_file_reloads_it_in_the_same_window(make_manager: MakeMa
 
 
 def test_a_broken_bar_file_keeps_the_current_bar(
-    make_manager: MakeManager, folder: Path, caplog: pytest.LogCaptureFixture
+    make_manager: MakeManager, folder: Path, alerts: list[str], caplog: pytest.LogCaptureFixture
 ):
     path = _bar_file(folder, "#ff0000")
     manager = make_manager(top={"file": str(path)})
@@ -104,6 +112,7 @@ def test_a_broken_bar_file_keeps_the_current_bar(
     assert bar.item is before
     assert _color(bar) == QColor("#ff0000")
     assert f"{path} has errors, bars keep the current version" in caplog.text
+    assert alerts == ["A QML file has errors"]
 
     _bar_file(folder, "#00ff00")
     _changed(manager, path)
@@ -111,7 +120,7 @@ def test_a_broken_bar_file_keeps_the_current_bar(
 
 
 def test_a_bar_file_that_is_not_a_bar_keeps_the_current_bar(
-    make_manager: MakeManager, folder: Path, caplog: pytest.LogCaptureFixture
+    make_manager: MakeManager, folder: Path, alerts: list[str], caplog: pytest.LogCaptureFixture
 ):
     path = _bar_file(folder, "#ff0000")
     manager = make_manager(top={"file": str(path)})
@@ -123,6 +132,7 @@ def test_a_bar_file_that_is_not_a_bar_keeps_the_current_bar(
         _changed(manager, path)
     assert bar.item is before
     assert "Bar top kept its current content" in caplog.text
+    assert alerts == ["Failed to reload the bar file of bar 'top'"]
 
 
 def test_widget_edits_apply_while_the_bar_file_is_broken(make_manager: MakeManager, folder: Path):
@@ -139,13 +149,7 @@ def test_widget_edits_apply_while_the_bar_file_is_broken(make_manager: MakeManag
     assert _color(bar) == QColor("#ff0000")
 
 
-def test_widget_edits_apply_to_the_built_in_fallback(
-    make_manager: MakeManager, folder: Path, monkeypatch: pytest.MonkeyPatch
-):
-    def no_alert(**kwargs: str) -> None:
-        pass
-
-    monkeypatch.setattr(window, "raise_info_alert", no_alert)
+def test_widget_edits_apply_to_the_built_in_fallback(make_manager: MakeManager, folder: Path):
     bar_path = folder / "bars" / "broken.qml"
     bar_path.write_text("import Yasb.Bar\n\nBar {\n")
     widget_path = _widget(folder, "a", "one")
@@ -173,7 +177,7 @@ def test_editing_a_widget_reloads_only_the_bars_using_it(make_manager: MakeManag
 
 
 def test_a_broken_widget_keeps_the_current_version(
-    make_manager: MakeManager, folder: Path, caplog: pytest.LogCaptureFixture
+    make_manager: MakeManager, folder: Path, alerts: list[str], caplog: pytest.LogCaptureFixture
 ):
     path = _widget(folder, "a", "one")
     manager = make_manager(top={"widgets": {"left": ["a"]}})
@@ -186,10 +190,19 @@ def test_a_broken_widget_keeps_the_current_version(
     assert bar.item is before
     assert _text(bar, "a") == "one"
     assert f"{path} has errors, bars keep the current version" in caplog.text
+    assert alerts == ["A QML file has errors"]
 
     _widget(folder, "a", "fixed")
     _changed(manager, path)
     assert _text(bar, "a") == "fixed"
+
+
+def test_a_broken_widget_at_startup_is_reported(make_manager: MakeManager, folder: Path, alerts: list[str]):
+    write_widget(folder / "widgets", "a", "import QtQuick\n\nText {\n")
+    _widget(folder, "b", "fine")
+    bar = make_manager(top={"widgets": {"left": ["a", "b"]}}).bars[0]
+    assert alerts == ["Some widgets could not load"]
+    assert _text(bar, "b") == "fine"
 
 
 def test_a_widget_file_added_later_shows_up(make_manager: MakeManager, folder: Path):

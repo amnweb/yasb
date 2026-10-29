@@ -22,7 +22,7 @@ Bar {
             fillColor: root.color
             fillGradient: root.fillGradient
             strokeWidth: -1
-            PathSvg { path: root.fillPath() }
+            PathSvg { path: root.backdropPath }
         }
 
         ShapePath {
@@ -177,6 +177,9 @@ Bar {
         return `${outline(0)} L ${point(0, 0)} L ${point(barLength, 0)} Z`
     }
 
+    // The visible fill and native blur use the same silhouette.
+    backdropShapes: []
+    backdropPath: fillPath()
     radius: 12
     background.visible: false
 

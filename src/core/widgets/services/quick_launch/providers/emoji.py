@@ -4,7 +4,7 @@ import os
 import sys
 from typing import Any, cast
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.utils.system import app_data_path
 from core.widgets.services.quick_launch.base_provider import (
@@ -120,7 +120,7 @@ class EmojiProvider(BaseProvider):
                 ProviderResult(
                     title="Emoji Search",
                     description="Type a name to search emojis - e.g. smile, heart, fire",
-                    icon_char=ICON_EMOJI,
+                    icon_path=ICON_EMOJI,
                     provider=self.name,
                 )
             )
@@ -132,7 +132,7 @@ class EmojiProvider(BaseProvider):
                 ProviderResult(
                     title="Emoji data not available",
                     description="The emoji.json data file could not be loaded",
-                    icon_char=ICON_EMOJI,
+                    icon_path=ICON_EMOJI,
                     provider=self.name,
                 )
             ]
@@ -180,7 +180,7 @@ class EmojiProvider(BaseProvider):
     def execute(self, result: ProviderResult) -> bool:
         emoji = result.action_data.get("emoji", "")
         if emoji:
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(emoji)
         return True
@@ -202,7 +202,7 @@ class EmojiProvider(BaseProvider):
             return ProviderMenuActionResult()
 
         if action_id == "copy":
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(emoji)
             return ProviderMenuActionResult()

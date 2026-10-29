@@ -25,4 +25,6 @@ def load_env():
 
 def set_qt_quick_defaults():
     QQuickWindow.setGraphicsApi(QSGRendererInterface.GraphicsApi.Direct3D11)
+    # Direct3D windows need no GDI redirection surface, which some systems paint opaque over a backdrop
+    os.environ["QT_QPA_DISABLE_REDIRECTION_SURFACE"] = "1"
     os.environ["QT_QUICK_CONTROLS_STYLE"] = "FluentWinUI3"

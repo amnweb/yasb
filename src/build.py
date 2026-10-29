@@ -1,6 +1,8 @@
 import datetime
 import os
+from pathlib import Path
 
+import winrt
 from cx_Freeze import Executable, setup  # pyright: ignore[reportUnknownVariableType, reportMissingTypeStubs]
 
 from core.utils.system import detect_architecture
@@ -24,13 +26,20 @@ display_arch, msi_arch_suffix = arch_info
 hook_dll_name = "YASBTrayHook_arm64.dll" if display_arch == "ARM64" else "YASBTrayHook.dll"
 everything_dll_name = "EverythingARM64.dll" if display_arch == "ARM64" else "Everything64.dll"
 
+# pywinrt 4 maps each namespace's projection table from a file beside its module, which a zip cannot hold
+winrt_tables = [
+    (table.as_posix(), (Path("lib/winrt") / table.relative_to(root)).as_posix())
+    for root in map(Path, winrt.__path__)
+    for table in root.rglob("_table.pywinrt")
+]
+
 build_options = {
     "constants": [f"ARCHITECTURE='{display_arch}'"],
     "silent_level": 1,
     "silent": True,
     "excludes": ["PySide6", "pydoc_data", "email", "tkinter", "PyQt5", "PySide2", "unittest"],
     "bin_excludes": ["Qt6Pdf.dll", "_avif.cp314-win_amd64.pyd"],
-    "zip_exclude_packages": [],
+    "zip_exclude_packages": ["winrt"],
     "zip_include_packages": ["*"],
     "no_compress": True,
     "zip_filename": "library.zip",
@@ -50,6 +59,7 @@ build_options = {
         (f"core/widgets/services/quick_launch/providers/resources/{everything_dll_name}", f"lib/{everything_dll_name}"),
         (f"core/widgets/services/systray/hook/{hook_dll_name}", f"lib/{hook_dll_name}"),
         ("core/widgets/services/quick_launch/providers/resources/emoji.json", "lib/emoji.json"),
+        *winrt_tables,
     ],
 }
 

@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 from zoneinfo import ZoneInfo
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.utils.system import app_data_path
 from core.widgets.services.quick_launch.base_provider import (
@@ -261,7 +261,7 @@ def _build_result(city: str, tz_id: str, now_utc: datetime, local_dt: datetime, 
     return ProviderResult(
         title=f"{city} - {time_str}",
         description=desc,
-        icon_char=ICON_CLOCK,
+        icon_path=ICON_CLOCK,
         provider="world_clock",
         action_data={"time": time_str, "city": city, "date": date_str, "utc": utc_str},
     )
@@ -343,7 +343,7 @@ class WorldClockProvider(BaseProvider):
         date_str = result.action_data.get("date", "")
         utc_str = result.action_data.get("utc", "")
         text = f"{city}: {time_str}, {date_str} ({utc_str})"
-        clipboard = QApplication.clipboard()
+        clipboard = QGuiApplication.clipboard()
         if clipboard:
             clipboard.setText(text)
         return True
@@ -368,7 +368,7 @@ class WorldClockProvider(BaseProvider):
             date_str = result.action_data.get("date", "")
             utc_str = result.action_data.get("utc", "")
             text = f"{city}: {time_str}, {date_str} ({utc_str})"
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(text)
             return ProviderMenuActionResult()

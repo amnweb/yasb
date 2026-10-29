@@ -1,7 +1,7 @@
 import re
 from typing import Any
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.widgets.services.quick_launch.providers.resources.icons import ICON_UNIT
@@ -260,7 +260,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title="Unit Converter",
                     description="e.g. 10 kg to lb, 100 mi to km, 72 f to c, 1 gb to mb",
-                    icon_char=ICON_UNIT,
+                    icon_path=ICON_UNIT,
                     provider=self.name,
                 )
             ]
@@ -271,7 +271,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title="Invalid format",
                     description="Try: 10 kg to lb, 100 f to c, 500 mb to gb",
-                    icon_char=ICON_UNIT,
+                    icon_path=ICON_UNIT,
                     provider=self.name,
                 )
             ]
@@ -296,7 +296,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title=f"Unknown unit: {from_unit}",
                     description="Supported: length, weight, volume, speed, data, time, temperature",
-                    icon_char=ICON_UNIT,
+                    icon_path=ICON_UNIT,
                     provider=self.name,
                 )
             ]
@@ -309,7 +309,7 @@ class UnitConverterProvider(BaseProvider):
                     ProviderResult(
                         title=f"Cannot convert {from_name} to {to_unit}",
                         description=f"Both units must be in the same category ({cat_name})",
-                        icon_char=ICON_UNIT,
+                        icon_path=ICON_UNIT,
                         provider=self.name,
                     )
                 ]
@@ -320,7 +320,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title=f"{display} {to_name}",
                     description=f"{_format_number(value)} {from_name} - press Enter to copy",
-                    icon_char=ICON_UNIT,
+                    icon_path=ICON_UNIT,
                     provider=self.name,
                     action_data={"value": display},
                 )
@@ -336,7 +336,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title=f"{display} {to_name}",
                     description=f"{_format_number(value)} {from_name} - press Enter to copy",
-                    icon_char=ICON_UNIT,
+                    icon_path=ICON_UNIT,
                     provider=self.name,
                     action_data={"value": display},
                 )
@@ -355,7 +355,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title=f"{display} {to_label}",
                     description=f"{_format_number(value)} {from_label} - press Enter to copy",
-                    icon_char=ICON_UNIT,
+                    icon_path=ICON_UNIT,
                     provider=self.name,
                     action_data={"value": display},
                 )
@@ -370,7 +370,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title=f"{display} {to_label}",
                     description=f"{_format_number(value)} {from_label} - press Enter to copy",
-                    icon_char=ICON_UNIT,
+                    icon_path=ICON_UNIT,
                     provider=self.name,
                     action_data={"value": display},
                 )
@@ -380,7 +380,7 @@ class UnitConverterProvider(BaseProvider):
     def execute(self, result: ProviderResult) -> bool:
         value = result.action_data.get("value", "")
         if value:
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(value)
         return True

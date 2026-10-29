@@ -248,7 +248,7 @@ class ClipboardHistoryProvider(BaseProvider):
         result = ProviderResult(
             title=title,
             description=desc,
-            icon_char=ICON_WARNING,
+            icon_path=ICON_WARNING,
             provider=self.name,
         )
         if status == "disabled":
@@ -260,7 +260,7 @@ class ClipboardHistoryProvider(BaseProvider):
             ProviderResult(
                 title="Clear clipboard history",
                 description="Delete all saved history items",
-                icon_char=ICON_CLEAR,
+                icon_path=ICON_CLEAR,
                 provider=self.name,
                 action_data={"action": "clear_history"},
             )
@@ -284,7 +284,7 @@ class ClipboardHistoryProvider(BaseProvider):
                 ProviderResult(
                     title="Clipboard history is empty",
                     description="Copy something to start",
-                    icon_char=ICON_CLIPBOARD,
+                    icon_path=ICON_CLIPBOARD,
                     provider=self.name,
                 )
             ]
@@ -302,7 +302,7 @@ class ClipboardHistoryProvider(BaseProvider):
                 ProviderResult(
                     title=title,
                     description=f"{desc}{time_part}",
-                    icon_char=entry.get("icon", ICON_CLIPBOARD),
+                    icon_path=entry.get("icon", ICON_CLIPBOARD),
                     provider=self.name,
                     id=entry["id"],
                     preview=entry.get("preview", {}),
@@ -315,7 +315,7 @@ class ClipboardHistoryProvider(BaseProvider):
                 ProviderResult(
                     title="No clipboard matches",
                     description="Try a different search term",
-                    icon_char=ICON_CLIPBOARD,
+                    icon_path=ICON_CLIPBOARD,
                     provider=self.name,
                 )
             ]

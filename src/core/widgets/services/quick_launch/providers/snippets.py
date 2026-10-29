@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any, cast
 
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.utils.system import app_data_path
 from core.utils.win32.bindings.user32 import SendInput
@@ -53,7 +53,7 @@ def _resolve_variables(text: str) -> str:
         if name == "datetime":
             return now.strftime(fmt or "%Y-%m-%d %H:%M:%S")
         if name == "clipboard":
-            cb = QApplication.clipboard()
+            cb = QGuiApplication.clipboard()
             return cb.text() if cb else ""
         if name == "username":
             return os.getlogin()
@@ -178,7 +178,7 @@ class SnippetsProvider(BaseProvider):
                 ProviderResult(
                     title="Create new snippet",
                     description="Add a new text snippet",
-                    icon_char=ICON_SNIPPET,
+                    icon_path=ICON_SNIPPET,
                     provider=self.name,
                     action_data={"action": "create"},
                     preview=self._edit_preview(),
@@ -207,7 +207,7 @@ class SnippetsProvider(BaseProvider):
             return ProviderResult(
                 title=title,
                 description="Editing...",
-                icon_char=ICON_SNIPPET,
+                icon_path=ICON_SNIPPET,
                 provider=self.name,
                 action_data={"snippet_id": snippet_id},
                 preview=self._edit_preview(title, content),
@@ -221,7 +221,7 @@ class SnippetsProvider(BaseProvider):
         return ProviderResult(
             title=title,
             description=first_line,
-            icon_char=ICON_SNIPPET,
+            icon_path=ICON_SNIPPET,
             provider=self.name,
             action_data={"snippet_id": snippet_id},
             preview={
@@ -280,7 +280,7 @@ class SnippetsProvider(BaseProvider):
             return ProviderMenuActionResult()
 
         if action_id == "copy":
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(_resolve_variables(snippet.get("content", "")))
             return ProviderMenuActionResult()

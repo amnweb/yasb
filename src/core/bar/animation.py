@@ -30,7 +30,6 @@ class BarAnimationManager(QObject):
             self._pending = "show"
             return
         self._pending = None
-        # A slide on the first show flashes the DWM blur and shadow, so the first show always fades
         if initial or self.bar.config.animation.type == "fade":
             self._start_fade(True)
         else:
@@ -89,8 +88,7 @@ class BarAnimationManager(QObject):
         else:
             hidden.moveLeft(area.x() + area.width())
 
-        # Sliding out of its own screen would show the bar on a screen stacked next to it. Clipping it
-        # means resizing the window every frame, which smears the DWM blur and shadow, so those bars fade.
+        # Sliding out of its own screen would show the bar on a screen stacked next to it, so those bars fade
         if any(other.geometry().intersects(hidden) for other in QGuiApplication.screens()):
             self._start_fade(show)
             return

@@ -288,14 +288,18 @@ class GitHubDataManager:
             return []
 
     @classmethod
-    def fetch_all_notifications(cls, token: str, max_notification: int = 100) -> list[dict[str, Any]]:
+    def fetch_all_notifications(
+        cls, token: str, max_notification: int = 100, show_comment_count: bool = False
+    ) -> list[dict[str, Any]]:
         """Fetch all notifications (read + unread) for a given token.
 
         This is the public entry point for on-demand fetching by the quick launch
         provider and any other consumer.  Unlike ``_get_github_notifications`` this
         method lets exceptions propagate so callers can show proper error messages.
         """
-        return cls._get_all_notifications(token, only_unread=False, max_notification=max_notification)
+        return cls._get_all_notifications(
+            token, only_unread=False, max_notification=max_notification, show_comment_count=show_comment_count
+        )
 
     @staticmethod
     def _parse_link_header(header: str) -> dict[str, str]:

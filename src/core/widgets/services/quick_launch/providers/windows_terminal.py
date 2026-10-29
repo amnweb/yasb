@@ -157,7 +157,7 @@ class WindowsTerminalProvider(BaseProvider):
                 ProviderResult(
                     title="No Windows Terminal installation found",
                     description="Install Windows Terminal from the Microsoft Store",
-                    icon_char=ICON_WINDOWS_TERMINAL,
+                    icon_path=ICON_WINDOWS_TERMINAL,
                     provider=self.name,
                 )
             ]
@@ -206,7 +206,7 @@ class WindowsTerminalProvider(BaseProvider):
                     ProviderResult(
                         title=t["name"],
                         description=desc,
-                        icon_char=t["icon"],
+                        icon_path=t["icon"],
                         provider=self.name,
                         action_data={
                             "guid": t["guid"],
@@ -221,7 +221,7 @@ class WindowsTerminalProvider(BaseProvider):
                 ProviderResult(
                     title="No matching profiles",
                     description="Try a different search term",
-                    icon_char=ICON_WINDOWS_TERMINAL,
+                    icon_path=ICON_WINDOWS_TERMINAL,
                     provider=self.name,
                 )
             ]

@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from typing import NamedTuple
 
-from core.utils.alert_dialog import raise_info_alert
+from core.utils.alert_dialog import show_alert
 from core.validation.bar import BarConfig
 from core.validation.config import YasbConfig
 from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, SCRIPT_PATH
@@ -51,9 +51,8 @@ def report_undefined_widgets(config: YasbConfig) -> None:
         for name in missing
     )
     logging.error("Undefined widget(s) in %s:\n%s", DEFAULT_CONFIG_FILENAME, details)
-    raise_info_alert(
+    show_alert(
         title=f"Undefined widget(s) in {DEFAULT_CONFIG_FILENAME}",
-        msg="Some widgets in your bars could not be found and were skipped.",
-        informative_msg="Please click 'Show Details' to find out more.",
-        additional_details=details,
+        message="Some widgets in your bars could not be found and were skipped.",
+        details=details,
     )

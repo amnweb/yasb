@@ -459,6 +459,18 @@ class RECT(ct.Structure):
     ]
 
 
+class XFORM(ct.Structure):
+    _fields_ = [(name, ct.c_float) for name in ("eM11", "eM12", "eM21", "eM22", "eDx", "eDy")]
+
+
+class RGNDATAHEADER(ct.Structure):
+    _fields_ = [("dwSize", DWORD), ("iType", DWORD), ("nCount", DWORD), ("nRgnSize", DWORD), ("rcBound", RECT)]
+
+
+class RGNDATA(ct.Structure):
+    _fields_ = [("rdh", RGNDATAHEADER), ("Buffer", ct.c_char * 1)]
+
+
 class SIZE(ct.Structure):
     _fields_ = [("cx", LONG), ("cy", LONG)]
 

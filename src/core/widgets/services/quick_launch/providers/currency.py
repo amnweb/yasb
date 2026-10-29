@@ -6,7 +6,7 @@ import time
 from typing import Any
 from xml.etree import ElementTree
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.utils.system import app_data_path
 from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
@@ -85,7 +85,7 @@ class CurrencyProvider(BaseProvider):
                 ProviderResult(
                     title="Type currency conversion",
                     description="e.g. 100 usd eur, 50 gbp jpy, usd eur",
-                    icon_char=ICON_CURRENCY,
+                    icon_path=ICON_CURRENCY,
                     provider=self.name,
                 )
             ]
@@ -96,7 +96,7 @@ class CurrencyProvider(BaseProvider):
                 ProviderResult(
                     title="Currency rates unavailable",
                     description="No internet connection and no cached rates",
-                    icon_char=ICON_CURRENCY,
+                    icon_path=ICON_CURRENCY,
                     provider=self.name,
                 )
             ]
@@ -131,7 +131,7 @@ class CurrencyProvider(BaseProvider):
                         ProviderResult(
                             title=f"{code}",
                             description=f"{sym} · Type amount and target e.g. 100 {code.lower()} usd",
-                            icon_char=ICON_CURRENCY,
+                            icon_path=ICON_CURRENCY,
                             provider=self.name,
                         )
                     )
@@ -141,7 +141,7 @@ class CurrencyProvider(BaseProvider):
             ProviderResult(
                 title="Invalid format",
                 description="Use: [amount] SRC DST  e.g. 100 usd eur",
-                icon_char=ICON_CURRENCY,
+                icon_path=ICON_CURRENCY,
                 provider=self.name,
             )
         ]
@@ -149,7 +149,7 @@ class CurrencyProvider(BaseProvider):
     def execute(self, result: ProviderResult) -> bool:
         value = result.action_data.get("copy_value", "")
         if value:
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(value)
         return False  # Keep popup open
@@ -162,7 +162,7 @@ class CurrencyProvider(BaseProvider):
                 ProviderResult(
                     title=f"Unknown currency: {src}",
                     description="Check currency code",
-                    icon_char=ICON_CURRENCY,
+                    icon_path=ICON_CURRENCY,
                     provider=self.name,
                 )
             ]
@@ -171,7 +171,7 @@ class CurrencyProvider(BaseProvider):
                 ProviderResult(
                     title=f"Unknown currency: {dst}",
                     description="Check currency code",
-                    icon_char=ICON_CURRENCY,
+                    icon_path=ICON_CURRENCY,
                     provider=self.name,
                 )
             ]
@@ -198,7 +198,7 @@ class CurrencyProvider(BaseProvider):
             ProviderResult(
                 title=f"{dst_sym}{display} {dst}",
                 description=f"{amt_display} {src} -> {dst} · Rate: {rate:.6f}".rstrip("0").rstrip("."),
-                icon_char=ICON_CURRENCY,
+                icon_path=ICON_CURRENCY,
                 provider=self.name,
                 action_data={"copy_value": display},
             )
@@ -234,7 +234,7 @@ class CurrencyProvider(BaseProvider):
                 ProviderResult(
                     title=f"{dst_sym}{display} {dst}",
                     description=f"{amt_display} {src} -> {dst}",
-                    icon_char=ICON_CURRENCY,
+                    icon_path=ICON_CURRENCY,
                     provider=self.name,
                     action_data={"copy_value": display},
                 )

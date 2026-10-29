@@ -10,7 +10,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
@@ -119,7 +119,7 @@ class DevToolsProvider(BaseProvider):
         data = result.action_data
         copy_text = data.get("copy")
         if copy_text is not None:
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(str(copy_text))
             return True
@@ -136,7 +136,7 @@ class DevToolsProvider(BaseProvider):
         data = result.action_data
         if action_id == "copy":
             copy_text = data.get("copy", "")
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(str(copy_text))
             return ProviderMenuActionResult(close_popup=True)
@@ -154,7 +154,7 @@ class DevToolsProvider(BaseProvider):
                 ProviderResult(
                     title=info["name"],
                     description=info["description"],
-                    icon_char=ICON_DEV_TOOLS,
+                    icon_path=ICON_DEV_TOOLS,
                     provider=self.name,
                     action_data={"_home": True, "prefix": self.prefix, "initial_text": key},
                 )
@@ -170,7 +170,7 @@ class DevToolsProvider(BaseProvider):
                     ProviderResult(
                         title=info["name"],
                         description=info["description"],
-                        icon_char=ICON_DEV_TOOLS,
+                        icon_path=ICON_DEV_TOOLS,
                         provider=self.name,
                         action_data={"_home": True, "prefix": self.prefix, "initial_text": key},
                     )
@@ -181,7 +181,7 @@ class DevToolsProvider(BaseProvider):
         return ProviderResult(
             title=title,
             description=description,
-            icon_char=ICON_DEV_TOOLS,
+            icon_path=ICON_DEV_TOOLS,
             provider=self.name,
             action_data={"copy": copy_text},
         )

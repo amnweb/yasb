@@ -16,18 +16,13 @@ Window {
         area.x + area.width - menu.width))
     readonly property real menuY: Math.max(area.y, Math.min(bar.edge === "bottom" ? position.y - menu.implicitHeight : position.y,
         area.y + area.height - menu.implicitHeight))
-    // Submenus are drawn in this window too. It has room for one beside the menu, on the side the screen has space,
-    // and below it, because Qt moves a submenu that doesn't fit on every frame of its open animation.
-    readonly property real submenuWidth: backdropMenu.width - backdropMenu.leftInset - backdropMenu.rightInset
-    readonly property real submenuHeight: backdropMenu.implicitHeight - backdropMenu.topInset - backdropMenu.bottomInset
-    readonly property bool submenuOnLeft: menuX + menu.width + submenuWidth > area.x + area.width
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.NoDropShadowWindowHint
     color: "transparent"
-    x: menuX + menu.leftInset - (submenuOnLeft ? submenuWidth : 0)
+    x: menuX + menu.leftInset
     y: menuY + menu.topInset
-    width: menu.width - menu.leftInset - menu.rightInset + submenuWidth
-    height: Math.min(menu.implicitHeight - menu.topInset - menu.bottomInset + submenuHeight, area.y + area.height - y)
+    width: menu.width - menu.leftInset - menu.rightInset
+    height: menu.implicitHeight - menu.topInset - menu.bottomInset
 
     Component.onCompleted: {
         show()
@@ -66,7 +61,7 @@ Window {
         }
 
         popupType: Popup.Item
-        x: (barMenu.submenuOnLeft ? barMenu.submenuWidth : 0) - leftInset
+        x: -leftInset
         y: -topInset
         onClosed: barMenu.close()
 
@@ -88,67 +83,6 @@ Window {
         }
 
         MenuSeparator {}
-
-        Menu {
-            id: backdropMenu
-
-            title: "Backdrop"
-            // Qt keeps the submenu inside this window, these keep its shadow inside too
-            topMargin: -topInset
-            bottomMargin: -bottomInset
-            // cascade: true
-            // Custom menu colors
-            topInset: 0
-            leftInset: 0
-            rightInset: 0
-            bottomInset: 0
-
-            background: Rectangle {
-                implicitWidth: 200
-                radius: 8
-                color: "#222222"
-                border.color: "#363636"
-            }
-            MenuItem {
-                text: "None"
-                checkable: true
-                autoExclusive: true
-                checked: barMenu.bar.context.backdrop === "none"
-                onTriggered: barMenu.bar.context.backdrop = "none"
-            }
-
-            MenuItem {
-                text: "Blur"
-                checkable: true
-                autoExclusive: true
-                checked: barMenu.bar.context.backdrop === "blur"
-                onTriggered: barMenu.bar.context.backdrop = "blur"
-            }
-
-            MenuItem {
-                text: "Acrylic"
-                checkable: true
-                autoExclusive: true
-                checked: barMenu.bar.context.backdrop === "acrylic"
-                onTriggered: barMenu.bar.context.backdrop = "acrylic"
-            }
-
-            MenuItem {
-                text: "Mica"
-                checkable: true
-                autoExclusive: true
-                checked: barMenu.bar.context.backdrop === "mica"
-                onTriggered: barMenu.bar.context.backdrop = "mica"
-            }
-
-            MenuItem {
-                text: "Mica Alt"
-                checkable: true
-                autoExclusive: true
-                checked: barMenu.bar.context.backdrop === "mica-alt"
-                onTriggered: barMenu.bar.context.backdrop = "mica-alt"
-            }
-        }
 
         MenuItem {
             text: barMenu.bar.context.autoHide ? "Disable Auto Hide" : "Enable Auto Hide"

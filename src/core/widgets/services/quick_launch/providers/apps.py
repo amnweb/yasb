@@ -5,7 +5,7 @@ import time
 from typing import TYPE_CHECKING, Any, cast
 
 from PyQt6.QtCore import QThread, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.utils.shell_utils import shell_open
 from core.utils.system import app_data_path
@@ -196,7 +196,7 @@ class DescriptionResolverWorker(QThread):
             from winrt.windows.management.deployment import PackageManager
 
             pm = PackageManager()
-            for pkg in pm.find_packages_by_user_security_id(""):
+            for pkg in pm.find_packages_for_user(""):
                 fn = pkg.id.family_name
                 if fn:
                     dn = pkg.display_name or ""
@@ -458,19 +458,19 @@ class AppsProvider(BaseProvider):
 
         if action_id == "copy_path":
             target = self._resolve_app_target(path)
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(target)
             return ProviderMenuActionResult()
 
         if action_id == "copy_app_id":
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 clipboard.setText(path[5:] if path.startswith("UWP::") else path)
             return ProviderMenuActionResult()
 
         if action_id == "copy_canonical_name":
-            clipboard = QApplication.clipboard()
+            clipboard = QGuiApplication.clipboard()
             if clipboard:
                 canonical = path[5:].split("::", 1)[-1] if path.startswith("CPL::") and "::" in path[5:] else path[5:]
                 clipboard.setText(canonical)

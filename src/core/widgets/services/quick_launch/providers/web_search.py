@@ -129,7 +129,7 @@ class WebSearchProvider(BaseProvider):
                 ProviderResult(
                     title=f"Search {preferred_name}...",
                     description="Type your search query",
-                    icon_char=ICON_WEB_SEARCH,
+                    icon_path=ICON_WEB_SEARCH,
                     provider=self.name,
                 )
             ]
@@ -141,7 +141,7 @@ class WebSearchProvider(BaseProvider):
                 ProviderResult(
                     title=f'Search {info["name"]} for "{query}"',
                     description=info["description"],
-                    icon_char=ICON_WEB_SEARCH if not icon else icon,
+                    icon_path=ICON_WEB_SEARCH if not icon else icon,
                     provider=self.name,
                     action_data={"query": query, "engine": key},
                 )
