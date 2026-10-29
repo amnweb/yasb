@@ -201,6 +201,8 @@ battery:
 .battery-widget .widget-container .icon.status-full {}
 .battery-widget .widget-container .icon.status-charging {}
 .battery-widget .widget-container .icon.status-charging.blink {}
+.battery-widget .widget-container .label.discharging {}
+.battery-widget .widget-container .icon.discharging {}
 /* Progress bar styles */
 .battery-widget .progress-container {}
 ```
