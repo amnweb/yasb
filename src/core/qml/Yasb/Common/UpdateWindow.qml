@@ -49,24 +49,28 @@ Window {
             font.weight: Font.DemiBold
         }
 
-        ScrollView {
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            TextArea {
-                id: notes
+            ScrollView {
+                anchors.fill: parent
 
-                readOnly: true
-                selectByMouse: true
-                textFormat: TextEdit.RichText
-                wrapMode: TextEdit.Wrap
-                background: null
-                text: window.updater.changelog === "" ? ""
-                    : `<html><head><style>${window.changelogStyle}</style></head><body>${window.updater.changelog}</body></html>`
-                onLinkActivated: link => window.updater.open(link)
+                TextArea {
+                    id: notes
 
-                HoverHandler {
-                    cursorShape: parent.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.IBeamCursor
+                    readOnly: true
+                    selectByMouse: true
+                    textFormat: TextEdit.RichText
+                    wrapMode: TextEdit.Wrap
+                    background: null
+                    text: window.updater.changelog === "" ? ""
+                        : `<html><head><style>${window.changelogStyle}</style></head><body>${window.updater.changelog}</body></html>`
+                    onLinkActivated: link => window.updater.open(link)
+
+                    HoverHandler {
+                        cursorShape: parent.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.IBeamCursor
+                    }
                 }
             }
 
