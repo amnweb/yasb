@@ -471,7 +471,8 @@ Item {
 
                             function onModelReset() {
                                 list.currentIndex = -1
-                                launcher.select(1)
+                                // The list handles the reset after this handler, so until then it still has the old rows
+                                Qt.callLater(launcher.select, 1)
                             }
                         }
 

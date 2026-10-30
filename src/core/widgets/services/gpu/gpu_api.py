@@ -5,8 +5,7 @@ from ctypes import Array, byref, c_byte, c_char, wintypes
 from typing import NamedTuple, NotRequired, TypedDict
 
 from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QCoreApplication, QObject, QThread, pyqtSignal
 
 from core.utils.win32.bindings.adl import (
     ADL_MAIN_MALLOC_CALLBACK,
@@ -447,7 +446,7 @@ class GpuWorker(QThread):
         self._update_interval = update_interval
         self._gpu_indices: set[int] = set()
         self._stop_event = threading.Event()
-        app = QApplication.instance()
+        app = QCoreApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self.stop)
 

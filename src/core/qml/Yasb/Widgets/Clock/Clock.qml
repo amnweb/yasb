@@ -57,6 +57,7 @@ Text {
     color: bar ? bar.textColor : dark ? "white" : "black"
     font.family: bar ? bar.font.family : Qt.application.font.family
     font.pixelSize: bar ? bar.font.pixelSize : 13
+    font.variableAxes: bar ? bar.font.variableAxes : 400
     verticalAlignment: Text.AlignVCenter
 
     Component.onCompleted: refresh()

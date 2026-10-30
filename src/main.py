@@ -7,32 +7,38 @@ from sys import argv
 from types import FrameType, TracebackType
 
 import qasync  # pyright: ignore[reportMissingTypeStubs]
+from PyQt6 import sip
 from PyQt6.QtCore import QEventLoop
+from PyQt6.QtQml import QQmlEngine
 
 from core.application import YASBApplication
 from core.bar.manager import BarManager
-from core.config import ConfigError, is_first_run, load_config
+from core.config import ConfigError, load_config
 from core.log import enable_debug_logging, init_logger
+from core.qml_types import register_qml_types
 from core.tray import SystemTrayManager
-from core.ui.views.welcome import run_setup_wizard
 from core.utils.alert_dialog import close_alerts, show_alert
 from core.utils.controller import start_cli_server
+from core.utils.icons.image_provider import ICON_PROVIDER, IconImageProvider
 from core.utils.single_instance import single_instance_lock
 from core.utils.update_service import get_update_service, start_update_checker
+from core.utils.win32.composition import shutdown_composition
 from core.watcher import create_observer
 from env import load_env, set_qt_quick_defaults
+from settings import QML_IMPORT_PATH
 
 
 def main():
     """Main entry point"""
     app = YASBApplication(argv)
-
-    if is_first_run() and not run_setup_wizard():
-        return
+    register_qml_types()
+    engine = QQmlEngine()
+    engine.addImportPath(QML_IMPORT_PATH)
+    engine.addImageProvider(ICON_PROVIDER, IconImageProvider())
 
     loop = qasync.QEventLoop(app)
     try:
-        loop.run_until_complete(main_async(app))  # pyright: ignore[reportUnknownMemberType]
+        loop.run_until_complete(main_async(app, engine))  # pyright: ignore[reportUnknownMemberType]
     except Exception as e:
         logging.exception("YASB stopped while starting")
         closed = QEventLoop()
@@ -42,9 +48,13 @@ def main():
         sys.exit(1)
     finally:
         loop.close()
+        # Qt's threads still call or delete Python objects while the engine goes, which hangs for good once
+        # Python itself is shutting down. The bars are closed by now, when the app quit.
+        sip.delete(engine)
+        shutdown_composition()
 
 
-async def main_async(app: YASBApplication):
+async def main_async(app: YASBApplication, engine: QQmlEngine):
     """
     Async entry point
     Required for qasync to work properly
@@ -88,7 +98,7 @@ async def main_async(app: YASBApplication):
         logging.info("Debug mode enabled.")
 
     # Initialise bars and background event listeners
-    manager = BarManager(config)
+    manager = BarManager(config, engine)
 
     try:
         manager.initialize_bars()

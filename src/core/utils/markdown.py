@@ -68,7 +68,6 @@ _HTML_BLOCK_OPEN = re.compile(r"^<(table|details|figure|fieldset|dl|form)\b", re
 
 # GitHub changelog preprocessing
 _IMG_TAG = re.compile(r"<img\s[^>]*/?>", re.IGNORECASE)
-_IMG_SRC = re.compile(r'<img\s[^>]*src="([^"]+)"', re.IGNORECASE)
 _COMMIT_URL = re.compile(r"https://github\.com/[^/\s]+/[^/\s]+/commit/([0-9a-fA-F]{7,40})(?=[^0-9a-fA-F]|$)")
 _COMPARE_URL = re.compile(r"(?<![<\[(])(https://github\.com/[^/\s]+/[^/\s]+/compare/[^\s<>()]+)")
 _PULL_URL = re.compile(r"(?<![\[(])https://github\.com/[^/\s]+/[^/\s]+/pull/(\d+)")
@@ -143,11 +142,6 @@ def preprocess_readme(text: str) -> str:
         flags=re.IGNORECASE,
     )
     return text
-
-
-def extract_img_srcs(html: str) -> list[str]:
-    """Return all ``src`` URLs from ``<img>`` tags in *html*."""
-    return _IMG_SRC.findall(html)
 
 
 def convert_img_tags(text: str) -> str:

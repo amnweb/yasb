@@ -3,8 +3,7 @@ import os
 import sys
 import threading
 
-from PyQt6.QtCore import QMetaObject, QProcess, Qt
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QCoreApplication, QMetaObject, QProcess, Qt
 
 from core.application import YASBApplication
 from core.cli.server import CliPipeHandler
@@ -23,7 +22,7 @@ def reload_application(msg: str = "Reloading Application..."):
         if _cli_pipe_handler is not None:
             _cli_pipe_handler.stop_cli_pipe_server()
 
-        app = QApplication.instance()
+        app = QCoreApplication.instance()
         if isinstance(app, YASBApplication):
             if app.loop and app.close_event:
                 app.loop.call_soon_threadsafe(app.close_event.set)
@@ -46,7 +45,7 @@ def exit_application(msg: str = "Exiting Application..."):
         if _cli_pipe_handler is not None:
             _cli_pipe_handler.stop_cli_pipe_server()
 
-        app = QApplication.instance()
+        app = QCoreApplication.instance()
         if isinstance(app, YASBApplication):
             if app.loop and app.close_event:
                 app.loop.call_soon_threadsafe(app.close_event.set)

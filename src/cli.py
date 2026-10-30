@@ -395,7 +395,7 @@ class CLIHandler:
 
         elif args.command == "stop":
             if args.force:
-                for proc in ["yasb.exe", "yasb_themes.exe"]:
+                for proc in ["yasb.exe"]:
                     if is_process_running(proc):
                         subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
             else:
@@ -511,9 +511,8 @@ class CLIHandler:
         elif args.command == "monitor-information":
             try:
                 from PyQt6.QtGui import QGuiApplication
-                from PyQt6.QtWidgets import QApplication
 
-                app = QApplication([])
+                app = QGuiApplication([])
 
                 screens = QGuiApplication.screens()
                 primary_screen = QGuiApplication.primaryScreen()
@@ -558,7 +557,7 @@ class CLIHandler:
             config_path = Path(DEFAULT_CONFIG_DIRECTORY)
 
             # Stop YASB if it is running
-            for proc in ["yasb.exe", "yasb_themes.exe"]:
+            for proc in ["yasb.exe"]:
                 if is_process_running(proc):
                     subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
 
@@ -887,7 +886,7 @@ class CLIChannelHandler:
             update_handler.download_yasb(release_info.download_url, msi_path)
 
             # Kill running processes
-            for proc in ["yasb.exe", "yasb_themes.exe"]:
+            for proc in ["yasb.exe"]:
                 if is_process_running(proc):
                     subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
 
@@ -978,7 +977,7 @@ class CLIUpdateHandler:
             self.download_yasb(release_info.download_url, msi_path)
 
             # Kill running processes
-            for proc in ["yasb.exe", "yasb_themes.exe"]:
+            for proc in ["yasb.exe"]:
                 if is_process_running(proc):
                     subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
 

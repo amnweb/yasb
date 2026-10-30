@@ -1,40 +1,62 @@
+import ctypes
 import logging
 import os
 import shutil
 import subprocess
 import threading
 from collections.abc import Callable
-from functools import partial
+from functools import cache, partial
 
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
-from PyQt6.QtWidgets import QSystemTrayIcon
+from PyQt6.QtCore import QCoreApplication, QObject, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor, QImage, QPainter
 
+from core.about import About
 from core.bar.manager import BarManager
-from core.ui.views.about import AboutDialog
+from core.updater import show_update
 from core.utils.controller import exit_application, reload_application
 from core.utils.shell_utils import shell_open
 from core.utils.update_service import ReleaseInfo, register_update_callback
+from core.utils.win32.bindings.kernel32 import GetLastError, GetModuleHandle
+from core.utils.win32.bindings.shell32 import shell32
 from core.utils.win32.bindings.user32 import (
     AppendMenu,
     CreatePopupMenu,
+    CreateWindowEx,
+    DestroyIcon,
     DestroyMenu,
+    DestroyWindow,
     GetCursorPos,
-    GetDesktopWindow,
+    GetSystemMetrics,
+    LoadImage,
     PostMessage,
+    RegisterWindowMessage,
     SetForegroundWindow,
     TrackPopupMenu,
+    user32,
 )
 from core.utils.win32.bindings.uxtheme import AllowDarkModeForWindow, FlushMenuThemes, SetPreferredAppMode
 from core.utils.win32.constants import (
+    IMAGE_ICON,
+    LR_LOADFROMFILE,
     MF_POPUP,
     MF_SEPARATOR,
     MF_STRING,
+    NIF_ICON,
+    NIF_MESSAGE,
+    NIF_TIP,
+    NIM_ADD,
+    NIM_DELETE,
+    NIM_MODIFY,
+    SM_CXSMICON,
     TPM_LEFTALIGN,
     TPM_NONOTIFY,
     TPM_RETURNCMD,
+    WM_APP,
     WM_NULL,
+    WM_RBUTTONUP,
+    WS_POPUP,
 )
+from core.utils.win32.structs import NOTIFYICONDATAW, WNDCLASS, WNDPROC
 from core.utils.win32.undocumented import PREFERRED_APP_MODE_ALLOW_DARK
 from core.utils.win32.utils import disable_autostart, enable_autostart, is_autostart_enabled
 from settings import (
@@ -45,30 +67,107 @@ from settings import (
 )
 
 EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
-THEME_EXE_PATH = os.path.join(SCRIPT_PATH, "yasb_themes.exe")
 CLOUD_EXE_PATH = os.path.join(SCRIPT_PATH, "yasb_cloud.exe")
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
+ICON_DIR = os.path.join(SCRIPT_PATH, "assets", "images")
+TRAY_WINDOW_CLASS = "YasbTray"
+# The message the shell sends the tray window for clicks on the icon
+TRAY_MESSAGE = WM_APP + 1
+
+_trays: dict[int, SystemTrayManager] = {}
 
 
-class SystemTrayManager(QSystemTrayIcon):
+def _window_procedure(hwnd: int, message: int, wparam: int, lparam: int) -> int:
+    tray = _trays.get(hwnd)
+    if tray is not None:
+        try:
+            tray.handle_message(message, lparam)
+        except Exception:
+            logging.exception("Tray message %#x failed", message)
+    return user32.DefWindowProcW(hwnd, message, wparam, lparam)
+
+
+_procedure = WNDPROC(_window_procedure)
+
+
+@cache
+def _window_class() -> str:
+    window_class = WNDCLASS(lpfnWndProc=_procedure, hInstance=GetModuleHandle(None), lpszClassName=TRAY_WINDOW_CLASS)
+    if not user32.RegisterClassW(ctypes.byref(window_class)):
+        raise ctypes.WinError(GetLastError())
+    return TRAY_WINDOW_CLASS
+
+
+class SystemTrayManager(QObject):
+    """YASB's icon in the notification area, with a native menu, made directly with Shell_NotifyIcon."""
+
     _update_signal = pyqtSignal(object)
 
     def __init__(self, bar_manager: BarManager):
         super().__init__()
         self._bar_manager = bar_manager
-        self._icon = QIcon()
         self._update_available = False
         self._pending_release_info: ReleaseInfo | None = None
-        self._load_favicon()
-        self.setToolTip(APP_NAME)
+        self._about: About | None = None
+        self._tooltip = APP_NAME
+        self._shown = False
+        # Explorer sends this to every top-level window after it restarts, and the icon must be added again
+        self._taskbar_created = RegisterWindowMessage("TaskbarCreated")
+        # A hidden window: the shell sends it the icon's clicks, and it owns the menu while it is open
+        self._hwnd = CreateWindowEx(
+            0, _window_class(), None, WS_POPUP, 0, 0, 0, 0, None, None, GetModuleHandle(None), None
+        )
+        if not self._hwnd:
+            raise ctypes.WinError(GetLastError())
+        _trays[self._hwnd] = self
+        size = GetSystemMetrics(SM_CXSMICON)
+        self._icon = LoadImage(0, os.path.join(ICON_DIR, "app_icon.ico"), IMAGE_ICON, size, size, LR_LOADFROMFILE)
+        self._menu_timer = QTimer(self)
+        self._menu_timer.setSingleShot(True)
+        self._menu_timer.timeout.connect(self._show_context_menu)
         self._load_config()
-        self.activated.connect(self._on_tray_activated)
         self._update_signal.connect(self._set_update_badge)
         register_update_callback(self._update_signal.emit)
+        app = QCoreApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self.close)
 
-    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason):
-        if reason == QSystemTrayIcon.ActivationReason.Context:
-            self._show_context_menu()
+    def show(self) -> None:
+        self._shown = self._notify(NIM_ADD)
+
+    def close(self) -> None:
+        if self._shown:
+            self._notify(NIM_DELETE)
+            self._shown = False
+        if self._hwnd:
+            _trays.pop(self._hwnd, None)
+            DestroyWindow(self._hwnd)
+            self._hwnd = 0
+        if self._icon:
+            DestroyIcon(self._icon)
+            self._icon = 0
+
+    def handle_message(self, message: int, lparam: int) -> None:
+        if message == TRAY_MESSAGE and lparam == WM_RBUTTONUP:
+            # The menu runs its own loop, so it opens after the shell's message has been answered
+            self._menu_timer.start()
+        elif message == self._taskbar_created and self._shown:
+            self._shown = self._notify(NIM_ADD)
+
+    def _notify(self, action: int) -> bool:
+        data = NOTIFYICONDATAW(
+            cbSize=ctypes.sizeof(NOTIFYICONDATAW),
+            hWnd=self._hwnd,
+            uID=1,
+            uFlags=NIF_MESSAGE | NIF_ICON | NIF_TIP,
+            uCallbackMessage=TRAY_MESSAGE,
+            hIcon=self._icon,
+            szTip=self._tooltip[:127],
+        )
+        if not shell32.Shell_NotifyIconW(action, ctypes.byref(data)):
+            logging.warning("The tray icon could not be updated (%d)", action)
+            return False
+        return True
 
     def _load_config(self):
         config = self._bar_manager.config
@@ -87,23 +186,28 @@ class SystemTrayManager(QSystemTrayIcon):
             self.glazewm_reload = config.glazewm.reload_command
             self.glazewm_enabled = any([self.glazewm_start, self.glazewm_stop, self.glazewm_reload])
 
-    def _load_favicon(self):
-        # Get the current directory of the script
-        self._icon.addFile(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png"), QSize(48, 48))
-        self.setIcon(self._icon)
-
     def _set_update_badge(self, release_info: ReleaseInfo | None = None):
         self._update_available = True
         self._pending_release_info = release_info
-        base = QPixmap(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")).scaled(48, 48)
-        painter = QPainter(base)
+        size = GetSystemMetrics(SM_CXSMICON)
+        image = QImage(os.path.join(ICON_DIR, "app_icon.png")).scaled(
+            size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+        )
+        dot = size * 3 / 8
+        painter = QPainter(image)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setBrush(QColor("#ef4747"))
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(30, 0, 18, 18)
+        painter.drawEllipse(round(size - dot), 0, round(dot), round(dot))
         painter.end()
-        self.setIcon(QIcon(base))
-        self.setToolTip("Update available")
+        badged = image.toHICON()
+        if badged is not None:
+            if self._icon:
+                DestroyIcon(self._icon)
+            self._icon = int(badged)
+        self._tooltip = "Update available"
+        if self._shown:
+            self._notify(NIM_MODIFY)
 
     def _try_enable_dark_menu(self, hwnd: int):
         try:
@@ -137,8 +241,6 @@ class SystemTrayManager(QSystemTrayIcon):
             add_item(hmenu, "Open Config", self.open_config)
             if os.path.exists(CLOUD_EXE_PATH):
                 add_item(hmenu, "YASB Cloud", lambda: shell_open(CLOUD_EXE_PATH))
-            if os.path.exists(THEME_EXE_PATH):
-                add_item(hmenu, "Get Themes", lambda: shell_open(THEME_EXE_PATH))
             add_item(hmenu, "Reload YASB", self._reload_application)
             add_sep(hmenu)
 
@@ -175,8 +277,7 @@ class SystemTrayManager(QSystemTrayIcon):
             add_sep(hmenu)
             add_item(hmenu, "Exit", self._exit_application)
 
-            bars = self._bar_manager.bars
-            hwnd = int(bars[0].winId()) if bars else GetDesktopWindow()
+            hwnd = self._hwnd
             x, y = GetCursorPos()
             self._try_enable_dark_menu(hwnd)
             try:
@@ -253,11 +354,12 @@ class SystemTrayManager(QSystemTrayIcon):
             logging.error("Failed to open browser: %s", e)
 
     def _show_about_dialog(self):
-        dialog = AboutDialog(self)
-        dialog.exec()
+        if self._about is None:
+            self._about = About(self)
+            self._about.updateRequested.connect(self._open_update_dialog)
+        self._about.show(self._bar_manager.engine)
 
-    def _open_update_dialog(self):
-        from core.ui.views.updater import UpdateDialog
-
-        dialog = UpdateDialog(release_info=self._pending_release_info)
-        dialog.exec()
+    def _open_update_dialog(self, release_info: ReleaseInfo | None = None):
+        release_info = release_info or self._pending_release_info
+        if release_info is not None:
+            show_update(self._bar_manager.engine, release_info)

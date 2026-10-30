@@ -2,23 +2,18 @@ import logging
 from contextlib import suppress
 from pathlib import Path
 
-from PyQt6.QtCore import QCoreApplication, QEvent, QObject, Qt, QTimer, QUrl, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QCoreApplication, QEvent, QObject, QTimer, QUrl, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QGuiApplication, QScreen
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 
 from core import widget_files
 from core.bar.hotkeys import WidgetHotkeys
 from core.bar.revisions import Revisions, path_key
-from core.bar.window import BAR_QML, BarWindow, is_dark_scheme
+from core.bar.window import BAR_QML, BarWindow
 from core.config import get_config
-from core.qml_types import register_qml_types
 from core.utils.alert_dialog import show_alert
 from core.utils.controller import reload_application
-from core.utils.global_state import GlobalState
-from core.utils.icons.image_provider import ICON_PROVIDER, IconImageProvider
-from core.utils.win32.composition import shutdown_composition
 from core.validation.config import YasbConfig
-from settings import QML_IMPORT_PATH
 
 QML_RELOAD_DELAY_MS = 200
 
@@ -27,15 +22,12 @@ class BarManager(QObject):
     config_modified = pyqtSignal()
     qml_changed = pyqtSignal(str)
 
-    def __init__(self, config: YasbConfig):
+    def __init__(self, config: YasbConfig, engine: QQmlEngine):
         super().__init__()
         self.config = config
         self.bars: list[BarWindow] = []
         self.revisions = Revisions()
-        register_qml_types()
-        self.engine = QQmlEngine(self)
-        self.engine.addImportPath(QML_IMPORT_PATH)
-        self.engine.addImageProvider(ICON_PROVIDER, IconImageProvider())
+        self.engine = engine
         self.hotkeys = WidgetHotkeys(self)
 
         self._changed_qml: set[str] = set()
@@ -53,11 +45,6 @@ class BarManager(QObject):
         self._app.screenAdded.connect(self.on_screens_update)
         self._app.screenRemoved.connect(self.on_screens_update)
         self.config_modified.connect(self.on_config_modified)
-
-        hints = QGuiApplication.styleHints()
-        if hints is not None:
-            hints.colorSchemeChanged.connect(self._on_color_scheme_changed)
-        GlobalState.set_dark(is_dark_scheme())
 
     def _disconnect_reload_signals(self) -> None:
         with suppress(TypeError):
@@ -146,9 +133,6 @@ class BarManager(QObject):
     def qml_folders(self) -> set[Path]:
         return {bar.bar_file.parent for bar in self.bars if bar.bar_file != BAR_QML}
 
-    def _on_color_scheme_changed(self, scheme: Qt.ColorScheme) -> None:
-        GlobalState.set_dark(scheme == Qt.ColorScheme.Dark)
-
     def _find_screen(self, name: str) -> QScreen | None:
         primary = QGuiApplication.primaryScreen()
         wanted = primary.name() if name == "primary" and primary is not None else name
@@ -183,14 +167,8 @@ class BarManager(QObject):
 
     @pyqtSlot()
     def shutdown(self) -> None:
-        """Close bars before releasing their shared composition runtime."""
         self._qml_timer.stop()
         self.close_bars()
-        # Qt threads that load images can still call or delete Python objects while the engine goes,
-        # which hangs for good once Python itself is shutting down
-        self.engine.deleteLater()
-        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
-        shutdown_composition()
 
     def close_bars(self) -> None:
         self.hotkeys.stop()

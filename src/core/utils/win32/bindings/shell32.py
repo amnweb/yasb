@@ -42,6 +42,7 @@ from core.utils.win32.constants import (
 )
 from core.utils.win32.structs import (
     APPBARDATA,
+    NOTIFYICONDATAW,
     PROPERTYKEY,
     PROPVARIANT,
     SHELLEXECUTEINFO,
@@ -66,6 +67,9 @@ shell32.SHGetFolderPathW.restype = HRESULT
 
 shell32.SHAppBarMessage.argtypes = [DWORD, POINTER(APPBARDATA)]
 shell32.SHAppBarMessage.restype = c_size_t
+
+shell32.Shell_NotifyIconW.argtypes = [DWORD, POINTER(NOTIFYICONDATAW)]
+shell32.Shell_NotifyIconW.restype = BOOL
 
 shell32.IsUserAnAdmin.argtypes = []
 shell32.IsUserAnAdmin.restype = BOOL

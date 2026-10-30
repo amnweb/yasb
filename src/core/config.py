@@ -10,10 +10,9 @@ from yaml import YAMLError, safe_load
 from core.utils.alert_dialog import show_alert
 from core.utils.validation_errors import format_pydantic_errors_to_yaml
 from core.validation.config import YasbConfig
-from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME, GITHUB_URL
+from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, GITHUB_URL
 
 HOME_CONFIGURATION_DIR = DEFAULT_CONFIG_DIRECTORY
-HOME_STYLES_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, DEFAULT_STYLES_FILENAME))
 HOME_CONFIG_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, DEFAULT_CONFIG_FILENAME))
 GITHUB_ISSUES_URL = f"{GITHUB_URL}/issues"
 
@@ -24,11 +23,6 @@ class ConfigValidationError(TypeError):
         self.errors = errors
         self.filetype = filetype
         self.filepath = filepath
-
-
-def is_first_run() -> bool:
-    """Return True when neither config file nor stylesheet exist yet."""
-    return not path.isfile(HOME_CONFIG_PATH) and not path.isfile(HOME_STYLES_PATH)
 
 
 def get_config_dir() -> str:

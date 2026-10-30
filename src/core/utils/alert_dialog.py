@@ -1,7 +1,8 @@
 import logging
+import os
 from collections.abc import Callable
 
-from PyQt6.QtCore import QCoreApplication, QEvent
+from PyQt6.QtCore import QCoreApplication, QEvent, QUrl
 from PyQt6.QtGui import QWindow
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 
@@ -27,9 +28,10 @@ def show_alert(title: str, message: str, details: str = "", on_closed: Callable[
     for open_dialog in [dialog for dialog in _alerts if dialog.property("heading") == title]:
         open_dialog.close()
     engine = QQmlEngine()
-    engine.addImportPath(QML_IMPORT_PATH)
-    component = QQmlComponent(engine)
-    component.loadFromModule("Yasb.Common", "AlertDialog")
+    # Not loadFromModule: PyQt keeps the GIL while it waits for Qt's loader thread, which can log through Python
+    component = QQmlComponent(
+        engine, QUrl.fromLocalFile(os.path.join(QML_IMPORT_PATH, "Yasb", "Common", "AlertDialog.qml"))
+    )
     dialog = component.createWithInitialProperties({"heading": title, "message": message, "details": details})
     if not isinstance(dialog, QWindow):
         logging.error("Could not show the alert %r: %s", title, [error.toString() for error in component.errors()])

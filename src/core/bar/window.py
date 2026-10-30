@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import override
 
 from PyQt6.QtCore import QObject, QPointF, QRect, QRectF, QSizeF, Qt, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QCloseEvent, QColor, QGuiApplication, QMouseEvent, QRegion, QScreen
+from PyQt6.QtGui import QCloseEvent, QColor, QMouseEvent, QRegion, QScreen
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtQuick import QQuickItem, QQuickWindow
 
@@ -41,11 +41,6 @@ APP_BAR_EDGES = {
 
 # QRect.adjust() deltas, per unit of overhang, that grow the window away from its screen edge
 OVERHANG_SIDES = {"top": (0, 0, 0, 1), "bottom": (0, -1, 0, 0), "left": (0, 0, 1, 0), "right": (-1, 0, 0, 0)}
-
-
-def is_dark_scheme() -> bool:
-    hints = QGuiApplication.styleHints()
-    return hints is not None and hints.colorScheme() == Qt.ColorScheme.Dark
 
 
 class BarContext(QObject):

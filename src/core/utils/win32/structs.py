@@ -272,6 +272,29 @@ class NOTIFYICONDATA(ct.Structure):
     ]
 
 
+class NOTIFYICONDATAW(ct.Structure):
+    """Shell_NotifyIconW's argument, with pointer-sized handles. NOTIFYICONDATA above is the 32-bit form
+    that other apps' tray icons arrive in."""
+
+    _fields_ = [
+        ("cbSize", DWORD),
+        ("hWnd", HWND),
+        ("uID", UINT),
+        ("uFlags", UINT),
+        ("uCallbackMessage", UINT),
+        ("hIcon", HICON),
+        ("szTip", WCHAR * 128),
+        ("dwState", DWORD),
+        ("dwStateMask", DWORD),
+        ("szInfo", WCHAR * 256),
+        ("uVersion", UINT),
+        ("szInfoTitle", WCHAR * 64),
+        ("dwInfoFlags", DWORD),
+        ("guidItem", GUID),
+        ("hBalloonIcon", HICON),
+    ]
+
+
 class SHELLTRAYDATA(ct.Structure):
     _fields_ = [
         ("magic_number", ct.c_uint32),

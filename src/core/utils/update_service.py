@@ -22,7 +22,7 @@ from typing import Any, cast
 import certifi
 
 from core.utils.system import app_data_path, get_architecture
-from core.utils.utilities import ToastNotifier, get_app_identifier
+from core.utils.toast import ToastNotifier, get_app_identifier
 from settings import APP_ID, BUILD_VERSION, IS_FROZEN, RELEASE_CHANNEL, SCRIPT_PATH
 
 # GitHub API configuration

@@ -135,7 +135,6 @@ jobs:
         path: |
           src/dist/yasb.exe
           src/dist/yasbc.exe
-          src/dist/yasb_themes.exe
           src/dist/yasb_cloud.exe
 
     - name: Get unsigned-exes artifact id

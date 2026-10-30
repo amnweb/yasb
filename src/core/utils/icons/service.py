@@ -20,9 +20,8 @@ from enum import IntEnum
 from typing import ClassVar, NamedTuple
 
 from PIL import Image
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QCoreApplication, QObject, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QApplication
 
 from core.utils.icons.sources import AppIcon, FileIcon, IconSource, ProcessIcon, WindowIcon, load_icon
 from core.utils.win32.bindings.ole32 import CoInitialize
@@ -94,7 +93,7 @@ class IconService(QObject):
 
         threading.Thread(target=self._run_icon_thread, daemon=True, name="IconService").start()
 
-        app = QApplication.instance()
+        app = QCoreApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self._stop)
 

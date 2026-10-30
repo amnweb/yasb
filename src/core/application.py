@@ -1,11 +1,11 @@
 from asyncio import AbstractEventLoop, Event
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 
-class YASBApplication(QApplication):
+class YASBApplication(QGuiApplication):
     """
-    Subclass of QApplication to provide type-safe access to application-wide
+    Subclass of QGuiApplication to provide type-safe access to application-wide
     asyncio loop and shutdown events.
     Might also be used to store other application-wide state.
     """

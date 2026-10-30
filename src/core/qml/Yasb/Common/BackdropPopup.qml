@@ -22,6 +22,8 @@ QtObject {
     property bool closing: false
     // Windows can take focus away for a moment while the popup shows
     property bool opening: false
+    // Frames left until the window hides, so the closed state is drawn first
+    property int framesUntilHidden: 0
     property alias visible: window.visible
     property alias title: window.title
     property alias color: window.color
@@ -77,6 +79,15 @@ QtObject {
             if (!visible)
                 popup.closing = false
         }
+        // Windows shows a window's last drawn frame again when it reopens
+        onAfterAnimating: {
+            if (popup.framesUntilHidden === 0)
+                return
+            if (--popup.framesUntilHidden === 0)
+                window.hide()
+            else
+                window.update()
+        }
 
         // A press in the room around the popup counts as a press outside it
         MouseArea {
@@ -107,6 +118,7 @@ QtObject {
     function open() {
         exit?.stop()
         closing = false
+        framesUntilHidden = 0
         opening = true
         side = sideOfAnchor()
         makeRoom()
@@ -166,8 +178,10 @@ QtObject {
         target: popup.exit
 
         function onFinished() {
-            if (popup.closing)
-                window.hide()
+            if (popup.closing) {
+                popup.framesUntilHidden = 2
+                window.update()
+            }
         }
     }
 

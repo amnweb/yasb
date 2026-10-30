@@ -9,10 +9,8 @@ All components live in `src/core/ui/components/` and share the same token-based 
 | Component | Import | Description |
 |-----------|--------|-------------|
 | [Button](#button) | `core.ui.components.button` | Button with `default`, `accent` and `subtle` variants. |
-| [DropDownButton](#dropdownbutton) | `core.ui.components.drop_down_button` | Button that opens a menu of actions. |
 | [Link](#link) | `core.ui.components.link` | Hyperlink-style button. |
 | [TextBlock](#textblock) | `core.ui.components.text_block` | Label with preset typography variants. |
-| [TextBox](#textbox) | `core.ui.components.text_box` | Single-line text input with optional icon. |
 | [ToggleSwitch](#toggleswitch) | `core.ui.components.toggle_switch` | On/off switch, with or without a text label. |
 | [Slider](#slider) | `core.ui.components.slider` | Horizontal slider with a value label. |
 | [DropDown](#dropdown) | `core.ui.components.dropdown` | Selector with a popup list. |
@@ -51,35 +49,6 @@ save_btn = Button("Save", variant="accent", parent=self)
 save_btn.clicked.connect(self._on_save)
 ```
 
-### DropDownButton
-
-A `Button` that opens a menu of actions.
-
-```python
-DropDownButton(
-    text="",
-    icon_svg=None,
-    items=None,
-    variant="default",
-    chevron=True,
-    parent=None,
-)
-```
-
-- `icon_svg`: SVG markup drawn in the button's text color.
-- `items`: a list of `(key, label)` or `(key, label, icon_svg)` tuples. Use `None` for a separator.
-- `chevron`: draw the down arrow that marks the button as a menu.
-- Signal: `triggered(str)` with the `key` of the chosen item.
-
-```python
-menu = DropDownButton(
-    "Actions",
-    items=[("copy", "Copy"), ("paste", "Paste"), None, ("clear", "Clear")],
-    parent=self,
-)
-menu.triggered.connect(lambda key: print(key))
-```
-
 ### Link
 
 ```python
@@ -115,22 +84,6 @@ TextBlock(text="", variant="body", parent=None)
 | `"caption-strong"` | 12px | DemiBold |
 
 Methods: `set_color_override(color)` and `reset_color()`.
-
-### TextBox
-
-```python
-TextBox(
-    text="",
-    placeholder="",
-    icon_svg=None,
-    icon_position="left",
-    height=32,
-    parent=None,
-)
-```
-
-- `icon_position`: `"left"` or `"right"`.
-- It is a `QLineEdit`, so `text()`, `textChanged` and the other `QLineEdit` API work as usual.
 
 ### ToggleSwitch
 

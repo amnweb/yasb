@@ -6,6 +6,7 @@ from typing import Any, cast
 
 import pytest
 from PyQt6.QtGui import QColor
+from PyQt6.QtQml import QQmlEngine
 from PyQt6.QtWidgets import QApplication
 from watchdog.events import FileModifiedEvent, FileMovedEvent
 
@@ -14,8 +15,10 @@ from core.bar import manager as bar_manager
 from core.bar import window
 from core.bar.manager import QML_RELOAD_DELAY_MS, BarManager
 from core.bar.window import BAR_QML, BarWindow
+from core.qml_types import register_qml_types
 from core.validation.config import YasbConfig
 from core.watcher import FileModifiedEventHandler
+from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 from tests.support.widgets import write_widget
 
@@ -45,10 +48,13 @@ def alerts(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 @pytest.fixture
 def make_manager(qapp: QApplication, fake_app_bar: None) -> Iterator[MakeManager]:
+    register_qml_types()
+    engine = QQmlEngine()
+    engine.addImportPath(QML_IMPORT_PATH)
     managers: list[BarManager] = []
 
     def make(**bars: dict[str, Any]) -> BarManager:
-        manager = BarManager(YasbConfig.model_validate({"bars": bars}))
+        manager = BarManager(YasbConfig.model_validate({"bars": bars}), engine)
         manager.initialize_bars()
         managers.append(manager)
         return manager

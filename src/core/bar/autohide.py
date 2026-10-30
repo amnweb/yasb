@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, override
 
 from PyQt6.QtCore import QEvent, QObject, QPoint, QRect, Qt, QTimer
 from PyQt6.QtGui import QCursor, QGuiApplication, QWindow
-from PyQt6.QtWidgets import QApplication
 
 from core.bar.appbar import EXCLUDED_WINDOW_CLASS_SUFFIXES, EXCLUDED_WINDOW_CLASSES
 from core.utils.win32.bindings.user32 import GetClassName, GetWindowText, IsWindowVisible, MonitorFromWindow, user32
@@ -104,8 +103,6 @@ class AutoHideManager(QObject):
         return False
 
     def _should_stay_visible(self) -> bool:
-        if QApplication.activePopupWidget() is not None:
-            return True
         cursor = QCursor.pos()
         for window in QGuiApplication.topLevelWindows():
             if window is self.bar or window is self._zone or not window.isVisible():

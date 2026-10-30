@@ -86,16 +86,6 @@ msi_data = {
             "[TARGETDIR]assets\\images\\app_icon.png",
             "TARGETDIR",
         ),
-        ("UriScheme", -1, "Software\\Classes\\yasb-themes", "", "URL:YASB Themes", "TARGETDIR"),
-        ("UriSchemeFlag", -1, "Software\\Classes\\yasb-themes", "URL Protocol", "", "TARGETDIR"),
-        (
-            "UriSchemeCommand",
-            -1,
-            "Software\\Classes\\yasb-themes\\shell\\open\\command",
-            "",
-            '"[TARGETDIR]yasb_themes.exe" "%1"',
-            "TARGETDIR",
-        ),
     ],
 }
 
@@ -127,13 +117,6 @@ executables = [
         shortcut_dir="MyProgramMenu",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasb",
-    ),
-    Executable(
-        "core/ui/views/themes.py",
-        base="gui",
-        icon=icon_ico,
-        copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
-        target_name="yasb_themes",
     ),
     Executable(
         "cli.py",

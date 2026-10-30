@@ -6,10 +6,9 @@ import winreg
 from collections.abc import Collection
 from contextlib import suppress
 from ctypes import byref
-from typing import NotRequired, TypedDict
+from typing import TYPE_CHECKING, NotRequired, TypedDict
 
-from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QApplication, QMenu, QWidget
+from PyQt6.QtGui import QCursor, QGuiApplication
 from winrt.windows.applicationmodel import Package
 from winrt.windows.management.deployment import PackageManager
 
@@ -50,6 +49,9 @@ from core.utils.win32.constants import (
 from core.utils.win32.registry_keys import RUN_KEY
 from core.utils.win32.structs import WINDOWPLACEMENT
 
+if TYPE_CHECKING:
+    from PyQt6.QtWidgets import QMenu
+
 
 def get_windows_host_arch():
     """Returns the actual host machine architecture on Windows,
@@ -81,15 +83,6 @@ def is_running_under_emulation():
         # If process_machine is not 0, it's running under emulation
         return process_machine.value != 0
     return False
-
-
-def get_widget_monitor_hwnd(widget: QWidget) -> int | None:
-    # Don't use widget.winId() here, Qt would turn the widget and all its
-    # siblings into native windows.
-    top = widget.window()
-    if top is None:
-        return None
-    return MonitorFromWindow(int(top.winId()))
 
 
 class MonitorRect(TypedDict):
@@ -338,7 +331,7 @@ def _monitor_device(monitor: int | None) -> str | None:
 
 
 def screen_monitor(screen_name: str) -> int | None:
-    for screen in QApplication.screens():
+    for screen in QGuiApplication.screens():
         if screen.name() == screen_name:
             geo = screen.geometry()
             return MonitorFromRect((geo.left(), geo.top(), geo.right(), geo.bottom()))
@@ -350,8 +343,8 @@ def find_focused_screen(
 ) -> str | None:
     """Find the screen that should be focused based on mouse position, active window, or primary screen."""
 
-    qt_screens = QApplication.screens()
-    primary_screen = QApplication.primaryScreen()
+    qt_screens = QGuiApplication.screens()
+    primary_screen = QGuiApplication.primaryScreen()
 
     def is_valid(name: str) -> bool:
         return screens is None or any(name in s for s in screens)
