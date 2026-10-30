@@ -1,0 +1,11 @@
+module Yasb.Cloud
+
+BackupsPage 1.0 BackupsPage.qml
+Caption 1.0 Caption.qml
+CloudWindow 1.0 CloudWindow.qml
+ConnectPage 1.0 ConnectPage.qml
+Glyph 1.0 Glyph.qml
+InfoBar 1.0 InfoBar.qml
+LinkButton 1.0 LinkButton.qml
+SettingCard 1.0 SettingCard.qml
+SettingsPage 1.0 SettingsPage.qml

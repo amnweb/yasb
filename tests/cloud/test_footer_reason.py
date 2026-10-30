@@ -10,7 +10,7 @@ only being retried that their backups had stopped.
 """
 
 from core.cloud.models import Access
-from core.cloud.ui.window import _reason
+from core.cloud.ui.cloud import _reason
 
 
 def test_a_retrying_payment_names_the_problem_without_claiming_backups_stopped():

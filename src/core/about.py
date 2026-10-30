@@ -8,7 +8,15 @@ from core.utils.qml_window import show_window
 from core.utils.shell_utils import shell_open
 from core.utils.system import get_architecture
 from core.utils.update_service import ReleaseInfo, get_update_service
-from settings import BUILD_VERSION, DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL, GITHUB_URL, RELEASE_CHANNEL, SCRIPT_PATH
+from settings import (
+    BUILD_VERSION,
+    DEFAULT_CONFIG_DIRECTORY,
+    GITHUB_URL,
+    RELEASE_CHANNEL,
+    SCRIPT_PATH,
+    WEBSITE_DOCS_URL,
+    WEBSITE_URL,
+)
 
 
 def release_notes_url() -> str:
@@ -55,8 +63,12 @@ class About(QObject):
         return GITHUB_URL
 
     @qml_property(str, constant=True)
-    def themesUrl(self) -> str:
-        return GITHUB_THEME_URL
+    def siteUrl(self) -> str:
+        return WEBSITE_URL
+
+    @qml_property(str, constant=True)
+    def docSiteUrl(self) -> str:
+        return WEBSITE_DOCS_URL
 
     @qml_property(str, constant=True)
     def iconUrl(self) -> str:

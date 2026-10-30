@@ -27,7 +27,6 @@ from core.utils.win32.bindings.user32 import (
     DestroyWindow,
     GetCursorPos,
     GetSystemMetrics,
-    LoadImage,
     PostMessage,
     RegisterWindowMessage,
     SetForegroundWindow,
@@ -36,8 +35,6 @@ from core.utils.win32.bindings.user32 import (
 )
 from core.utils.win32.bindings.uxtheme import AllowDarkModeForWindow, FlushMenuThemes, SetPreferredAppMode
 from core.utils.win32.constants import (
-    IMAGE_ICON,
-    LR_LOADFROMFILE,
     MF_POPUP,
     MF_SEPARATOR,
     MF_STRING,
@@ -98,6 +95,25 @@ def _window_class() -> str:
     return TRAY_WINDOW_CLASS
 
 
+def _app_icon(badge: bool = False) -> int:
+    """The app icon at the notification area's size, with the update dot when badge is set."""
+    size = GetSystemMetrics(SM_CXSMICON)
+    # The PNG, because it is what the build ships and preview builds swap in their own
+    image = QImage(os.path.join(ICON_DIR, "app_icon.png")).scaled(
+        size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+    )
+    if badge:
+        dot = size * 3 / 8
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setBrush(QColor("#ef4747"))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(round(size - dot), 0, round(dot), round(dot))
+        painter.end()
+    icon = image.toHICON()
+    return int(icon) if icon is not None else 0
+
+
 class SystemTrayManager(QObject):
     """YASB's icon in the notification area, with a native menu, made directly with Shell_NotifyIcon."""
 
@@ -120,8 +136,7 @@ class SystemTrayManager(QObject):
         if not self._hwnd:
             raise ctypes.WinError(GetLastError())
         _trays[self._hwnd] = self
-        size = GetSystemMetrics(SM_CXSMICON)
-        self._icon = LoadImage(0, os.path.join(ICON_DIR, "app_icon.ico"), IMAGE_ICON, size, size, LR_LOADFROMFILE)
+        self._icon = _app_icon()
         self._menu_timer = QTimer(self)
         self._menu_timer.setSingleShot(True)
         self._menu_timer.timeout.connect(self._show_context_menu)
@@ -189,22 +204,11 @@ class SystemTrayManager(QObject):
     def _set_update_badge(self, release_info: ReleaseInfo | None = None):
         self._update_available = True
         self._pending_release_info = release_info
-        size = GetSystemMetrics(SM_CXSMICON)
-        image = QImage(os.path.join(ICON_DIR, "app_icon.png")).scaled(
-            size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
-        )
-        dot = size * 3 / 8
-        painter = QPainter(image)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setBrush(QColor("#ef4747"))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(round(size - dot), 0, round(dot), round(dot))
-        painter.end()
-        badged = image.toHICON()
-        if badged is not None:
+        badged = _app_icon(badge=True)
+        if badged:
             if self._icon:
                 DestroyIcon(self._icon)
-            self._icon = int(badged)
+            self._icon = badged
         self._tooltip = "Update available"
         if self._shown:
             self._notify(NIM_MODIFY)

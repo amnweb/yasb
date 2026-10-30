@@ -11,14 +11,14 @@ and in another one, which is what stops a CLI restore running under the window's
 from pathlib import Path
 
 import pytest
-from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import QApplication
 
 from core.cloud.api import ApiClient
 from core.cloud.constants import BUSY_MESSAGE
 from core.cloud.models import Account
+from core.cloud.operations import Operations
 from core.cloud.session import Session
-from core.cloud.ui.window import CloudWindow, Operations
+from core.cloud.ui.cloud import Cloud
 from core.cloud.workers import config_lock
 
 
@@ -107,21 +107,18 @@ def test_a_second_operation_is_refused_while_one_is_active(ops: Operations):
 def test_closing_the_window_cancels_rather_than_refusing(qapp: QApplication, cloud_home: Path):
     """Closing always closes. Whatever is running is cancelled and released; the user is
     never asked to wait and never shown a dialog about it."""
-    window = CloudWindow()
-    window._session.master_key = bytes(32)
+    cloud = Cloud()
+    cloud._session.master_key = bytes(32)
     warned: list[str] = []
-    window.backups_view.show_error = lambda message, title="Error": warned.append(title)
+    cloud.messageRequested.connect(lambda title, _message: warned.append(title))
 
-    window._ops.restore("any-snapshot-id")
-    assert window._ops._active is not None
+    cloud._ops.restore("any-snapshot-id")
+    assert cloud._ops._active is not None
 
-    event = QCloseEvent()
-    event.accept()
-    window.closeEvent(event)
+    cloud.shutdown()
 
-    assert event.isAccepted(), "the close must never be refused"
-    assert warned == [], "and must never explain itself"
-    assert window._ops._active is None, "and must leave nothing running"
+    assert warned == [], "closing must never explain itself"
+    assert cloud._ops._active is None, "and must leave nothing running"
     assert config_lock().tryLock(0), "with the lock handed back"
 
 

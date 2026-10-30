@@ -1,7 +1,9 @@
 # pyright: reportPrivateUsage=false
 
 import ctypes
+import shutil
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
@@ -37,10 +39,15 @@ def shell(monkeypatch: pytest.MonkeyPatch) -> Shell:
 
 
 @pytest.fixture
-def tray(qapp: QApplication, shell: Shell, monkeypatch: pytest.MonkeyPatch) -> Iterator[SystemTrayManager]:
+def tray(
+    qapp: QApplication, shell: Shell, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Iterator[SystemTrayManager]:
     def no_updates(callback: Callable[[Any], object]) -> None:
         pass
 
+    # Laid out like the build, which ships app_icon.png and no .ico
+    shutil.copy(Path(tray_module.ICON_DIR) / "app_icon.png", tmp_path / "app_icon.png")
+    monkeypatch.setattr(tray_module, "ICON_DIR", str(tmp_path))
     monkeypatch.setattr(tray_module, "register_update_callback", no_updates)
     tray = SystemTrayManager(cast(Any, SimpleNamespace(config=YasbConfig())))
     yield tray

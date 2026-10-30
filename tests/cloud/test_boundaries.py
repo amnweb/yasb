@@ -16,7 +16,8 @@ CLOUD = SRC / "core" / "cloud"
 
 ALLOWED_PREFIXES = (
     "core.cloud",
-    "core.ui",
+    # Leaf helper for exposing properties to QML; depends only on PyQt6.
+    "core.utils.qml",
     "core.utils.win32",
     "core.utils.system",
     "core.utils.toast",

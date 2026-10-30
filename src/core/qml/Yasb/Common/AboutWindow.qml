@@ -84,30 +84,70 @@ Window {
         anchors.margins: 24
         spacing: 4
 
+        Image {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 8
+            Layout.preferredWidth: 96
+            Layout.preferredHeight: 96
+            source: window.about.iconUrl
+            sourceSize: Qt.size(96, 96)
+        }
+
+        Label {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 12
+            text: "YASB Reborn"
+            font.pixelSize: 28
+            font.weight: Font.DemiBold
+        }
+
+        Label {
+            Layout.fillWidth: true
+            text: qsTr("A highly configurable status bar for Windows")
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+            color: Qt.alpha(palette.windowText, 0.7)
+        }
+
+        Caption {
+            Layout.fillWidth: true
+            Layout.topMargin: 4
+            horizontalAlignment: Text.AlignHCenter
+            textFormat: Text.RichText
+            text: `${window.about.version}&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${window.about.releaseUrl}" style="color: ${systemPalette.accent}; text-decoration: none">${window.about.releaseLabel}</a>`
+            onLinkActivated: link => window.about.open(link)
+
+            HoverHandler {
+                cursorShape: parent.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
+        }
+
         RowLayout {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 48
             Layout.bottomMargin: 20
-            spacing: 16
+            spacing: 4
 
-            Image {
-                Layout.preferredWidth: 56
-                Layout.preferredHeight: 56
-                source: window.about.iconUrl
-                sourceSize: Qt.size(56, 56)
+            LinkButton {
+                text: "GitHub"
+                onClicked: window.about.open(window.about.githubUrl)
             }
 
-            ColumnLayout {
-                spacing: 2
-
-                Label {
-                    text: "YASB Reborn"
-                    font.pixelSize: 20
-                    font.weight: Font.DemiBold
-                }
-
-                Caption {
-                    text: window.about.version
-                }
+            LinkButton {
+                text: qsTr("Contributors")
+                onClicked: window.about.open(window.about.githubUrl + "/graphs/contributors")
             }
+
+            LinkButton {
+                text: qsTr("Website")
+                onClicked: window.about.open(window.about.siteUrl)
+            }
+
+            LinkButton {
+                text: "Discord"
+                onClicked: window.about.open("https://discord.gg/qkeunvBFgX")
+            }
+
         }
 
         Card {
@@ -150,41 +190,24 @@ Window {
             description: qsTr("YASB is free and open source")
 
             CardButton {
-                text: "Ko-fi"
+                text: "Buy me a coffee"
                 onClicked: window.about.open("https://ko-fi.com/amnweb")
             }
         }
 
-        RowLayout {
-            Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 12
-            spacing: 4
+        Card {
+            heading: qsTr("Documentation")
+            description: qsTr("Read the official documentation")
 
-            LinkButton {
-                text: window.about.releaseLabel
-                onClicked: window.about.open(window.about.releaseUrl)
-            }
-
-            LinkButton {
-                text: "GitHub"
-                onClicked: window.about.open(window.about.githubUrl)
-            }
-
-            LinkButton {
-                text: qsTr("Themes")
-                onClicked: window.about.open(window.about.themesUrl)
-            }
-
-            LinkButton {
-                text: "Discord"
-                onClicked: window.about.open("https://discord.gg/qkeunvBFgX")
-            }
-
-            LinkButton {
-                text: qsTr("Contributors")
-                onClicked: window.about.open(window.about.githubUrl + "/graphs/contributors")
+            CardButton {
+                text: "Open docs"
+                onClicked: window.about.open(window.about.docSiteUrl)
             }
         }
+    }
+
+    SystemPalette {
+        id: systemPalette
     }
 
     Shortcut {
