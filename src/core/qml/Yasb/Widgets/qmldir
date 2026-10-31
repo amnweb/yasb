@@ -10,6 +10,7 @@ Media 1.0 Media/Media.qml
 Notifications 1.0 Notifications/Notifications.qml
 PowerMenu 1.0 PowerMenu/PowerMenu.qml
 Github 1.0 Github/Github.qml
+GlazewmWorkspaces 1.0 GlazewmWorkspaces/GlazewmWorkspaces.qml
 QuickLaunch 1.0 QuickLaunch/QuickLaunch.qml
 Volume 1.0 Volume/Volume.qml
 WindowsDesktops 1.0 WindowsDesktops/WindowsDesktops.qml

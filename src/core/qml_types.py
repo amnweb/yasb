@@ -10,6 +10,7 @@ from core.widgets.services.audio_visualizer.levels import AudioLevels
 from core.widgets.services.clock.time_zones import TimeZones
 from core.widgets.services.cpu.monitor import CpuMonitor
 from core.widgets.services.github.notifications import GitHubNotifications
+from core.widgets.services.glazewm.workspaces import GlazewmWorkspacesModel
 from core.widgets.services.gpu.monitor import GpuMonitor
 from core.widgets.services.media.now_playing import NowPlaying
 from core.widgets.services.memory.monitor import MemoryMonitor
@@ -33,6 +34,7 @@ def register_qml_types() -> None:
     qmlRegisterType(GpuMonitor, QML_URI, 1, 0, "GpuMonitor")
     qmlRegisterType(MemoryMonitor, QML_URI, 1, 0, "MemoryMonitor")
     qmlRegisterType(GitHubNotifications, QML_URI, 1, 0, "GitHubNotifications")
+    qmlRegisterType(GlazewmWorkspacesModel, QML_URI, 1, 0, "GlazewmWorkspacesModel")
     qmlRegisterType(QuickLaunchSearch, QML_URI, 1, 0, "QuickLaunchSearch")
     qmlRegisterType(NowPlaying, QML_URI, 1, 0, "NowPlaying")
     qmlRegisterType(AudioOutput, QML_URI, 1, 0, "AudioOutput")
