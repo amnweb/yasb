@@ -16,7 +16,7 @@ from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from core.cloud import logs
 from core.cloud.constants import APP_LOG_FILE, TASK_LOG_FILE
 from core.utils.win32.dwm import enable_mica
-from env import set_qt_quick_defaults
+from env import set_defaults
 from settings import QML_IMPORT_PATH, SCRIPT_PATH
 
 MUTEX_NAME = "Global\\YASB.Cloud.SingleInstance"
@@ -66,7 +66,7 @@ def main() -> int:
     if not _single_instance():
         return 0
 
-    set_qt_quick_defaults()
+    set_defaults()
     app = QGuiApplication(sys.argv)
     app.setApplicationName("YASB Cloud")
     app.setWindowIcon(QIcon(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")))

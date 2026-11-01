@@ -5,7 +5,6 @@ import threading
 
 from PyQt6.QtCore import QCoreApplication, QMetaObject, QProcess, Qt
 
-from core.application import YASBApplication
 from core.cli.server import CliPipeHandler
 from core.events.service import EventService
 
@@ -23,11 +22,8 @@ def reload_application(msg: str = "Reloading Application..."):
             _cli_pipe_handler.stop_cli_pipe_server()
 
         app = QCoreApplication.instance()
-        if isinstance(app, YASBApplication):
-            if app.loop and app.close_event:
-                app.loop.call_soon_threadsafe(app.close_event.set)
-            else:  # Should never happen while we use qasync
-                QMetaObject.invokeMethod(app, "quit", Qt.ConnectionType.QueuedConnection)
+        if app is not None:
+            QMetaObject.invokeMethod(app, "exit", Qt.ConnectionType.QueuedConnection)
 
         args = list(sys.argv)
         if "--restart-wait" not in args:
@@ -46,11 +42,8 @@ def exit_application(msg: str = "Exiting Application..."):
             _cli_pipe_handler.stop_cli_pipe_server()
 
         app = QCoreApplication.instance()
-        if isinstance(app, YASBApplication):
-            if app.loop and app.close_event:
-                app.loop.call_soon_threadsafe(app.close_event.set)
-            else:  # Should never happen while we use qasync
-                QMetaObject.invokeMethod(app, "quit", Qt.ConnectionType.QueuedConnection)
+        if app is not None:
+            QMetaObject.invokeMethod(app, "exit", Qt.ConnectionType.QueuedConnection)
     except:
         os._exit(0)
 

@@ -23,7 +23,7 @@ def load_env():
             logging.info("Loaded environment variables from %s", env_path)
 
 
-def set_qt_quick_defaults():
+def set_defaults():
     QQuickWindow.setGraphicsApi(QSGRendererInterface.GraphicsApi.Direct3D11)
     # Direct3D windows need no GDI redirection surface, which some systems paint opaque over a backdrop
     os.environ["QT_QPA_DISABLE_REDIRECTION_SURFACE"] = "1"

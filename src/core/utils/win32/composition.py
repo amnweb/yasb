@@ -109,8 +109,7 @@ def shutdown_composition() -> None:
     try:
         if _dispatcher_queue is not None:
             # A current-thread queue cannot finish shutdown if we block its message
-            # pump. A short nested Qt loop also works from aboutToQuit, without
-            # depending on an asyncio loop that may already be stopping.
+            # pump. A short nested Qt loop also works from aboutToQuit.
             operation = _dispatcher_queue.shutdown_queue_async()
             loop = QEventLoop()
 
