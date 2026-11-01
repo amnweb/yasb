@@ -112,7 +112,7 @@ widgets:
 - **widgets:** A list of widget names that should be grouped together inside this container. The widgets are referenced by their configuration names defined elsewhere in the config file. The widgets will be displayed horizontally in the order specified.
 - **hide_empty:** If set to true, the grouper widget will automatically hide itself if all its child widgets are hidden.
 - **collapse_options:** Configuration for collapsible grouper behavior:
-  - **enabled:** When true, adds a collapse button to show/hide grouped widgets.
+  - **enabled:** When true, adds a collapse button to show/hide grouped widgets. The grouper starts collapsed, and after you expand or collapse it, YASB remembers that state for each screen across restarts.
   - **exclude_widgets:** List of widget names (matching names in `widgets` list) that should remain visible even when collapsed. Useful for keeping important widgets always visible.
   - **expanded_label:** Icon or text displayed on the collapse button when the grouper is expanded.
   - **collapsed_label:** Icon or text displayed on the collapse button when the grouper is collapsed.
