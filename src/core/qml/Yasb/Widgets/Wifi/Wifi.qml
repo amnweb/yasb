@@ -296,18 +296,10 @@ Item {
                     font.weight: Font.Bold
                 }
 
-                ProgressBar {
+                LoadingLine {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 1
-                    indeterminate: true
-                    visible: monitor.scanning || monitor.connecting
-                }
-
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 1
-                    visible: !monitor.scanning && !monitor.connecting
-                    color: Qt.alpha(wifi.foreground, 0.08)
+                    running: monitor.scanning || monitor.connecting
+                    trackColor: Qt.alpha(wifi.foreground, 0.08)
                 }
 
                 // Show the Ethernet connection above available Wi-Fi networks.
