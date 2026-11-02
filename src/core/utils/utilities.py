@@ -27,6 +27,7 @@ from PyQt6.QtGui import (
     QShowEvent,
     QStaticText,
     QTransform,
+    QWheelEvent,
 )
 from PyQt6.QtWidgets import (
     QApplication,
@@ -56,6 +57,14 @@ def percent_to_float(percent: str) -> float:
 
 def is_valid_percentage_str(s: str) -> bool:
     return s.endswith("%") and len(s) <= 4 and s[:-1].isdigit()
+
+
+def wheel_delta(event: QWheelEvent, invert: bool = False) -> int:
+    """Scroll amount where positive means increase. Without vertical movement the horizontal
+    wheel is used instead, and Qt reports scrolling right as negative x, so it is flipped."""
+    angle = event.angleDelta()
+    delta = angle.y() if angle.y() != 0 else -angle.x()
+    return -delta if invert else delta
 
 
 def get_screen_by_name(screen_name: str) -> QScreen | None:
