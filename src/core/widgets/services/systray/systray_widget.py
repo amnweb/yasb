@@ -51,6 +51,8 @@ from core.utils.win32.constants import (
     WM_RBUTTONDOWN,
     WM_RBUTTONUP,
 )
+from core.utils.win32.system_function import quick_settings
+from core.utils.win32.undocumented import TRAY_VOLUME_ICON_GUID
 from core.widgets.services.systray.systray_monitor import IconData
 from core.widgets.services.systray.utils import pack_i32
 
@@ -117,6 +119,7 @@ class IconWidget(QPushButton):
 
         # Only start drag if left mouse button is pressed and moved more than 10 pixels
         if self.lmb_pressed and (event.pos() - self.last_cursor_pos).manhattanLength() > 10:
+            self.ignore_next_release = True
             IconWidget.drag_in_progress = True
             # Dim the icon while it is being dragged
             effect = QGraphicsOpacityEffect(self)
@@ -140,6 +143,8 @@ class IconWidget(QPushButton):
                 self.setGraphicsEffect(None)
                 self.lmb_pressed = False
                 IconWidget.drag_in_progress = False
+                if owner := getattr(self, "_tray_owner", None):
+                    owner.on_drag_ended()
 
         return super().mouseMoveEvent(event)
 
@@ -155,8 +160,11 @@ class IconWidget(QPushButton):
         if btn == Qt.MouseButton.LeftButton and (self.last_cursor_pos - e.pos()).manhattanLength() > 8:
             return super().mouseReleaseEvent(e)
         if btn == Qt.MouseButton.LeftButton:
-            self.send_action(WM_LBUTTONDOWN)
-            self.send_action(WM_LBUTTONUP)
+            if self.data is not None and self.data.guid == TRAY_VOLUME_ICON_GUID:
+                quick_settings()
+            else:
+                self.send_action(WM_LBUTTONDOWN)
+                self.send_action(WM_LBUTTONUP)
         elif btn == Qt.MouseButton.RightButton:
             self.send_action(WM_RBUTTONDOWN)
             self.send_action(WM_RBUTTONUP)

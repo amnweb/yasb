@@ -838,6 +838,10 @@ class BarContextMenu:
         self._menu.setProperty("class", "context-menu dark" if GlobalState.is_dark() else "context-menu")
         self._menu.aboutToHide.connect(self._on_menu_about_to_hide)
 
+        settings_action = _add_action(self._menu, "Bar Settings")
+        settings_action.triggered.connect(self._open_bar_settings)
+        self._menu.addSeparator()
+
         # Bar info
         bar_info = _add_action(self._menu, f"Bar: {self._bar_name}")
         bar_info.setEnabled(False)
@@ -883,6 +887,24 @@ class BarContextMenu:
 
         self._menu.popup(self.parent.mapToGlobal(position))
         self._menu.activateWindow()
+
+    def _open_bar_settings(self):
+        from pathlib import Path
+
+        from PyQt6.QtWidgets import QMessageBox
+
+        from core.ui.views.bar_settings import BarSettingsDialog
+        from settings import DEFAULT_CONFIG_DIRECTORY
+
+        try:
+            dialog = BarSettingsDialog(
+                Path(DEFAULT_CONFIG_DIRECTORY), partial(reload_application, "Applying bar settings...")
+            )
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self.parent, "Cannot open bar settings", str(error))
+            return
+        dialog.exec()
+        dialog.deleteLater()
 
     def _on_menu_about_to_hide(self):
         """Called when the context menu is about to hide - restart autohide timer if enabled"""
