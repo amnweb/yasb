@@ -373,6 +373,7 @@ class SystrayWidget(BaseWidget):
         icon = self.find_icon(data.guid, data.hWnd, data.uID)
         if icon is None:
             icon = IconWidget()
+            icon._tray_owner = self
             icon.data = IconData()
             icon.pinned_changed.connect(self.on_icon_pinned_changed)
             icon.icon_moved.connect(self.on_icon_moved)
@@ -401,6 +402,8 @@ class SystrayWidget(BaseWidget):
         icon.update_icon()
         was_hidden = icon.isHidden()
         icon.setHidden(data.uFlags & NIF_STATE != 0 and data.dwState == 1)
+        if placement := getattr(self, "_tray_placement", None):
+            placement.restore_icon(icon)
         if self.config.show_in_popup and was_hidden != icon.isHidden():
             self._relayout_popup_grid()
         self.pinned_vis_check_timer.start(300)
@@ -410,6 +413,8 @@ class SystrayWidget(BaseWidget):
         """Handles the icon deleted signal sent by the tray monitor"""
         icon = self.find_icon(data.guid, data.hWnd, data.uID)
         if icon is not None:
+            if placement := getattr(self, "_tray_placement", None):
+                placement.remove_icon(icon)
             self.icons.remove(icon)
             icon.hide()
             icon.deleteLater()
@@ -420,6 +425,8 @@ class SystrayWidget(BaseWidget):
     @pyqtSlot(object)
     def on_icon_pinned_changed(self, icon: IconWidget):
         """Handles the icon pinned changed signal sent when user [Mod]+Clicks on the icon"""
+        if (placement := getattr(self, "_tray_placement", None)) and not placement.forget(icon):
+            return
         if not icon.is_pinned:
             self.pinned_layout.addWidget(icon)
             icon.is_pinned = True
@@ -436,6 +443,9 @@ class SystrayWidget(BaseWidget):
     @pyqtSlot(object)
     def on_icon_moved(self, icon: IconWidget):
         """Handle icon moved signal"""
+        if (placement := getattr(self, "_tray_placement", None)) and not placement.forget(icon):
+            placement.restore_icon(icon)
+            return
         icon.is_pinned = self.pinned_layout.indexOf(icon) != -1
         if self.config.show_in_popup:
             self._relayout_popup_grid()
@@ -461,6 +471,8 @@ class SystrayWidget(BaseWidget):
         icons_changed = False
         for icon in self.icons[:]:
             if icon.data is not None and not IsWindow(icon.data.hWnd):
+                if placement := getattr(self, "_tray_placement", None):
+                    placement.remove_icon(icon)
                 self.icons.remove(icon)
                 icon.hide()
                 icon.deleteLater()

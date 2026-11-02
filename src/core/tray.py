@@ -5,6 +5,7 @@ import subprocess
 import threading
 from collections.abc import Callable
 from functools import partial
+from pathlib import Path
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
@@ -134,6 +135,7 @@ class SystemTrayManager(QSystemTrayIcon):
                 add_item(hmenu, "Update Available", self._open_update_dialog)
                 add_sep(hmenu)
 
+            add_item(hmenu, "Bar settings", self._show_bar_settings)
             add_item(hmenu, "Open Config", self.open_config)
             if os.path.exists(CLOUD_EXE_PATH):
                 add_item(hmenu, "YASB Cloud", lambda: shell_open(CLOUD_EXE_PATH))
@@ -255,6 +257,19 @@ class SystemTrayManager(QSystemTrayIcon):
     def _show_about_dialog(self):
         dialog = AboutDialog(self)
         dialog.exec()
+
+    def _show_bar_settings(self):
+        from PyQt6.QtWidgets import QMessageBox
+
+        from core.ui.views.bar_settings import BarSettingsDialog
+
+        try:
+            dialog = BarSettingsDialog(Path(DEFAULT_CONFIG_DIRECTORY), self._reload_application)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(None, "Cannot open bar settings", str(error))
+            return
+        dialog.exec()
+        dialog.deleteLater()
 
     def _open_update_dialog(self):
         from core.ui.views.updater import UpdateDialog
