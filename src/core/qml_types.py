@@ -20,6 +20,7 @@ from core.widgets.services.power_menu.session import PowerSession
 from core.widgets.services.quick_launch.search import QuickLaunchSearch
 from core.widgets.services.systray.model import SystrayModel
 from core.widgets.services.volume.output import AudioOutput
+from core.widgets.services.wifi.monitor import WifiMonitor
 from core.widgets.services.windows_desktops.desktops import VirtualDesktops
 
 QML_URI = "Yasb"
@@ -46,3 +47,4 @@ def register_qml_types() -> None:
     qmlRegisterType(PowerSession, QML_URI, 1, 0, "PowerSession")
     qmlRegisterType(SystrayModel, QML_URI, 1, 0, "SystrayModel")
     qmlRegisterType(BatteryMonitor, QML_URI, 1, 0, "BatteryMonitor")
+    qmlRegisterType(WifiMonitor, QML_URI, 1, 0, "WifiMonitor")

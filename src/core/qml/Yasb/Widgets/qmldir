@@ -16,3 +16,4 @@ QuickLaunch 1.0 QuickLaunch/QuickLaunch.qml
 Systray 1.0 Systray/Systray.qml
 Volume 1.0 Volume/Volume.qml
 WindowsDesktops 1.0 WindowsDesktops/WindowsDesktops.qml
+Wifi 1.0 Wifi/Wifi.qml
