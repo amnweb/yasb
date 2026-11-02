@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           path: main-repo # Checkout the public repo into a subfolder so it doesn't conflict
@@ -32,14 +32,14 @@ jobs:
           private-key: ${{ secrets.YASB_APP_PRIVATE_KEY }}
 
       - name: Checkout Latest Agent Core
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: amnweb/yasb-agent-core
           token: ${{ secrets.YASB_AGENT_CORE }}
           path: agent-core
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.14'
 

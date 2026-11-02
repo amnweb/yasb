@@ -19,7 +19,7 @@ jobs:
     steps:
       # The default branch, not the pull request: everything below runs with a write token.
       - name: Checkout Scripts
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           sparse-checkout: .github/scripts
           persist-credentials: false
