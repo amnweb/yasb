@@ -49,8 +49,6 @@ Item {
     font.letterSpacing: bar?.font.letterSpacing ?? 0
     font.capitalization: bar?.font.capitalization ?? Font.MixedCase
     font.variableAxes: bar?.font.variableAxes ?? ({})
-    readonly property color foreground: dark ? "#ebebeb" : "#1f1f1f"
-    readonly property color secondary: Qt.alpha(foreground, 0.6)
     readonly property string edge: bar?.edge ?? "top"
 
     // Connection kind: wifi, ethernet, or none.
@@ -250,6 +248,7 @@ Item {
         property real reveal: 0
         // SSID whose controls are open; empty for a hidden network.
         property var expanded: undefined
+        readonly property color ink: wifi.dark ? "#ffffff" : "#000000"
 
         objectName: "popup"
         title: "Wi-Fi"
@@ -286,20 +285,20 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     Layout.leftMargin: 16
-                    Layout.rightMargin: 16
+                    Layout.rightMargin: 10
                     Layout.topMargin: 12
-                    Layout.bottomMargin: 10
-                    text: "Wi-Fi networks"
-                    color: wifi.foreground
+                    Layout.bottomMargin: 12
+                    text: "<b>Wi-Fi</b> Networks"
+                    textFormat: Text.StyledText
+                    color: popup.ink
                     font.family: "Segoe UI"
                     font.pixelSize: 16
-                    font.weight: Font.Bold
                 }
 
                 LoadingLine {
                     Layout.fillWidth: true
                     running: monitor.scanning || monitor.connecting
-                    trackColor: Qt.alpha(wifi.foreground, 0.08)
+                    trackColor: Qt.alpha(popup.ink, 0.1)
                 }
 
                 // Show the Ethernet connection above available Wi-Fi networks.
@@ -318,7 +317,7 @@ Item {
                         Layout.preferredWidth: 20
                         Layout.preferredHeight: 20
                         text: wifi.ethernetIcon
-                        color: wifi.foreground
+                        color: popup.ink
                         font.pixelSize: 20
                     }
 
@@ -327,7 +326,7 @@ Item {
                         text: wifi.status.name || "Ethernet"
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
-                        color: wifi.foreground
+                        color: popup.ink
                         font.family: "Segoe UI"
                         font.pixelSize: 13
                     }
@@ -336,7 +335,7 @@ Item {
                         Text {
                             anchors.right: parent.right
                             text: "Connected"
-                            color: wifi.secondary
+                            color: Qt.alpha(popup.ink, 0.65)
                             font.family: "Segoe UI"
                             font.pixelSize: 12
                         }
@@ -345,7 +344,7 @@ Item {
                             anchors.right: parent.right
                             visible: text !== ""
                             text: wifi.status.ipAddress
-                            color: wifi.secondary
+                            color: Qt.alpha(popup.ink, 0.5)
                             font.family: "Segoe UI"
                             font.pixelSize: 12
                         }
@@ -392,7 +391,7 @@ Item {
                     visible: list.count === 0 && monitor.error === ""
                     text: monitor.scanning ? "Looking for networks..." : "No networks found"
                     horizontalAlignment: Text.AlignHCenter
-                    color: wifi.secondary
+                    color: Qt.alpha(popup.ink, 0.5)
                     font.family: "Segoe UI"
                     font.pixelSize: 13
                 }
@@ -472,8 +471,10 @@ Item {
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: 6
-                            color: Qt.alpha(wifi.foreground, network.expanded ? 0.06 : headerArea.containsMouse ? 0.04 : 0)
+                            radius: 8
+                            color: Qt.alpha(popup.ink, network.expanded ? 0.03 : headerArea.containsMouse ? 0.06 : 0)
+                            border.width: network.expanded ? 1 : 0
+                            border.color: Qt.alpha(popup.ink, 0.04)
                         }
 
                         ColumnLayout {
@@ -496,7 +497,7 @@ Item {
                                         size: 20
                                         icons: network.secured ? wifi.securedIcons : wifi.openIcons
                                         strength: network.quality
-                                        color: wifi.foreground
+                                        color: popup.ink
                                     }
 
                                     Text {
@@ -504,7 +505,7 @@ Item {
                                         text: network.name
                                         textFormat: Text.PlainText
                                         elide: Text.ElideRight
-                                        color: network.hidden ? wifi.secondary : wifi.foreground
+                                        color: network.hidden ? Qt.alpha(popup.ink, 0.65) : popup.ink
                                         font.family: "Segoe UI"
                                         font.pixelSize: 13
                                     }
@@ -513,7 +514,7 @@ Item {
                                         Text {
                                             anchors.right: parent.right
                                             text: network.statusText
-                                            color: wifi.secondary
+                                            color: Qt.alpha(popup.ink, 0.65)
                                             font.family: "Segoe UI"
                                             font.pixelSize: 12
                                         }
@@ -521,7 +522,7 @@ Item {
                                         Text {
                                             anchors.right: parent.right
                                             text: `${network.quality}%`
-                                            color: wifi.secondary
+                                            color: Qt.alpha(popup.ink, 0.5)
                                             font.family: "Segoe UI"
                                             font.pixelSize: 12
                                         }
@@ -607,7 +608,7 @@ Item {
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: Qt.alpha(wifi.foreground, 0.08)
+                        color: Qt.alpha(popup.ink, 0.1)
                     }
 
                     Text {
@@ -615,7 +616,7 @@ Item {
                         anchors.leftMargin: 15
                         anchors.verticalCenter: parent.verticalCenter
                         text: "More Wi-Fi settings"
-                        color: settingsArea.containsMouse ? wifi.foreground : Qt.alpha(wifi.foreground, 0.75)
+                        color: settingsArea.containsMouse ? popup.ink : Qt.alpha(popup.ink, 0.65)
                         font.family: "Segoe UI"
                         font.pixelSize: 12
                         Accessible.role: Accessible.Link
@@ -653,13 +654,13 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             radius: 4
-                            color: Qt.alpha(wifi.foreground, refreshArea.containsMouse && !monitor.scanning ? 0.08 : 0)
+                            color: Qt.alpha(popup.ink, refreshArea.containsMouse && !monitor.scanning ? 0.1 : 0)
                         }
 
                         Glyph {
                             anchors.fill: parent
                             text: ""
-                            color: wifi.foreground
+                            color: popup.ink
                             font.pixelSize: 14
                         }
 
