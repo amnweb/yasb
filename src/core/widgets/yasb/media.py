@@ -27,7 +27,9 @@ from qasync import asyncSlot  # type: ignore
 from core.utils.utilities import (
     PopupWidget,
     ScrollingLabel,
+    clip_to_width,
     refresh_widget_style,
+    text_width,
 )
 from core.utils.win32.aumid import activate_app_by_aumid, get_aumid_for_process
 from core.utils.win32.aumid_process import get_process_name_for_aumid
@@ -972,8 +974,8 @@ class MediaWidget(BaseWidget):
                 self.config.max_field_size.label_alt if self._show_alt_label else self.config.max_field_size.label
             )
 
-        if len(text) > max_size:
-            return text[: max_size - 3] + "..."
+        if text_width(text) > max_size:
+            return clip_to_width(text, max_size - 3) + "..."
         else:
             return text
 
