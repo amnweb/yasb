@@ -80,11 +80,12 @@ def test_failed_config_write_rolls_back_css(config_dir, monkeypatch):
     assert doc.config_path.read_bytes() == doc.original_config
 
 
-def test_dialog_saves_edits_across_bars_and_keeps_fixed_height(config_dir, qapp):
+def test_dialog_saves_edits_across_bars_and_height(config_dir, qapp):
     calls = []
-    dialog = BarSettingsDialog(config_dir, lambda: calls.append(True), fixed_height=26)
+    dialog = BarSettingsDialog(config_dir, lambda: calls.append(True))
     dialog.bar.setCurrentText("status")
-    assert not dialog.height.isEnabled()
+    assert dialog.height.isEnabled()
+    dialog.height.setValue(34)
     dialog.widgets.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
     dialog.bar.setCurrentText("secondary")
     dialog.bar.setCurrentText("status")
@@ -97,7 +98,7 @@ def test_dialog_saves_edits_across_bars_and_keeps_fixed_height(config_dir, qapp)
     saved = yaml.safe_load((config_dir / "config.yaml").read_bytes())
     assert saved["bars"]["status"]["widgets"]["left"] == []
     assert saved["bars"]["secondary"]["widgets"]["left"] == ["ceiling"]
-    assert saved["bars"]["status"]["dimensions"]["height"] == 26
+    assert saved["bars"]["status"]["dimensions"]["height"] == 34
     assert saved["widgets"]["clock"]["options"]["label"] == "{%I:%M:%S %p}"
     assert calls == [True]
     dialog.close()
@@ -108,69 +109,6 @@ def test_unchanged_clock_keeps_custom_format(config_dir, qapp):
     original = dialog.document.config["widgets"]["clock"]
     dialog.save()
     assert yaml.safe_load((config_dir / "config.yaml").read_bytes())["widgets"]["clock"] == original
-    dialog.close()
-
-
-def test_dock_tab_applies_only_edited_size(config_dir, qapp, monkeypatch):
-    from core.utils import windhawk_dock
-
-    calls = []
-
-    class DockSettings:
-        original = (32, 32)
-
-        def save(self, size):
-            calls.append(size)
-            return True
-
-    monkeypatch.setattr(windhawk_dock, "DockIconSettings", DockSettings)
-    dialog = BarSettingsDialog(config_dir, windhawk_dock=True)
-    assert dialog.tabs.tabText(3) == "Dock"
-    assert dialog.dock_size.value() == 32
-    dialog.save()
-    assert calls == []
-    dialog.dock_size.setValue(36)
-    dialog.save()
-    dialog.save()
-    assert calls == [36]
-    dialog.close()
-
-
-def test_dock_failure_keeps_bar_saved_and_reports_partial_result(config_dir, qapp, monkeypatch):
-    from core.utils import windhawk_dock
-
-    class DockSettings:
-        original = (32, 32)
-
-        def save(self, size):
-            raise OSError("Approval cancelled")
-
-    monkeypatch.setattr(windhawk_dock, "DockIconSettings", DockSettings)
-    messages = []
-    monkeypatch.setattr("core.ui.views.bar_settings.QMessageBox.warning", lambda *args: messages.append(args[2]))
-    dialog = BarSettingsDialog(config_dir, windhawk_dock=True)
-    dialog.font_size.setValue(15)
-    dialog.dock_size.setValue(36)
-    dialog.save()
-    assert SettingsDocument(config_dir).appearance()["font_size"] == 15
-    assert "Approval cancelled" in messages[0]
-    assert "could not be applied" in dialog.status.text()
-    assert dialog.dock_size_changed
-    dialog.close()
-
-
-def test_unavailable_dock_does_not_block_bar_settings(config_dir, qapp, monkeypatch):
-    from core.utils import windhawk_dock
-
-    def unavailable():
-        raise FileNotFoundError("Windhawk mod is not installed")
-
-    monkeypatch.setattr(windhawk_dock, "DockIconSettings", unavailable)
-    dialog = BarSettingsDialog(config_dir, windhawk_dock=True)
-    assert not dialog.dock_size.isEnabled()
-    dialog.font_size.setValue(15)
-    dialog.save()
-    assert SettingsDocument(config_dir).appearance()["font_size"] == 15
     dialog.close()
 
 

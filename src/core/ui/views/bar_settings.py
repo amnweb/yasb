@@ -40,11 +40,10 @@ DATE_FORMATS = {
 
 
 class BarSettingsDialog(QDialog):
-    def __init__(self, directory: Path, reload_callback=None, fixed_height: int | None = None, windhawk_dock=False):
+    def __init__(self, directory: Path, reload_callback=None):
         super().__init__()
         self.document = SettingsDocument(directory)
         self.reload_callback = reload_callback
-        self.fixed_height = fixed_height
         self._loaded_bar = None
         self._loaded_clock = None
         self.setWindowTitle("YASB · Bar settings")
@@ -71,11 +70,6 @@ class BarSettingsDialog(QDialog):
         self._build_widgets()
         self._build_appearance()
         self._build_clock()
-        self.dock_settings = None
-        if windhawk_dock:
-            self._build_dock()
-            self.setWindowTitle("Bar and dock settings")
-            title.setText("Bar and dock settings")
         self.status = QLabel("Changes apply only when you save. A backup is kept automatically.")
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
@@ -162,48 +156,11 @@ class BarSettingsDialog(QDialog):
         form.addRow("Background", opacity_row)
         form.addRow("Bar height", self.height)
         layout.addLayout(form)
-        if self.fixed_height is not None:
-            self.height.setEnabled(False)
-            layout.addWidget(
-                self._hint(
-                    "Height is fixed by your Windhawk dock integration. Text, tray icons and spacing remain adjustable."
-                )
-            )
         layout.addStretch()
         self.tabs.addTab(page, "Appearance")
 
     def _tray_changed(self):
         self.tray_size_changed = True
-
-    def _build_dock(self):
-        from core.utils.windhawk_dock import MAX_SIZE, MIN_SIZE, DockIconSettings
-
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.addWidget(self._hint("Size applies to app icons on all monitors and follows Windows display scaling."))
-        form = QFormLayout()
-        self.dock_size = self._spin(MIN_SIZE, MAX_SIZE, 32)
-        form.addRow("App icon size", self.dock_size)
-        layout.addLayout(form)
-        try:
-            self.dock_settings = DockIconSettings()
-            self.dock_size.setValue(self.dock_settings.original[0])
-        except (OSError, ValueError) as error:
-            self.dock_size.setEnabled(False)
-            layout.addWidget(self._hint(f"Dock settings unavailable: {error}"))
-        self.dock_size_changed = False
-        self.dock_size.valueChanged.connect(self._dock_changed)
-        layout.addWidget(
-            self._hint("32 px is the default for this setup. Dock height and hide behavior stay unchanged.")
-        )
-        layout.addWidget(
-            self._hint("Save and apply may ask for Windows administrator approval when dock size changes.")
-        )
-        layout.addStretch()
-        self.tabs.addTab(page, "Dock")
-
-    def _dock_changed(self):
-        self.dock_size_changed = True
 
     def _build_clock(self):
         page = QWidget()
@@ -326,7 +283,7 @@ class BarSettingsDialog(QDialog):
         rows += [(False, name, "right") for name in self.document.config["widgets"] if name not in used]
         self._set_rows(rows)
         height = self.document.config["bars"][self.bar.currentText()].get("dimensions", {}).get("height", 30)
-        self.height.setValue(self.fixed_height if self.fixed_height is not None else height)
+        self.height.setValue(height)
 
     def _store_bar(self):
         if self._loaded_bar:
@@ -335,8 +292,7 @@ class BarSettingsDialog(QDialog):
             for enabled, name, section in self._rows():
                 if enabled:
                     bar["widgets"][section].append(name)
-            if self.fixed_height is None:
-                bar.setdefault("dimensions", {})["height"] = self.height.value()
+            bar.setdefault("dimensions", {})["height"] = self.height.value()
 
     def move_widget(self, delta: int):
         row = self.widgets.currentRow()
@@ -360,8 +316,7 @@ class BarSettingsDialog(QDialog):
             appearance.update(
                 font_size=self.font_size.value(), spacing=self.spacing.value(), opacity=self.opacity.value()
             )
-            if self.fixed_height is None:
-                appearance["height"] = self.height.value()
+            appearance["height"] = self.height.value()
             if self.tray_size_changed:
                 appearance["tray_icon_size"] = self.tray_size.value()
             clock = None
@@ -381,14 +336,6 @@ class BarSettingsDialog(QDialog):
                 QMessageBox.warning(
                     self, "Saved, but reload failed", f"Your changes are saved. Reload YASB to apply them.\n\n{error}"
                 )
-        if self.dock_settings is not None and self.dock_size_changed:
-            try:
-                if self.dock_settings.save(self.dock_size.value()):
-                    self.status.setText("Bar settings saved. Dock icon size applied through Windhawk.")
-                self.dock_size_changed = False
-            except (OSError, ValueError) as error:
-                self.status.setText("Bar settings saved. Dock size could not be applied.")
-                QMessageBox.warning(self, "Dock size was not applied", f"Bar settings were saved.\n\n{error}")
 
 
 def main():
@@ -397,21 +344,7 @@ def main():
         "--config", type=Path, default=Path(os.getenv("YASB_CONFIG_HOME", Path.home() / ".config/yasb"))
     )
     parser.add_argument("--yasbc", type=Path)
-    parser.add_argument("--fixed-height", type=int)
-    parser.add_argument("--windhawk-dock", action="store_true", help="Show settings for the installed Windhawk dock")
-    parser.add_argument("--apply-dock-size", type=int, nargs=3, help=argparse.SUPPRESS)
     args = parser.parse_args()
-    if args.apply_dock_size is not None:
-        from core.utils.windhawk_dock import write_sizes
-
-        size, normal, small = args.apply_dock_size
-        try:
-            write_sizes(size, (normal, small))
-        except ValueError:
-            return 2
-        except OSError:
-            return 3
-        return 0
     app = QApplication(sys.argv[:1])
     app.setStyle("Fusion")
 
@@ -431,9 +364,7 @@ def main():
             raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "YASB did not accept reload.")
 
     try:
-        window = BarSettingsDialog(
-            args.config, reload_bar if args.yasbc else None, args.fixed_height, args.windhawk_dock
-        )
+        window = BarSettingsDialog(args.config, reload_bar if args.yasbc else None)
     except Exception as error:
         QMessageBox.critical(None, "Cannot open bar settings", str(error))
         return 1

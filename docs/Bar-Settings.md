@@ -56,14 +56,3 @@ For a standalone launcher, run `settings_launcher.py` with `src` on `PYTHONPATH`
 ```
 python settings_launcher.py --config PATH --yasbc PATH_TO_YASBC
 ```
-
-The optional `--fixed-height 26` locks height for an external dock integration
-whose reserved space cannot safely change independently.
-
-For the Windhawk dock setup, add `--windhawk-dock` to show a **Dock** tab.
-It reads the installed **Taskbar height and icon size** mod and changes app icons
-from 16–40 logical pixels on all monitors. Windows display scaling still applies.
-Dock height, button width, and hide behavior are preserved. Changing icon size
-may request Windows administrator approval; other settings run without elevation.
-No dock write occurs unless you edit the size. If approval is cancelled, bar
-settings remain saved and the dialog reports that dock size was not applied.
