@@ -1,5 +1,6 @@
 import pytest
 from PyQt6.QtCore import QObject, QUrl, pyqtSignal
+from PyQt6.QtGui import QFont
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtWidgets import QApplication
@@ -74,3 +75,24 @@ def test_the_widget_shows_the_usage_and_the_alternate_label(worker: FakeWorker):
 
     widget.setProperty("showAlternate", True)
     assert label.property("text") == "CPU: 42.5% | freq: 3000.00 Mhz"
+
+
+def test_the_icon_uses_the_bars_icon_font(worker: FakeWorker):
+    register_qml_types()
+    engine = QQmlEngine()
+    engine.addImportPath(QML_IMPORT_PATH)
+    component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Cpu" / "Cpu.qml")))
+    widget = component.create()
+    assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+    font = widget.property("iconFont")
+    assert (font.family(), font.weight()) == ("Segoe Fluent Icons", QFont.Weight.Normal)
+
+    bar_component = QQmlComponent(engine)
+    bar_component.setData(
+        b'import QtQuick\n\nItem {\n    property font iconFont: Qt.font({ family: "Segoe MDL2 Assets", weight: Font.Bold })\n}\n',
+        QUrl(),
+    )
+    bar = bar_component.create()
+    widget.setProperty("bar", bar)
+    font = widget.property("iconFont")
+    assert (font.family(), font.weight()) == ("Segoe MDL2 Assets", QFont.Weight.Bold)

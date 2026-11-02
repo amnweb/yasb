@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.impl
 import QtQuick.Effects
 import QtQuick.Layouts
 import Yasb
@@ -16,7 +15,7 @@ Item {
     // Windows' default sound when a slider is let go, to hear the new level
     property bool beepOnRelease: true
     property int popupWidth: 340
-    // The speaker on the bar, an SVG from icons/ in the text colour
+    // The speaker on the bar, drawn in iconFont and the text colour
     property int iconSize: 16
     // Volumes of the apps playing, under the master slider; appsExpanded opens them with the popup
     property bool showApps: true
@@ -33,13 +32,16 @@ Item {
     font.letterSpacing: bar?.font.letterSpacing ?? 0
     font.capitalization: bar?.font.capitalization ?? Font.MixedCase
     font.variableAxes: bar?.font.variableAxes ?? ({})
+    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    property font iconFont
+    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
+    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
     readonly property color foreground: dark ? "#ebebeb" : "#1f1f1f"
     readonly property string edge: bar?.edge ?? "top"
     readonly property color accent: dark ? "#60cdff" : "#005fb8"
 
-    function icon(level: int, muted: bool): url {
-        const name = muted ? "mute" : level === 0 ? "0" : level < 34 ? "1" : level < 67 ? "2" : "3"
-        return Qt.resolvedUrl(`icons/speaker-${name}.svg`)
+    function icon(level: int, muted: bool): string {
+        return muted ? "\ue74f" : level === 0 ? "\ue992" : level < 34 ? "\ue993" : level < 67 ? "\ue994" : "\ue995"
     }
 
     function placePopup() {
@@ -90,20 +92,18 @@ Item {
         function onYChanged() { if (popup.visible) volume.placePopup() }
     }
 
-    component SvgIcon: IconImage {
-        sourceSize: Qt.size(width, height)
-    }
-
     Row {
         id: label
         height: parent.height
         spacing: 6
-        SvgIcon {
-            y: Math.round((parent.height - height) / 2)
-            width: volume.iconSize
-            height: volume.iconSize
-            source: volume.icon(audio.volume, audio.muted)
+        Text {
+            objectName: "icon"
+            anchors.verticalCenter: parent.verticalCenter
+            text: volume.icon(audio.volume, audio.muted)
             color: volume.textColor
+            font.family: volume.iconFont.family
+            font.weight: volume.iconFont.weight
+            font.pixelSize: volume.iconSize
         }
         // Text {
         //     anchors.verticalCenter: parent.verticalCenter
@@ -133,7 +133,7 @@ Item {
     component IconButton: Item {
         id: button
 
-        property url source
+        property string glyph
         property int iconSize: 14
         property bool checked: false
         property string tip
@@ -155,13 +155,14 @@ Item {
             color: Qt.alpha(volume.foreground, area.containsMouse ? 0.08 : button.checked ? 0.06 : 0)
         }
 
-        SvgIcon {
+        Text {
             anchors.centerIn: parent
-            width: button.iconSize
-            height: button.iconSize
-            source: button.source
+            text: button.glyph
             color: volume.foreground
             opacity: button.checked || area.containsMouse ? 1 : 0.6
+            font.family: volume.iconFont.family
+            font.weight: volume.iconFont.weight
+            font.pixelSize: button.iconSize
         }
 
         MouseArea {
@@ -223,7 +224,7 @@ Item {
                     }
                     IconButton {
                         visible: audio.devices.length > 1
-                        source: Qt.resolvedUrl(popup.devicesOpen ? "icons/chevron-up.svg" : "icons/chevron-down.svg")
+                        glyph: popup.devicesOpen ? "\ue70e" : "\ue70d"
                         iconSize: 12
                         checked: popup.devicesOpen
                         tip: "Output devices"
@@ -259,14 +260,15 @@ Item {
                                 popup.devicesOpen = false
                             }
 
-                            SvgIcon {
+                            Text {
                                 x: 10
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: 14
-                                height: 14
-                                source: Qt.resolvedUrl("icons/device.svg")
+                                text: "\ue7f5"
                                 color: volume.foreground
                                 opacity: device.modelData.current ? 1 : 0.75
+                                font.family: volume.iconFont.family
+                                font.weight: volume.iconFont.weight
+                                font.pixelSize: 14
                             }
 
                             Text {
@@ -281,15 +283,16 @@ Item {
                                 font.pixelSize: 13
                             }
 
-                            SvgIcon {
+                            Text {
                                 anchors.right: parent.right
                                 anchors.rightMargin: 10
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: 12
-                                height: 12
                                 visible: device.modelData.current
-                                source: Qt.resolvedUrl("icons/check.svg")
+                                text: "\ue73e"
                                 color: volume.accent
+                                font.family: volume.iconFont.family
+                                font.weight: volume.iconFont.weight
+                                font.pixelSize: 12
                             }
 
                             MouseArea {
@@ -315,7 +318,7 @@ Item {
                     spacing: 4
 
                     IconButton {
-                        source: volume.icon(audio.volume, audio.muted)
+                        glyph: volume.icon(audio.volume, audio.muted)
                         iconSize: 16
                         enabled: audio.available
                         tip: audio.muted ? "Unmute" : "Mute"
@@ -345,7 +348,7 @@ Item {
                     }
                     IconButton {
                         visible: volume.showApps && audio.apps.length > 0
-                        source: Qt.resolvedUrl(popup.appsOpen ? "icons/chevron-up.svg" : "icons/chevron-down.svg")
+                        glyph: popup.appsOpen ? "\ue70e" : "\ue70d"
                         iconSize: 12
                         checked: popup.appsOpen
                         tip: "App volumes"
@@ -494,15 +497,16 @@ Item {
                         font.pixelSize: 12
                     }
 
-                    SvgIcon {
+                    Text {
                         anchors.right: parent.right
                         anchors.rightMargin: 14
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 10
-                        height: 10
-                        source: Qt.resolvedUrl("icons/chevron-right.svg")
+                        text: "\ue76c"
                         color: volume.foreground
                         opacity: footerArea.containsMouse ? 1 : 0.75
+                        font.family: volume.iconFont.family
+                        font.weight: volume.iconFont.weight
+                        font.pixelSize: 10
                     }
 
                     MouseArea {

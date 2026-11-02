@@ -173,12 +173,16 @@ Item {
     property int resultIconSize: 24
     property int popupWidth: 720
     property int popupHeight: 480
-    // The icon on the bar, an SVG drawn in the text colour
-    property url icon: Qt.resolvedUrl("icons/launcher.svg")
+    // The glyph on the bar, drawn in iconFont and the text colour
+    property string icon: "\ue721"
     property int iconSize: 16
 
     readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
     property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    property font iconFont
+    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
+    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
     readonly property color foreground: dark ? "#f3f3f3" : "#1b1b1b"
     readonly property color secondary: dark ? "#9a9a9a" : "#5f5f5f"
     readonly property color hover: Qt.alpha(foreground, 0.06)
@@ -187,8 +191,8 @@ Item {
     property string prefix: ""
     property bool previewShown: false
 
-    implicitWidth: label.implicitWidth
-    implicitHeight: label.implicitHeight
+    implicitWidth: label.width
+    implicitHeight: label.height
 
     function toggle() {
         if (popup.visible && !popup.closing)
@@ -259,14 +263,19 @@ Item {
         sourceSize: Qt.size(width, height)
     }
 
-    SvgIcon {
+    Text {
         id: label
 
         y: Math.round((parent.height - height) / 2)
         width: launcher.iconSize
         height: launcher.iconSize
-        source: launcher.icon
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        text: launcher.icon
         color: launcher.textColor
+        font.family: launcher.iconFont.family
+        font.weight: launcher.iconFont.weight
+        font.pixelSize: launcher.iconSize
     }
 
     MouseArea {
@@ -412,14 +421,15 @@ Item {
                             }
                         }
 
-                        SvgIcon {
+                        Text {
                             anchors.right: parent.right
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 18
-                            height: 18
-                            source: Qt.resolvedUrl("icons/search-input.svg")
+                            text: "\ue721"
                             color: launcher.dark ? "#f3f3f3" : "#202020"
+                            font.family: launcher.iconFont.family
+                            font.weight: launcher.iconFont.weight
+                            font.pixelSize: 18
                         }
 
                         placeholderText: launcher.prefix

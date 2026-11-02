@@ -190,24 +190,30 @@ def _left(bar: BarWindow, name: str) -> float:
     return _position(bar, name).x()
 
 
+# The bar's default space at both ends and between widgets
+PADDING = 12
+SPACING = 12
+
 WIDGETS = {"left": ["a", "b"], "center": ["c"], "right": ["d"]}
+# The left slot's widgets, a and b
+LEFT = 40 + SPACING + 60
 
 
 def test_sections_split_the_bar_and_keep_the_yaml_order(make_bar: MakeBar, widget_dir: Path):
     bar = make_bar(length=600, widgets=WIDGETS)
     wait(50)
-    assert _left(bar, "a") == 8
-    assert _left(bar, "b") == 8 + 40 + 8
+    assert _left(bar, "a") == PADDING
+    assert _left(bar, "b") == PADDING + 40 + SPACING
     assert abs(_left(bar, "c") + 50 - 300) < 1
-    assert _left(bar, "d") + 40 == 600 - 8
+    assert _left(bar, "d") + 40 == 600 - PADDING
 
 
 def test_auto_width_fits_the_widgets(make_bar: MakeBar, widget_dir: Path):
     bar = make_bar(length="auto", widgets=WIDGETS)
     wait(50)
-    assert bar.width() == 8 + (40 + 8 + 60) + 100 + 40 + 8
-    assert _left(bar, "c") == 8 + 108
-    assert _left(bar, "d") + 40 == bar.width() - 8
+    assert bar.width() == PADDING + LEFT + 100 + 40 + PADDING
+    assert _left(bar, "c") == PADDING + LEFT
+    assert _left(bar, "d") + 40 == bar.width() - PADDING
 
 
 def _bar_file(folder: Path, body: str) -> str:
@@ -221,22 +227,22 @@ def test_a_bar_file_can_stop_a_slot_from_stretching(make_bar: MakeBar, widget_di
     file = _bar_file(widget_dir, "import Yasb.Bar\n\nBar {\n    leftSlot.stretch: false\n}\n")
     bar = make_bar(length=600, widgets=WIDGETS, file=file)
     wait(50)
-    center_width = (600 - 16 - 108) / 2
-    assert abs(_left(bar, "c") - (8 + 108 + (center_width - 100) / 2)) < 1
+    center_width = (600 - 2 * PADDING - LEFT) / 2
+    assert abs(_left(bar, "c") - (PADDING + LEFT + (center_width - 100) / 2)) < 1
 
 
 def test_a_bar_file_can_align_a_slot(make_bar: MakeBar, widget_dir: Path):
     file = _bar_file(widget_dir, 'import Yasb.Bar\n\nBar {\n    centerSlot.alignment: "left"\n}\n')
     bar = make_bar(length=600, widgets=WIDGETS, file=file)
     wait(50)
-    assert abs(_left(bar, "c") - (8 + (600 - 16) / 3)) < 1
+    assert abs(_left(bar, "c") - (PADDING + (600 - 2 * PADDING) / 3)) < 1
 
 
 @pytest.mark.parametrize("island", [False, True], ids=["bar", "island-bar"])
 def test_widgets_sit_on_whole_pixels(make_bar: MakeBar, widget_dir: Path, island: bool):
     write_widget(widget_dir, "e", 'import QtQuick\nRectangle { objectName: "e"; implicitWidth: 40.4 }\n')
     file = {"file": _bar_file(widget_dir, ISLAND_BAR)} if island else {}
-    # 584 pixels shared by three sections and a centred widget would otherwise put widgets between pixels
+    # 576 pixels shared by three sections and a centred widget would otherwise put widgets between pixels
     bar = make_bar(length=600, widgets={"left": ["e", "a"], "center": ["c"], "right": ["d"]}, **file)
     wait(50)
     for name in ("e", "a", "c", "d"):
@@ -249,7 +255,7 @@ def test_widgets_sit_on_whole_pixels(make_bar: MakeBar, widget_dir: Path, island
 def test_a_broken_widget_leaves_no_gap(make_bar: MakeBar, widget_dir: Path):
     bar = make_bar(length=600, widgets={"left": ["a", "broken", "b"]})
     wait(50)
-    assert _left(bar, "b") == 8 + 40 + 8
+    assert _left(bar, "b") == PADDING + 40 + SPACING
 
 
 def _root(bar: BarWindow) -> QQuickItem:
@@ -305,8 +311,8 @@ def test_a_custom_layout_places_its_own_slots(make_bar: MakeBar, widget_dir: Pat
     bar = make_bar(length=600, widgets={"first": ["a"], "second": ["c"]}, file=file)
     wait(50)
     assert set(_root(bar).property("slotNames")) == {"first", "second"}
-    assert _left(bar, "a") == 8
-    assert _left(bar, "c") == 8 + 40
+    assert _left(bar, "a") == PADDING
+    assert _left(bar, "c") == PADDING + 40
 
 
 def test_slots_the_bar_file_lacks_are_reported(make_bar: MakeBar, widget_dir: Path, caplog: pytest.LogCaptureFixture):
@@ -407,7 +413,7 @@ def test_a_widget_can_sit_outside_the_islands(make_bar: MakeBar, widget_dir: Pat
     write_widget(widget_dir, "x", "import QtQuick\nItem { property bool island: false; implicitWidth: 30 }\n")
     bar = make_bar(length=600, widgets={"left": ["a", "x", "b"]}, file=_bar_file(widget_dir, ISLAND_BAR))
     wait(50)
-    assert _islands(bar) == [[0, 60], [86, 166]]
+    assert _islands(bar) == [[0, 60], [70 + 2 * SPACING, 150 + 2 * SPACING]]
 
 
 @pytest.mark.parametrize(("edge", "rail", "gap"), [("top", 2, 20), ("bottom", 27, 10)])
@@ -557,9 +563,9 @@ def test_a_vertical_bar_stacks_its_slots_top_to_bottom(make_bar: MakeBar, widget
     bar = make_bar(edge="left", length=600, widgets={"top": ["t"], "center": ["m"], "bottom": ["b"]})
     wait(50)
     assert set(_root(bar).property("slotNames")) == {"top", "center", "bottom"}
-    assert _position(bar, "t").y() == 8
+    assert _position(bar, "t").y() == PADDING
     assert abs(_position(bar, "m").y() + 20 - 300) < 1
-    assert _position(bar, "b").y() + 30 == 600 - 8
+    assert _position(bar, "b").y() + 30 == 600 - PADDING
     widget = find_item(_root(bar), "t")
     assert widget is not None and widget.width() == bar.width()
 
@@ -654,7 +660,8 @@ def test_a_right_click_on_a_widget_that_shrinks_opens_no_bar_menu(make_bar: Make
     wait(50)
     before = _open_windows()
     point = QPoint(round(_left(bar, "shrinks")) + 10, bar.height() // 2)
-    QTest.mouseClick(bar, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, point)
+    # PyQt's stub lists this static function as a method
+    QTest.mouseClick(bar, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, point)  # pyright: ignore[reportCallIssue, reportArgumentType]
     wait(50)
     assert _left(bar, "shrinks") > point.x()
     QApplication.sendEvent(bar, QContextMenuEvent(QContextMenuEvent.Reason.Mouse, point, bar.mapToGlobal(point)))

@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.impl
 import QtQuick.Effects
 import QtQuick.Layouts
 import Yasb
@@ -11,10 +10,10 @@ Item {
 
     property Item bar: null
     property bool hideEmpty: true
-    // The album art on the bar, in a circle; the icon shows while there is none
+    // The album art on the bar, in a circle; the icon glyph, in iconFont, shows while there is none
     property bool showThumbnail: true
     property int thumbnailSize: 20
-    property url icon: Qt.resolvedUrl("icons/music.svg")
+    property string icon: "\ue8d6"
     property int iconSize: 16
     property bool showArtist: false
     property bool showProgress: false
@@ -41,6 +40,10 @@ Item {
     font.letterSpacing: bar?.font.letterSpacing ?? 0
     font.capitalization: bar?.font.capitalization ?? Font.MixedCase
     font.variableAxes: bar?.font.variableAxes ?? ({})
+    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    property font iconFont
+    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
+    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
     readonly property color accent: dark ? "#60cdff" : "#005fb8"
     readonly property string edge: bar?.edge ?? "top"
     readonly property string label: player.title && media.showArtist && player.artist
@@ -121,10 +124,6 @@ Item {
         }
     }
 
-    component SvgIcon: IconImage {
-        sourceSize: Qt.size(width, height)
-    }
-
     Row {
         id: row
         height: parent.height
@@ -161,13 +160,14 @@ Item {
             }
         }
 
-        SvgIcon {
-            y: Math.round((parent.height - height) / 2)
-            width: media.iconSize
-            height: media.iconSize
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
             visible: !cover.visible
-            source: media.icon
+            text: media.icon
             color: media.textColor
+            font.family: media.iconFont.family
+            font.weight: media.iconFont.weight
+            font.pixelSize: media.iconSize
         }
 
         Text {
@@ -194,7 +194,7 @@ Item {
     component PlayerButton: Item {
         id: button
 
-        property url source
+        property string glyph
         property bool active: false
         property bool primary: false
 
@@ -212,11 +212,12 @@ Item {
             color: button.primary && button.enabled ? popup.ink : Qt.alpha(popup.ink, area.containsMouse ? 0.1 : 0)
         }
 
-        SvgIcon {
+        Text {
             anchors.centerIn: parent
-            width: button.primary ? 20 : 16
-            height: button.primary ? 20 : 16
-            source: button.source
+            text: button.glyph
+            font.family: media.iconFont.family
+            font.weight: media.iconFont.weight
+            font.pixelSize: button.primary ? 20 : 16
             color: button.primary && button.enabled ? (media.dark ? "#000000" : "#ffffff")
                 : button.active ? media.activeColor : popup.ink
             opacity: button.enabled ? 1 : 0.35
@@ -339,12 +340,13 @@ Item {
                                 audio.setAppMuted(media.app.key, !media.app.muted)
                         }
 
-                        SvgIcon {
+                        Text {
                             anchors.centerIn: parent
-                            width: 16
-                            height: 16
-                            source: Qt.resolvedUrl(media.app?.muted ? "icons/speaker-mute.svg" : "icons/speaker.svg")
+                            text: media.app?.muted ? "\ue74f" : "\ue767"
                             color: popup.ink
+                            font.family: media.iconFont.family
+                            font.weight: media.iconFont.weight
+                            font.pixelSize: 16
                             opacity: !media.app ? 0.3 : media.app.muted ? 0.6 : 1
                         }
 
@@ -427,11 +429,14 @@ Item {
                             sourceSize: Qt.size(32, 32)
                         }
 
-                        SvgIcon {
-                            anchors.fill: parent
+                        Text {
+                            anchors.centerIn: parent
                             visible: appIcon.status !== Image.Ready
-                            source: Qt.resolvedUrl("icons/music.svg")
+                            text: "\ue8d6"
                             color: popup.ink
+                            font.family: media.iconFont.family
+                            font.weight: media.iconFont.weight
+                            font.pixelSize: 16
                             opacity: 0.65
                         }
 
@@ -466,12 +471,13 @@ Item {
                         visible: art.status !== Image.Ready
                         color: Qt.alpha(popup.ink, 0.06)
 
-                        SvgIcon {
+                        Text {
                             anchors.centerIn: parent
-                            width: 40
-                            height: 40
-                            source: Qt.resolvedUrl("icons/music-large.svg")
+                            text: "\ue8d6"
                             color: popup.ink
+                            font.family: media.iconFont.family
+                            font.weight: media.iconFont.weight
+                            font.pixelSize: 40
                             opacity: 0.5
                         }
                     }
@@ -604,33 +610,33 @@ Item {
                     spacing: 4
 
                     PlayerButton {
-                        source: Qt.resolvedUrl("icons/shuffle.svg")
+                        glyph: "\ue8b1"
                         enabled: player.canShuffle
                         active: player.shuffle
                         onClicked: player.toggleShuffle()
                         Accessible.name: player.shuffle ? "Shuffle on" : "Shuffle"
                     }
                     PlayerButton {
-                        source: Qt.resolvedUrl("icons/previous.svg")
+                        glyph: "\uf8ac"
                         enabled: player.canPrevious
                         onClicked: player.previous()
                         Accessible.name: "Previous"
                     }
                     PlayerButton {
                         primary: true
-                        source: Qt.resolvedUrl(player.playing ? "icons/pause.svg" : "icons/play.svg")
+                        glyph: player.playing ? "\uf8ae" : "\uf5b0"
                         enabled: player.canPlayPause
                         onClicked: player.playPause()
                         Accessible.name: player.playing ? "Pause" : "Play"
                     }
                     PlayerButton {
-                        source: Qt.resolvedUrl("icons/next.svg")
+                        glyph: "\uf8ad"
                         enabled: player.canNext
                         onClicked: player.next()
                         Accessible.name: "Next"
                     }
                     PlayerButton {
-                        source: Qt.resolvedUrl(player.repeat === "track" ? "icons/repeat-one.svg" : "icons/repeat.svg")
+                        glyph: player.repeat === "track" ? "\ue8ed" : "\ue8ee"
                         enabled: player.canRepeat
                         active: player.repeat !== "none"
                         onClicked: player.cycleRepeat()

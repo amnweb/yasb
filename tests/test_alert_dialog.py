@@ -1,3 +1,5 @@
+# pyright: reportPrivateUsage=false
+
 from types import SimpleNamespace
 
 import pytest
@@ -7,10 +9,14 @@ from core.utils import alert_dialog
 from tests.support.qt import wait
 
 
+def ignore(_: object) -> None:
+    pass
+
+
 @pytest.fixture(autouse=True)
 def quiet(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(alert_dialog, "user32", SimpleNamespace(MessageBeep=lambda _: None))
-    monkeypatch.setattr(alert_dialog, "enable_mica", lambda _: None)
+    monkeypatch.setattr(alert_dialog, "user32", SimpleNamespace(MessageBeep=ignore))
+    monkeypatch.setattr(alert_dialog, "enable_mica", ignore)
 
 
 def test_an_alert_raised_during_work_shows_once_the_work_is_done(qapp: QApplication):

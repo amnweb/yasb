@@ -16,7 +16,7 @@ from core.widgets.services.volume import output as output_module
 from core.widgets.services.volume.output import AudioOutput
 from settings import QML_IMPORT_PATH
 from tests.support.audio import FakeAudioService
-from tests.support.qt import wait
+from tests.support.qt import find_item, wait
 
 
 def aumid(pid: int) -> str:
@@ -117,11 +117,8 @@ def test_the_widget_shows_the_level(service: FakeAudioService):
     widget = component.create()
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
-    sources = [
-        item.property("source").toString()
-        for item in widget.findChildren(QQuickItem)
-        if item.property("source") is not None
-    ]
+    icon = find_item(widget, "icon")
+    assert icon is not None
     # 30% is one wave
-    assert any(source.endswith("icons/speaker-1.svg") for source in sources)
+    assert icon.property("text") == "\ue993"
     sip.delete(widget)

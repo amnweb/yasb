@@ -59,7 +59,7 @@ def rewrite_text(text: str, rules: list[dict[str, Any]]) -> str:
     return result
 
 
-def _setting(kind: type | str, name: str, notify: pyqtSignal) -> pyqtProperty:
+def _setting(kind: type | str, name: str, notify: pyqtSignal) -> pyqtProperty[Any]:
     def get(tracker: ActiveWindowTracker) -> Any:
         return tracker.setting(name)
 

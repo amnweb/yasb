@@ -18,8 +18,8 @@ Item {
     property bool hideEmpty: false
     property int popupWidth: 440
     property int popupHeight: 640
-    // The logo on the bar, drawn in the text colour
-    property url icon: Qt.resolvedUrl("icons/github.svg")
+    // The logo on the bar, drawn in the text colour; thicker when the icon font is bold
+    property url icon: Qt.resolvedUrl(iconFont.weight >= Font.DemiBold ? "icons/github-bold.svg" : "icons/github.svg")
     property int iconSize: 16
     // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
     property color textColor: bar?.textColor ?? foreground
@@ -31,6 +31,10 @@ Item {
     font.letterSpacing: bar?.font.letterSpacing ?? 0
     font.capitalization: bar?.font.capitalization ?? Font.MixedCase
     font.variableAxes: bar?.font.variableAxes ?? ({})
+    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    property font iconFont
+    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
+    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
     readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
     readonly property color foreground: dark ? "#ebebeb" : "#24292f"
     readonly property color secondary: dark ? "#959da5" : "#656d76"
@@ -180,7 +184,7 @@ Item {
     component IconButton: Item {
         id: button
 
-        property url source
+        property string glyph
         property int iconSize: 14
         property bool checked: false
         property string tip
@@ -203,13 +207,14 @@ Item {
             color: Qt.alpha(github.foreground, area.containsMouse ? 0.08 : button.checked ? 0.06 : 0)
         }
 
-        SvgIcon {
+        Text {
             anchors.centerIn: parent
-            width: button.iconSize
-            height: button.iconSize
-            source: button.source
+            text: button.glyph
             color: github.foreground
             opacity: button.checked || area.containsMouse ? 1 : 0.6
+            font.family: github.iconFont.family
+            font.weight: github.iconFont.weight
+            font.pixelSize: button.iconSize
         }
 
         MouseArea {
@@ -276,13 +281,13 @@ Item {
                 }
                 Item { Layout.fillWidth: true }
                 IconButton {
-                    source: Qt.resolvedUrl("icons/mark-read.svg")
+                    glyph: "\ue73e"
                     tip: "Mark all as read"
                     enabled: monitor.unreadCount > 0 && !popup.needsSignIn
                     onClicked: monitor.markAllRead()
                 }
                 IconButton {
-                    source: Qt.resolvedUrl("icons/refresh.svg")
+                    glyph: "\ue72c"
                     tip: "Refresh"
                     enabled: !monitor.loading && !popup.needsSignIn
                     onClicked: monitor.refresh()
@@ -322,15 +327,16 @@ Item {
                     font.pixelSize: 12
                 }
 
-                SvgIcon {
+                Text {
                     anchors.right: parent.right
                     anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 10
-                    height: 10
-                    source: Qt.resolvedUrl("icons/chevron-right.svg")
+                    text: "\ue76c"
                     color: github.foreground
                     opacity: footerArea.containsMouse ? 1 : 0.75
+                    font.family: github.iconFont.family
+                    font.weight: github.iconFont.weight
+                    font.pixelSize: 10
                 }
 
                 MouseArea {

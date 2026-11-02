@@ -110,7 +110,11 @@ def test_closing_the_window_cancels_rather_than_refusing(qapp: QApplication, clo
     cloud = Cloud()
     cloud._session.master_key = bytes(32)
     warned: list[str] = []
-    cloud.messageRequested.connect(lambda title, _message: warned.append(title))
+
+    def warn(title: str, _message: str) -> None:
+        warned.append(title)
+
+    cloud.messageRequested.connect(warn)
 
     cloud._ops.restore("any-snapshot-id")
     assert cloud._ops._active is not None

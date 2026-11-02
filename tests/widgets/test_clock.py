@@ -212,8 +212,10 @@ def test_the_calendar_opens_away_from_the_bar_edge(make_clock: MakeClock, fake_b
     clock.setProperty("bar", fake_bar)
     window = clock.window()
     assert window is not None
+    on = window.screen()
+    assert on is not None
     # Against the screen edge its bar is on, like a bar, so the calendar has room on the other side
-    screen = window.screen().availableGeometry()
+    screen = on.availableGeometry()
     window.setPosition(
         {"left": screen.left() + 16, "right": screen.right() - window.width() - 16}.get(
             edge, screen.center().x() - window.width() // 2

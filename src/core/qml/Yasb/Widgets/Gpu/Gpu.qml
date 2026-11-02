@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.impl
 import QtQuick.Layouts
 import QtQuick.Shapes
 import Yasb
@@ -15,8 +14,8 @@ Item {
     // Square grid lines behind the graph
     property bool graphGrid: true
     property color temperatureColor: "#ff6b35"
-    // The SVG in front of the text, drawn in the text colour; "" for none
-    property url icon: Qt.resolvedUrl("icons/gpu.svg")
+    // The glyph in front of the text, drawn in iconFont and the text colour; "" for none
+    property string icon: "\uf211"
     property int iconSize: 16
     property Item bar: null
 
@@ -35,6 +34,10 @@ Item {
     font.letterSpacing: bar?.font.letterSpacing ?? 0
     font.capitalization: bar?.font.capitalization ?? Font.MixedCase
     font.variableAxes: bar?.font.variableAxes ?? ({})
+    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    property font iconFont
+    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
+    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
     readonly property string edge: bar?.edge ?? "top"
 
     function spline(points: var): string {
@@ -130,23 +133,20 @@ Item {
         function onYChanged() { if (popup.visible && !popup.pinned) gpu.placePopup() }
     }
 
-    component SvgIcon: IconImage {
-        sourceSize: Qt.size(width, height)
-    }
-
     Row {
         id: row
 
         height: parent.height
         spacing: 4
 
-        SvgIcon {
-            y: Math.round((parent.height - height) / 2)
-            width: gpu.iconSize
-            height: gpu.iconSize
-            visible: gpu.icon.toString() !== ""
-            source: gpu.icon
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: gpu.icon !== ""
+            text: gpu.icon
             color: gpu.textColor
+            font.family: gpu.iconFont.family
+            font.weight: gpu.iconFont.weight
+            font.pixelSize: gpu.iconSize
         }
 
         Text {
@@ -266,13 +266,14 @@ Item {
                         Accessible.name: popup.pinned ? "Unpin this window" : "Pin this window"
                         Accessible.onPressAction: popup.pinned = !popup.pinned
 
-                        SvgIcon {
+                        Text {
                             anchors.centerIn: parent
-                            width: 14
-                            height: 14
-                            source: Qt.resolvedUrl(popup.pinned ? "icons/pinned.svg" : "icons/pin.svg")
+                            text: popup.pinned ? "\ue77a" : "\ue840"
                             color: popup.ink
                             opacity: popup.pinned ? 1 : 0.6
+                            font.family: gpu.iconFont.family
+                            font.weight: gpu.iconFont.weight
+                            font.pixelSize: 14
                         }
 
                         MouseArea {

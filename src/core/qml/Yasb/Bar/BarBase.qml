@@ -22,10 +22,11 @@ Item {
     // A custom silhouette, including any edge overhang outside this item.
     property string backdropPath: ""
 
-    property int padding: 8
-    property int spacing: 8
+    property int padding: 12
+    property int spacing: 12
     property color textColor: dark ? "#ffffff" : "#000000"
     property font font: Qt.font({ pixelSize: 13 })
+    property font iconFont: Qt.font({ family: "Segoe Fluent Icons" })
     property real contentImplicitLength: longestContent()
     property list<string> slotNames: []
     property list<Item> slots: []

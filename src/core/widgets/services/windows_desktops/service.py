@@ -6,9 +6,10 @@ from concurrent.futures import Future
 from ctypes import wintypes
 from dataclasses import dataclass
 from functools import partial
-from typing import TYPE_CHECKING, Any, override
+from typing import Any, override
 
 from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
+from PyQt6 import sip
 from PyQt6.QtCore import (
     QAbstractNativeEventFilter,
     QCoreApplication,
@@ -34,10 +35,6 @@ from core.widgets.services.windows_desktops.com import (
 )
 from core.widgets.services.windows_desktops.interfaces import VirtualDesktopUnsupportedError
 from core.widgets.services.windows_desktops.notification import DesktopEvent, DesktopNotificationListener
-
-if TYPE_CHECKING:
-    import PyQt6.sip as sip
-    from core.widgets.yasb.windows_desktops import WorkspaceWidget
 
 logger = logging.getLogger("windows_desktop_service")
 
@@ -91,7 +88,7 @@ class _TaskbarCreatedFilter(QAbstractNativeEventFilter):
         self._on_taskbar_created = on_taskbar_created
 
     @override
-    def nativeEventFilter(self, eventType: Any, message: sip.voidptr | None) -> tuple[bool, sip.voidptr | None]:
+    def nativeEventFilter(self, eventType: Any, message: sip.voidptr | None) -> tuple[bool, sip.voidptr]:
         try:
             if eventType == b"windows_generic_MSG" and message is not None:
                 msg = ctypes.cast(int(message), ctypes.POINTER(MSG)).contents
@@ -99,7 +96,7 @@ class _TaskbarCreatedFilter(QAbstractNativeEventFilter):
                     self._on_taskbar_created()
         except Exception:
             pass
-        return False, 0  # pyright: ignore[reportReturnType]
+        return False, sip.voidptr(0)
 
 
 class _ServiceThread(QThread):
@@ -162,7 +159,7 @@ class WindowsDesktopService(QObject):
         WindowsDesktopService._init_done = True
 
         self._api = get_api()
-        self._widgets: list[WorkspaceWidget] = []
+        self._widgets: list[QObject] = []
         self._timer: QTimer | None = None
         self._listener: DesktopNotificationListener | None = None
 
@@ -341,7 +338,7 @@ class WindowsDesktopService(QObject):
             self._last_number = number
             self.desktops_updated.emit({"index": number}, {"update_buttons": update_buttons})
 
-    def register_widget(self, widget: WorkspaceWidget) -> None:
+    def register_widget(self, widget: QObject) -> None:
         """Track a widget, starting notifications on the first one."""
         if widget not in self._widgets:
             self._widgets.append(widget)
@@ -388,7 +385,7 @@ class WindowsDesktopService(QObject):
         else:
             self._start_polling()
 
-    def unregister_widget(self, widget: WorkspaceWidget) -> None:
+    def unregister_widget(self, widget: QObject) -> None:
         """Stop tracking a widget, releasing the shell once the last one goes."""
         try:
             self._widgets.remove(widget)

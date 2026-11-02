@@ -30,7 +30,7 @@ class SystemControlsSectionWidget(QFrame):
         self._tooltip = tooltip
         self.setProperty("class", "section system-controls")
 
-        self._power_ops = PowerOperations(main_window=parent)
+        self._power_ops = PowerOperations()
 
         self._settings_btn: QPushButton | None = None
         self._settings_menu: QMenu | None = None

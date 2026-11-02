@@ -179,7 +179,8 @@ def test_the_widget_shows_waiting_notifications_and_groups_by_app(events: Events
     widget.setProperty("hideEmpty", False)
     events.emit_event("WindowsNotificationsChanged", [item(4), item(5, aumid="Contoso.Chat", app_name="Chat"), item(6)])
     wait(10)
-    assert widget.findChild(QQuickItem, "dot").property("visible")
+    dot = widget.findChild(QQuickItem, "dot")
+    assert dot is not None and dot.property("visible")
     groups = widget.property("groups")
     groups = groups.toVariant() if hasattr(groups, "toVariant") else groups
     assert [(group["appName"], len(group["items"])) for group in groups] == [("Mail", 2), ("Chat", 1)]
@@ -187,7 +188,7 @@ def test_the_widget_shows_waiting_notifications_and_groups_by_app(events: Events
     events.emit_event("WindowsNotificationUpdate", 2)
     events.emit_event("WindowsNotificationsChanged", [])
     wait(10)
-    assert not widget.findChild(QQuickItem, "dot").property("visible")
+    assert not dot.property("visible")
     widget.setProperty("hideEmpty", True)
     assert not widget.property("shown") and widget.property("implicitWidth") == 0
     sip.delete(widget)

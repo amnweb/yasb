@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.impl
 import QtQuick.Effects
 import QtQuick.Layouts
 import Yasb
@@ -14,7 +13,7 @@ Item {
     property int popupWidth: 380
     // The popup grows with its notifications up to this height
     property int popupHeight: 560
-    // The bell on the bar, an SVG from icons/ in the text colour
+    // The bell on the bar, drawn in iconFont and the text colour
     property int iconSize: 16
 
     readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
@@ -28,6 +27,10 @@ Item {
     font.letterSpacing: bar?.font.letterSpacing ?? 0
     font.capitalization: bar?.font.capitalization ?? Font.MixedCase
     font.variableAxes: bar?.font.variableAxes ?? ({})
+    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    property font iconFont
+    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
+    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
     readonly property color foreground: dark ? "#ebebeb" : "#1f1f1f"
     readonly property color secondary: dark ? "#9d9d9d" : "#616161"
     readonly property string edge: bar?.edge ?? "top"
@@ -113,20 +116,19 @@ Item {
         onTriggered: notifications.now = Date.now()
     }
 
-    component SvgIcon: IconImage {
-        sourceSize: Qt.size(width, height)
-    }
-
     Item {
         id: label
         y: Math.round((parent.height - height) / 2)
         implicitWidth: notifications.iconSize
         implicitHeight: notifications.iconSize
 
-        SvgIcon {
-            anchors.fill: parent
-            source: Qt.resolvedUrl(center.doNotDisturb ? "icons/do-not-disturb.svg" : "icons/bell.svg")
+        Text {
+            anchors.centerIn: parent
+            text: center.doNotDisturb ? "\ue708" : "\uea8f"
             color: notifications.textColor
+            font.family: notifications.iconFont.family
+            font.weight: notifications.iconFont.weight
+            font.pixelSize: notifications.iconSize
         }
 
         Rectangle {
@@ -156,7 +158,7 @@ Item {
     component IconButton: Item {
         id: button
 
-        property url source
+        property string glyph
         property int iconSize: 14
         property bool checked: false
         property string tip
@@ -178,13 +180,14 @@ Item {
             color: Qt.alpha(notifications.foreground, area.containsMouse ? 0.08 : button.checked ? 0.06 : 0)
         }
 
-        SvgIcon {
+        Text {
             anchors.centerIn: parent
-            width: button.iconSize
-            height: button.iconSize
-            source: button.source
+            text: button.glyph
             color: notifications.foreground
             opacity: button.checked || area.containsMouse ? 1 : 0.6
+            font.family: notifications.iconFont.family
+            font.weight: notifications.iconFont.weight
+            font.pixelSize: button.iconSize
         }
 
         MouseArea {
@@ -245,14 +248,14 @@ Item {
                     }
                     IconButton {
                         visible: center.doNotDisturbAvailable
-                        source: Qt.resolvedUrl("icons/moon.svg")
+                        glyph: "\ue708"
                         checked: center.doNotDisturb
                         tip: center.doNotDisturb ? "Do not disturb is on" : "Do not disturb"
                         onClicked: center.setDoNotDisturb(!center.doNotDisturb)
                         Accessible.name: center.doNotDisturb ? "Turn off do not disturb" : "Turn on do not disturb"
                     }
                     IconButton {
-                        source: Qt.resolvedUrl("icons/delete.svg")
+                        glyph: "\ue74d"
                         enabled: center.notifications.length > 0
                         tip: "Clear all"
                         onClicked: center.clearAll()
@@ -271,12 +274,13 @@ Item {
                         width: parent.width - 32
                         spacing: 10
                         visible: notifications.groups.length === 0
-                        SvgIcon {
+                        Text {
                             anchors.horizontalCenter: parent.horizontalCenter
-                            width: 28
-                            height: 28
-                            source: Qt.resolvedUrl("icons/bell.svg")
+                            text: "\uea8f"
                             color: notifications.secondary
+                            font.family: notifications.iconFont.family
+                            font.weight: notifications.iconFont.weight
+                            font.pixelSize: 28
                         }
                         Text {
                             width: parent.width
@@ -335,7 +339,7 @@ Item {
                                         }
                                         IconButton {
                                             visible: group.modelData.appId !== ""
-                                            source: Qt.resolvedUrl("icons/dismiss.svg")
+                                            glyph: "\ue711"
                                             iconSize: 10
                                             tip: `Clear ${group.modelData.appName}`
                                             onClicked: center.clearApp(group.modelData.appId)
@@ -458,7 +462,7 @@ Item {
                                                                     implicitWidth: 22
                                                                     implicitHeight: 22
                                                                     visible: hover.hovered
-                                                                    source: Qt.resolvedUrl("icons/dismiss.svg")
+                                                                    glyph: "\ue711"
                                                                     iconSize: 10
                                                                     onClicked: center.dismiss(card.modelData.id)
                                                                     Accessible.name: "Dismiss"
@@ -543,15 +547,16 @@ Item {
                         font.pixelSize: 12
                     }
 
-                    SvgIcon {
+                    Text {
                         anchors.right: parent.right
                         anchors.rightMargin: 14
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 10
-                        height: 10
-                        source: Qt.resolvedUrl("icons/chevron-right.svg")
+                        text: "\ue76c"
                         color: notifications.foreground
                         opacity: footerArea.containsMouse ? 1 : 0.75
+                        font.family: notifications.iconFont.family
+                        font.weight: notifications.iconFont.weight
+                        font.pixelSize: 10
                     }
 
                     MouseArea {

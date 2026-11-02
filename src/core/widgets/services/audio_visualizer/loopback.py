@@ -17,8 +17,7 @@ from pycaw.api.mmdeviceapi import PROPERTYKEY, IMMDevice, IMMDeviceEnumerator
 from pycaw.callbacks import MMNotificationClient
 from pycaw.constants import DEVICE_STATE, STGM
 from pycaw.pycaw import AudioUtilities, EDataFlow, ERole, IAudioClient
-from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QCoreApplication, QObject, Qt, QTimer, pyqtSignal
 
 from core.utils.win32.bindings.audioclient import IAudioCaptureClient, IID_IAudioCaptureClient, IID_IAudioClient
 from core.utils.win32.bindings.kernel32 import CreateEvent, ResetEvent, SetEvent, WaitForMultipleObjects
@@ -343,7 +342,7 @@ class AudioVisualizerCaptureService(QObject):
         self.frame_ready.connect(self._on_frame_dispatched)
         self.audio_started.connect(self._stop_idle_timers)
         self.audio_stopped.connect(self._start_idle_timers)
-        app = QApplication.instance()
+        app = QCoreApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self.shutdown)
 
