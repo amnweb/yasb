@@ -178,7 +178,7 @@ Available actions:
 - **hide_empty:** Whether to hide the widget when there is no media information available.
 - **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).
 - **callbacks:** Mouse event callbacks. See [Callbacks](#available-callbacks).
-- **max_field_size:** Maximum field sizes for the labels.
+- **max_field_size:** Maximum field sizes for the labels. Full-width characters (Chinese, Japanese, Korean, most emoji) count as two.
   - **label:** Maximum size for the main label. If the label exceeds this size, it will be truncated.
   - **label_alt:** Maximum size for the alternative label. If the label exceeds this size, it will be truncated.
   - **truncate_whole_label:** Whether to truncate the whole label or separated `{title} {artist}` if it exceeds the maximum size. If set to false, only the part that exceeds the maximum size will be truncated.

@@ -110,7 +110,7 @@ taskbar:
   - enabled: A boolean flag to enable or disable title labels.
   - show: A string that determines the display behavior (either `"focused"` or `"always"`).
   - min_length: The minimum length of the title label.
-  - max_length: The maximum length of the title label.
+  - max_length: The maximum length of the title label. Full-width characters (Chinese, Japanese, Korean, most emoji) count as two.
 - **monitor_exclusive:** A boolean indicating whether the application should be exclusive to the monitor. If set to `True`, the taskbar will only show applications on the monitor where the application is running.
 - **ignore_apps:** A dictionary that allows you to specify which applications should be ignored by the taskbar widget. It includes:
   - processes: A list of process names to ignore.

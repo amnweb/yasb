@@ -99,6 +99,13 @@ def test_long_output_is_truncated(make_widget: MakeWidget):
     assert _texts(widget._widgets) == ["abc..."]
 
 
+def test_full_width_characters_count_twice_when_truncating(make_widget: MakeWidget):
+    widget = make_widget(label="{data}", label_max_length=6)
+
+    assert widget._truncate_label("東京の天気です") == "東京の..."
+    assert widget._truncate_label("東京の") == "東京の"
+
+
 def test_an_icon_span_keeps_its_own_label(make_widget: MakeWidget):
     widget = make_widget(
         label="<span>\uf2db</span> {data}",

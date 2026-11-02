@@ -52,7 +52,7 @@ komorebi_stack:
 - **label_no_window:** The label to display when no window is in focus.  
 - **label_zero_index:** Whether to use zero-based indexing for window labels.
 - **show_icons:** Whether to display app icons. Options are `always`, `never`, or `focused`.
-- **max_length:** The maximum number of characters to display for the label. If the title exceeds this length, it will be truncated.
+- **max_length:** The maximum number of characters to display for the label. If the title exceeds this length, it will be truncated. Full-width characters (Chinese, Japanese, Korean, most emoji) count as two.
 - **max_length_active:** The maximum number of characters to display for the active window label. If the title exceeds this length, it will be truncated.
 - **max_length_overall:** If specified, `max_length` is calculated as `max_length_overall` divided by the number of inactive windows.
 - **max_length_ellipsis:** The string to append to truncated window titles.  
