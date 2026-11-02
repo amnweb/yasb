@@ -8,7 +8,7 @@ import pytest
 from PyQt6 import sip
 from PyQt6.QtCore import QUrl, pyqtBoundSignal
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
-from PyQt6.QtQuick import QQuickItem
+from PyQt6.QtQuick import QQuickItem, QQuickWindow
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
@@ -169,12 +169,26 @@ def test_the_widget_shows_waiting_notifications_and_groups_by_app(events: Events
     engine.addImportPath(QML_IMPORT_PATH)
     path = BUILTIN_WIDGETS_DIR / "Notifications" / "Notifications.qml"
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(path)))
-    widget = component.create()
+    widget = component.createWithInitialProperties({"hideEmpty": True})
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+    # In a window like on a bar, where Qt keeps the items' visibility up to date
+    window = QQuickWindow()
+    widget.setParentItem(window.contentItem())
+    # Hidden with nothing to show, and taking no space so the bar leaves no gap
+    assert not widget.property("shown") and widget.property("implicitWidth") == 0
+    widget.setProperty("hideEmpty", False)
     events.emit_event("WindowsNotificationsChanged", [item(4), item(5, aumid="Contoso.Chat", app_name="Chat"), item(6)])
     wait(10)
     assert widget.findChild(QQuickItem, "dot").property("visible")
     groups = widget.property("groups")
     groups = groups.toVariant() if hasattr(groups, "toVariant") else groups
     assert [(group["appName"], len(group["items"])) for group in groups] == [("Mail", 2), ("Chat", 1)]
+    # Windows can still count toasts the list can't read, which the popup has nothing to show for
+    events.emit_event("WindowsNotificationUpdate", 2)
+    events.emit_event("WindowsNotificationsChanged", [])
+    wait(10)
+    assert not widget.findChild(QQuickItem, "dot").property("visible")
+    widget.setProperty("hideEmpty", True)
+    assert not widget.property("shown") and widget.property("implicitWidth") == 0
     sip.delete(widget)
+    sip.delete(window)

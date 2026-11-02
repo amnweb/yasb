@@ -1,6 +1,7 @@
 import threading
 
 from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal, pyqtSlot
+from PyQt6.QtGui import QIcon
 from PyQt6.QtQml import QQmlEngine
 
 from core.utils.qml import qml_property
@@ -43,7 +44,9 @@ class About(QObject):
         self._checked.connect(self._receive)
 
     def show(self, engine: QQmlEngine) -> None:
-        show_window(engine, "AboutWindow", {"about": self})
+        window = show_window(engine, "AboutWindow", {"about": self})
+        if window is not None:
+            window.setIcon(QIcon(f"{SCRIPT_PATH}/assets/images/app_icon.png"))
 
     @qml_property(str, constant=True)
     def version(self) -> str:

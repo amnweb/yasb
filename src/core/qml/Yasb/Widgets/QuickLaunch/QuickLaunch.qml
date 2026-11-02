@@ -379,49 +379,46 @@ Item {
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.margins: 12
-                    spacing: 8
-
-                    Label {
-                        visible: launcher.prefix !== ""
-                        text: launcher.prefix
-                        leftPadding: 8
-                        rightPadding: 8
-                        topPadding: 3
-                        bottomPadding: 3
-                        background: Rectangle {
-                            radius: 4
-                            color: launcher.selected
-                        }
-                    }
+                    spacing: 0
 
                     TextField {
                         id: field
 
                         Layout.fillWidth: true
                         Layout.preferredHeight: 40
-                        leftPadding: 32
+                        leftPadding: prefixChip.visible ? prefixChip.x + prefixChip.width + 6 : 12
                         rightPadding: 32
                         background: Rectangle {
                             color: "transparent"
                             border.width: 0
                         }
 
-                        SvgIcon {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 8
+                        Label {
+                            id: prefixChip
+
+                            // Its text starts where the prefix was typed, so it stays in place
+                            x: 12 - leftPadding
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 18
-                            height: 18
-                            source: Qt.resolvedUrl("icons/search-input.svg")
-                            color: launcher.dark ? "#f3f3f3" : "#202020"
+                            visible: launcher.prefix !== ""
+                            text: launcher.prefix
+                            font.pixelSize: field.font.pixelSize
+                            leftPadding: 8
+                            rightPadding: 8
+                            topPadding: 3
+                            bottomPadding: 3
+                            background: Rectangle {
+                                radius: 4
+                                color: launcher.selected
+                            }
                         }
+
                         SvgIcon {
                             anchors.right: parent.right
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
                             width: 18
                             height: 18
-                            source: Qt.resolvedUrl("icons/enter.svg")
+                            source: Qt.resolvedUrl("icons/search-input.svg")
                             color: launcher.dark ? "#f3f3f3" : "#202020"
                         }
 

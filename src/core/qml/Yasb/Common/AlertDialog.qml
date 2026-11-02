@@ -12,10 +12,7 @@ Window {
     property bool detailsShown: false
 
     title: "YASB"
-    // Any hint replaces Qt's default title bar hints, so they are listed too
-    flags: Qt.Dialog | Qt.WindowTitleHint | Qt.WindowCloseButtonHint | Qt.MSWindowsFixedSizeDialogHint
-        | Qt.WindowStaysOnTopHint
-    // Mica shows through where the window is transparent
+    flags: Qt.Tool | Qt.WindowStaysOnTopHint
     color: "transparent"
     width: 520
     height: layout.implicitHeight
@@ -23,6 +20,11 @@ Window {
     Component.onCompleted: {
         x = screen.virtualX + (screen.width - width) / 2
         y = screen.virtualY + (screen.height - height) / 2
+    }
+
+    DragHandler {
+        target: null
+        onActiveChanged: if (active) dialog.startSystemMove()
     }
 
     ColumnLayout {
@@ -41,8 +43,9 @@ Window {
                 text: dialog.heading
                 visible: text !== ""
                 wrapMode: Text.Wrap
-                font.pixelSize: 20
+                font.pixelSize: 18
                 font.weight: Font.DemiBold
+                Layout.bottomMargin: 8
             }
 
             Label {
@@ -60,6 +63,7 @@ Window {
                     id: detailsArea
 
                     text: dialog.details
+                    font.pixelSize: 13
                     readOnly: true
                     selectByMouse: true
                     wrapMode: TextEdit.Wrap

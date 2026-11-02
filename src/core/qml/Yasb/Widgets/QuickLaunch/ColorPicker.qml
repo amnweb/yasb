@@ -94,9 +94,10 @@ QtObject {
                         maskSpreadAtMin: 1.0
                     }
 
+                    // Solid, so the lines between the cells don't show the screen under the lens
                     Rectangle {
                         anchors.fill: parent
-                        color: Qt.alpha("#ffffff", 0.16)
+                        color: "#292929"
                     }
 
                     Grid {

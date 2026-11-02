@@ -9,7 +9,7 @@ Item {
     property string noWindowLabel: ""
     property bool showIcon: true
     property int iconSize: 16
-    property int maxLength: 0
+    property int maxLength: 32
     property string ellipsis: "..."
     property bool monitorExclusive: false
     property var rewrite: []

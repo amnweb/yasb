@@ -259,3 +259,18 @@ def test_the_widget_shows_the_title_and_finds_the_players_audio(service: MediaSe
     app = app.toVariant() if hasattr(app, "toVariant") else app
     assert app["name"] == "Spotify"
     sip.delete(widget)
+
+
+def test_the_widget_takes_no_space_without_a_player(service: MediaService, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(output_module, "AudioOutputService", FakeAudioService)
+    register_qml_types()
+    engine = QQmlEngine()
+    engine.addImportPath(QML_IMPORT_PATH)
+    engine.addImageProvider(MEDIA_ART_PROVIDER, MediaArtProvider())
+    component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Media" / "Media.qml")))
+    widget = component.createWithInitialProperties({"hideEmpty": True})
+    assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+    wait(10)
+    # So the bar leaves no gap where it would be
+    assert not widget.property("shown") and widget.property("implicitWidth") == 0
+    sip.delete(widget)

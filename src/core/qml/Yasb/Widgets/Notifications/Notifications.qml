@@ -80,12 +80,14 @@ Item {
         }
     }
 
-    implicitWidth: label.implicitWidth
-    implicitHeight: label.implicitHeight
-    visible: !hideEmpty || center.count > 0
+    readonly property bool shown: !hideEmpty || center.notifications.length > 0
+
+    implicitWidth: shown ? label.implicitWidth : 0
+    implicitHeight: shown ? label.implicitHeight : 0
+    visible: shown
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
-    Accessible.name: `Notifications, ${center.count}`
+    Accessible.name: `Notifications, ${center.notifications.length}`
     Accessible.onPressAction: togglePopup()
     Keys.onReturnPressed: togglePopup()
     Keys.onSpacePressed: togglePopup()
@@ -134,7 +136,7 @@ Item {
             width: 6
             height: 6
             radius: 3
-            visible: center.count > 0
+            visible: center.notifications.length > 0
             color: "#ff4545"
         }
     }

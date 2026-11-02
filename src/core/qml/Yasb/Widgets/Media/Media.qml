@@ -79,9 +79,11 @@ Item {
         }
     }
 
-    implicitWidth: row.implicitWidth
-    implicitHeight: row.implicitHeight
-    visible: !hideEmpty || player.available
+    readonly property bool shown: !hideEmpty || player.available
+
+    implicitWidth: shown ? row.implicitWidth : 0
+    implicitHeight: shown ? row.implicitHeight : 0
+    visible: shown
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: player.available ? `${player.appName}: ${player.title}` : "Nothing playing"

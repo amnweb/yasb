@@ -45,14 +45,14 @@ Window {
         required property string heading
         property string description
         default property alias actions: row.data
-
+        
         Layout.fillWidth: true
 
         RowLayout {
             id: row
 
             anchors.fill: parent
-            spacing: 16
+            spacing: 0
 
             ColumnLayout {
                 Layout.fillWidth: true
@@ -87,10 +87,10 @@ Window {
         Image {
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: 8
-            Layout.preferredWidth: 96
-            Layout.preferredHeight: 96
+            Layout.preferredWidth: 64
+            Layout.preferredHeight: 64
             source: window.about.iconUrl
-            sourceSize: Qt.size(96, 96)
+            sourceSize: Qt.size(64, 64)
         }
 
         Label {
@@ -114,7 +114,7 @@ Window {
             Layout.topMargin: 4
             horizontalAlignment: Text.AlignHCenter
             textFormat: Text.RichText
-            text: `${window.about.version}&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${window.about.releaseUrl}" style="color: ${systemPalette.accent}; text-decoration: none">${window.about.releaseLabel}</a>`
+            text: `${window.about.version}&nbsp;&nbsp;-&nbsp;&nbsp;<a href="${window.about.releaseUrl}" style="color: ${systemPalette.accent}; text-decoration: none">${window.about.releaseLabel}</a>`
             onLinkActivated: link => window.about.open(link)
 
             HoverHandler {
@@ -124,9 +124,9 @@ Window {
 
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 48
-            Layout.bottomMargin: 20
-            spacing: 4
+            Layout.topMargin: 24
+            Layout.bottomMargin: 12
+            spacing: 2
 
             LinkButton {
                 text: "GitHub"
@@ -164,6 +164,7 @@ Window {
             }
 
             CardButton {
+                font.pixelSize: 13
                 text: window.updateState === "available" ? qsTr("Update") : qsTr("Check for updates")
                 highlighted: window.updateState === "available"
                 enabled: window.updateState !== "checking" && window.updateState !== "unsupported"
@@ -177,10 +178,11 @@ Window {
 
         Card {
             heading: qsTr("Configuration")
-            description: qsTr("Your config.yaml and widget files")
+            description: qsTr("Your configs and widgets files")
 
             CardButton {
                 text: qsTr("Open folder")
+                font.pixelSize: 13
                 onClicked: window.about.openConfig()
             }
         }
@@ -191,6 +193,7 @@ Window {
 
             CardButton {
                 text: "Buy me a coffee"
+                font.pixelSize: 13
                 onClicked: window.about.open("https://ko-fi.com/amnweb")
             }
         }
@@ -201,6 +204,7 @@ Window {
 
             CardButton {
                 text: "Open docs"
+                font.pixelSize: 13
                 onClicked: window.about.open(window.about.docSiteUrl)
             }
         }

@@ -138,7 +138,7 @@ Item {
         id: row
 
         height: parent.height
-        spacing: 2
+        spacing: 4
 
         SvgIcon {
             y: Math.round((parent.height - height) / 2)

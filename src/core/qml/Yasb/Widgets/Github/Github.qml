@@ -38,9 +38,11 @@ Item {
     readonly property string edge: bar?.edge ?? "top"
     property real now: Date.now()
 
-    implicitWidth: label.implicitWidth
-    implicitHeight: label.implicitHeight
-    visible: !hideEmpty || monitor.needsSignIn || monitor.unreadCount > 0 || monitor.error !== ""
+    readonly property bool shown: !hideEmpty || monitor.needsSignIn || monitor.unreadCount > 0 || monitor.error !== ""
+
+    implicitWidth: shown ? label.implicitWidth : 0
+    implicitHeight: shown ? label.implicitHeight : 0
+    visible: shown
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: `GitHub, ${monitor.unreadCount} unread notifications`
