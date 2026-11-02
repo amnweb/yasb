@@ -7,6 +7,7 @@ from core.utils.commands import Commands
 from core.utils.hotkey import Hotkey
 from core.widgets.services.active_window.tracker import ActiveWindowTracker
 from core.widgets.services.audio_visualizer.levels import AudioLevels
+from core.widgets.services.battery.monitor import BatteryMonitor
 from core.widgets.services.clock.time_zones import TimeZones
 from core.widgets.services.cpu.monitor import CpuMonitor
 from core.widgets.services.github.notifications import GitHubNotifications
@@ -44,3 +45,4 @@ def register_qml_types() -> None:
     qmlRegisterType(AudioLevels, QML_URI, 1, 0, "AudioLevels")
     qmlRegisterType(PowerSession, QML_URI, 1, 0, "PowerSession")
     qmlRegisterType(SystrayModel, QML_URI, 1, 0, "SystrayModel")
+    qmlRegisterType(BatteryMonitor, QML_URI, 1, 0, "BatteryMonitor")

@@ -2,6 +2,7 @@ module Yasb.Widgets
 
 ActiveWindow 1.0 ActiveWindow/ActiveWindow.qml
 AudioVisualizer 1.0 AudioVisualizer/AudioVisualizer.qml
+Battery 1.0 Battery/Battery.qml
 Clock 1.0 Clock/Clock.qml
 Cpu 1.0 Cpu/Cpu.qml
 Gpu 1.0 Gpu/Gpu.qml
