@@ -15,8 +15,8 @@ Rectangle {
 
     implicitHeight: content.implicitHeight + 24
     radius: 4
-    color: warning ? (dark ? "#433519" : "#fff4ce") : (dark ? "#08ffffff" : "#80f6f6f6")
-    border.color: dark ? "#19000000" : "#0f000000"
+    color: warning ? (dark ? "#433519" : "#fff4ce") : (dark ? Qt.alpha("#ffffff", 0.03) : Qt.alpha("#f6f6f6", 0.5))
+    border.color: Qt.alpha("#000000", dark ? 0.1 : 0.06)
 
     SystemPalette {
         id: system
@@ -43,7 +43,7 @@ Rectangle {
             Label {
                 anchors.centerIn: parent
                 text: bar.warning ? "!" : "i"
-                color: bar.dark ? "black" : "white"
+                color: bar.dark ? "#000000" : "#ffffff"
                 font.pixelSize: 11
                 font.weight: Font.Bold
             }

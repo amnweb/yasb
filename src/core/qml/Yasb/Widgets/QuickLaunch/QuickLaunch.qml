@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.impl
 import QtQuick.Layouts
 import Yasb
 import Yasb.Common
@@ -12,7 +13,8 @@ Item {
     // active, cursor or primary: which screen's widget opens on the hotkey
     property string hotkeyScreen: "active"
     // What each search provider does: on or off, the prefix typed before a space to use it ("*" for none),
-    // its order among the others, and its own options. Only apps is on; turn one on with `calculator.enabled: true`.
+    // its order among the others, and its own options. Apps, colour, file search and GitHub notifications are on;
+    // turn another on with `calculator.enabled: true`.
     component Provider: QtObject {
         property bool enabled: false
         property string prefix: "*"
@@ -168,22 +170,25 @@ Item {
     property string placeholder: "Search applications..."
     property bool rememberLastQuery: false
     property bool showIcons: true
-    property int iconSize: 24
+    property int resultIconSize: 24
     property int popupWidth: 720
     property int popupHeight: 480
+    // The icon on the bar, an SVG drawn in the text colour
+    property url icon: Qt.resolvedUrl("icons/launcher.svg")
+    property int iconSize: 16
 
     readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
+    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
     readonly property color foreground: dark ? "#f3f3f3" : "#1b1b1b"
     readonly property color secondary: dark ? "#9a9a9a" : "#5f5f5f"
     readonly property color hover: Qt.alpha(foreground, 0.06)
     readonly property color selected: Qt.alpha(foreground, 0.1)
 
-    // The provider prefix shown as a chip in front of the search text
     property string prefix: ""
     property bool previewShown: false
 
-    implicitWidth: label.implicitWidth + 16
-    implicitHeight: 30
+    implicitWidth: label.implicitWidth
+    implicitHeight: label.implicitHeight
 
     function toggle() {
         if (popup.visible && !popup.closing)
@@ -193,7 +198,6 @@ Item {
     }
 
     function open() {
-        // Centered on the bar's screen, a third of the way down
         popup.x = Math.round(launcher.Screen.virtualX + (launcher.Screen.width - popup.width) / 2)
         popup.y = Math.round(launcher.Screen.virtualY + (launcher.Screen.height - popup.height) / 3)
         if (!rememberLastQuery) {
@@ -207,7 +211,6 @@ Item {
         runSearch()
     }
 
-    // Opens with this text; a provider prefix in front of it becomes the chip
     function showQuery(text: string) {
         if (!popup.visible || popup.closing)
             open()
@@ -252,12 +255,18 @@ Item {
         menu.popup(item)
     }
 
-    Image {
+    component SvgIcon: IconImage {
+        sourceSize: Qt.size(width, height)
+    }
+
+    SvgIcon {
         id: label
 
-        anchors.centerIn: parent
-        source: Qt.resolvedUrl("icons/search.svg")
-        sourceSize: Qt.size(16, 16)
+        y: Math.round((parent.height - height) / 2)
+        width: launcher.iconSize
+        height: launcher.iconSize
+        source: launcher.icon
+        color: launcher.textColor
     }
 
     MouseArea {
@@ -324,7 +333,6 @@ Item {
     ColorPicker {
         id: colorPicker
 
-        // The colour provider's prefix, so a picked colour opens on its results
         property string prefix
 
         quickLaunch: search
@@ -343,8 +351,8 @@ Item {
         height: launcher.popupHeight
         anchor: launcher
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 120; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 90; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible) {
                 reveal = 0
@@ -356,12 +364,12 @@ Item {
             id: surface
 
             anchors.fill: parent
-            radius: 16
+            radius: 8
             color: launcher.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#f3f3f3", 0.85)
             border.width: 1
-            border.color: launcher.dark ? Qt.alpha("#ffffff", 0.1) : "#22000000"
+            border.color: launcher.dark ? Qt.alpha("#3A3A3A", 1) : Qt.alpha("#D9D9D9", 1)      
             opacity: popup.reveal
-            scale: 0.75 + popup.reveal * 0.25
+            scale: 0.85 + popup.reveal * 0.15
 
             ColumnLayout {
                 anchors.fill: parent
@@ -390,10 +398,38 @@ Item {
                         id: field
 
                         Layout.fillWidth: true
+                        Layout.preferredHeight: 40
+                        leftPadding: 32
+                        rightPadding: 32
+                        background: Rectangle {
+                            color: "transparent"
+                            border.width: 0
+                        }
+
+                        SvgIcon {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 18
+                            height: 18
+                            source: Qt.resolvedUrl("icons/search-input.svg")
+                            color: launcher.dark ? "#f3f3f3" : "#202020"
+                        }
+                        SvgIcon {
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 18
+                            height: 18
+                            source: Qt.resolvedUrl("icons/enter.svg")
+                            color: launcher.dark ? "#f3f3f3" : "#202020"
+                        }
+
                         placeholderText: launcher.prefix
                             ? search.prefixes.find(p => p.prefix === launcher.prefix)?.placeholder ?? ""
                             : launcher.placeholder
                         font.pixelSize: 16
+                        verticalAlignment: TextInput.AlignVCenter
 
                         onTextEdited: {
                             const typed = search.prefixes.find(p => text.startsWith(`${p.prefix} `))
@@ -423,7 +459,6 @@ Item {
                             event.accepted = true
                         }
 
-                        // The rest of the first app's name, after what is typed
                         Label {
                             x: field.leftPadding + field.contentWidth
                             anchors.verticalCenter: parent.verticalCenter
@@ -446,7 +481,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 1
                     visible: !search.loading
-                    color: launcher.dark ? "#1affffff" : "#14000000"
+                    color: launcher.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.08)
                 }
 
                 RowLayout {
@@ -471,7 +506,6 @@ Item {
 
                             function onModelReset() {
                                 list.currentIndex = -1
-                                // The list handles the reset after this handler, so until then it still has the old rows
                                 Qt.callLater(launcher.select, 1)
                             }
                         }
@@ -488,7 +522,7 @@ Item {
                             required property string path
 
                             width: ListView.view.width
-                            height: separator ? 28 : Math.max(launcher.showIcons ? launcher.iconSize : 0, texts.implicitHeight) + 16
+                            height: separator ? 28 : Math.max(launcher.showIcons ? launcher.resultIconSize : 0, texts.implicitHeight) + 16
 
                             Rectangle {
                                 anchors.fill: parent
@@ -515,15 +549,15 @@ Item {
 
                                 x: 10
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: launcher.iconSize
-                                height: launcher.iconSize
+                                width: launcher.resultIconSize
+                                height: launcher.resultIconSize
                                 visible: launcher.showIcons && !row.separator
 
                                 Image {
                                     anchors.fill: parent
                                     visible: row.icon !== ""
                                     source: row.icon
-                                    sourceSize: Qt.size(launcher.iconSize, launcher.iconSize)
+                                    sourceSize: Qt.size(launcher.resultIconSize, launcher.resultIconSize)
                                     fillMode: Image.PreserveAspectFit
                                 }
 
@@ -532,7 +566,7 @@ Item {
                                     visible: row.icon === ""
                                     text: row.iconText
                                     font.family: "Segoe UI Emoji"
-                                    font.pixelSize: launcher.iconSize * 0.75
+                                    font.pixelSize: launcher.resultIconSize * 0.75
                                 }
                             }
 
@@ -585,7 +619,6 @@ Item {
                                 }
                             }
 
-                            // Files can be dragged out to other apps
                             Item {
                                 id: dragItem
 
@@ -601,7 +634,7 @@ Item {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 1
                         visible: preview.visible
-                        color: launcher.dark ? "#1affffff" : "#14000000"
+                        color: launcher.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.08)
                     }
 
                     Preview {

@@ -23,7 +23,10 @@ BarBase {
             const share = rest / flexible.length
             const longest = flexible[flexible.length - 1]
             if (lengths[longest] <= share) {
-                flexible.forEach(index => lengths[index] = share)
+                // Whole pixels, so every section and its widgets start on one
+                const whole = Math.floor(share)
+                let remainder = Math.round(rest - whole * flexible.length)
+                flexible.forEach(index => lengths[index] = whole + (remainder-- > 0 ? 1 : 0))
                 break
             }
             rest -= lengths[longest]

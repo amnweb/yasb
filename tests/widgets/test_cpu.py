@@ -58,7 +58,7 @@ def test_the_monitor_publishes_the_workers_data(worker: FakeWorker):
     }
 
 
-def test_the_widget_shows_the_histogram_and_the_alternate_label(worker: FakeWorker):
+def test_the_widget_shows_the_usage_and_the_alternate_label(worker: FakeWorker):
     register_qml_types()
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)
@@ -70,7 +70,7 @@ def test_the_widget_shows_the_histogram_and_the_alternate_label(worker: FakeWork
     worker.data_ready.emit(SAMPLE)
     label = find_item(widget, "label")
     assert label is not None
-    assert label.property("text") == " " + "▁" * 9 + "▃"
+    assert label.property("text") == "43%"
 
     widget.setProperty("showAlternate", True)
-    assert label.property("text") == " CPU: 42.5% | freq: 3000.00 Mhz"
+    assert label.property("text") == "CPU: 42.5% | freq: 3000.00 Mhz"

@@ -179,7 +179,12 @@ def test_the_widget_searches_without_qml_warnings(qapp: QApplication):
         host.show()
         search = widget.findChild(QuickLaunchSearch)
         assert search is not None
-        until(lambda: {p["prefix"] for p in search.property("prefixes")} == {"=", "??"})
+
+        def prefixes() -> set[str]:
+            return {p["prefix"] for p in search.property("prefixes")}
+
+        # The file's providers are on, web search under its new prefix. The built-in defaults turn on more.
+        until(lambda: {"=", "??"} <= prefixes() and "?" not in prefixes())
         QMetaObject.invokeMethod(widget, "open")
         until(lambda: rows(search))
         search.search("= 2+2")

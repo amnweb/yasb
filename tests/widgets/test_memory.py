@@ -59,7 +59,7 @@ def test_the_monitor_publishes_the_workers_data(worker: FakeWorker):
     assert data["cached_bytes"] == GIB
 
 
-def test_the_widget_shows_free_memory_and_the_alternate_label(worker: FakeWorker):
+def test_the_widget_shows_the_memory_use_and_the_alternate_label(worker: FakeWorker):
     register_qml_types()
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)
@@ -71,7 +71,7 @@ def test_the_widget_shows_free_memory_and_the_alternate_label(worker: FakeWorker
     worker.data_ready.emit(SAMPLE)
     label = find_item(widget, "label")
     assert label is not None
-    assert label.property("text") == " 8.0G/16.0G"
+    assert label.property("text") == "50%"
 
     widget.setProperty("showAlternate", True)
-    assert label.property("text") == " VIRT: 50% SWAP: 12.5%"
+    assert label.property("text") == "8.0G/16.0G"

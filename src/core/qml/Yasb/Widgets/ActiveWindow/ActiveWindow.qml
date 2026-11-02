@@ -17,6 +17,16 @@ Item {
     property list<string> ignoreClasses: []
     property list<string> ignoreProcesses: []
     property Item bar: null
+    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
+    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    property font font
+    font.family: bar?.font.family ?? Qt.application.font.family
+    font.pixelSize: bar?.font.pixelSize ?? 13
+    font.weight: bar?.font.weight ?? Font.Normal
+    font.italic: bar?.font.italic ?? false
+    font.letterSpacing: bar?.font.letterSpacing ?? 0
+    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
+    font.variableAxes: bar?.font.variableAxes ?? ({})
 
     readonly property alias tracker: tracker
     readonly property bool dark: Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
@@ -45,11 +55,11 @@ Item {
     Row {
         id: row
 
-        anchors.verticalCenter: parent.verticalCenter
+        height: parent.height
         spacing: 6
 
         Image {
-            anchors.verticalCenter: parent.verticalCenter
+            y: Math.round((parent.height - height) / 2)
             visible: activeWindow.showIcon && tracker.icon !== ""
             source: tracker.icon
             width: activeWindow.iconSize
@@ -62,9 +72,8 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: tracker.text
             textFormat: Text.PlainText
-            color: activeWindow.bar ? activeWindow.bar.textColor : activeWindow.dark ? "white" : "black"
-            font.family: activeWindow.bar ? activeWindow.bar.font.family : Qt.application.font.family
-            font.pixelSize: activeWindow.bar ? activeWindow.bar.font.pixelSize : 13
+            color: activeWindow.textColor
+            font: activeWindow.font
         }
     }
 

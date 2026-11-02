@@ -5,5 +5,8 @@ Clock 1.0 Clock/Clock.qml
 Cpu 1.0 Cpu/Cpu.qml
 Gpu 1.0 Gpu/Gpu.qml
 Memory 1.0 Memory/Memory.qml
+Media 1.0 Media/Media.qml
+Notifications 1.0 Notifications/Notifications.qml
 Github 1.0 Github/Github.qml
 QuickLaunch 1.0 QuickLaunch/QuickLaunch.qml
+Volume 1.0 Volume/Volume.qml

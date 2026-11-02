@@ -18,6 +18,8 @@ QtObject {
     // Animations a widget can set; the popup runs `enter` after it shows and `exit` before it hides
     property Animation enter: null
     property Animation exit: null
+    // A pinned popup stays open when it loses focus or the bar is pressed; close() and Escape still close it
+    property bool pinned: false
     // While `exit` runs
     property bool closing: false
     // Windows can take focus away for a moment while the popup shows
@@ -63,9 +65,9 @@ QtObject {
         height: Math.ceil(Math.max(popup.windowHeight, popup.height))
 
         onActiveChanged: {
-            if (!active && !popup.opening) {
+            if (!active && !popup.opening && !popup.pinned) {
                 Qt.callLater(() => {
-                    if (window.visible && !window.active && !popup.opening && !popup.bar?.active)
+                    if (window.visible && !window.active && !popup.opening && !popup.pinned && !popup.bar?.active)
                         popup.close()
                 })
             }
@@ -94,7 +96,7 @@ QtObject {
             anchors.fill: parent
             onPressed: mouse => {
                 mouse.accepted = false
-                if (!body.contains(mapToItem(body, mouse.x, mouse.y)))
+                if (!popup.pinned && !body.contains(mapToItem(body, mouse.x, mouse.y)))
                     popup.close()
             }
         }
@@ -192,7 +194,7 @@ QtObject {
 
         function onPressed(position: point) {
             const anchor = popup.anchor
-            if (window.visible && !(anchor && anchor.contains(anchor.mapFromItem(null, position))))
+            if (window.visible && !popup.pinned && !(anchor && anchor.contains(anchor.mapFromItem(null, position))))
                 popup.close()
         }
     }

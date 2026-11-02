@@ -7,10 +7,9 @@ Item {
     id: preview
 
     property var content: ({})
-    // Alt+P shows previews of providers that hide them
     property bool forced: false
     property bool dark: false
-    property color secondary: "gray"
+    property color secondary: "#808080"
 
     readonly property string kind: content.kind ?? ""
     readonly property bool editing: kind === "edit" && (content.fields?.length ?? 0) > 0

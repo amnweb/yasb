@@ -3,11 +3,14 @@ import threading
 from collections.abc import Callable
 from typing import Any, Protocol, TypedDict
 
+from comtypes import CLSCTX_ALL, GUID, COMError  # pyright: ignore[reportMissingTypeStubs]
 from pycaw.api.audioclient import ISimpleAudioVolume
+from pycaw.api.audiopolicy import IAudioSessionControl2, IAudioSessionManager2
 from pycaw.api.endpointvolume import IAudioEndpointVolume
-from pycaw.api.mmdeviceapi import IMMDeviceEnumerator
+from pycaw.api.mmdeviceapi import IMMDevice, IMMDeviceEnumerator
+from pycaw.api.mmdeviceapi.depend.structures import PROPERTYKEY
 from pycaw.callbacks import AudioEndpointVolumeCallback, MMNotificationClient
-from pycaw.constants import DEVICE_STATE
+from pycaw.constants import DEVICE_STATE, STGM, AudioDeviceState
 from pycaw.pycaw import AudioUtilities, EDataFlow, ERole
 from pycaw.utils import AudioDevice, AudioSession
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -20,6 +23,67 @@ BLACKLISTED_PROCESSES = [
     "shellhost.exe",
     "shellexperiencehost.exe",
 ]
+
+
+# The device property set with DEVPKEY_Device_FriendlyName (14) and DEVPKEY_Device_DeviceDesc (2)
+DEVICE_PROPERTIES = GUID("{a45c254e-df1c-4efd-8020-67d146a850e0}")
+FRIENDLY_NAME = 14
+DEVICE_DESCRIPTION = 2
+
+
+def _device_name(device: IMMDevice) -> str | None:
+    """The friendly name, or the description like pycaw falls back to, read without the other properties."""
+    store = device.OpenPropertyStore(STGM.STGM_READ.value)
+    for pid in (FRIENDLY_NAME, DEVICE_DESCRIPTION):
+        key = PROPERTYKEY()
+        key.fmtid = DEVICE_PROPERTIES
+        key.pid = pid
+        try:
+            value = store.GetValue(key)
+        except COMError:
+            continue
+        name = value.GetValue()
+        value.clear()
+        if isinstance(name, str) and name:
+            return name
+    return None
+
+
+def _audio_device(device: IMMDevice) -> AudioDevice:
+    """pycaw's AudioDevice with only the name read. Its CreateDevice reads all 100+ properties of a device,
+    which takes ~35 ms an endpoint."""
+    name = _device_name(device)
+    properties = {f"{DEVICE_PROPERTIES} {FRIENDLY_NAME}".upper(): name} if name else {}
+    return AudioDevice(device.GetId(), AudioDeviceState(device.GetState()), properties, device)
+
+
+def _default_output(enumerator: IMMDeviceEnumerator) -> IMMDevice:
+    # The device and role pycaw's GetSpeakers uses
+    return enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender.value, ERole.eMultimedia.value)
+
+
+def _active_outputs() -> list[tuple[str, str | None]]:
+    collection = AudioUtilities.GetDeviceEnumerator().EnumAudioEndpoints(
+        EDataFlow.eRender.value, DEVICE_STATE.ACTIVE.value
+    )
+    devices = (collection.Item(index) for index in range(collection.GetCount()))
+    return [(device.GetId(), _device_name(device)) for device in devices]
+
+
+def _output_sessions() -> list[AudioSession]:
+    """pycaw's GetAllSessions without the GetSpeakers it starts with."""
+    device = _default_output(AudioUtilities.GetDeviceEnumerator())
+    manager = device.Activate(IAudioSessionManager2._iid_, CLSCTX_ALL, None).QueryInterface(IAudioSessionManager2)
+    sessions = manager.GetSessionEnumerator()
+    result: list[AudioSession] = []
+    for index in range(sessions.GetCount()):
+        control = sessions.GetSession(index)
+        if control is None:
+            continue
+        control2 = control.QueryInterface(IAudioSessionControl2)
+        if control2 is not None:
+            result.append(AudioSession(control2))
+    return result
 
 
 class AudioOutputListener(Protocol):
@@ -93,14 +157,11 @@ class AudioOutputService(QObject):
             try:
                 with self._cache_lock:
                     if self._cached_devices is None:
-                        devices = AudioUtilities.GetAllDevices(
-                            data_flow=EDataFlow.eRender.value, device_state=DEVICE_STATE.ACTIVE.value
-                        )
-                        self._cached_devices = [(d.id, d.FriendlyName) for d in devices]
+                        self._cached_devices = _active_outputs()
 
                 with self._cache_lock:
                     if self._cached_sessions is None:
-                        self._cached_sessions = AudioUtilities.GetAllSessions()
+                        self._cached_sessions = _output_sessions()
 
             except Exception as e:
                 logging.debug("AudioOutputService prefetch failed: %s", e)
@@ -227,10 +288,7 @@ class AudioOutputService(QObject):
                 return self._cached_devices
 
         try:
-            devices = AudioUtilities.GetAllDevices(
-                data_flow=EDataFlow.eRender.value, device_state=DEVICE_STATE.ACTIVE.value
-            )
-            result = [(d.id, d.FriendlyName) for d in devices]
+            result = _active_outputs()
             with self._cache_lock:
                 self._cached_devices = result
             return result
@@ -246,7 +304,7 @@ class AudioOutputService(QObject):
 
         self._speakers_checked = True
         try:
-            result = AudioUtilities.GetSpeakers()
+            result = _audio_device(_default_output(self._enumerator or AudioUtilities.GetDeviceEnumerator()))
             self._cached_speakers = result
             return result
         except Exception as e:
@@ -262,7 +320,7 @@ class AudioOutputService(QObject):
                 return result
 
         try:
-            return AudioUtilities.GetAllSessions()
+            return _output_sessions()
         except Exception:
             return []
 

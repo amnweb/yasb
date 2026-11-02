@@ -6,10 +6,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PyQt6.QtCore import QCoreApplication, QEvent, QMetaObject, QPoint, QPointF, QRectF, QUrl
+from PyQt6.QtCore import QCoreApplication, QEvent, QMetaObject, QPoint, QPointF, QRectF, Qt, QUrl
 from PyQt6.QtGui import QColor, QContextMenuEvent, QGuiApplication, QWindow
 from PyQt6.QtQml import QQmlEngine
 from PyQt6.QtQuick import QQuickItem
+from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
 from core import widget_files
@@ -229,6 +230,20 @@ def test_a_bar_file_can_align_a_slot(make_bar: MakeBar, widget_dir: Path):
     bar = make_bar(length=600, widgets=WIDGETS, file=file)
     wait(50)
     assert abs(_left(bar, "c") - (8 + (600 - 16) / 3)) < 1
+
+
+@pytest.mark.parametrize("island", [False, True], ids=["bar", "island-bar"])
+def test_widgets_sit_on_whole_pixels(make_bar: MakeBar, widget_dir: Path, island: bool):
+    write_widget(widget_dir, "e", 'import QtQuick\nRectangle { objectName: "e"; implicitWidth: 40.4 }\n')
+    file = {"file": _bar_file(widget_dir, ISLAND_BAR)} if island else {}
+    # 584 pixels shared by three sections and a centred widget would otherwise put widgets between pixels
+    bar = make_bar(length=600, widgets={"left": ["e", "a"], "center": ["c"], "right": ["d"]}, **file)
+    wait(50)
+    for name in ("e", "a", "c", "d"):
+        left = _left(bar, name)
+        assert left == round(left), f"{name} starts at {left}"
+    if island:
+        assert all(edge == round(edge) for span in _islands(bar) for edge in span), _islands(bar)
 
 
 def test_a_broken_widget_leaves_no_gap(make_bar: MakeBar, widget_dir: Path):
@@ -624,6 +639,27 @@ def test_the_bar_menu_opens_off_widgets_only(make_bar: MakeBar, widget_dir: Path
     assert len(menus) == 1
     for menu in menus:
         menu.close()
+
+
+def test_a_right_click_on_a_widget_that_shrinks_opens_no_bar_menu(make_bar: MakeBar, widget_dir: Path):
+    # Like the clock leaving its alternate format: the widget shrinks between the click and the menu request
+    write_widget(
+        widget_dir,
+        "shrinks",
+        'import QtQuick\nRectangle {\n    objectName: "shrinks"\n    implicitWidth: 200\n'
+        "    MouseArea {\n        anchors.fill: parent\n        acceptedButtons: Qt.RightButton\n"
+        "        onClicked: parent.implicitWidth = 40\n    }\n}\n",
+    )
+    bar = make_bar(length=600, widgets={"right": ["shrinks"]})
+    wait(50)
+    before = _open_windows()
+    point = QPoint(round(_left(bar, "shrinks")) + 10, bar.height() // 2)
+    QTest.mouseClick(bar, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, point)
+    wait(50)
+    assert _left(bar, "shrinks") > point.x()
+    QApplication.sendEvent(bar, QContextMenuEvent(QContextMenuEvent.Reason.Mouse, point, bar.mapToGlobal(point)))
+    wait(100)
+    assert _open_windows() == before
 
 
 def test_the_bar_context_switches_auto_hide(make_bar: MakeBar):

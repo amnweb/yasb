@@ -10,8 +10,11 @@ from core.widgets.services.clock.time_zones import TimeZones
 from core.widgets.services.cpu.monitor import CpuMonitor
 from core.widgets.services.github.notifications import GitHubNotifications
 from core.widgets.services.gpu.monitor import GpuMonitor
+from core.widgets.services.media.now_playing import NowPlaying
 from core.widgets.services.memory.monitor import MemoryMonitor
+from core.widgets.services.notifications.center import NotificationCenter
 from core.widgets.services.quick_launch.search import QuickLaunchSearch
+from core.widgets.services.volume.output import AudioOutput
 
 QML_URI = "Yasb"
 
@@ -28,3 +31,6 @@ def register_qml_types() -> None:
     qmlRegisterType(MemoryMonitor, QML_URI, 1, 0, "MemoryMonitor")
     qmlRegisterType(GitHubNotifications, QML_URI, 1, 0, "GitHubNotifications")
     qmlRegisterType(QuickLaunchSearch, QML_URI, 1, 0, "QuickLaunchSearch")
+    qmlRegisterType(NowPlaying, QML_URI, 1, 0, "NowPlaying")
+    qmlRegisterType(AudioOutput, QML_URI, 1, 0, "AudioOutput")
+    qmlRegisterType(NotificationCenter, QML_URI, 1, 0, "NotificationCenter")

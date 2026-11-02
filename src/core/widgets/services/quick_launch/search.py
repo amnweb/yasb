@@ -45,8 +45,6 @@ class ResultModel(QAbstractListModel):
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._results: list[ProviderResult] = []
-        # Bumped when IconService finishes loading icons, so QML asks for them again
-        self._revision = 0
 
     @override
     def roleNames(self) -> dict[int, QByteArray]:
@@ -72,7 +70,7 @@ class ResultModel(QAbstractListModel):
                 return result.description
             case "icon":
                 if result.icon_source is not None:
-                    return icon_url(result.icon_source, self._revision)
+                    return icon_url(result.icon_source, IconService.instance().revision)
                 return image_url(result.icon_path) or image_url(result.icon_char)
             case "iconText":
                 return "" if image_url(result.icon_char) else result.icon_char
@@ -94,7 +92,7 @@ class ResultModel(QAbstractListModel):
         self.endResetModel()
 
     def refresh_icons(self) -> None:
-        self._revision += 1
+        # IconService finished loading icons and moved to a new revision, so QML asks for them again
         if self._results:
             role = Qt.ItemDataRole.UserRole + ROLES.index("icon")
             self.dataChanged.emit(self.index(0), self.index(len(self._results) - 1), [role])

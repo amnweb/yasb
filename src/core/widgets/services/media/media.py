@@ -1,32 +1,106 @@
 import asyncio
-import io
+import contextlib
 import logging
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
+from dataclasses import dataclass, replace
 from functools import partial
 from typing import Any
 
-import PyQt6.sip as sip
-from PIL import Image
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QApplication
-from qasync import asyncSlot  # type: ignore
+from PyQt6.QtCore import QCoreApplication, QObject, pyqtSignal
+from winrt.runtime import ApartmentType, init_apartment
 from winrt.windows.media import MediaPlaybackAutoRepeatMode
-from winrt.windows.media.control import (
-    GlobalSystemMediaTransportControlsSession,
-)
+from winrt.windows.media.control import GlobalSystemMediaTransportControlsSession as MediaSession
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionManager as SessionManager
 from winrt.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
 
-pil_logger = logging.getLogger("PIL")
-pil_logger.setLevel(logging.INFO)
-
-type MediaSession = GlobalSystemMediaTransportControlsSession
+from core.utils.win32.aumid_process import get_process_name_for_aumid
+from core.widgets.services.media.art import keep_art
+from core.widgets.services.media.source_apps import resolve_source_app_name
 
 logger = logging.getLogger("WindowsMedia")
 
-REFRESH_INTERVAL = 0.1
+# SMTC playback_status: 0=Closed, 1=Opened, 2=Changing, 3=Stopped, 4=Playing, 5=Paused
+PLAYING = 4
+# HRESULT_FROM_WIN32(ERROR_NOT_READY), from an app whose session exists while the app is still starting
+NOT_READY = -2147024875
+REPEAT_MODES = {
+    int(MediaPlaybackAutoRepeatMode.NONE): "none",
+    int(MediaPlaybackAutoRepeatMode.TRACK): "track",
+    int(MediaPlaybackAutoRepeatMode.LIST): "list",
+}
+NEXT_REPEAT_MODE = {
+    "none": MediaPlaybackAutoRepeatMode.LIST,
+    "list": MediaPlaybackAutoRepeatMode.TRACK,
+    "track": MediaPlaybackAutoRepeatMode.NONE,
+}
+
+
+@dataclass(frozen=True)
+class MediaInfo:
+    """One player, as the UI sees it."""
+
+    app_id: str
+    app_name: str
+    process: str
+    title: str = ""
+    artist: str = ""
+    album: str = ""
+    art: bytes | None = None
+    art_revision: int = 0
+    playing: bool = False
+    # Seconds into the track at position_time, a Unix time; 0 when the player never said
+    position: float = 0.0
+    position_time: float = 0.0
+    rate: float = 1.0
+    duration: float = 0.0
+    can_seek: bool = False
+    can_play_pause: bool = True
+    can_previous: bool = True
+    can_next: bool = True
+    can_shuffle: bool = False
+    can_repeat: bool = False
+    shuffle: bool = False
+    repeat: str = "none"
+
+    def position_at(self, now: float) -> float:
+        position = self.position
+        if self.playing and self.position_time > 0:
+            position += (now - self.position_time) * self.rate
+        position = max(position, 0.0)
+        return min(position, self.duration) if self.duration > 0 else position
+
+
+@dataclass(frozen=True)
+class MediaState:
+    players: tuple[MediaInfo, ...] = ()
+    current: str = ""
+
+    @property
+    def player(self) -> MediaInfo | None:
+        return next((player for player in self.players if player.app_id == self.current), None)
+
+
+@dataclass(frozen=True)
+class _Timeline:
+    position: float
+    updated: float
+    duration: float
+
+
+@dataclass(frozen=True)
+class _Playback:
+    playing: bool
+    rate: float
+    can_play_pause: bool
+    can_previous: bool
+    can_next: bool
+    can_seek: bool
+    can_shuffle: bool
+    can_repeat: bool
+    shuffle: bool
+    repeat: str
 
 
 def _iref_float(value: Any, default: float = 1.0) -> float:
@@ -58,579 +132,394 @@ def _iref_int(value: Any, default: int = 0) -> int:
         return default
 
 
-class SessionState:
-    """Session state container for media info and cleanup callbacks"""
-
-    def __init__(self, app_id: str):
-        self.app_id = app_id
-        self.title = ""
-        self.artist = ""
-        self.last_snapshot_pos = 0.0
-        self.last_update_time = 0.0
-        self.duration = 0.0
-        self.current_pos = 0.0
-        self.is_playing = False
-        # SMTC playback_status: 0=Closed, 1=Opened, 2=Changing, 3=Stopped, 4=Playing, 5=Paused
-        self.playback_status = 0
-        self.playback_rate = 1.0
-        self.is_current = False
-        self.timeline_enabled = False
-        # Snapshotted from WinRT PlaybackInfo - plain Python only (do not retain COM objects).
-        self.playback_ready = False
-        self.controls_prev_enabled = True
-        self.controls_play_enabled = True
-        self.controls_next_enabled = True
-        self.controls_shuffle_enabled = False
-        self.controls_repeat_enabled = False
-        self.is_shuffle_active = False
-        # 0=None, 1=Track, 2=List (MediaPlaybackAutoRepeatMode)
-        self.auto_repeat_mode = 0
-        self.thumbnail: Image.Image | None = None
-        self.cleanup_callbacks: list[Callable[..., None]] = []
-        self.session: MediaSession | None = None
+def _read_timeline(session: MediaSession) -> _Timeline | None:
+    """Caller must hold the SMTC lock."""
+    timeline = session.get_timeline_properties()
+    if not timeline:
+        return None
+    snapshot = _Timeline(
+        timeline.position.total_seconds(),
+        timeline.last_updated_time.timestamp(),
+        timeline.end_time.total_seconds(),
+    )
+    del timeline
+    return snapshot
 
 
-class QSingleton(type(QObject)):
-    """Singleton metaclass for Qt classes"""
+def _read_playback(session: MediaSession) -> _Playback | None:
+    """Caller must hold the SMTC lock. Reads each IReference once and keeps no COM object."""
+    playback = session.get_playback_info()
+    if not playback:
+        return None
+    try:
+        status = int(playback.playback_status)
+    except TypeError, ValueError:
+        status = 0
+    raw_rate = playback.playback_rate
+    rate = _iref_float(raw_rate, 1.0)
+    del raw_rate
+    controls = playback.controls
+    if controls:
+        can = (
+            bool(controls.is_play_pause_toggle_enabled),
+            bool(controls.is_previous_enabled),
+            bool(controls.is_next_enabled),
+            bool(controls.is_playback_position_enabled),
+            bool(controls.is_shuffle_enabled),
+            bool(controls.is_repeat_enabled),
+        )
+    else:
+        can = (True, True, True, False, False, False)
+    del controls
+    raw_shuffle = playback.is_shuffle_active
+    shuffle = _iref_bool(raw_shuffle, False)
+    del raw_shuffle
+    raw_repeat = playback.auto_repeat_mode
+    repeat = REPEAT_MODES.get(_iref_int(raw_repeat, 0), "none")
+    del raw_repeat
+    del playback
+    return _Playback(status == PLAYING, rate, *can, shuffle, repeat)
 
-    _instances: dict[Any, Any] = {}
-    _lock = threading.Lock()
 
-    def __call__(cls, *args: Any, **kwargs: Any):
-        with cls._lock:
-            if cls not in cls._instances or sip.isdeleted(cls._instances[cls]):
-                cls._instances[cls] = super().__call__(*args, **kwargs)
-            return cls._instances[cls]
+async def _read_art(reference: IRandomAccessStreamReference) -> bytes | None:
+    stream = await reference.open_read_async()
+    try:
+        buffer = Buffer(stream.size)
+        await stream.read_async(buffer, buffer.capacity, InputStreamOptions.READ_AHEAD)
+        return bytes(buffer)[: buffer.length]
+    except Exception as e:
+        logger.error("Could not read the album art: %s", e)
+        return None
+    finally:
+        stream.close()
 
 
-class WindowsMedia(QObject, metaclass=QSingleton):
-    """Windows Media Control singleton"""
+class MediaService(QObject):
+    """Watches the Windows media sessions on a thread of its own. Everything that touches WinRT runs there or
+    on WinRT's callback threads; the UI only gets MediaState, which never changes once made."""
 
-    media_data_changed = pyqtSignal(dict)
-    current_session_changed = pyqtSignal()
-    media_properties_changed = pyqtSignal()
-    timeline_info_changed = pyqtSignal()
-    playback_info_changed = pyqtSignal()
+    changed = pyqtSignal(object)
 
-    def __init__(self):
+    _instance: MediaService | None = None
+
+    @classmethod
+    def instance(cls) -> MediaService:
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    def __init__(self) -> None:
         super().__init__()
-        self._loop = asyncio.get_running_loop()
-        self._running = False
-
-        self._trackers: dict[str, SessionState] = {}
-        self._current_session_id: str = ""
-        self._manager: SessionManager | None = None
-        # Serialize SMTC/COM reads so WinRT callback threads and asyncio never
+        self.state = MediaState()
+        # The rest belongs to the media thread
+        self._loop = asyncio.new_event_loop()
+        self._stop = asyncio.Event()
+        self._tasks: set[asyncio.Task[Any]] = set()
+        # Serialize SMTC/COM reads so WinRT callback threads and the loop never
         # release the same IReference / PlaybackInfo concurrently (heap double-free).
         self._smtc_lock = threading.RLock()
-
-        self._loop.create_task(self.run())
-
-        app = QApplication.instance()
+        self._manager: SessionManager | None = None
+        self._sessions: dict[str, MediaSession] = {}
+        self._unsubscribe: dict[str, list[Callable[[], None]]] = {}
+        self._players: dict[str, MediaInfo] = {}
+        self._property_reads: dict[str, int] = {}
+        self._current = ""
+        self._art_revision = 0
+        self._thread = threading.Thread(target=self._run, name="MediaService", daemon=True)
+        self._thread.start()
+        app = QCoreApplication.instance()
         if app is not None:
-            app.aboutToQuit.connect(self._on_quit)
+            app.aboutToQuit.connect(self.stop)
 
-    @property
-    def current_session(self) -> SessionState | None:
-        """Get the current session state"""
-        return self._trackers.get(self._current_session_id)
+    def stop(self) -> None:
+        with contextlib.suppress(RuntimeError):
+            self._loop.call_soon_threadsafe(self._stop.set)
+        self._thread.join(2)
 
-    async def run(self):
-        """Start the WindowsMedia worker"""
-        self._running = True
+    def play_pause(self, app_id: str) -> None:
+        self._spawn(self._command, app_id, "play or pause", MediaSession.try_toggle_play_pause_async)
+
+    def previous(self, app_id: str) -> None:
+        self._spawn(self._command, app_id, "skip back", MediaSession.try_skip_previous_async)
+
+    def next(self, app_id: str) -> None:
+        self._spawn(self._command, app_id, "skip", MediaSession.try_skip_next_async)
+
+    def toggle_shuffle(self, app_id: str) -> None:
+        self._spawn(self._toggle_shuffle, app_id)
+
+    def cycle_repeat(self, app_id: str) -> None:
+        self._spawn(self._cycle_repeat, app_id)
+
+    def seek(self, app_id: str, seconds: float) -> None:
+        self._spawn(self._seek, app_id, seconds)
+
+    def switch(self, direction: int) -> None:
+        with contextlib.suppress(RuntimeError):
+            self._loop.call_soon_threadsafe(self._switch, direction)
+
+    def _run(self) -> None:
+        asyncio.set_event_loop(self._loop)
         try:
-            manager = await SessionManager.request_async()
-            self._manager = manager
-            await self._refresh_sessions(manager)
-
-            manager.add_sessions_changed(self._bridge_manager_event(self._on_sessions_changed))
-            manager.add_current_session_changed(self._bridge_manager_event(self._on_current_session_changed))
-
-            await self._on_current_session_changed()
-
-            # Start the refresh loop
-            while self._running:
-                self._interpolate_and_emit(self._trackers)
-                await asyncio.sleep(REFRESH_INTERVAL)
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.error("Failed to start WindowsMedia worker: %s", e, exc_info=True)
+            init_apartment(ApartmentType.MULTI_THREADED)
+            self._loop.run_until_complete(self._watch())
+        except Exception:
+            logger.exception("The media service stopped")
         finally:
-            self._running = False
+            self._loop.run_until_complete(self._cancel_tasks())
+            self._loop.close()
 
-    def _on_quit(self):
-        """Unsubscribe all WinRT event handlers on application quit"""
-        self._running = False
-        for state in list(self._trackers.values()):
-            for cb in state.cleanup_callbacks:
-                try:
-                    cb()
-                except Exception:
-                    pass
-        self._trackers.clear()
+    async def _watch(self) -> None:
+        manager = await SessionManager.request_async()
+        self._manager = manager
+        sessions_changed = manager.add_sessions_changed(self._bridge(self._refresh, follow_system=False))
+        current_changed = manager.add_current_session_changed(self._bridge(self._refresh, follow_system=True))
+        try:
+            await self._refresh(follow_system=True)
+            await self._stop.wait()
+        finally:
+            manager.remove_sessions_changed(sessions_changed)
+            manager.remove_current_session_changed(current_changed)
+            for app_id in list(self._sessions):
+                self._forget(app_id)
+            self._manager = None
 
-    def _apply_current_selection(self, system_id: str | None, *, follow_system: bool) -> bool:
-        """Keep _current_session_id and is_current flags aligned with live trackers.
+    async def _cancel_tasks(self) -> None:
+        tasks = list(self._tasks)
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
-        Returns True if the selected session id changed.
-        """
-        prev_id = self._current_session_id
+    def _spawn(self, handler: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None:
+        """Runs handler on the media thread; safe from any thread, and a no-op once the service stopped."""
+        with contextlib.suppress(RuntimeError):
+            self._loop.call_soon_threadsafe(self._start_task, handler, *args)
 
-        if follow_system or self._current_session_id not in self._trackers:
-            # Follow Windows "current", or fall back when our selection was removed
-            # (e.g. browser tab ended while user had switched to it via scroll).
-            if system_id in self._trackers:
-                self._current_session_id = system_id
-            elif self._trackers:
-                self._current_session_id = next(iter(self._trackers))
-            else:
-                self._current_session_id = ""
-        # else: keep manual selection (still present in trackers)
+    def _start_task(self, handler: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None:
+        task = self._loop.create_task(handler(*args))
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
 
-        for tracker in self._trackers.values():
-            tracker.is_current = bool(self._current_session_id) and tracker.app_id == self._current_session_id
+    def _bridge(self, handler: Callable[..., Coroutine[Any, Any, Any]], **kwargs: Any) -> Callable[[Any, Any], None]:
+        """WinRT manager events arrive on WinRT threads, with COM arguments that stay there."""
 
-        return prev_id != self._current_session_id
+        def bridge(_sender: Any, _args: Any) -> None:
+            self._spawn(partial(handler, **kwargs))
 
-    def _bind_session(self, state: SessionState, session: MediaSession) -> None:
-        """Register WinRT event callbacks for a session. Caller must hold _smtc_lock."""
-        state.session = session
-        t_mp = session.add_media_properties_changed(self._bridge_session_properties)
-        t_tp = session.add_timeline_properties_changed(self._bridge_session_timeline)
-        t_pi = session.add_playback_info_changed(self._bridge_session_playback)
-        state.cleanup_callbacks = [
-            partial(session.remove_media_properties_changed, t_mp),
-            partial(session.remove_timeline_properties_changed, t_tp),
-            partial(session.remove_playback_info_changed, t_pi),
+        return bridge
+
+    async def _refresh(self, *, follow_system: bool) -> None:
+        manager = self._manager
+        if manager is None:
+            return
+        with self._smtc_lock:
+            sessions = {session.source_app_user_model_id: session for session in manager.get_sessions()}
+            current = manager.get_current_session()
+            system_id = current.source_app_user_model_id if current else None
+            del current
+        for app_id in [app_id for app_id in self._sessions if app_id not in sessions]:
+            self._forget(app_id)
+        added = [app_id for app_id in sessions if app_id not in self._sessions]
+        for app_id in added:
+            self._track(app_id, sessions[app_id])
+        del sessions
+        for app_id in self._sessions:
+            self._snapshot(app_id)
+        self._select(system_id, follow_system=follow_system)
+        self._publish()
+        for app_id in added:
+            await self._sync_properties(app_id)
+
+    def _track(self, app_id: str, session: MediaSession) -> None:
+        with self._smtc_lock:
+            properties = session.add_media_properties_changed(self._on_properties_event)
+            timeline = session.add_timeline_properties_changed(self._on_timeline_event)
+            playback = session.add_playback_info_changed(self._on_playback_event)
+        self._sessions[app_id] = session
+        self._unsubscribe[app_id] = [
+            partial(session.remove_media_properties_changed, properties),
+            partial(session.remove_timeline_properties_changed, timeline),
+            partial(session.remove_playback_info_changed, playback),
         ]
+        self._players[app_id] = MediaInfo(
+            app_id, resolve_source_app_name(app_id) or app_id, get_process_name_for_aumid(app_id) or ""
+        )
 
-    async def _refresh_sessions(self, manager: SessionManager, *, follow_system: bool = False) -> bool:
-        """Refresh session states from the manager.
+    def _forget(self, app_id: str) -> None:
+        for unsubscribe in self._unsubscribe.pop(app_id, []):
+            with contextlib.suppress(Exception):
+                unsubscribe()
+        self._sessions.pop(app_id, None)
+        self._players.pop(app_id, None)
+        self._property_reads.pop(app_id, None)
 
-        Returns True if the selected session id changed.
-        """
-        with self._smtc_lock:
-            sessions = list(manager.get_sessions())
-            current_session = manager.get_current_session()
-            current_ids = [s.source_app_user_model_id for s in sessions]
-            system_id = current_session.source_app_user_model_id if current_session else None
-
-        # Cleanup old trackers
-        to_remove = [app_id for app_id in self._trackers if app_id not in current_ids]
-        for app_id in to_remove:
-            old_state = self._trackers.pop(app_id)
-            for cleanup_callback in old_state.cleanup_callbacks:
-                try:
-                    cleanup_callback()
-                except Exception:
-                    pass
-
-        # Create new trackers
-        for session in sessions:
-            app_id = session.source_app_user_model_id
-            if app_id not in self._trackers:
-                self._trackers[app_id] = SessionState(app_id)
-                with self._smtc_lock:
-                    self._bind_session(self._trackers[app_id], session)
-
-            self.media_data_changed.emit(self._trackers)
-
-            await self._sync_media_properties(app_id)
-
-            state = self._trackers.get(app_id)
-            if state is None or state.session is None:
-                continue
-            with self._smtc_lock:
-                tracked = state.session
-                timeline_snap = self._snapshot_timeline(tracked)
-                playback_snap = self._snapshot_playback(tracked)
-            if timeline_snap is not None:
-                self._apply_timeline_snapshot(app_id, timeline_snap)
-            if playback_snap is not None:
-                self._apply_playback_snapshot(app_id, playback_snap)
-
-        return self._apply_current_selection(system_id, follow_system=follow_system)
-
-    async def _on_sessions_changed(self):
-        """Handle SMTC session list changes (session added/removed)."""
-        manager = self._manager
-        if manager is None:
-            return
-        selection_changed = await self._refresh_sessions(manager, follow_system=False)
-        self.media_data_changed.emit(self._trackers)
-        if selection_changed:
-            # e.g. selected browser session ended -> fell back to Spotify
-            self.media_properties_changed.emit()
-            if (session := self.current_session) is not None and session.playback_ready:
-                self.playback_info_changed.emit()
-            self.current_session_changed.emit()
-
-    async def _on_current_session_changed(self):
-        """Handle Windows current-session change (follow system)."""
-        manager = self._manager
-        if manager is None:
-            return
-        await self._refresh_sessions(manager, follow_system=True)
-        self.media_data_changed.emit(self._trackers)
-        self.current_session_changed.emit()
-
-    async def _on_media_properties_app(self, app_id: str):
-        """Properties event from WinRT: use tracked session only (never callback COM arg)."""
-        await self._sync_media_properties(app_id)
-
-    async def _sync_media_properties(self, app_id: str):
-        """Fetch media properties via tracked session; never hold the SMTC lock across await."""
-        state = self._trackers.get(app_id)
-        if state is None:
-            return
-        try:
-            with self._smtc_lock:
-                session = state.session
-                if session is None:
-                    return
-                op = session.try_get_media_properties_async()
-            try:
-                props = await op
-            except Exception:
-                return
-            if not props:
-                return
-
-            with self._smtc_lock:
-                title = props.title or ""
-                artist = props.artist or ""
-                thumb_ref = props.thumbnail
-            del props
-
-            if thumb_ref is not None:  # pyright: ignore[reportUnnecessaryComparison]
-                thumbnail = await self._get_thumbnail_async(thumb_ref)
+    def _select(self, system_id: str | None, *, follow_system: bool) -> None:
+        # Follow Windows' current player, or fall back when the one picked by switching went away
+        if follow_system or self._current not in self._players:
+            if system_id is not None and system_id in self._players:
+                self._current = system_id
             else:
-                thumbnail = None
-            del thumb_ref
+                self._current = next(iter(self._players), "")
 
-            state = self._trackers.get(app_id)
-            if state is None:
-                return
-            state.title = title
-            state.artist = artist
-            state.thumbnail = thumbnail
-            self.media_properties_changed.emit()
-        except Exception as e:
-            logger.error("Error syncing session: %s", e, exc_info=True)
+    def _publish(self) -> None:
+        players = tuple(self._players.values())
+        keep_art({player.art_revision: player.art for player in players if player.art is not None})
+        self.state = MediaState(players, self._current)
+        self.changed.emit(self.state)
 
-    @staticmethod
-    def _snapshot_timeline(session: MediaSession) -> dict[str, float] | None:
-        """Plain-Python timeline fields. Caller must hold _smtc_lock."""
-        timeline = session.get_timeline_properties()
-        if not timeline:
-            return None
-        snap = {
-            "position": timeline.position.total_seconds(),
-            "last_updated": timeline.last_updated_time.timestamp(),
-            "duration": timeline.end_time.total_seconds(),
-        }
-        del timeline
-        return snap
-
-    def _apply_timeline_snapshot(self, app_id: str, snap: dict[str, float]) -> None:
-        state = self._trackers.get(app_id)
-        if state is None:
+    def _snapshot(self, app_id: str) -> None:
+        session = self._sessions.get(app_id)
+        if session is None:
             return
-        new_pos = snap["position"]
-        new_update = snap["last_updated"]
-        # WinRT unset DateTime is 1601-01-01 (unix -11644473600). Ignore it or
-        # interpolate becomes now - (-11644473600) (~1.3e10 seconds).
-        if new_update <= 0:
+        with self._smtc_lock:
+            timeline = _read_timeline(session)
+            playback = _read_playback(session)
+        # Playback first: a player first seen while it plays has no position yet that a start could stop
+        if playback is not None:
+            self._apply_playback(app_id, playback)
+        if timeline is not None:
+            self._apply_timeline(app_id, timeline)
+
+    def _apply_timeline(self, app_id: str, timeline: _Timeline) -> None:
+        player = self._players.get(app_id)
+        # WinRT's unset DateTime is 1601-01-01, a negative Unix time
+        if player is None or timeline.updated <= 0:
             return
-        state.duration = snap["duration"]
-        if new_update > state.last_update_time:
-            state.last_snapshot_pos = new_pos
-        state.last_update_time = new_update
-        self.timeline_info_changed.emit()
+        if timeline.updated > player.position_time:
+            player = replace(player, position=timeline.position, position_time=timeline.updated)
+        self._players[app_id] = replace(player, duration=timeline.duration)
 
-    @staticmethod
-    def _snapshot_playback(session: MediaSession) -> dict[str, Any] | None:
-        """Plain-Python playback fields. Caller must hold _smtc_lock.
+    def _apply_playback(self, app_id: str, playback: _Playback) -> None:
+        player = self._players.get(app_id)
+        if player is None:
+            return
+        if playback.playing != player.playing and player.position_time > 0:
+            # Players often skip the timeline event on play and pause, so the position stops or starts here
+            now = time.time()
+            player = replace(player, position=player.position_at(now), position_time=now)
+        self._players[app_id] = replace(
+            player,
+            playing=playback.playing,
+            rate=playback.rate,
+            can_play_pause=playback.can_play_pause,
+            can_previous=playback.can_previous,
+            can_next=playback.can_next,
+            can_seek=playback.can_seek,
+            can_shuffle=playback.can_shuffle,
+            can_repeat=playback.can_repeat,
+            shuffle=playback.shuffle,
+            repeat=playback.repeat,
+        )
 
-        Reads each IReference property exactly once, converts immediately, and
-        does not retain the PlaybackInfo / IReference COM objects.
-        """
-        playback = session.get_playback_info()
-        if not playback:
-            return None
+    def _applied(self, apply: Callable[[str, Any], None], app_id: str, snapshot: Any) -> None:
+        apply(app_id, snapshot)
+        self._publish()
 
+    def _on_properties_event(self, session: Any, _args: Any) -> None:
         try:
-            playback_status = int(playback.playback_status)
-        except TypeError, ValueError:
-            playback_status = 0
-        is_playing = playback_status == 4
+            self._spawn(self._sync_properties, session.source_app_user_model_id)
+        except Exception:
+            pass
 
-        raw_rate = playback.playback_rate
-        playback_rate = _iref_float(raw_rate, 1.0)
-        del raw_rate
+    def _on_timeline_event(self, session: Any, _args: Any) -> None:
+        try:
+            app_id = session.source_app_user_model_id
+            with self._smtc_lock:
+                timeline = _read_timeline(session)
+            if timeline is not None:
+                self._loop.call_soon_threadsafe(self._applied, self._apply_timeline, app_id, timeline)
+        except Exception:
+            pass
 
-        controls = playback.controls
-        if controls:
-            prev_enabled = bool(controls.is_previous_enabled)
-            play_enabled = bool(controls.is_play_pause_toggle_enabled)
-            next_enabled = bool(controls.is_next_enabled)
-            timeline_enabled = bool(controls.is_playback_position_enabled)
-            shuffle_enabled = bool(controls.is_shuffle_enabled)
-            repeat_enabled = bool(controls.is_repeat_enabled)
+    def _on_playback_event(self, session: Any, _args: Any) -> None:
+        # Crash path from dumps: IReference[double] (playback_rate) double-freed when
+        # PlaybackInfo was read later on another thread, so it is read here, once.
+        try:
+            app_id = session.source_app_user_model_id
+            with self._smtc_lock:
+                playback = _read_playback(session)
+            if playback is not None:
+                self._loop.call_soon_threadsafe(self._applied, self._apply_playback, app_id, playback)
+        except Exception:
+            pass
+
+    async def _sync_properties(self, app_id: str) -> None:
+        session = self._sessions.get(app_id)
+        if session is None:
+            return
+        # A track change sends several events; only the newest read may land
+        read = self._property_reads.get(app_id, 0) + 1
+        self._property_reads[app_id] = read
+        try:
+            with self._smtc_lock:
+                operation = session.try_get_media_properties_async()
+            properties = await operation
+            if not properties:
+                return
+            with self._smtc_lock:
+                title = properties.title or ""
+                artist = properties.artist or ""
+                album = properties.album_title or ""
+                thumbnail = properties.thumbnail
+            del properties
+            art = await _read_art(thumbnail) if thumbnail else None
+            del thumbnail
+        except Exception as e:
+            if isinstance(e, OSError) and e.winerror == NOT_READY:
+                logger.debug("%s is not ready to say what it plays", app_id)
+            else:
+                logger.error("Could not read what %s plays: %s", app_id, e)
+            return
+        player = self._players.get(app_id)
+        if player is None or self._property_reads.get(app_id) != read:
+            return
+        if art is None:
+            revision = 0
+        elif art == player.art:
+            revision = player.art_revision
         else:
-            prev_enabled = True
-            play_enabled = True
-            next_enabled = True
-            timeline_enabled = False
-            shuffle_enabled = False
-            repeat_enabled = False
-        del controls
+            self._art_revision += 1
+            revision = self._art_revision
+        self._players[app_id] = replace(player, title=title, artist=artist, album=album, art=art, art_revision=revision)
+        self._publish()
 
-        raw_shuffle = playback.is_shuffle_active
-        shuffle_active = _iref_bool(raw_shuffle, False)
-        del raw_shuffle
-
-        raw_repeat = playback.auto_repeat_mode
-        auto_repeat_mode = _iref_int(raw_repeat, 0)
-        del raw_repeat
-
-        del playback
-
-        return {
-            "is_playing": is_playing,
-            "playback_status": playback_status,
-            "playback_rate": playback_rate,
-            "controls_prev_enabled": prev_enabled,
-            "controls_play_enabled": play_enabled,
-            "controls_next_enabled": next_enabled,
-            "timeline_enabled": timeline_enabled,
-            "controls_shuffle_enabled": shuffle_enabled,
-            "controls_repeat_enabled": repeat_enabled,
-            "is_shuffle_active": shuffle_active,
-            "auto_repeat_mode": auto_repeat_mode,
-        }
-
-    def _apply_playback_snapshot(self, app_id: str, snap: dict[str, Any]) -> None:
-        state = self._trackers.get(app_id)
-        if state is None:
-            return
-        state.is_playing = snap["is_playing"]
-        state.playback_status = snap["playback_status"]
-        state.playback_rate = snap["playback_rate"]
-        state.controls_prev_enabled = snap["controls_prev_enabled"]
-        state.controls_play_enabled = snap["controls_play_enabled"]
-        state.controls_next_enabled = snap["controls_next_enabled"]
-        state.timeline_enabled = snap["timeline_enabled"]
-        state.controls_shuffle_enabled = snap["controls_shuffle_enabled"]
-        state.controls_repeat_enabled = snap["controls_repeat_enabled"]
-        state.is_shuffle_active = snap["is_shuffle_active"]
-        state.auto_repeat_mode = snap["auto_repeat_mode"]
-        state.playback_ready = True
-        self.playback_info_changed.emit()
-
-    def _interpolate_and_emit(self, trackers: dict[str, SessionState]):
-        """Interpolate the timeline and emit media data"""
-        # Update current position for each session
-        now = time.time()
-        for state in trackers.values():
-            pos = state.last_snapshot_pos
-            # Require a real SMTC timestamp; unset WinRT DateTime is <= 0.
-            if state.is_playing and state.last_update_time > 0:
-                drift = now - state.last_update_time
-                pos += drift * state.playback_rate
-            state.current_pos = pos
-
-        self.media_data_changed.emit(trackers)
-
-    def _safe_create_task(self, callback: Callable[..., Any], *args: Any) -> None:
-        """Create a task on the loop, silently ignoring shutdown races."""
+    async def _command(self, app_id: str, action: str, start: Callable[[MediaSession], Any]) -> bool:
+        session = self._sessions.get(app_id)
+        if session is None:
+            return False
         try:
-            self._loop.create_task(callback(*args))
-        except RuntimeError:
-            pass
-
-    def _bridge_manager_event(self, callback: Callable[[], Any]):
-        """WinRT manager events: hop to asyncio with no COM args."""
-
-        def wrapper(_sender: Any, _args: Any) -> None:
-            try:
-                self._loop.call_soon_threadsafe(self._safe_create_task, callback)
-            except RuntimeError:
-                pass
-
-        return wrapper
-
-    def _bridge_session_properties(self, session: Any, _args: Any) -> None:
-        """Properties need async fetch; schedule by app_id only (tracked session)."""
-        try:
-            app_id = session.source_app_user_model_id
-            self._loop.call_soon_threadsafe(self._safe_create_task, self._on_media_properties_app, app_id)
-        except Exception:
-            pass
-
-    def _bridge_session_timeline(self, session: Any, _args: Any) -> None:
-        """Snapshot timeline on the WinRT thread, apply plain data on asyncio."""
-        try:
-            app_id = session.source_app_user_model_id
             with self._smtc_lock:
-                snap = self._snapshot_timeline(session)
-            if snap is None:
-                return
-            self._loop.call_soon_threadsafe(self._apply_timeline_snapshot, app_id, snap)
-        except Exception:
-            pass
-
-    def _bridge_session_playback(self, session: Any, _args: Any) -> None:
-        """Snapshot playback on the WinRT thread, apply plain data on asyncio.
-
-        Crash path from dumps: IReference[double] (playback_rate) double-freed when
-        PlaybackInfo was read later on another thread.
-        """
-        try:
-            app_id = session.source_app_user_model_id
-            with self._smtc_lock:
-                snap = self._snapshot_playback(session)
-            if snap is None:
-                return
-            self._loop.call_soon_threadsafe(self._apply_playback_snapshot, app_id, snap)
-        except Exception:
-            pass
-
-    @staticmethod
-    async def _get_thumbnail_async(thumbnail_stream_reference: IRandomAccessStreamReference) -> Image.Image | None:
-        """Read the thumbnail for the IRandomAccessStreamReference and return it as PIL ImageFile"""
-        # Read the stream into the buffer
-        readable_stream = await thumbnail_stream_reference.open_read_async()
-        try:
-            # Create buffer of stream size
-            thumb_read_buffer = Buffer(readable_stream.size)
-
-            # Read stream into buffer
-            await readable_stream.read_async(
-                thumb_read_buffer,
-                thumb_read_buffer.capacity,
-                InputStreamOptions.READ_AHEAD,
-            )
-
-            # Convert bytearray to pillow image
-            pillow_image = Image.open(io.BytesIO(thumb_read_buffer))
-
-            return pillow_image
+                operation = start(session)
+            return bool(await operation)
         except Exception as e:
-            logging.error("get_thumbnail(): Error occurred when loading the thumbnail: %s", e)
-            return None
-        finally:
-            # Close the stream
-            readable_stream.close()
+            logger.error("Could not %s %s: %s", action, app_id, e)
+            return False
 
-    def force_update(self):
-        """Force an immediate update of the media data and properties signals"""
-        self.media_properties_changed.emit()
-        self._interpolate_and_emit(self._trackers)
+    async def _toggle_shuffle(self, app_id: str) -> None:
+        player = self._players.get(app_id)
+        if player is not None and player.can_shuffle:
+            shuffle = not player.shuffle
+            await self._command(app_id, "shuffle", lambda s: s.try_change_shuffle_active_async(shuffle))
 
-    def switch_current_session(self, direction: int):
-        """Switch to the next/previous session in the list."""
-        if not self._trackers:
+    async def _cycle_repeat(self, app_id: str) -> None:
+        player = self._players.get(app_id)
+        if player is not None and player.can_repeat:
+            mode = NEXT_REPEAT_MODE[player.repeat]
+            await self._command(app_id, "repeat", lambda s: s.try_change_auto_repeat_mode_async(mode))
+
+    async def _seek(self, app_id: str, seconds: float) -> None:
+        ticks = int(seconds * 10_000_000)  # 100-nanosecond units
+        if not await self._command(app_id, "seek", lambda s: s.try_change_playback_position_async(ticks)):
             return
+        player = self._players.get(app_id)
+        if player is not None:
+            self._players[app_id] = replace(player, position=seconds, position_time=time.time())
+            self._publish()
 
-        sessions = list(self._trackers.values())
-
-        # Use selected id (not is_current alone) so wheel works after a dead
-        # session was removed but flags were briefly out of sync.
-        idx = next((i for i, s in enumerate(sessions) if s.app_id == self._current_session_id), 0)
-        next_session = sessions[(idx + direction) % len(sessions)]
-
-        if next_session.app_id == self._current_session_id:
+    def _switch(self, direction: int) -> None:
+        players = list(self._players)
+        if not players:
             return
-
-        for s in sessions:
-            s.is_current = False
-
-        next_session.is_current = True
-        self._current_session_id = next_session.app_id
-
-        self.media_data_changed.emit(self._trackers)
-        self.media_properties_changed.emit()
-
-        if next_session.playback_ready:
-            self.playback_info_changed.emit()
-
-        self.current_session_changed.emit()
-
-    async def _invoke_session_async(self, starter: Callable[[MediaSession], Any]) -> None:
-        """Start a session async op under the SMTC lock, await outside the lock."""
-        state = self.current_session
-        if state is None or state.session is None:
-            return
-        with self._smtc_lock:
-            op = starter(state.session)
-        await op
-
-    @asyncSlot()
-    async def play_pause(self):
-        """Play/pause the current session"""
-        try:
-            await self._invoke_session_async(lambda s: s.try_toggle_play_pause_async())
-        except Exception as e:
-            logger.error("Error playing/pausing: %s", e)
-
-    @asyncSlot()
-    async def prev(self):
-        """Skip to previous track"""
-        try:
-            await self._invoke_session_async(lambda s: s.try_skip_previous_async())
-        except Exception as e:
-            logger.error("Error skipping previous: %s", e)
-
-    @asyncSlot()
-    async def next(self):
-        """Skip to next track"""
-        try:
-            await self._invoke_session_async(lambda s: s.try_skip_next_async())
-        except Exception as e:
-            logger.error("Error skipping next: %s", e)
-
-    @asyncSlot()
-    async def toggle_shuffle(self):
-        """Toggle shuffle for the current session when supported."""
-        try:
-            state = self.current_session
-            if state is None or state.session is None or not state.controls_shuffle_enabled:
-                return
-            want = not state.is_shuffle_active
-            await self._invoke_session_async(lambda s: s.try_change_shuffle_active_async(want))
-        except Exception as e:
-            logger.error("Error toggling shuffle: %s", e)
-
-    @asyncSlot()
-    async def cycle_repeat(self):
-        """Cycle repeat: None -> List -> Track -> None when supported."""
-        try:
-            state = self.current_session
-            if state is None or state.session is None or not state.controls_repeat_enabled:
-                return
-            mode = state.auto_repeat_mode
-            if mode == int(MediaPlaybackAutoRepeatMode.NONE):
-                nxt = MediaPlaybackAutoRepeatMode.LIST
-            elif mode == int(MediaPlaybackAutoRepeatMode.LIST):
-                nxt = MediaPlaybackAutoRepeatMode.TRACK
-            else:
-                nxt = MediaPlaybackAutoRepeatMode.NONE
-            await self._invoke_session_async(lambda s: s.try_change_auto_repeat_mode_async(nxt))
-        except Exception as e:
-            logger.error("Error cycling repeat: %s", e)
-
-    async def seek_to_position(self, position: float):
-        """Seek to specific position in seconds."""
-        try:
-            state = self.current_session
-            if state is None or state.session is None:
-                return
-            position_in_100ns = int(position * 10_000_000)  # Seconds -> 100-nanosecond units
-            await self._invoke_session_async(lambda s: s.try_change_playback_position_async(position_in_100ns))
-            state.last_snapshot_pos = position
-            state.last_update_time = time.time()
-            self._interpolate_and_emit(self._trackers)
-        except Exception as e:
-            logger.error("Error seeking to position: %s", e)
+        index = players.index(self._current) if self._current in players else 0
+        self._current = players[(index + direction) % len(players)]
+        self._publish()

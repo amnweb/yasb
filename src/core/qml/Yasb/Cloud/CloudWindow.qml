@@ -74,14 +74,14 @@ Window {
                 switch (window.cloud.accountState) {
                 case "critical": return window.dark ? "#442726" : "#fde7e9"
                 case "caution": return window.dark ? "#433519" : "#fff4ce"
-                default: return window.dark ? "#0dffffff" : "#ffffff"
+                default: return window.dark ? Qt.alpha("#ffffff", 0.05) : "#ffffff"
                 }
             }
 
             Rectangle {
                 width: parent.width
                 height: 1
-                color: window.dark ? "#14ffffff" : "#0f000000"
+                color: window.dark ? Qt.alpha("#ffffff", 0.08) : Qt.alpha("#000000", 0.06)
             }
 
             RowLayout {

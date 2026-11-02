@@ -27,11 +27,10 @@ Item {
                 Accessible.name: qsTr("Back")
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Back")
-                contentItem: Glyph {
-                    text: "\ue72b"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
+                display: AbstractButton.IconOnly
+                icon.source: Qt.resolvedUrl("icons/arrow-left.svg")
+                icon.width: 16
+                icon.height: 16
                 onClicked: page.cloud.closeSettings()
             }
         }

@@ -93,7 +93,6 @@ class ActiveWindowTracker(QObject):
         }
         self._win_info: WindowInfo | None = None
         self._text = ""
-        self._icon_revision = 0
         self._uwp_retries = 0
         self._workspace_retries = 0
         self._app_names: dict[int, str] = {}
@@ -162,7 +161,7 @@ class ActiveWindowTracker(QObject):
 
     @qml_property(str, notify=windowChanged)
     def icon(self) -> str:
-        return window_icon_url(self._win_info["hwnd"], self._icon_revision) if self._win_info else ""
+        return window_icon_url(self._win_info["hwnd"], IconService.instance().revision) if self._win_info else ""
 
     @qml_property("QVariantMap", notify=windowChanged)
     def window(self) -> dict[str, Any]:
@@ -340,5 +339,4 @@ class ActiveWindowTracker(QObject):
 
     def _on_icons_changed(self) -> None:
         if self._win_info is not None:
-            self._icon_revision += 1
             self.windowChanged.emit()

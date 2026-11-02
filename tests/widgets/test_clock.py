@@ -14,6 +14,7 @@ from PyQt6.QtCore import (
     QLocale,
     QMetaObject,
     QObject,
+    QPointF,
     QTimer,
     QTimeZone,
     QUrl,
@@ -170,7 +171,12 @@ def test_the_calendar_opens_on_today_in_the_clock_zone(make_clock: MakeClock, zo
     assert QDate(shown.year(), shown.month(), shown.day()) == today
     assert (calendar.property("month"), calendar.property("year")) == (today.month() - 1, today.year())
 
+    # It fades out before it hides
     _call(clock, "toggleCalendar")
+    for _ in range(100):
+        if not calendar.property("visible"):
+            break
+        _wait(10)
     assert not calendar.property("visible")
 
 
@@ -206,12 +212,27 @@ def test_the_calendar_opens_away_from_the_bar_edge(make_clock: MakeClock, fake_b
     clock.setProperty("bar", fake_bar)
     window = clock.window()
     assert window is not None
-    window.setPosition(400, 400)
+    # Against the screen edge its bar is on, like a bar, so the calendar has room on the other side
+    screen = window.screen().availableGeometry()
+    window.setPosition(
+        {"left": screen.left() + 16, "right": screen.right() - window.width() - 16}.get(
+            edge, screen.center().x() - window.width() // 2
+        ),
+        {"top": screen.top() + 16, "bottom": screen.bottom() - window.height() - 16}.get(edge, screen.center().y()),
+    )
     _call(clock, "toggleCalendar")
     _wait(50)
     calendar = _calendar(clock)
+    # The calendar has a window of its own, placed on the screen
+    origin = clock.mapToGlobal(QPointF(0, 0))
     x, y = calendar.property("x"), calendar.property("y")
-    away = {"top": y >= clock.height(), "bottom": y < 0, "left": x >= clock.width(), "right": x < 0}
+    width, height = calendar.property("width"), calendar.property("height")
+    away = {
+        "top": y >= origin.y() + clock.height(),
+        "bottom": y + height <= origin.y(),
+        "left": x >= origin.x() + clock.width(),
+        "right": x + width <= origin.x(),
+    }
     assert away[edge]
 
 

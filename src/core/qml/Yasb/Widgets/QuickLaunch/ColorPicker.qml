@@ -6,7 +6,6 @@ import QtQuick.Effects
 QtObject {
     id: picker
 
-    // The launcher's QuickLaunchSearch, which reads the screen's pixels
     required property QtObject quickLaunch
     readonly property int size: 11
     readonly property int cell: 12
@@ -61,7 +60,6 @@ QtObject {
                     const color = window.pixels[(picker.size * picker.size - 1) / 2]
                     if (mouse.button === Qt.LeftButton && color)
                         picker.picked(color)
-                    // Stopping deletes this window and this handler with it, so it comes last
                     picker.stop()
                 }
             }
@@ -75,9 +73,8 @@ QtObject {
                 id: loupe
 
                 readonly property int grid: picker.size * picker.cell
-                readonly property color center: window.pixels[(picker.size * picker.size - 1) / 2] ?? "black"
+                readonly property color center: window.pixels[(picker.size * picker.size - 1) / 2] ?? "#000000"
 
-                // Whole pixels, or every cell edge is smeared across two screen pixels
                 x: Math.round(window.cursor.x - width / 2)
                 y: Math.round(window.cursor.y - lens.height / 2)
                 width: lens.width
@@ -99,7 +96,7 @@ QtObject {
 
                     Rectangle {
                         anchors.fill: parent
-                        color: Qt.rgba(1, 1, 1, 0.16)
+                        color: Qt.alpha("#ffffff", 0.16)
                     }
 
                     Grid {
@@ -118,7 +115,7 @@ QtObject {
 
                                 width: picker.cell - 1
                                 height: picker.cell - 1
-                                color: window.pixels[index] ?? "black"
+                                color: window.pixels[index] ?? "#000000"
                             }
                         }
                     }
@@ -138,10 +135,9 @@ QtObject {
                     radius: width / 2
                     color: "transparent"
                     border.width: 2.5
-                    border.color: Qt.rgba(0.16, 0.16, 0.16, 0.86)
+                    border.color: Qt.alpha("#292929", 0.86)
                 }
 
-                // Around the middle cell, the colour that a click picks
                 Rectangle {
                     x: cells.x + (picker.size - 1) / 2 * picker.cell - 1
                     y: x
@@ -149,7 +145,7 @@ QtObject {
                     height: picker.cell + 1
                     color: "transparent"
                     border.width: 2
-                    border.color: loupe.center.hslLightness < 0.5 ? "white" : "black"
+                    border.color: loupe.center.hslLightness < 0.5 ? "#ffffff" : "#000000"
                 }
 
                 Rectangle {
@@ -161,7 +157,7 @@ QtObject {
                     width: row.implicitWidth + 16
                     height: row.implicitHeight + 8
                     radius: height / 2
-                    color: Qt.rgba(0.08, 0.08, 0.08, 0.82)
+                    color: Qt.alpha("#141414", 0.82)
 
                     Row {
                         id: row
@@ -176,12 +172,12 @@ QtObject {
                             radius: 7
                             color: loupe.center
                             border.width: 1
-                            border.color: Qt.rgba(1, 1, 1, 0.4)
+                            border.color: Qt.alpha("#ffffff", 0.4)
                         }
 
                         Text {
                             text: String(loupe.center).toUpperCase()
-                            color: "white"
+                            color: "#ffffff"
                             font.family: "Segoe UI"
                             font.pointSize: 9
                             font.bold: true

@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import ElidedLabel, refresh_widget_style
 from core.widgets.services.control_center.config import MediaSectionConfig
-from core.widgets.services.media.media import SessionState, WindowsMedia
+from core.widgets.services.media.media import MediaInfo, MediaService, MediaState
 from settings import SCRIPT_PATH
 
 logger = logging.getLogger("media_section")
@@ -53,7 +53,8 @@ class MediaSectionWidget(QFrame):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         self.hide()
 
-        self._media = WindowsMedia()
+        self._media = MediaService.instance()
+        self._player: MediaInfo | None = self._media.state.player
 
         self._current_app_id: str = ""
         self._current_title: str = ""
@@ -112,16 +113,16 @@ class MediaSectionWidget(QFrame):
         self._prev_btn = _MediaButton(controls_frame)
         self._prev_btn.setProperty("class", "button prev")
         self._prev_btn.setText(config.icons.prev_track)
-        self._prev_btn.data = self._media.prev
+        self._prev_btn.data = self._previous
 
         self._play_btn = _MediaButton(controls_frame)
         self._play_btn.setProperty("class", "button play")
-        self._play_btn.data = self._media.play_pause
+        self._play_btn.data = self._play_pause
 
         self._next_btn = _MediaButton(controls_frame)
         self._next_btn.setProperty("class", "button next")
         self._next_btn.setText(config.icons.next_track)
-        self._next_btn.data = self._media.next
+        self._next_btn.data = self._next
 
         controls_layout.addWidget(self._prev_btn)
         controls_layout.addWidget(self._play_btn)
@@ -133,33 +134,36 @@ class MediaSectionWidget(QFrame):
 
         layout.addWidget(content)
 
-        self._media.current_session_changed.connect(self._on_current_session_changed)
-        self._media.media_properties_changed.connect(self._on_media_properties_changed)
-        self._media.playback_info_changed.connect(self._on_playback_info_changed)
+        self._media.changed.connect(self._on_changed)
         self.destroyed.connect(self._disconnect_media_signals)
 
     def _disconnect_media_signals(self):
         try:
-            self._media.current_session_changed.disconnect(self._on_current_session_changed)
-            self._media.media_properties_changed.disconnect(self._on_media_properties_changed)
-            self._media.playback_info_changed.disconnect(self._on_playback_info_changed)
+            self._media.changed.disconnect(self._on_changed)
         except Exception:
             pass
 
-    @pyqtSlot()
-    def _on_current_session_changed(self):
-        self._sync_ui(force_thumbnail=True)
-
-    @pyqtSlot()
-    def _on_media_properties_changed(self):
-        self._sync_ui(force_thumbnail=True)
-
-    @pyqtSlot()
-    def _on_playback_info_changed(self):
-        self._update_controls()
+    # The service publishes from its own thread, so this arrives queued on the UI thread
+    @pyqtSlot(object)
+    def _on_changed(self, state: MediaState):
+        self._player = state.player
+        self._sync_ui()
 
     def refresh_state(self) -> None:
-        self._sync_ui(force_thumbnail=True)
+        self._player = self._media.state.player
+        self._sync_ui()
+
+    def _previous(self) -> None:
+        if self._player is not None:
+            self._media.previous(self._player.app_id)
+
+    def _play_pause(self) -> None:
+        if self._player is not None:
+            self._media.play_pause(self._player.app_id)
+
+    def _next(self) -> None:
+        if self._player is not None:
+            self._media.next(self._player.app_id)
 
     @override
     def event(self, e: QEvent | None) -> bool:
@@ -175,12 +179,11 @@ class MediaSectionWidget(QFrame):
         self._thumb_dpr = dpr
         self._empty_thumb = self._build_empty_thumbnail()
         self._cached_thumb = None
-        session = self._media.current_session
-        if session is not None:
-            self._apply_thumbnail(session.thumbnail)
+        if self._player is not None:
+            self._apply_thumbnail(self._player)
 
     def _hide_now(self) -> None:
-        if self._media.current_session is not None:
+        if self._player is not None:
             return
         self._current_app_id = ""
         self._current_title = ""
@@ -188,11 +191,11 @@ class MediaSectionWidget(QFrame):
         self._current_is_playing = None
         self.hide()
 
-    def _sync_ui(self, force_thumbnail: bool = False):
+    def _sync_ui(self):
         if not is_valid_qobject(self):
             return
-        session = self._media.current_session
-        if session is None:
+        player = self._player
+        if player is None:
             if not self.isHidden() and not self._hide_timer.isActive():
                 self._hide_timer.start()
             return
@@ -201,12 +204,10 @@ class MediaSectionWidget(QFrame):
         if self.isHidden():
             self.show()
 
-        app_id = session.app_id
-        session_changed = app_id != self._current_app_id
-        self._current_app_id = app_id
+        self._current_app_id = player.app_id
 
-        title = session.title or "Unknown Title"
-        artist = session.artist or "Unknown Artist"
+        title = player.title or "Unknown Title"
+        artist = player.artist or "Unknown Artist"
         if title != self._current_title:
             self._current_title = title
             self._title_label.setText(title)
@@ -214,30 +215,31 @@ class MediaSectionWidget(QFrame):
             self._current_artist = artist
             self._artist_label.setText(artist)
 
-        if session_changed or force_thumbnail:
-            self._apply_thumbnail(session.thumbnail)
+        self._apply_thumbnail(player)
+        self._update_controls_from(player)
 
-        self._update_controls_from(session)
-
-    def _apply_thumbnail(self, image: Image.Image | None):
+    def _apply_thumbnail(self, player: MediaInfo):
         if not is_valid_qobject(self._thumbnail_label):
             return
 
-        if image is None:
-            if self._empty_thumb is not None:
-                self._thumbnail_label.setPixmap(self._empty_thumb)
-            else:
-                self._thumbnail_label.clear()
-            self._cached_thumb = None
+        # Each new album art gets its own revision, and 0 means none
+        revision = player.art_revision if player.art is not None else 0
+        if self._cached_thumb is not None and self._cached_thumb[0] == revision:
             return
 
-        img_id = id(image)
-        if self._cached_thumb is not None and self._cached_thumb[0] == img_id:
+        if player.art is None:
+            if self._empty_thumb is not None:
+                self._thumbnail_label.setPixmap(self._empty_thumb)
+                self._cached_thumb = (0, self._empty_thumb)
+            else:
+                self._thumbnail_label.clear()
+                self._cached_thumb = None
             return
 
         try:
-            pixmap = self._render_thumbnail(image)
-            self._cached_thumb = (img_id, pixmap)
+            with Image.open(io.BytesIO(player.art)) as image:
+                pixmap = self._render_thumbnail(image)
+            self._cached_thumb = (revision, pixmap)
             self._thumbnail_label.setPixmap(pixmap)
         except Exception as e:
             logger.error("Error creating media thumbnail: %s", e)
@@ -310,28 +312,19 @@ class MediaSectionWidget(QFrame):
         pixmap.setDevicePixelRatio(dpr)
         return pixmap
 
-    def _update_controls(self):
-        session = self._media.current_session
-        if session is not None:
-            self._update_controls_from(session)
-
-    def _update_controls_from(self, session: SessionState):
+    def _update_controls_from(self, player: MediaInfo):
         if not is_valid_qobject(self._play_btn):
             return
 
-        is_playing = session.is_playing
+        is_playing = player.playing
         if is_playing != self._current_is_playing:
             self._current_is_playing = is_playing
             self._play_btn.setText(self.config.icons.pause if is_playing else self.config.icons.play)
 
-        if session.playback_ready:
-            self._prev_btn.setEnabled(session.controls_prev_enabled)
-            self._play_btn.setEnabled(session.controls_play_enabled)
-            self._next_btn.setEnabled(session.controls_next_enabled)
-        else:
-            self._prev_btn.setEnabled(True)
-            self._play_btn.setEnabled(True)
-            self._next_btn.setEnabled(True)
+        # All on until the player says otherwise
+        self._prev_btn.setEnabled(player.can_previous)
+        self._play_btn.setEnabled(player.can_play_pause)
+        self._next_btn.setEnabled(player.can_next)
 
         for btn in (self._prev_btn, self._play_btn, self._next_btn):
             old_class = btn.property("class") or ""
@@ -350,5 +343,5 @@ class MediaSectionWidget(QFrame):
         delta = a0.angleDelta().y()
         if delta == 0:
             return
-        self._media.switch_current_session(1 if delta > 0 else -1)
+        self._media.switch(1 if delta > 0 else -1)
         a0.accept()

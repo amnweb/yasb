@@ -3,8 +3,7 @@ from contextlib import suppress
 from ctypes import byref, c_void_p
 
 from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QCoreApplication, Qt
 
 from core.events.service import EventService
 from core.utils.win32.bindings.ntdll import (
@@ -109,7 +108,7 @@ class DndService:
                 cls._wnf_is_active = True
                 logging.info("DndService initialized...")
                 # Ensure cleanup is run when YASB exits
-                app = QApplication.instance()
+                app = QCoreApplication.instance()
                 if app:
                     app.aboutToQuit.connect(cls.shutdown_wnf_listener, Qt.ConnectionType.UniqueConnection)  # pyright: ignore[reportCallIssue]
             else:

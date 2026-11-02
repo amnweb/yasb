@@ -2,7 +2,7 @@ import logging
 import os
 from collections.abc import Callable
 
-from PyQt6.QtCore import QCoreApplication, QEvent, QUrl
+from PyQt6.QtCore import QCoreApplication, QEvent, QTimer, QUrl
 from PyQt6.QtGui import QWindow
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 
@@ -22,6 +22,11 @@ def show_alert(title: str, message: str, details: str = "", on_closed: Callable[
     if app is None:
         logging.error("Could not show the alert %r, the application is not running", title)
         return
+
+    QTimer.singleShot(0, lambda: _show(app, title, message, details, on_closed))
+
+
+def _show(app: QCoreApplication, title: str, message: str, details: str, on_closed: Callable[[], None] | None) -> None:
     if not _alerts and not _closing:
         app.aboutToQuit.connect(close_alerts)
     # A newer alert about the same thing replaces the open one, e.g. while a file is saved again and again

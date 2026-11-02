@@ -20,7 +20,7 @@ Item {
             return 0
         if (alignment === "right" || alignment === "bottom")
             return free
-        return free / 2
+        return Math.round(free / 2)
     }
     readonly property var widgets: bar ? bar.context.widgets[name] ?? [] : []
 
@@ -50,8 +50,8 @@ Item {
         Loader {
             required property var modelData
 
-            width: slot.vertical ? slot.width : undefined
-            height: slot.vertical ? undefined : slot.height
+            width: slot.vertical ? slot.width : Math.ceil(implicitWidth)
+            height: slot.vertical ? Math.ceil(implicitHeight) : slot.height
             visible: status === Loader.Ready
             source: modelData.url
 

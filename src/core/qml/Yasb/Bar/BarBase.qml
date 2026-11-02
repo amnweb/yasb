@@ -24,7 +24,7 @@ Item {
 
     property int padding: 8
     property int spacing: 8
-    property color textColor: dark ? "white" : "black"
+    property color textColor: dark ? "#ffffff" : "#000000"
     property font font: Qt.font({ pixelSize: 13 })
     property real contentImplicitLength: longestContent()
     property list<string> slotNames: []
@@ -35,6 +35,9 @@ Item {
         BarMenu {}
     }
     property Window openedMenu: null
+    // Whether the last press on the bar was on a widget. Windows asks for the menu after the button is let
+    // go, when a widget that changed size on the click may no longer be under the mouse.
+    property bool pressedOnWidget: false
 
     default property alias content: contentArea.data
 
@@ -52,6 +55,17 @@ Item {
         slotNames = [...slotNames, slot.name]
     }
 
+    // Whether a point in the window is on one of the widgets
+    function widgetAt(position: point): bool {
+        for (const slot of slots) {
+            for (const widget of slot.content.children) {
+                if (widget.visible && widget.contains(widget.mapFromItem(null, position)))
+                    return true
+            }
+        }
+        return false
+    }
+
     function openContextMenu(position: point) {
         openedMenu?.close()
         if (contextMenu)
@@ -65,7 +79,21 @@ Item {
     implicitWidth: vertical ? 0 : 2 * padding + contentImplicitLength
     implicitHeight: vertical ? 2 * padding + contentImplicitLength : 0
 
-    ContextMenu.onRequested: position => base.openContextMenu(position)
+    ContextMenu.onRequested: position => {
+        if (!pressedOnWidget)
+            base.openContextMenu(position)
+        pressedOnWidget = false
+    }
+
+    // The bar window reports each press before its items get it
+    Connections {
+        target: base.Window.window
+        ignoreUnknownSignals: true
+
+        function onPressed(position: point) {
+            base.pressedOnWidget = base.widgetAt(position)
+        }
+    }
 
     TapHandler {
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -76,7 +104,7 @@ Item {
         id: surface
 
         anchors.fill: parent
-        color: base.dark ? "#cc1e1e1e" : "#ccf3f3f3"
+        color: Qt.alpha(base.dark ? "#1e1e1e" : "#f3f3f3", 0.8)
         border.width: 0
     }
 

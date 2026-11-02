@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.impl
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
@@ -66,11 +67,10 @@ Item {
                 Accessible.name: qsTr("Settings")
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Settings")
-                contentItem: Glyph {
-                    text: "\ue713"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
+                display: AbstractButton.IconOnly
+                icon.source: Qt.resolvedUrl("icons/gear.svg")
+                icon.width: 16
+                icon.height: 16
                 onClicked: page.cloud.openSettings()
             }
         }
@@ -105,9 +105,13 @@ Item {
                     anchors.fill: parent
                     spacing: 12
 
-                    Glyph {
-                        Layout.preferredWidth: 20
-                        text: row.shareUrl !== "" ? "\ue72d" : "\uea18"
+                    IconImage {
+                        Layout.preferredWidth: 16
+                        Layout.preferredHeight: 16
+                        Layout.leftMargin: 2
+                        Layout.rightMargin: 2
+                        sourceSize: Qt.size(16, 16)
+                        source: Qt.resolvedUrl(row.shareUrl !== "" ? "icons/link.svg" : "icons/shield.svg")
                         color: row.shareUrl !== "" ? system.accent : Qt.alpha(palette.windowText, 0.7)
 
                         HoverHandler {

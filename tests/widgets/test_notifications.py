@@ -52,10 +52,10 @@ def use_history(monkeypatch: pytest.MonkeyPatch, history: dict[str, list[str | N
 
         return SimpleNamespace(content=SimpleNamespace(get_xml=get_xml))
 
-    def get_history_with_id(aumid: str) -> list[SimpleNamespace]:
+    def get_history(aumid: str) -> list[SimpleNamespace]:
         return [entry(xml) for xml in history.get(aumid, [])]
 
-    manager = SimpleNamespace(history=SimpleNamespace(get_history_with_id=get_history_with_id))
+    manager = SimpleNamespace(history=SimpleNamespace(get_history=get_history))
     monkeypatch.setattr(windows_notification, "ToastNotificationManager", manager)
 
 

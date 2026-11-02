@@ -89,6 +89,11 @@ class IconService(QObject):
         self._change_pending = False
         # transparent placeholders by (size, dpr)
         self._blank_pixmaps: dict[tuple[int, float], QPixmap] = {}
+        # Goes up with every icons_changed, before anyone else hears of it. Icon URLs carry it, so QML asks again
+        # instead of reusing a placeholder it cached before the icon loaded. It is the same for every widget,
+        # so widgets QML makes again, as on a bar reload, never go back to an old URL.
+        self.revision = 0
+        self.icons_changed.connect(self._next_revision)
         self._icon_loaded.connect(self._on_icon_loaded)
 
         threading.Thread(target=self._run_icon_thread, daemon=True, name="IconService").start()
@@ -163,6 +168,9 @@ class IconService(QObject):
         if waiting is None or priority < waiting:
             self._waiting[key] = priority
             self._load_queue.put((priority, next(self._request_numbers), key))
+
+    def _next_revision(self) -> None:
+        self.revision += 1
 
     def _on_icon_loaded(self) -> None:
         with self._lock:

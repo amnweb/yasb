@@ -306,7 +306,7 @@ class WindowsNotificationEventListener(QThread):
         # ClearNotifications() fails with ERROR_NOT_FOUND without package identity
         for app in {item.aumid for item in self._items if aumid in (None, item.aumid)} - {""}:
             try:
-                ToastNotificationManager.history.clear_with_id(app)
+                ToastNotificationManager.history.clear(app)
             except Exception as e:
                 logging.debug("Failed to clear the notifications of %s: %s", app, e)
         if aumid is None:
@@ -379,6 +379,8 @@ def _get_app_info(notification: UserNotification) -> tuple[str, str, str]:
 def _get_texts(notification: UserNotification) -> list[str]:
     try:
         binding = notification.notification.visual.get_binding(KnownNotificationBindings.toast_generic)
+        if binding is None:
+            return []
         # an empty text element comes back as whitespace
         return [text for element in binding.get_text_elements() if (text := (element.text or "").strip())]
     except Exception as e:
@@ -391,7 +393,7 @@ def _read_toast_xml(aumid: str, count: int) -> list[ET.Element]:
     if not aumid:
         return []
     try:
-        history = ToastNotificationManager.history.get_history_with_id(aumid)
+        history = ToastNotificationManager.history.get_history(aumid)
     except Exception as e:
         logging.debug("Failed to read the toast history of %s: %s", aumid, e)
         return []

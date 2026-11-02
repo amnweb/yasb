@@ -75,7 +75,7 @@ def test_the_widget_shows_usage_and_memory(worker: FakeWorker):
     label = find_item(widget, "label")
     assert label is not None
     assert widget.property("implicitWidth") > 0
-    assert label.property("text") == "12.5%"
+    assert label.property("text") == "13%"
 
     widget.setProperty("showAlternate", True)
     assert label.property("text") == "1.0G/8.0G"
