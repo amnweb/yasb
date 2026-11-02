@@ -104,8 +104,9 @@ Item {
         id: surface
 
         anchors.fill: parent
-        color: Qt.alpha(base.dark ? "#1e1e1e" : "#f3f3f3", 0.8)
+        color: dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
         border.width: 0
+        border.color: dark ? Qt.alpha("#3A3A3A", 1) : Qt.alpha("#D9D9D9", 1)
     }
 
     Item {
