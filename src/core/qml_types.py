@@ -17,6 +17,7 @@ from core.widgets.services.memory.monitor import MemoryMonitor
 from core.widgets.services.notifications.center import NotificationCenter
 from core.widgets.services.power_menu.session import PowerSession
 from core.widgets.services.quick_launch.search import QuickLaunchSearch
+from core.widgets.services.systray.model import SystrayModel
 from core.widgets.services.volume.output import AudioOutput
 from core.widgets.services.windows_desktops.desktops import VirtualDesktops
 
@@ -42,3 +43,4 @@ def register_qml_types() -> None:
     qmlRegisterType(VirtualDesktops, QML_URI, 1, 0, "VirtualDesktops")
     qmlRegisterType(AudioLevels, QML_URI, 1, 0, "AudioLevels")
     qmlRegisterType(PowerSession, QML_URI, 1, 0, "PowerSession")
+    qmlRegisterType(SystrayModel, QML_URI, 1, 0, "SystrayModel")

@@ -12,5 +12,6 @@ PowerMenu 1.0 PowerMenu/PowerMenu.qml
 Github 1.0 Github/Github.qml
 GlazewmWorkspaces 1.0 GlazewmWorkspaces/GlazewmWorkspaces.qml
 QuickLaunch 1.0 QuickLaunch/QuickLaunch.qml
+Systray 1.0 Systray/Systray.qml
 Volume 1.0 Volume/Volume.qml
 WindowsDesktops 1.0 WindowsDesktops/WindowsDesktops.qml

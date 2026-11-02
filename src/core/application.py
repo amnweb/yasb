@@ -24,6 +24,7 @@ from core.utils.update_service import get_update_service, start_update_checker
 from core.utils.win32.composition import shutdown_composition
 from core.watcher import create_observer
 from core.widgets.services.media.art import MEDIA_ART_PROVIDER, MediaArtProvider
+from core.widgets.services.systray.systray import SYSTRAY_ICON_PROVIDER, SystrayIconProvider
 from settings import QML_IMPORT_PATH
 
 
@@ -39,6 +40,7 @@ class YASBApplication(QGuiApplication):
         self._engine.addImportPath(QML_IMPORT_PATH)
         self._engine.addImageProvider(ICON_PROVIDER, IconImageProvider())
         self._engine.addImageProvider(MEDIA_ART_PROVIDER, MediaArtProvider())
+        self._engine.addImageProvider(SYSTRAY_ICON_PROVIDER, SystrayIconProvider())
         self._bars: BarManager | None = None
         self._tray: SystemTrayManager | None = None
         self._observer: BaseObserver | None = None
