@@ -1,7 +1,10 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
 
 Item {
@@ -34,15 +37,15 @@ Item {
     property int maxListHeight: 320
     property color errorColor: dark ? "#ff99a4" : "#c42b1c"
 
-    property Item bar: null
+    property BarBase bar: null
 
     property bool showAlternate: false
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
+    readonly property bool dark: bar ? bar.dark : Application.styleHints.colorScheme === Qt.ColorScheme.Dark
     // Inherit the bar's text color and font unless overridden here.
     property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
+    font.family: bar?.font.family ?? Application.font.family
     font.pixelSize: bar?.font.pixelSize ?? 13
     font.weight: bar?.font.weight ?? Font.Normal
     font.italic: bar?.font.italic ?? false
@@ -253,7 +256,7 @@ Item {
         objectName: "popup"
         title: "Wi-Fi"
         width: wifi.popupWidth
-        height: content.implicitHeight + 16
+        height: popupContent.implicitHeight + 16
         anchor: wifi
         backdropItem: surface
         enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
@@ -277,7 +280,7 @@ Item {
             transformOrigin: wifi.edge === "bottom" ? Item.Bottom : Item.Top
 
             ColumnLayout {
-                id: content
+                id: popupContent
 
                 width: parent.width
                 spacing: 0
@@ -538,7 +541,8 @@ Item {
                                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                                     onClicked: mouse => {
                                         if (mouse.button === Qt.RightButton)
-                                            networkMenu.show(network, mouse.x, mouse.y)
+                                            networkMenu.show(network, network.ssid, network.known, network.autoConnect,
+                                                mouse.x, mouse.y)
                                         else
                                             popup.expanded = network.expanded ? undefined : network.ssid
                                     }
@@ -685,11 +689,11 @@ Item {
                 property bool known
                 property bool autoConnect
 
-                function show(network: Item, x: real, y: real) {
-                    networkMenu.ssid = network.ssid
-                    networkMenu.known = network.known
-                    networkMenu.autoConnect = network.autoConnect
-                    networkMenu.popup(network, x, y)
+                function show(target: Item, ssid: string, known: bool, autoConnect: bool, x: real, y: real) {
+                    networkMenu.ssid = ssid
+                    networkMenu.known = known
+                    networkMenu.autoConnect = autoConnect
+                    networkMenu.popup(target, x, y)
                 }
 
                 popupType: Popup.Item

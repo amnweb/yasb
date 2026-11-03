@@ -1,6 +1,9 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import Yasb
+import Yasb.Bar
 import Yasb.Common
 
 Item {
@@ -29,13 +32,13 @@ Item {
     // Use the Explorer hook instead of the legacy tray window; the first widget sets this for all bars.
     property bool useHook: true
     property color hoveredColor: dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.1)
-    property Item bar: null
+    property BarBase bar: null
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
+    readonly property bool dark: bar ? bar.dark : Application.styleHints.colorScheme === Qt.ColorScheme.Dark
     // Inherit the bar's text color and font unless overridden here.
     property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
+    font.family: bar?.font.family ?? Application.font.family
     font.pixelSize: bar?.font.pixelSize ?? 13
     font.weight: bar?.font.weight ?? Font.Normal
     font.italic: bar?.font.italic ?? false
@@ -417,7 +420,7 @@ Item {
         DropArea {
             id: pinnedDrop
 
-            readonly property bool empty: tray.pinnedIcons.count === 0
+            readonly property bool empty: pinnedRepeater.count === 0
             // Keep an empty drop target available during a drag.
             readonly property int emptySize: systray.dragging ? systray.iconSize + 8 : 0
 
@@ -522,7 +525,7 @@ Item {
         id: popup
 
         property real reveal: 0
-        readonly property int iconCount: tray.unpinnedIcons.count
+        readonly property int iconCount: unpinnedRepeater.count
         readonly property int cell: systray.iconSize + 20
         readonly property int columns: Math.max(1, Math.min(systray.iconsPerRow, iconCount))
         readonly property int rows: Math.max(1, Math.ceil(iconCount / columns))

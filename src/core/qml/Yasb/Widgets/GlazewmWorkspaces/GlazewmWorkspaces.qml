@@ -1,9 +1,12 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import Yasb
+import Yasb.Bar
 
 Item {
-    id: workspaces
+    id: root
 
     property string serverUri: "ws://localhost:6123"
     property bool monitorExclusive: true
@@ -17,13 +20,13 @@ Item {
     property string focusedEmptyLabel: ""
     property bool enableScrollSwitching: true
     property bool reverseScrollDirection: false
-    property color focusedColor: workspaces.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.1)
-    property color activeColor: workspaces.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.1)
-    property color hoveredColor: workspaces.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.1)
+    property color focusedColor: root.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.1)
+    property color activeColor: root.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.1)
+    property color hoveredColor: root.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.1)
     property int spacing: 2
-    property Item bar: null
+    property BarBase bar: null
 
-    property QtObject appIcons: QtObject {
+    component AppIcons: QtObject {
         property bool enabledPopulated: false
         property bool enabledActive: false
         property var enabledFocused: null
@@ -34,8 +37,10 @@ Item {
         property bool hideFloating: false
     }
 
+    property AppIcons appIcons: AppIcons {}
+
     readonly property QtObject model: workspaceModel
-    readonly property bool dark: Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
+    readonly property bool dark: Application.styleHints.colorScheme === Qt.ColorScheme.Dark
     readonly property color textColor: bar ? bar.textColor : dark ? "white" : "black"
     readonly property bool vertical: bar?.vertical ?? false
     readonly property bool shown: workspaceModel.connected || (!hideIfOffline && offlineLabel !== "")
@@ -66,16 +71,16 @@ Item {
     GlazewmWorkspacesModel {
         id: workspaceModel
 
-        serverUri: workspaces.serverUri
-        screenName: workspaces.bar?.screenName ?? ""
-        monitorExclusive: workspaces.monitorExclusive
+        serverUri: root.serverUri
+        screenName: root.bar?.screenName ?? ""
+        monitorExclusive: root.monitorExclusive
         appIcons: ({
-            enabledPopulated: workspaces.appIcons.enabledPopulated,
-            enabledActive: workspaces.appIcons.enabledActive,
-            enabledFocused: workspaces.appIcons.enabledFocused,
-            maxIcons: workspaces.appIcons.maxIcons,
-            hideDuplicates: workspaces.appIcons.hideDuplicates,
-            hideFloating: workspaces.appIcons.hideFloating
+            enabledPopulated: root.appIcons.enabledPopulated,
+            enabledActive: root.appIcons.enabledActive,
+            enabledFocused: root.appIcons.enabledFocused,
+            maxIcons: root.appIcons.maxIcons,
+            hideDuplicates: root.appIcons.hideDuplicates,
+            hideFloating: root.appIcons.hideFloating
         })
     }
 
@@ -84,20 +89,20 @@ Item {
 
         objectName: "offline"
         anchors.verticalCenter: parent.verticalCenter
-        visible: !workspaceModel.connected && workspaces.shown
-        text: workspaces.offlineLabel
+        visible: !workspaceModel.connected && root.shown
+        text: root.offlineLabel
         textFormat: Text.PlainText
-        color: workspaces.textColor
-        font.family: workspaces.bar ? workspaces.bar.font.family : Qt.application.font.family
-        font.pixelSize: workspaces.bar ? workspaces.bar.font.pixelSize : 13
+        color: root.textColor
+        font.family: root.bar ? root.bar.font.family : Application.font.family
+        font.pixelSize: root.bar ? root.bar.font.pixelSize : 13
     }
 
     Flow {
         id: buttons
 
         anchors.verticalCenter: parent.verticalCenter
-        flow: workspaces.vertical ? Flow.TopToBottom : Flow.LeftToRight
-        spacing: workspaces.spacing
+        flow: root.vertical ? Flow.TopToBottom : Flow.LeftToRight
+        spacing: root.spacing
         visible: workspaceModel.connected
 
         Repeater {
@@ -110,26 +115,26 @@ Item {
                 readonly property string status: modelData.status
                 readonly property bool populated: modelData.windowCount > 0
                 readonly property bool focused: modelData.focused
-                readonly property bool active: workspaces.monitorExclusive && modelData.displayed
+                readonly property bool active: root.monitorExclusive && modelData.displayed
 
                 objectName: "workspace-" + modelData.name
                 leftPadding: 4
                 rightPadding: 4
                 topPadding: 4
                 bottomPadding: 4
-                Accessible.name: workspaces.label(modelData)
+                Accessible.name: root.label(modelData)
 
                 background: Rectangle {
                     radius: 4
                     color: {
                         if (button.focused) {
-                            return focusedColor;
+                            return root.focusedColor;
                         }
                         if (button.active) {
-                            return activeColor;
+                            return root.activeColor;
                         }
                         if (button.hovered) {
-                            return hoveredColor;
+                            return root.hoveredColor;
                         }
                         return "transparent";
                     }
@@ -140,7 +145,7 @@ Item {
                     hoverEnabled: true
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: workspaceModel.activateWorkspace(modelData.name)
+                    onClicked: workspaceModel.activateWorkspace(button.modelData.name)
                 }
 
                 contentItem: Row {
@@ -149,13 +154,13 @@ Item {
                     Text {
                         objectName: "label"
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: !workspaces.appIcons.hideLabel || button.modelData.icons.length === 0
-                        text: workspaces.label(button.modelData)
+                        visible: !root.appIcons.hideLabel || button.modelData.icons.length === 0
+                        text: root.label(button.modelData)
                         textFormat: Text.PlainText
-                        color: workspaces.textColor
+                        color: root.textColor
                         opacity: button.populated || button.focused || button.active ? 1 : 0.5
-                        font.family: workspaces.bar ? workspaces.bar.font.family : Qt.application.font.family
-                        font.pixelSize: workspaces.bar ? workspaces.bar.font.pixelSize : 13
+                        font.family: root.bar ? root.bar.font.family : Application.font.family
+                        font.pixelSize: root.bar ? root.bar.font.pixelSize : 13
                     }
 
                     Repeater {
@@ -166,7 +171,7 @@ Item {
 
                             objectName: "app-icon"
                             anchors.verticalCenter: parent.verticalCenter
-                            width: Math.max(1, workspaces.appIcons.size)
+                            width: Math.max(1, root.appIcons.size)
                             height: width
                             sourceSize: Qt.size(width, height)
                             source: modelData.source
@@ -178,11 +183,11 @@ Item {
     }
 
     WheelHandler {
-        enabled: workspaces.enableScrollSwitching && workspaceModel.connected
+        enabled: root.enableScrollSwitching && workspaceModel.connected
         onWheel: event => {
             const delta = event.angleDelta.y || event.angleDelta.x
             if (delta !== 0) {
-                workspaces.scroll(delta)
+                root.scroll(delta)
                 event.accepted = true
             }
         }

@@ -1,5 +1,6 @@
 import QtQuick
 import Yasb
+import Yasb.Bar
 
 Item {
     id: battery
@@ -35,15 +36,15 @@ Item {
     property color chargingColor: textColor
     property color blinkingColor: Qt.alpha("#119909", 0.8)
 
-    property Item bar: null
+    property BarBase bar: null
 
     property bool showAlternate: false
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
+    readonly property bool dark: bar ? bar.dark : Application.styleHints.colorScheme === Qt.ColorScheme.Dark
 
     property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
+    font.family: bar?.font.family ?? Application.font.family
     font.pixelSize: bar?.font.pixelSize ?? 13
     font.weight: bar?.font.weight ?? Font.Normal
     font.italic: bar?.font.italic ?? false
