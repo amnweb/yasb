@@ -477,18 +477,10 @@ Item {
                     }
                 }
 
-                ProgressBar {
+                LoadingLine {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 1
-                    indeterminate: true
-                    visible: search.loading
-                }
-
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 1
-                    visible: !search.loading
-                    color: launcher.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.08)
+                    running: search.loading
+                    trackColor: launcher.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.08)
                 }
 
                 RowLayout {

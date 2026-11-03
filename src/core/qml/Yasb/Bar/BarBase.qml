@@ -1,10 +1,11 @@
 import QtQuick
 import QtQuick.Controls
+import Yasb
 
 Item {
     id: base
 
-    required property var context
+    required property BarContext context
 
     readonly property bool dark: Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
     readonly property string name: context.name

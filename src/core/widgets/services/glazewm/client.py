@@ -72,18 +72,20 @@ class GlazewmClient(QObject):
         uri: str,
         initial_messages: list[str] | None = None,
         reconnect_interval: int = 4000,
+        parent: QObject | None = None,
     ):
-        super().__init__()
+        super().__init__(parent)
         self.initial_messages = initial_messages if initial_messages else []
 
         self._uri = QUrl(uri)
-        self._websocket = QWebSocket()
+        self._closed = False
+        self._websocket = QWebSocket(parent=self)
         self._websocket.connected.connect(self._on_connected)  # type: ignore
         self._websocket.textMessageReceived.connect(self._handle_message)  # type: ignore
         self._websocket.stateChanged.connect(self._on_state_changed)  # type: ignore
         self._websocket.errorOccurred.connect(self._on_error)  # type: ignore
 
-        self._reconnect_timer = QTimer()
+        self._reconnect_timer = QTimer(self)
         self._reconnect_timer.setInterval(reconnect_interval)
         self._reconnect_timer.timeout.connect(self.connect)  # type: ignore
 
@@ -112,10 +114,16 @@ class GlazewmClient(QObject):
         self._websocket.sendTextMessage("command focus --prev-active-workspace")
 
     def connect(self):
-        if self._websocket.state() == QAbstractSocket.SocketState.ConnectedState:
+        if self._websocket.state() != QAbstractSocket.SocketState.UnconnectedState:
             return
+        self._closed = False
         logger.debug("Connecting to %s", self._uri.toString())
         self._websocket.open(self._uri)
+
+    def close(self) -> None:
+        self._closed = True
+        self._reconnect_timer.stop()
+        self._websocket.abort()
 
     def _on_connected(self) -> None:
         logger.debug("Connected to %s", self._uri.toString())
@@ -129,10 +137,13 @@ class GlazewmClient(QObject):
     def _on_state_changed(self, state: QAbstractSocket.SocketState):
         logger.debug("WebSocket state changed: %s", state)
         self.glazewm_connection_status.emit(state == QAbstractSocket.SocketState.ConnectedState)
+        if state == QAbstractSocket.SocketState.UnconnectedState and not self._closed:
+            self._reconnect_timer.start()
 
     def _on_error(self, error: QAbstractSocket.SocketError) -> None:
-        logger.warning("WebSocket error: %s. Reconnecting...", error)
-        self._reconnect_timer.start()
+        if not self._closed:
+            logger.debug("WebSocket error: %s. Reconnecting...", error)
+            self._reconnect_timer.start()
 
     def _handle_message(self, message: str):
         try:
@@ -141,11 +152,19 @@ class GlazewmClient(QObject):
             logger.warning("Received invalid JSON data.")
             return
 
+        if not isinstance(response, dict):
+            logger.warning("Expected a JSON object from GlazeWM")
+            return
+        response = cast(dict[str, Any], response)
+
         if response.get("messageType") == MessageType.EVENT_SUBSCRIPTION:
             for message in self.initial_messages:
                 if message in QueryType:
                     self._websocket.sendTextMessage(message)
         elif response.get("messageType") == MessageType.CLIENT_RESPONSE:
+            if response.get("success") is False:
+                logger.warning("GlazeWM request failed: %s", response.get("error"))
+                return
             raw_data: Any = response.get("data")
             if not isinstance(raw_data, dict):
                 logger.warning("Expected 'data' to be a dict, got %s", type(raw_data).__name__)
@@ -153,10 +172,10 @@ class GlazewmClient(QObject):
             data = cast(dict[str, Any], raw_data)
             if response.get("clientMessage") == QueryType.MONITORS:
                 monitors = data.get("monitors", [])
-                if monitors is None:
-                    logger.warning("Expected 'monitors' to be a list, got None")
+                if not isinstance(monitors, list):
+                    logger.warning("Expected 'monitors' to be a list")
                     return
-                self.workspaces_data_processed.emit(self._process_workspaces(monitors))
+                self.workspaces_data_processed.emit(self._process_workspaces(cast(list[dict[str, Any]], monitors)))
             elif response.get("clientMessage") == QueryType.TILING_DIRECTION:
                 tiling_direction = TilingDirection(data.get("tilingDirection", TilingDirection.HORIZONTAL))
                 self.tiling_direction_processed.emit(tiling_direction)
@@ -177,18 +196,21 @@ class GlazewmClient(QObject):
                 continue
             if not monitor_name:
                 monitor_name = f"Unknown_{handle}"
-            workspaces_data = [
-                Workspace(
-                    name=child.get("name", ""),
-                    display_name=child.get("displayName", ""),
-                    is_displayed=child.get("isDisplayed", False),
-                    focus=child.get("hasFocus", False),
-                    num_windows=len(child.get("children", [])),
-                    windows=self._read_windows(child),
+            workspaces_data: list[Workspace] = []
+            for child in mon.get("children", []):
+                if child.get("type") != "workspace":
+                    continue
+                windows = self._read_windows(child)
+                workspaces_data.append(
+                    Workspace(
+                        name=child.get("name", ""),
+                        display_name=child.get("displayName", ""),
+                        is_displayed=child.get("isDisplayed", False),
+                        focus=child.get("hasFocus", False),
+                        num_windows=len(windows),
+                        windows=windows,
+                    )
                 )
-                for child in mon.get("children", [])
-                if child.get("type") == "workspace"
-            ]
             monitors.append(
                 Monitor(
                     name=monitor_name,
@@ -211,6 +233,7 @@ class GlazewmClient(QObject):
         windows: list[Window] = []
         for child in parent.get("children", []):
             if child.get("type") == "window":
+                state: dict[str, Any] = child.get("state") or {}
                 windows.append(
                     Window(
                         id=child.get("id"),
@@ -219,7 +242,7 @@ class GlazewmClient(QObject):
                         class_name=child.get("className"),
                         process_name=child.get("processName"),
                         display_state=child.get("displayState"),
-                        is_floating=child.get("state").get("type") == "floating",
+                        is_floating=state.get("type") == "floating",
                     )
                 )
             elif child.get("type") == "split":

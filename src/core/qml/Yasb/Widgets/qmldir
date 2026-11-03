@@ -2,6 +2,7 @@ module Yasb.Widgets
 
 ActiveWindow 1.0 ActiveWindow/ActiveWindow.qml
 AudioVisualizer 1.0 AudioVisualizer/AudioVisualizer.qml
+Battery 1.0 Battery/Battery.qml
 Clock 1.0 Clock/Clock.qml
 Cpu 1.0 Cpu/Cpu.qml
 Gpu 1.0 Gpu/Gpu.qml
@@ -10,6 +11,9 @@ Media 1.0 Media/Media.qml
 Notifications 1.0 Notifications/Notifications.qml
 PowerMenu 1.0 PowerMenu/PowerMenu.qml
 Github 1.0 Github/Github.qml
+GlazewmWorkspaces 1.0 GlazewmWorkspaces/GlazewmWorkspaces.qml
 QuickLaunch 1.0 QuickLaunch/QuickLaunch.qml
+Systray 1.0 Systray/Systray.qml
 Volume 1.0 Volume/Volume.qml
 WindowsDesktops 1.0 WindowsDesktops/WindowsDesktops.qml
+Wifi 1.0 Wifi/Wifi.qml

@@ -42,6 +42,7 @@ class AppBarManager(QAbstractNativeEventFilter):
     _intended_visible: dict[int, bool]
     _installed: bool
     _reregister_pending: bool
+    _suppressed: bool
 
     def __new__(cls):
         if cls._instance is None:
@@ -50,6 +51,7 @@ class AppBarManager(QAbstractNativeEventFilter):
             instance._intended_visible = {}
             instance._installed = False
             instance._reregister_pending = False
+            instance._suppressed = False
             cls._instance = instance
         return cls._instance
 
@@ -71,6 +73,13 @@ class AppBarManager(QAbstractNativeEventFilter):
         self._bars.pop(hwnd, None)
         self._intended_visible.pop(hwnd, None)
 
+    def suppress(self) -> None:
+        """Ignore YASB's TaskbarCreated broadcast until unsuppress()."""
+        self._suppressed = True
+
+    def unsuppress(self) -> None:
+        self._suppressed = False
+
     @override
     def nativeEventFilter(self, eventType: Any, message: sip.voidptr | None) -> tuple[bool, sip.voidptr]:
         try:
@@ -78,7 +87,7 @@ class AppBarManager(QAbstractNativeEventFilter):
                 msg = ctypes.cast(int(message), ctypes.POINTER(MSG)).contents
                 if msg.message == WM_TASKBARCREATED:
                     # Broadcast to every top-level window, so many arrive at once; re-register once
-                    if not self._reregister_pending and self._bars:
+                    if not self._reregister_pending and not self._suppressed and self._bars:
                         self._reregister_pending = True
                         QTimer.singleShot(0, self._reregister)
                 elif msg.message == APPBAR_CALLBACK_MESSAGE and msg.wParam == AppBarNotify.FullScreenApp:
