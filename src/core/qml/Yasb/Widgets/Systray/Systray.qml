@@ -159,6 +159,8 @@ Item {
         const iconId = parseInt(drop.getDataAsString(mimeType))
         tray.moveIcon(iconId, pinned, dropIndex(repeater, area, drop.x, drop.y, inColumns))
         drop.accept(Qt.MoveAction)
+        // Moving to the other list destroys the dragged delegate before its Drag.onDragFinished runs
+        dragging = false
     }
 
     implicitWidth: layout.implicitWidth
