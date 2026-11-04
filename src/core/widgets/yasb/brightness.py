@@ -121,9 +121,16 @@ class BrightnessWidget(BaseWidget):
     def set_brightness(self, value: int):
         """Set brightness."""
         if self._hmonitor:
-            self._service.set_brightness(self._hmonitor, value)
+            self._write_brightness(self._hmonitor, value)
             self.current_brightness = value
             self._update_label()
+
+    def _write_brightness(self, hmonitor: int, value: int):
+        if self.config.link_monitors:
+            for linked_hmonitor, _ in self._service.get_monitors():
+                self._service.set_brightness(linked_hmonitor, value)
+        else:
+            self._service.set_brightness(hmonitor, value)
 
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
@@ -370,7 +377,7 @@ class BrightnessWidget(BaseWidget):
         slider_type = self._slider_types.get(key)
         hmonitor = int(key.split("_", 1)[1])
         if slider_type == "brightness":
-            self._service.set_brightness(hmonitor, value)
+            self._write_brightness(hmonitor, value)
             if hmonitor == self._hmonitor:
                 self.current_brightness = value
                 self._update_label()
