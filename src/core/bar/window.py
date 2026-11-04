@@ -23,14 +23,14 @@ from PyQt6.QtGui import QCloseEvent, QColor, QMouseEvent, QRegion, QScreen
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtQuick import QQuickItem, QQuickWindow
 
+from core.app.controller import exit_application, reload_application
+from core.app.windows.alert_dialog import show_alert
 from core.bar.animation import BarAnimationManager
 from core.bar.appbar import AppBarManager
 from core.bar.autohide import AutoHideManager, MaximizedWindowWatcher
 from core.bar.geometry import bar_geometry, bar_length
 from core.bar.revisions import Revisions, path_key
 from core.events.service import EventService
-from core.utils.alert_dialog import show_alert
-from core.utils.controller import exit_application, reload_application
 from core.utils.qml import qml_property
 from core.utils.win32 import app_bar
 from core.utils.win32.bindings.user32 import MonitorFromWindow

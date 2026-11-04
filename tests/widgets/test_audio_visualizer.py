@@ -11,10 +11,10 @@ from PyQt6.QtQuick import QQuickItem, QQuickWindow
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.audio_visualizer import levels as levels_module
+from core.services.audio_visualizer.levels import AudioLevels
+from core.services.audio_visualizer.spectrum import FFT_SIZE, SpectrumSource
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.audio_visualizer import levels as levels_module
-from core.widgets.services.audio_visualizer.levels import AudioLevels
-from core.widgets.services.audio_visualizer.spectrum import FFT_SIZE, SpectrumSource
 from settings import QML_IMPORT_PATH
 from tests.support.qt import wait
 

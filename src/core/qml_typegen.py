@@ -15,7 +15,7 @@ from typing import cast
 
 from PyQt6.QtCore import QByteArray, QMetaMethod, QMetaObject, QMetaProperty, QObject
 
-from core.qml_types import QML_TYPES, QML_UNCREATABLE_TYPES, QML_URI, QML_VERSION
+from core.qml_types import QML_SINGLETONS, QML_TYPES, QML_UNCREATABLE_TYPES, QML_URI, QML_VERSION
 
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "qmltypes"
 DEPENDENCIES = ("QtQml 2.0",)
@@ -212,13 +212,16 @@ def _source_file(cls: type[QObject]) -> str | None:
 
 
 def render_qmltypes(
-    types: Iterable[type[QObject]] = QML_TYPES, uncreatable: Iterable[type[QObject]] = QML_UNCREATABLE_TYPES
+    types: Iterable[type[QObject]] = QML_TYPES,
+    uncreatable: Iterable[type[QObject]] = QML_UNCREATABLE_TYPES,
+    singletons: Iterable[type[QObject]] = QML_SINGLETONS,
 ) -> str:
     """Return a deterministic plugins.qmltypes document for the exported types."""
     creatable = set(types)
-    exported = creatable | set(uncreatable)
-    if len(exported) != len(creatable) + len(set(uncreatable)):
-        raise GenerationError("a class cannot be both creatable and uncreatable")
+    single = set(singletons)
+    exported = creatable | set(uncreatable) | single
+    if len(exported) != len(creatable) + len(set(uncreatable)) + len(single):
+        raise GenerationError("a class can be only one of creatable, uncreatable and singleton")
     classes: dict[str, type[QObject]] = {}
     for exported_cls in exported:
         for cls in _python_bases(exported_cls):
@@ -254,6 +257,7 @@ def render_qmltypes(
             writer.field("exports", [f"{QML_URI}/{cls.__name__} {major}.{minor}"])
             writer.field("exportMetaObjectRevisions", [(major << 8) | minor])
         writer.field("isCreatable", cls in creatable)
+        writer.flag("isSingleton", cls in single)
         for index in range(meta.classInfoOffset(), meta.classInfoCount()):
             info = meta.classInfo(index)
             info_name = info.name()
@@ -280,11 +284,12 @@ def module_files(
     output_dir: Path,
     types: Iterable[type[QObject]] = QML_TYPES,
     uncreatable: Iterable[type[QObject]] = QML_UNCREATABLE_TYPES,
+    singletons: Iterable[type[QObject]] = QML_SINGLETONS,
 ) -> dict[Path, str]:
     directory = output_dir.joinpath(*QML_URI.split("."))
     qmldir = [f"module {QML_URI}", "typeinfo plugins.qmltypes", *(f"depends {dep}" for dep in DEPENDENCIES)]
     return {
-        directory / "plugins.qmltypes": render_qmltypes(types, uncreatable),
+        directory / "plugins.qmltypes": render_qmltypes(types, uncreatable, singletons),
         directory / "qmldir": "\n".join(qmldir) + "\n",
     }
 

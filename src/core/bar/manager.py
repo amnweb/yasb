@@ -7,12 +7,12 @@ from PyQt6.QtGui import QGuiApplication, QScreen
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 
 from core import widget_files
+from core.app.controller import reload_application
+from core.app.windows.alert_dialog import show_alert
 from core.bar.hotkeys import WidgetHotkeys
 from core.bar.revisions import Revisions, path_key
 from core.bar.window import BAR_QML, BarWindow
 from core.config import get_config
-from core.utils.alert_dialog import show_alert
-from core.utils.controller import reload_application
 from core.validation.config import YasbConfig
 
 QML_RELOAD_DELAY_MS = 200

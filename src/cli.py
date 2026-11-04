@@ -817,8 +817,8 @@ class CLIChannelHandler:
         """
         import tempfile
 
+        from core.app.update.service import get_update_service
         from core.utils.system import get_architecture
-        from core.utils.update_service import get_update_service
 
         update_service = get_update_service()
         current_channel = update_service.current_channel
@@ -925,8 +925,8 @@ class CLIUpdateHandler:
         """Check for updates and install if available using centralized update service."""
         import tempfile
 
+        from core.app.update.service import get_update_service
         from core.utils.system import get_architecture
-        from core.utils.update_service import get_update_service
 
         architecture = get_architecture()
         update_service = get_update_service()

@@ -11,9 +11,9 @@ from PyQt6.QtWidgets import QApplication
 
 from core.bar.backdrop import Backdrop
 from core.qml_types import register_qml_types
+from core.services.power_menu import session as session_module
+from core.services.power_menu.session import PowerSession
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.power_menu import session as session_module
-from core.widgets.services.power_menu.session import PowerSession
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 

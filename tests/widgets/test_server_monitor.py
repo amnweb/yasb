@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from core.widgets.services.server_monitor.worker import ServerCheckWorker, _build_url, _cert_not_after
+from core.services.server_monitor.worker import ServerCheckWorker, _build_url, _cert_not_after
 
 CERT_UTC_TIME = """-----BEGIN CERTIFICATE-----
 MIIBfDCCASOgAwIBAgIUMjrADyaY5iIAU7ePKJABQXd2RKgwCgYIKoZIzj0EAwIw

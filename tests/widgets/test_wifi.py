@@ -9,11 +9,11 @@ from PyQt6.QtWidgets import QApplication
 from winrt.windows.devices.wifi import WiFiConnectionStatus
 
 from core.qml_types import register_qml_types
+from core.services.wifi import monitor as monitor_module
+from core.services.wifi.monitor import NetworkList, WifiMonitor, network_row, sort_networks
+from core.services.wifi.wlan import Network, ScanStatus
 from core.utils.win32.constants import WlanNotificationAcm
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.wifi import monitor as monitor_module
-from core.widgets.services.wifi.monitor import NetworkList, WifiMonitor, network_row, sort_networks
-from core.widgets.services.wifi.wlan import Network, ScanStatus
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 

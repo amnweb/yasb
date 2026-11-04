@@ -8,10 +8,10 @@ from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.dnd import status as status_module
+from core.services.dnd.dnd_api import DndService
+from core.services.dnd.status import DoNotDisturb
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.dnd import status as status_module
-from core.widgets.services.dnd.dnd_api import DndService
-from core.widgets.services.dnd.status import DoNotDisturb
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 

@@ -10,10 +10,10 @@ from PyQt6.QtWidgets import QApplication
 from core.events.service import EventService
 from core.events.win32 import WinEvent
 from core.qml_types import register_qml_types
+from core.services.active_window import tracker as tracker_module
+from core.services.active_window.tracker import ActiveWindowTracker
 from core.utils.win32 import event_listener
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.active_window import tracker as tracker_module
-from core.widgets.services.active_window.tracker import ActiveWindowTracker
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 

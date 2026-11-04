@@ -16,14 +16,14 @@ from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.systray import model as model_module
+from core.services.systray import systray as systray_module
+from core.services.systray.model import IconList, SystrayModel
+from core.services.systray.systray import TrayIcon, merge_icon_data
+from core.services.systray.systray_monitor import IconData
 from core.utils.win32.constants import NIF_STATE, NIF_TIP, NIM_MODIFY, NIM_SETVERSION, NIS_HIDDEN, NIS_SHAREDICON
 from core.utils.win32.undocumented import TRAY_VOLUME_ICON_GUID
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.systray import model as model_module
-from core.widgets.services.systray import systray as systray_module
-from core.widgets.services.systray.model import IconList, SystrayModel
-from core.widgets.services.systray.systray import TrayIcon, merge_icon_data
-from core.widgets.services.systray.systray_monitor import IconData
 from settings import QML_IMPORT_PATH
 from tests.support.qt import wait
 

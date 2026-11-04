@@ -16,12 +16,12 @@ from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.media import media as media_module
+from core.services.media.art import MEDIA_ART_PROVIDER, MediaArtProvider, art_url, keep_art
+from core.services.media.media import MediaInfo, MediaService, _Playback, _Timeline
+from core.services.media.now_playing import NowPlaying
+from core.services.volume import output as output_module
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.media import media as media_module
-from core.widgets.services.media.art import MEDIA_ART_PROVIDER, MediaArtProvider, art_url, keep_art
-from core.widgets.services.media.media import MediaInfo, MediaService, _Playback, _Timeline
-from core.widgets.services.media.now_playing import NowPlaying
-from core.widgets.services.volume import output as output_module
 from settings import QML_IMPORT_PATH
 from tests.support.audio import FakeAudioService
 from tests.support.qt import wait

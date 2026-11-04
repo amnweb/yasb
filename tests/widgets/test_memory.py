@@ -5,10 +5,10 @@ from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.memory import monitor as monitor_module
+from core.services.memory.memory_api import MemoryData, SwapMemory, VirtualMemory
+from core.services.memory.monitor import MemoryMonitor
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.memory import monitor as monitor_module
-from core.widgets.services.memory.memory_api import MemoryData, SwapMemory, VirtualMemory
-from core.widgets.services.memory.monitor import MemoryMonitor
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 

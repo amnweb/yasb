@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import NamedTuple
 
-from core.utils.alert_dialog import show_alert
+from core.app.windows.alert_dialog import show_alert
 from core.validation.bar import BarConfig
 from core.validation.config import YasbConfig
 from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, SCRIPT_PATH

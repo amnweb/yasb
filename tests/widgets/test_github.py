@@ -8,18 +8,21 @@ from typing import Any
 
 import pytest
 from PyQt6.QtCore import QCoreApplication, QEvent, QMetaObject, QThread, QUrl
-from PyQt6.QtQml import QQmlComponent, QQmlEngine, QQmlError
+from PyQt6.QtQml import QQmlComponent, QQmlEngine, QQmlError, QQmlProperty
 from PyQt6.QtQuick import QQuickItem, QQuickWindow
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.github import auth
+from core.services.github.api import GitHubDataManager
+from core.services.github.notifications import GitHubNotifications, notification_details, notification_status
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.github import auth
-from core.widgets.services.github.api import GitHubDataManager
-from core.widgets.services.github.notifications import GitHubNotifications, notification_details, notification_status
 from settings import QML_IMPORT_PATH
 from tests.support.qt import wait
+
+# The token the widget is set to in most tests
+TOKEN = "configured-token"
 
 SAMPLE: list[dict[str, Any]] = [
     {
@@ -93,7 +96,6 @@ class GitHub:
 
 @pytest.fixture
 def github(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> GitHub:
-    monkeypatch.setenv("YASB_GITHUB_TOKEN", "env-token")
     monkeypatch.setattr(auth, "get_saved_token", lambda: "")
     return GitHub(monkeypatch)
 
@@ -101,6 +103,7 @@ def github(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> GitHub:
 @pytest.fixture
 def service(github: GitHub) -> Iterator[GitHubNotifications]:
     service = GitHubNotifications()
+    service.setProperty("token", TOKEN)
     yield service
     service.deleteLater()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
@@ -152,6 +155,7 @@ def test_optional_comment_count_is_only_shown_when_valid(count: Any, suffix: str
 def test_notifications_arrive_on_the_gui_thread(github: GitHub, qapp: QApplication):
     threads: list[QThread | None] = []
     service = GitHubNotifications()
+    service.setProperty("token", TOKEN)
     service.dataChanged.connect(lambda: threads.append(QThread.currentThread()))
     until(settled(service))
     assert [item["id"] for item in service.property("notifications")] == ["1", "2"]
@@ -206,7 +210,6 @@ def test_a_rejected_configured_token_asks_to_update_it(github: GitHub, service: 
 
 
 def test_a_rejected_sign_in_asks_to_sign_in_again(github: GitHub, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.delenv("YASB_GITHUB_TOKEN")
     monkeypatch.setattr(auth, "get_saved_token", lambda: "saved-token")
     github.fetch = rejected
     service = GitHubNotifications()
@@ -215,8 +218,7 @@ def test_a_rejected_sign_in_asks_to_sign_in_again(github: GitHub, monkeypatch: p
     service.deleteLater()
 
 
-def test_no_token_asks_to_sign_in_without_fetching(github: GitHub, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.delenv("YASB_GITHUB_TOKEN")
+def test_no_token_asks_to_sign_in_without_fetching(github: GitHub):
     service = GitHubNotifications()
     until(lambda: service._request)
     assert service.property("needsSignIn") and not service.property("loading") and github.tokens == []
@@ -224,16 +226,16 @@ def test_no_token_asks_to_sign_in_without_fetching(github: GitHub, monkeypatch: 
 
 
 @pytest.mark.parametrize(
-    ("setting", "environment", "expected"),
+    ("setting", "expected"),
     [
-        ("", "env-token", "env-token"),
-        ("env", "env-token", "env-token"),
-        ("", "", "saved-token"),
-        ("config-token", "env-token", "config-token"),
+        ("", "saved-token"),
+        ("  ", "saved-token"),
+        ("config-token", "config-token"),
     ],
 )
-def test_token_priority(github: GitHub, monkeypatch: pytest.MonkeyPatch, setting: str, environment: str, expected: str):
-    monkeypatch.setenv("YASB_GITHUB_TOKEN", environment)
+def test_a_set_token_comes_before_the_sign_in(
+    github: GitHub, monkeypatch: pytest.MonkeyPatch, setting: str, expected: str
+):
     monkeypatch.setattr(auth, "get_saved_token", lambda: "saved-token")
     service = GitHubNotifications()
     service.setProperty("token", setting)
@@ -247,7 +249,7 @@ def test_marking_read_updates_the_filtered_view(github: GitHub, service: GitHubN
     until(settled(service))
     service.markRead("1")
     assert [item["id"] for item in service.property("notifications")] == ["2"]
-    assert service.property("unreadCount") == 1 and github.read == [("1", "env-token")]
+    assert service.property("unreadCount") == 1 and github.read == [("1", TOKEN)]
     service.setProperty("onlyUnread", False)
     assert [item["unread"] for item in service.property("notifications")] == [False, True]
 
@@ -255,7 +257,7 @@ def test_marking_read_updates_the_filtered_view(github: GitHub, service: GitHubN
 def test_mark_all_read_marks_everything_without_filters(github: GitHub, service: GitHubNotifications):
     until(settled(service))
     service.markAllRead()
-    assert service.property("unreadCount") == 0 and github.all_read == ["env-token"] and github.read == []
+    assert service.property("unreadCount") == 0 and github.all_read == [TOKEN] and github.read == []
 
 
 def test_mark_all_read_with_reason_filters_leaves_hidden_notifications_unread(
@@ -264,7 +266,7 @@ def test_mark_all_read_with_reason_filters_leaves_hidden_notifications_unread(
     service.setProperty("reasonFilters", ["mention"])
     until(settled(service))
     service.markAllRead()
-    assert github.all_read == [] and github.read == [("2", "env-token")]
+    assert github.all_read == [] and github.read == [("2", TOKEN)]
     service.setProperty("reasonFilters", [])
     assert [item["unread"] for item in service.property("notifications")] == [True, False]
 
@@ -299,7 +301,6 @@ def test_a_sign_in_saves_the_token_on_the_gui_thread_and_fetches(
     github: GitHub, monkeypatch: pytest.MonkeyPatch, qapp: QApplication
 ):
     saved: list[tuple[str, QThread | None]] = []
-    monkeypatch.delenv("YASB_GITHUB_TOKEN")
     monkeypatch.setattr(auth, "request_device_code", device_code)
 
     def poll(*args: Any, **_kwargs: Any) -> None:
@@ -333,6 +334,7 @@ def test_qml_widget_shows_every_state_without_warnings(github: GitHub, monkeypat
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Github" / "Github.qml")))
     widget = component.create()
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+    QQmlProperty.write(widget, "token", TOKEN)
     host = QQuickWindow()
     try:
         widget.setParentItem(host.contentItem())
@@ -348,7 +350,8 @@ def test_qml_widget_shows_every_state_without_warnings(github: GitHub, monkeypat
         github.fetch = rejected
         service.refresh()
         until(settled(service))
-        monkeypatch.delenv("YASB_GITHUB_TOKEN")
+        # Without the token the popup's sign-in is used, of which there is none
+        QQmlProperty.write(widget, "token", "")
         service.refresh()
         wait(50)
         assert service.property("needsSignIn")

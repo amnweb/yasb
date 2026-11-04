@@ -13,10 +13,10 @@ from PyQt6.QtGui import QImage
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtWidgets import QApplication
 
-from core import about as about_module
-from core.about import About
-from core.updater import Updater, changelog_html, download_installer, fit_images
-from core.utils.update_service import ReleaseInfo
+from core.app.update.installer import Updater, changelog_html, download_installer, fit_images
+from core.app.update.service import ReleaseInfo
+from core.app.windows import about as about_module
+from core.app.windows.about import About
 from settings import QML_IMPORT_PATH
 from tests.support.qt import wait
 

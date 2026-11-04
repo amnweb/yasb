@@ -5,7 +5,7 @@ import pytest
 from PyQt6.QtCore import QObject, pyqtEnum, pyqtProperty, pyqtSignal, pyqtSlot
 
 from core.qml_typegen import GenerationError, main, module_files, render_qmltypes
-from core.qml_types import QML_TYPES, QML_UNCREATABLE_TYPES
+from core.qml_types import QML_SINGLETONS, QML_TYPES, QML_UNCREATABLE_TYPES
 
 
 class HiddenBase(QObject):
@@ -47,7 +47,7 @@ class OpaqueFixture(QObject):
 
 def test_every_registered_type_is_exported():
     content = render_qmltypes()
-    for cls in (*QML_TYPES, *QML_UNCREATABLE_TYPES):
+    for cls in (*QML_TYPES, *QML_UNCREATABLE_TYPES, *QML_SINGLETONS):
         assert f'exports: ["Yasb/{cls.__name__} 1.0"]' in content
 
 
@@ -136,5 +136,13 @@ def test_uncreatable_types_are_exported_but_not_creatable():
 
 
 def test_a_class_cannot_be_both_creatable_and_uncreatable():
-    with pytest.raises(GenerationError, match="both creatable and uncreatable"):
+    with pytest.raises(GenerationError, match="only one of creatable, uncreatable and singleton"):
         render_qmltypes([Handed], [Handed])
+
+
+def test_singletons_are_exported_as_singletons():
+    content = render_qmltypes([Owner], [], [Handed])
+    handed = content[content.index('name: "Handed"') : content.index('name: "Owner"')]
+    assert 'exports: ["Yasb/Handed 1.0"]' in handed
+    assert "isCreatable: false" in handed and "isSingleton: true" in handed
+    assert "isSingleton" not in content[content.index('name: "Owner"') :]

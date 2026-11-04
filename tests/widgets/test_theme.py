@@ -3,8 +3,8 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QApplication
 
-from core.widgets.services.theme import mode as mode_module
-from core.widgets.services.theme.mode import WindowsTheme
+from core.services.theme import mode as mode_module
+from core.services.theme.mode import WindowsTheme
 
 
 class Windows:

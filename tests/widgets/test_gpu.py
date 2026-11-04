@@ -5,10 +5,10 @@ from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.gpu import monitor as monitor_module
+from core.services.gpu.gpu_api import GpuData
+from core.services.gpu.monitor import GpuMonitor
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.gpu import monitor as monitor_module
-from core.widgets.services.gpu.gpu_api import GpuData
-from core.widgets.services.gpu.monitor import GpuMonitor
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 

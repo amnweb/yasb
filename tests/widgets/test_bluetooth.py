@@ -10,12 +10,12 @@ from PyQt6.QtQuick import QQuickItem, QQuickWindow
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.bluetooth import bluetooth_managers
+from core.services.bluetooth import monitor as monitor_module
+from core.services.bluetooth.bluetooth_managers import BluetoothManager
+from core.services.bluetooth.bluetooth_types import BluetoothStatus, DeviceInfo, DeviceType, ScanResultStatus
+from core.services.bluetooth.monitor import BluetoothMonitor, DeviceList, device_row
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.bluetooth import bluetooth_managers
-from core.widgets.services.bluetooth import monitor as monitor_module
-from core.widgets.services.bluetooth.bluetooth_managers import BluetoothManager
-from core.widgets.services.bluetooth.bluetooth_types import BluetoothStatus, DeviceInfo, DeviceType, ScanResultStatus
-from core.widgets.services.bluetooth.monitor import BluetoothMonitor, DeviceList, device_row
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 

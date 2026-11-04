@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from core.utils import alert_dialog
+from core.app.windows import alert_dialog
 from tests.support.qt import wait
 
 

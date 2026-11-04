@@ -183,7 +183,7 @@ COM_INTERFACES: dict[str, str] = {}
 # by module name prefix.
 OWN_CTYPES_MODULES: dict[str, str] = {
     "core.cloud": "YASB Cloud stays independent of the rest of YASB",
-    "core.widgets.services.windows_desktops.interfaces": "undocumented interfaces, built per Windows build",
+    "core.services.windows_desktops.interfaces": "undocumented interfaces, built per Windows build",
 }
 
 
@@ -195,12 +195,12 @@ def keeps_own_ctypes(module: str) -> bool:
 UNDOCUMENTED_INTERFACES: dict[str, str] = {
     "core.utils.win32.bindings.shell32.IQuietHoursSettings": "undocumented shell interface",
     "core.utils.win32.bindings.shell32.ITipInvocation": "undocumented shell interface",
-    "core.widgets.services.windows_desktops.interfaces.IApplicationView": "undocumented shell interface",
-    "core.widgets.services.windows_desktops.interfaces.IApplicationViewChangeListener": "undocumented shell interface",
-    "core.widgets.services.windows_desktops.interfaces.IApplicationViewCollection": "undocumented shell interface",
-    "core.widgets.services.windows_desktops.interfaces.IVirtualDesktop2": "undocumented shell interface",
-    "core.widgets.services.windows_desktops.interfaces.IVirtualDesktopNotificationService": "undocumented shell interface",
-    "core.widgets.services.windows_desktops.interfaces.IVirtualDesktopPinnedApps": "undocumented shell interface",
+    "core.services.windows_desktops.interfaces.IApplicationView": "undocumented shell interface",
+    "core.services.windows_desktops.interfaces.IApplicationViewChangeListener": "undocumented shell interface",
+    "core.services.windows_desktops.interfaces.IApplicationViewCollection": "undocumented shell interface",
+    "core.services.windows_desktops.interfaces.IVirtualDesktop2": "undocumented shell interface",
+    "core.services.windows_desktops.interfaces.IVirtualDesktopNotificationService": "undocumented shell interface",
+    "core.services.windows_desktops.interfaces.IVirtualDesktopPinnedApps": "undocumented shell interface",
 }
 
 # Python constant -> SDK name, for constants the code names differently from the headers.

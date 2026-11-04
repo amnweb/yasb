@@ -1,0 +1,850 @@
+"""WASAPI loopback capture of a render device."""
+
+import logging
+import threading
+import time
+from array import array
+from ctypes import POINTER, Array, c_ubyte, c_void_p, cast
+from ctypes.wintypes import HANDLE
+from typing import Any
+
+from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
+    CLSCTX_ALL,
+    GUID,
+    COMError,
+)
+from pycaw.api.mmdeviceapi import PROPERTYKEY, IMMDevice, IMMDeviceEnumerator
+from pycaw.callbacks import MMNotificationClient
+from pycaw.constants import DEVICE_STATE, STGM
+from pycaw.pycaw import AudioUtilities, EDataFlow, ERole, IAudioClient
+from PyQt6.QtCore import QCoreApplication, QObject, Qt, QTimer, pyqtSignal
+
+from core.services.audio_visualizer.spectrum import FFT_SIZE, SpectrumSource
+from core.utils.win32.bindings.audioclient import IAudioCaptureClient, IID_IAudioCaptureClient, IID_IAudioClient
+from core.utils.win32.bindings.kernel32 import CreateEvent, ResetEvent, SetEvent, WaitForMultipleObjects
+from core.utils.win32.bindings.ole32 import ole32
+from core.utils.win32.constants import (
+    AUDCLNT_BUFFERFLAGS_SILENT,
+    AUDCLNT_SHAREMODE_SHARED,
+    AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+    AUDCLNT_STREAMFLAGS_LOOPBACK,
+    COINIT_MULTITHREADED,
+    INFINITE,
+    KSDATAFORMAT_SUBTYPE_IEEE_FLOAT,
+    KSDATAFORMAT_SUBTYPE_PCM,
+    RPC_E_CHANGED_MODE,
+    WAIT_OBJECT_0,
+    WAIT_TIMEOUT,
+    WAVE_FORMAT_EXTENSIBLE,
+    WAVE_FORMAT_IEEE_FLOAT,
+    WAVE_FORMAT_PCM,
+)
+from core.utils.win32.structs import WAVEFORMATEX, WAVEFORMATEXTENSIBLE
+
+# Channel selectors a widget can ask for.
+_CHANNELS = ("left", "right", "average")
+
+_AUTO_SOURCE = "auto"
+
+# PKEY_Device_FriendlyName, the full "Speakers (Realtek(R) Audio)" name.
+_PKEY_DEVICE_FRIENDLY_NAME = PROPERTYKEY()
+_PKEY_DEVICE_FRIENDLY_NAME.fmtid = GUID("{A45C254E-DF1C-4EFD-8020-67D146A850E0}")
+_PKEY_DEVICE_FRIENDLY_NAME.pid = 14
+
+# Returned by magnitudes() before the first frame and while the stream is idle.
+_SILENT_SPECTRUM: list[float] = [0.0] * (FFT_SIZE // 2)
+
+REFTIMES_PER_SEC = 10_000_000
+
+# cbSize of a WAVEFORMATEXTENSIBLE payload (2 + 4 + sizeof(GUID)).
+_WFX_EXTENSIBLE_CBSIZE = 22
+
+# Newest PCM frames kept per channel. Only the newest FFT window is ever
+# transformed; the rest is headroom for several packets between publishes.
+_RING_SIZE = 4096
+
+# A healthy stream signals every device period (~10 ms). Waiting several
+# periods with nothing to show means the render stream went away, which is how
+# "the browser was closed" is detected without polling anything.
+_STALE_TIMEOUT_MIN_MS = 160
+_STALE_TIMEOUT_PERIODS = 4
+
+_REOPEN_BACKOFF_MIN_MS = 500
+_REOPEN_BACKOFF_MAX_MS = 8000
+
+# Peak amplitude at or below which a packet counts as silence. About -100 dBFS,
+# far below anything that could move a bar by a whole pixel.
+_SILENCE_FLOOR = 1e-5
+
+# Indices into the WaitForMultipleObjects handle list.
+_STOP = 0
+_WAKE = 1
+_AUDIO = 2
+
+
+class UnsupportedFormatError(RuntimeError):
+    """The endpoint mix format cannot be decoded, and retrying will not help."""
+
+
+def _is_silent(samples: list[float]) -> bool:
+    """Is this channel inaudible? Cheap because max()/min() run in C."""
+    return not samples or (max(samples) <= _SILENCE_FLOOR and min(samples) >= -_SILENCE_FLOOR)
+
+
+def _decode_stereo(buf: bytes, channels: int, sample_code: str, scale: float) -> tuple[list[float], list[float]]:
+    """Split an interleaved packet into its first two channels.
+
+    Strided slicing over an ``array`` keeps the per-sample work in C, which is
+    roughly 20x faster than walking every frame from Python. Float mix formats
+    need no scaling at all, which is the overwhelmingly common case.
+    """
+    samples: array[float] = array(sample_code)
+    samples.frombytes(buf)
+    if channels >= 2:
+        left = samples[0::channels]
+        right = samples[1::channels]
+    else:
+        left = right = samples
+    if scale == 1.0:
+        return left.tolist(), right.tolist()
+    return [v * scale for v in left], [v * scale for v in right]
+
+
+def _friendly_name(device: IMMDevice) -> str:
+    try:
+        value = device.OpenPropertyStore(STGM.STGM_READ.value).GetValue(_PKEY_DEVICE_FRIENDLY_NAME)
+    except COMError:
+        return ""
+    try:
+        return value.GetValue() or ""
+    finally:
+        value.clear()
+
+
+class _WasapiLoopbackClient:
+    """A live event-driven loopback client.
+
+    Created, used and released entirely on the capture thread. Format details
+    are read from the endpoint every time a client is opened, so a device
+    switch can never leave a stale frame stride behind.
+    """
+
+    def __init__(self, device: IMMDevice, audio_event: int) -> None:
+        self.sample_rate = 48000
+        self.channels = 2
+        self.frame_bytes = 8
+        self.bits = 32
+        self.sample_code = "f"
+        self.sample_scale = 1.0
+        self.stale_timeout_ms = _STALE_TIMEOUT_MIN_MS
+        self.capture: IAudioCaptureClient | None = None
+        self._client: IAudioClient | None = None
+        self._open(device, audio_event)
+
+    @property
+    def format_summary(self) -> str:
+        kind = {"f": "float", "h": "int16", "i": "int32"}.get(self.sample_code, self.sample_code)
+        return f"{self.sample_rate} Hz, {self.channels} ch, {self.bits}-bit {kind}"
+
+    def _open(self, device: IMMDevice, audio_event: int) -> None:
+        client = device.Activate(IID_IAudioClient, CLSCTX_ALL, None).QueryInterface(IAudioClient)
+
+        wfx = client.GetMixFormat()
+        try:
+            self._read_format(wfx)
+            client.Initialize(
+                AUDCLNT_SHAREMODE_SHARED,
+                AUDCLNT_STREAMFLAGS_LOOPBACK | AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+                REFTIMES_PER_SEC // 10,
+                0,  # periodicity must be 0 alongside EVENTCALLBACK
+                wfx,
+                None,
+            )
+        finally:
+            # GetMixFormat hands over a CoTaskMemAlloc'd block that comtypes
+            # will not release. Initialize has copied what it needs by now.
+            ole32.CoTaskMemFree(cast(wfx, c_void_p))
+
+        default_period, _minimum = client.GetDevicePeriod()
+        period_ms = max(1.0, default_period / 10_000.0)
+        self.stale_timeout_ms = max(_STALE_TIMEOUT_MIN_MS, int(period_ms * _STALE_TIMEOUT_PERIODS) + 1)
+
+        client.SetEventHandle(audio_event)
+        capture = client.GetService(IID_IAudioCaptureClient).QueryInterface(IAudioCaptureClient)
+        client.Start()
+        self._client = client
+        self.capture = capture
+
+    def _read_format(self, wfx: Any) -> None:
+        fmt = cast(wfx, POINTER(WAVEFORMATEX)).contents
+        self.sample_rate = max(1, int(fmt.nSamplesPerSec))
+        self.channels = max(1, int(fmt.nChannels))
+        self.bits = int(fmt.wBitsPerSample)
+        # nBlockAlign is the authoritative frame stride; only fall back to a
+        # computed value if the driver reports nonsense.
+        self.frame_bytes = int(fmt.nBlockAlign) or self.channels * max(1, self.bits // 8)
+
+        tag = int(fmt.wFormatTag)
+        if tag == WAVE_FORMAT_EXTENSIBLE:
+            if int(fmt.cbSize) < _WFX_EXTENSIBLE_CBSIZE:
+                raise UnsupportedFormatError(f"WAVE_FORMAT_EXTENSIBLE with truncated cbSize {int(fmt.cbSize)}")
+            subtype = cast(wfx, POINTER(WAVEFORMATEXTENSIBLE)).contents.SubFormat
+            is_float = bytes(subtype) == bytes(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT)
+            if not is_float and bytes(subtype) != bytes(KSDATAFORMAT_SUBTYPE_PCM):
+                raise UnsupportedFormatError(f"unsupported loopback subformat {subtype}")
+        else:
+            is_float = tag == WAVE_FORMAT_IEEE_FLOAT
+            if not is_float and tag != WAVE_FORMAT_PCM:
+                raise UnsupportedFormatError(f"unsupported loopback format tag 0x{tag:04X}")
+
+        bytes_per_sample = self.frame_bytes // self.channels
+        if is_float and bytes_per_sample == 4:
+            self.sample_code, self.sample_scale = "f", 1.0
+        elif not is_float and bytes_per_sample == 2:
+            self.sample_code, self.sample_scale = "h", 1.0 / 32768.0
+        elif not is_float and bytes_per_sample == 4:
+            self.sample_code, self.sample_scale = "i", 1.0 / 2147483648.0
+        else:
+            raise UnsupportedFormatError(
+                f"cannot decode {self.bits}-bit {'float' if is_float else 'PCM'} ({bytes_per_sample} bytes per sample)"
+            )
+
+    def close(self) -> None:
+        client, self._client = self._client, None
+        self.capture = None
+        if client is None:
+            return
+        try:
+            client.Stop()
+            client.Reset()
+        except Exception:
+            logging.debug("Audio visualizer: WASAPI client teardown failed", exc_info=True)
+
+
+class _RenderDeviceWatcher(MMNotificationClient):
+    """Asks the capture thread to rebuild its client when the endpoint changes.
+
+    Registered on the UI thread, matching how ``services/volume`` does it. The
+    callbacks only flip a flag and signal an event, so they never block the
+    audio service that invokes them.
+    """
+
+    def __init__(self, service: AudioVisualizerCaptureService) -> None:
+        super().__init__()
+        self._service = service
+        self._last_states: dict[str, int] = {}
+
+    def on_default_device_changed(
+        self, flow: str, flow_id: int, role: str, role_id: int, default_device_id: str | None
+    ) -> None:
+        if flow_id != EDataFlow.eRender.value or role_id != ERole.eMultimedia.value:
+            return
+        device_id, follows_default = self._service.endpoint
+        if not follows_default or default_device_id == device_id:
+            return
+        logging.debug("Audio visualizer: default device changed to %s, reopening", default_device_id)
+        self._service.request_reopen()
+
+    def on_device_added(self, added_device_id: str) -> None:
+        if self._service.waiting_for_source:
+            logging.debug("Audio visualizer: device %s added, reopening", added_device_id)
+            self._service.request_reopen()
+
+    def on_device_state_changed(self, device_id: str, new_state: str, new_state_id: int) -> None:
+        if self._last_states.get(device_id) == new_state_id:
+            return
+        self._last_states[device_id] = new_state_id
+        # A device connecting or disconnecting can touch several unrelated
+        # endpoints (a headset's own microphone, other devices Windows
+        # happens to re-enumerate along the way), only the one we are
+        # actually reading from matters to a render-only loopback capture.
+        # While the configured source is missing, any endpoint that comes up
+        # may be it.
+        current_id, _ = self._service.endpoint
+        if device_id != current_id and not (
+            new_state_id == DEVICE_STATE.ACTIVE.value and self._service.waiting_for_source
+        ):
+            return
+        logging.debug("Audio visualizer: device %s state changed to %#x, reopening", device_id, new_state_id)
+        self._service.request_reopen()
+
+
+class AudioVisualizerCaptureService(QObject):
+    """Shared, event-driven loopback capture for every visualizer widget with
+    the same ``source``.
+
+    A single WASAPI stream and a single capture thread serve all those widgets,
+    on every monitor. The stream is open while at least one widget is attached,
+    so audio starting and stopping is always reported, spectra are computed
+    only while one of them is on screen, and it is torn down once the last
+    widget goes away.
+    """
+
+    #: A new spectrum has been published. Rate limited to the fastest framerate
+    #: among attached widgets.
+    frame_ready = pyqtSignal()
+    #: Real audio started flowing, whether or not any widget is on screen.
+    audio_started = pyqtSignal()
+    #: The render stream went away. The published spectra have been dropped, so
+    #: magnitudes() now returns silence and widgets should fade out.
+    audio_stopped = pyqtSignal()
+    #: Audio has been silent for the delay registered under this widget name.
+    idle_timeout = pyqtSignal(str)
+    #: The endpoint sample rate changed; analyzers must be rebuilt.
+    format_changed = pyqtSignal(int)
+
+    _instances: dict[str, AudioVisualizerCaptureService] = {}
+    _instance_lock = threading.Lock()
+
+    def __init__(self, source: str = _AUTO_SOURCE) -> None:
+        super().__init__()
+        self._source = source
+        # Capture thread only.
+        self._source_missing = False
+        # (endpoint id, follows the default device). Rebound in one go by the
+        # capture thread, read by the device watcher.
+        self._endpoint: tuple[str | None, bool] = (None, True)
+        self._lock = threading.Lock()
+        self._ring_l: list[float] = []
+        self._ring_r: list[float] = []
+        # (framerate, wanted-channels) per attached widget, plus a count of the
+        # ones currently on screen, the only ones that need spectra.
+        self._readers: list[tuple[int, frozenset[str]]] = []
+        self._active_readers = 0
+        self._idle_timers: dict[str, QTimer] = {}
+        self._wanted_channels: frozenset[str] = frozenset()
+        self._frame_interval_ns = 1_000_000_000 // 60
+        self._last_emit_ns = 0
+        self._frame_pending = False
+        # One transform per channel selector, shared by every widget and every
+        # monitor. Touched only from the capture thread (_publish_frame).
+        self._sources = {ch: SpectrumSource(FFT_SIZE) for ch in _CHANNELS}
+        # Last spectrum per channel. The capture thread swaps this dict in one
+        # atomic rebind; the UI thread reads it lock-free in magnitudes().
+        self._channel_mags: dict[str, list[float]] = {}
+        self._sample_rate = 48000
+        self._active = False
+        self._running = False
+        # Capture thread only: when real (non-silent) audio last arrived.
+        self._last_audio_ns = 0
+        self._device_dirty = False
+        self._format_rejected = False
+        self._thread: threading.Thread | None = None
+        self._enumerator: IMMDeviceEnumerator | None = None
+        self._watcher: _RenderDeviceWatcher | None = None
+
+        self._audio_event = CreateEvent(None, False, False, None)  # auto-reset
+        self._wake_event = CreateEvent(None, False, False, None)  # auto-reset
+        self._stop_event = CreateEvent(None, True, False, None)  # manual-reset
+
+        # Connected first so it runs before the widget slots and re-arms
+        # emission as early as possible.
+        self.frame_ready.connect(self._on_frame_dispatched)
+        self.audio_started.connect(self._stop_idle_timers)
+        self.audio_stopped.connect(self._start_idle_timers)
+        app = QCoreApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self.shutdown)
+
+    @classmethod
+    def instance(cls, source: str = _AUTO_SOURCE) -> AudioVisualizerCaptureService:
+        with cls._instance_lock:
+            service = cls._instances.get(source)
+            if service is None:
+                service = cls._instances[source] = cls(source)
+            return service
+
+    @property
+    def endpoint(self) -> tuple[str | None, bool]:
+        return self._endpoint
+
+    @property
+    def waiting_for_source(self) -> bool:
+        """A device is configured but not active, so the default stands in."""
+        return self._source != _AUTO_SOURCE and self._endpoint[1]
+
+    @property
+    def sample_rate(self) -> int:
+        return self._sample_rate
+
+    @property
+    def is_active(self) -> bool:
+        """True while real audio is flowing."""
+        return self._active
+
+    def attach(self, framerate: int, channels: frozenset[str]) -> None:
+        """Register a reader wanting ``channels`` at up to ``framerate`` fps.
+
+        A reader starts visible; the widget calls :meth:`set_reader_visible`
+        when it is hidden or shown.
+        """
+        with self._lock:
+            self._readers.append((self._clamp_framerate(framerate), channels))
+            self._active_readers += 1
+            self._refresh_readers()
+        self._ensure_thread()
+        SetEvent(self._wake_event)
+
+    def detach(self, framerate: int, channels: frozenset[str], visible: bool) -> None:
+        """Drop a reader. The stream closes once the last one leaves."""
+        with self._lock:
+            if not self._running:
+                return
+            try:
+                self._readers.remove((self._clamp_framerate(framerate), channels))
+                if visible:
+                    self._active_readers = max(0, self._active_readers - 1)
+            except ValueError:
+                logging.debug("Audio visualizer: detach without a matching attach")
+            self._refresh_readers()
+        SetEvent(self._wake_event)
+
+    def set_reader_visible(self, visible: bool) -> None:
+        """A widget came on screen (``True``) or left it (``False``).
+
+        Spectra are only computed while at least one reader is visible.
+        Capture keeps running either way.
+        """
+        with self._lock:
+            self._active_readers = max(0, self._active_readers + (1 if visible else -1))
+
+    def watch_idle(self, widget_name: str, delay_ms: int) -> None:
+        """Emit ``idle_timeout(widget_name)`` whenever audio stays silent for
+        ``delay_ms``. One timer per widget config, shared across screens."""
+        if widget_name in self._idle_timers:
+            return
+        timer = self._idle_timers[widget_name] = QTimer(self)
+        timer.setSingleShot(True)
+        timer.setTimerType(Qt.TimerType.CoarseTimer)
+        timer.setInterval(delay_ms)
+        timer.timeout.connect(lambda: self.idle_timeout.emit(widget_name))
+        if not self._active:
+            timer.start()
+
+    def _start_idle_timers(self) -> None:
+        for timer in self._idle_timers.values():
+            timer.start()
+
+    def _stop_idle_timers(self) -> None:
+        for timer in self._idle_timers.values():
+            timer.stop()
+
+    @staticmethod
+    def _clamp_framerate(framerate: int) -> int:
+        return max(1, min(240, int(framerate)))
+
+    def _refresh_readers(self) -> None:
+        """Recompute the emit interval and the union of wanted channels.
+
+        Caller holds the lock.
+        """
+        if self._readers:
+            fps = max(fr for fr, _ in self._readers)
+            wanted: set[str] = set()
+            for _, chans in self._readers:
+                wanted |= chans
+            self._wanted_channels = frozenset(wanted)
+        else:
+            fps = 60
+            self._wanted_channels = frozenset()
+        self._frame_interval_ns = max(1, 1_000_000_000 // fps)
+
+    def _has_readers(self) -> bool:
+        with self._lock:
+            return bool(self._readers)
+
+    def _raw_window_locked(self, n: int) -> tuple[list[float], list[float]]:
+        """Newest ``n`` samples per channel, zero-padded at the front.
+
+        Caller holds the lock. Returns silence while the stream is idle,
+        because ``_mark_stopped`` and ``_open`` clear the rings.
+        """
+        left = self._ring_l[-n:]
+        right = self._ring_r[-n:]
+        pad = n - len(left)
+        if pad > 0:
+            head = [0.0] * pad
+            left = head + left
+            right = head + right
+        return left, right
+
+    def magnitudes(self, channel: str) -> list[float]:
+        """Latest magnitude spectrum for ``channel`` (``"left"``, ``"right"`` or
+        ``"average"``).
+
+        The transform itself runs on the capture thread, once per frame per
+        channel no matter how many widgets or monitors ask for it. This is a
+        lock-free read of the last published result, cheap enough to call from
+        paint; it returns silence until the first frame after audio starts.
+        """
+        return self._channel_mags.get(channel, _SILENT_SPECTRUM)
+
+    def _safe_emit(self, signal_name: str, *args: object) -> None:
+        try:
+            getattr(self, signal_name).emit(*args)
+        except RuntimeError:
+            pass
+
+    def request_reopen(self) -> None:
+        """Rebuild the client, e.g. after the default endpoint changed."""
+        with self._lock:
+            self._device_dirty = True
+            self._format_rejected = False
+        SetEvent(self._wake_event)
+
+    def _ensure_thread(self) -> None:
+        # Only ever called from the UI thread (via attach), so the read of
+        # _thread and the start below cannot race each other.
+        with self._lock:
+            thread = self._thread
+            if self._running and thread is not None and thread.is_alive():
+                return
+            self._running = True
+        self._register_device_watcher()
+        ResetEvent(self._stop_event)
+        self._thread = threading.Thread(target=self._capture_thread, name="yasb-audio-visualizer", daemon=True)
+        self._thread.start()
+
+    def shutdown(self) -> None:
+        """Stop capturing and join the thread. Safe to call more than once."""
+        with self._lock:
+            self._readers.clear()
+            self._active_readers = 0
+            self._refresh_readers()
+            was_running = self._running
+            self._running = False
+        if not was_running:
+            return
+
+        SetEvent(self._stop_event)
+        thread, self._thread = self._thread, None
+        if thread is not None and thread.is_alive() and threading.current_thread() is not thread:
+            thread.join(timeout=2.0)
+            if thread.is_alive():
+                logging.warning("Audio visualizer: capture thread did not exit in time")
+
+        self._unregister_device_watcher()
+        with self._lock:
+            self._ring_l.clear()
+            self._ring_r.clear()
+            self._active = False
+
+    def _register_device_watcher(self) -> None:
+        if self._watcher is not None:
+            return
+        try:
+            self._enumerator = AudioUtilities.GetDeviceEnumerator()
+            self._watcher = _RenderDeviceWatcher(self)
+            self._enumerator.RegisterEndpointNotificationCallback(self._watcher)
+        except Exception:
+            self._watcher = None
+            self._enumerator = None
+            logging.warning("Audio visualizer: device change notifications unavailable", exc_info=True)
+
+    def _unregister_device_watcher(self) -> None:
+        watcher, self._watcher = self._watcher, None
+        enumerator, self._enumerator = self._enumerator, None
+        if watcher is None or enumerator is None:
+            return
+        try:
+            enumerator.UnregisterEndpointNotificationCallback(watcher)
+        except Exception:
+            logging.debug("Audio visualizer: could not unregister device watcher", exc_info=True)
+
+    def _capture_thread(self) -> None:
+        hr = ole32.CoInitializeEx(None, COINIT_MULTITHREADED)
+        if hr < 0 and hr != RPC_E_CHANGED_MODE:
+            logging.error("Audio visualizer: CoInitializeEx failed (0x%08X)", hr & 0xFFFFFFFF)
+            return
+        try:
+            self._capture_loop()
+        except Exception:
+            logging.exception("Audio visualizer: capture thread crashed")
+        finally:
+            self._mark_stopped()
+            if hr >= 0:
+                ole32.CoUninitialize()
+
+    def _capture_loop(self) -> None:
+        handles = (HANDLE * 3)(self._stop_event, self._wake_event, self._audio_event)
+        idle_handles = (HANDLE * 2)(self._stop_event, self._wake_event)
+        client: _WasapiLoopbackClient | None = None
+        backoff_ms = _REOPEN_BACKOFF_MIN_MS
+        try:
+            while self._running:
+                if self._take_device_dirty():
+                    client = self._close(client)
+                    backoff_ms = _REOPEN_BACKOFF_MIN_MS
+
+                # No widgets at all: close the stream and park.
+                if not self._has_readers():
+                    client = self._close(client)
+                    self._mark_stopped()
+                    if self._park(idle_handles, INFINITE):
+                        break
+                    continue
+
+                if client is None:
+                    if self._format_rejected:
+                        # Only a device change can make this work; wait for one
+                        # rather than retrying a format we cannot decode.
+                        if self._park(idle_handles, INFINITE):
+                            break
+                        continue
+                    client = self._open()
+                    if client is None:
+                        self._mark_stopped()
+                        if self._park(idle_handles, backoff_ms):
+                            break
+                        backoff_ms = min(backoff_ms * 2, _REOPEN_BACKOFF_MAX_MS)
+                        continue
+                    backoff_ms = _REOPEN_BACKOFF_MIN_MS
+                    # Give the new stream the full timeout to produce audio, so
+                    # swapping devices mid-track does not blip the bars to zero.
+                    self._last_audio_ns = time.monotonic_ns()
+
+                rc = WaitForMultipleObjects(len(handles), handles, False, client.stale_timeout_ms)
+                if rc == WAIT_OBJECT_0 + _STOP:
+                    break
+                if rc == WAIT_OBJECT_0 + _WAKE:
+                    continue
+
+                if rc == WAIT_OBJECT_0 + _AUDIO:
+                    try:
+                        if self._drain(client):
+                            self._last_audio_ns = time.monotonic_ns()
+                            self._publish_frame()
+                    except COMError as exc:
+                        # The endpoint was invalidated mid-stream: another app
+                        # claimed the device exclusively (ASIO and similar
+                        # drivers bypass the shared mixer entirely), it was
+                        # unplugged, or it was reconfigured. Reopening below
+                        # succeeds on its own once the device is available
+                        # again, same as _open()'s COMError handling.
+                        logging.debug("Audio visualizer: loopback stream invalidated (%s), reopening", exc)
+                        client = self._close(client)
+                        self._mark_stopped()
+                        if self._park(idle_handles, backoff_ms):
+                            break
+                        backoff_ms = min(backoff_ms * 2, _REOPEN_BACKOFF_MAX_MS)
+                        continue
+                    except Exception:
+                        logging.warning("Audio visualizer: loopback stream failed, reopening", exc_info=True)
+                        client = self._close(client)
+                        self._mark_stopped()
+                        # Back off like a failed open, so a packet that keeps
+                        # failing to drain cannot spin this loop at the device
+                        # period rate.
+                        if self._park(idle_handles, backoff_ms):
+                            break
+                        backoff_ms = min(backoff_ms * 2, _REOPEN_BACKOFF_MAX_MS)
+                        continue
+                elif rc != WAIT_TIMEOUT:
+                    continue
+
+                # Idle means "no real audio for several device periods", which
+                # covers both the render stream ending and it staying open while
+                # feeding pure silence. Muting an app is the latter: packets keep
+                # arriving forever, so waiting for them to stop would leave the
+                # bars frozen on the last frame before the mute.
+                if self._silent_for(client.stale_timeout_ms):
+                    self._mark_stopped()
+        finally:
+            self._close(client)
+
+    def _silent_for(self, timeout_ms: int) -> bool:
+        """Has no real audio arrived for ``timeout_ms``? Capture thread only."""
+        return time.monotonic_ns() - self._last_audio_ns >= timeout_ms * 1_000_000
+
+    def _park(self, handles: Array[HANDLE], timeout_ms: int) -> bool:
+        """Block on wake/stop. Returns True when shutdown was requested."""
+        rc = WaitForMultipleObjects(len(handles), handles, False, timeout_ms)
+        return rc == WAIT_OBJECT_0 + _STOP
+
+    def _take_device_dirty(self) -> bool:
+        with self._lock:
+            dirty, self._device_dirty = self._device_dirty, False
+        return dirty
+
+    def _open(self) -> _WasapiLoopbackClient | None:
+        try:
+            device = self._pick_device(AudioUtilities.GetDeviceEnumerator())
+            client = _WasapiLoopbackClient(device, int(self._audio_event))
+        except UnsupportedFormatError as exc:
+            logging.error("Audio visualizer: %s", exc)
+            with self._lock:
+                self._format_rejected = True
+            return None
+        except COMError:
+            return None
+        except Exception:
+            logging.debug("Audio visualizer: could not open WASAPI loopback", exc_info=True)
+            return None
+
+        with self._lock:
+            self._ring_l.clear()
+            self._ring_r.clear()
+            rate_changed = client.sample_rate != self._sample_rate
+            self._sample_rate = client.sample_rate
+        if rate_changed:
+            self._safe_emit("format_changed", client.sample_rate)
+        logging.info(
+            "Audio visualizer: loopback capture open on %r (%s)", _friendly_name(device), client.format_summary
+        )
+        return client
+
+    def _pick_device(self, enumerator: IMMDeviceEnumerator) -> IMMDevice:
+        """The configured device while it is active, otherwise the default one."""
+        if self._source != _AUTO_SOURCE:
+            device = self._find_source(enumerator)
+            self._source_missing = device is None
+            if device is not None:
+                self._endpoint = (device.GetId(), False)
+                return device
+        device = enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender.value, ERole.eMultimedia.value)
+        self._endpoint = (device.GetId(), True)
+        return device
+
+    def _find_source(self, enumerator: IMMDeviceEnumerator) -> IMMDevice | None:
+        collection = enumerator.EnumAudioEndpoints(EDataFlow.eRender.value, DEVICE_STATE.ACTIVE.value)
+        for i in range(collection.GetCount()):
+            device = collection.Item(i)
+            if _friendly_name(device) == self._source:
+                return device
+        if not self._source_missing:
+            logging.warning(
+                "Audio visualizer: cannot open output device %r, switched to the default device", self._source
+            )
+        return None
+
+    @staticmethod
+    def _close(client: _WasapiLoopbackClient | None) -> None:
+        if client is not None:
+            client.close()
+        return None
+
+    def _drain(self, client: _WasapiLoopbackClient) -> bool:
+        """Consume every ready packet. Returns True if real audio arrived."""
+        capture = client.capture
+        if capture is None:
+            return False
+        frame_bytes = client.frame_bytes
+        got_audio = False
+
+        while self._running:
+            if not capture.GetNextPacketSize():
+                break
+
+            data_ptr, nframes, flags, *_ = capture.GetBuffer()
+            nframes = int(nframes)
+            try:
+                if nframes and not (flags & AUDCLNT_BUFFERFLAGS_SILENT):
+                    nbytes = nframes * frame_bytes
+                    buf = bytes(cast(data_ptr, POINTER(c_ubyte * nbytes)).contents)
+                else:
+                    buf = b""
+            finally:
+                # The packet must be released even if the copy raised, or the
+                # capture buffer stays locked and the stream stalls for good.
+                capture.ReleaseBuffer(nframes)
+
+            # While "nothing is playing but the endpoint is open" every packet
+            # is digital silence. count() is a C-level scan and roughly 35x
+            # cheaper than decoding, so discard those before doing any work.
+            if not buf or buf.count(0) == len(buf):
+                self._publish_silence()
+                continue
+
+            left, right = _decode_stereo(buf, client.channels, client.sample_code, client.sample_scale)
+
+            # Muting an app scales its samples by zero, which turns every
+            # negative one into negative zero. Those are not zero bytes, so the
+            # scan above lets them through and the stream would look alive
+            # forever. Test amplitude as well; max() short-circuits this to a
+            # single C pass for anything actually audible.
+            if _is_silent(left) and _is_silent(right):
+                self._publish_silence()
+                continue
+
+            with self._lock:
+                self._ring_l.extend(left)
+                self._ring_r.extend(right)
+                overflow = len(self._ring_l) - _RING_SIZE
+                if overflow > 0:
+                    del self._ring_l[:overflow]
+                    del self._ring_r[:overflow]
+            got_audio = True
+
+        return got_audio
+
+    def _publish_frame(self) -> None:
+        now = time.monotonic_ns()
+        with self._lock:
+            started = not self._active
+            self._active = True
+        if started:
+            self._safe_emit("audio_started")
+        with self._lock:
+            if not self._active_readers or self._frame_pending or now - self._last_emit_ns < self._frame_interval_ns:
+                return
+            wanted = self._wanted_channels
+            if not wanted:
+                return
+            self._frame_pending = True
+            self._last_emit_ns = now
+            left, right = self._raw_window_locked(FFT_SIZE)
+
+        # The transform is the expensive part (~0.3 ms per channel). Run it here
+        # on the capture thread, outside the lock, so it never competes with the
+        # bar's own painting and animations on the UI thread.
+        mags: dict[str, list[float]] = {}
+        for channel in wanted:
+            if channel == "left":
+                window = left
+            elif channel == "right":
+                window = right
+            else:
+                window = [0.5 * (left[i] + right[i]) for i in range(FFT_SIZE)]
+            mags[channel] = self._sources[channel].magnitudes(window)
+        # One atomic rebind; magnitudes() reads it lock-free.
+        self._channel_mags = mags
+        self._safe_emit("frame_ready")
+
+    def _publish_silence(self) -> None:
+        """Publish a zero spectrum for a silent packet, the same as a real
+        frame but without the transform. Gated on ``_active`` so it only
+        applies while a stream was recently live, never during genuine idle.
+        """
+        now = time.monotonic_ns()
+        with self._lock:
+            if (
+                not self._active
+                or not self._active_readers
+                or self._frame_pending
+                or now - self._last_emit_ns < self._frame_interval_ns
+            ):
+                return
+            wanted = self._wanted_channels
+            if not wanted:
+                return
+            self._frame_pending = True
+            self._last_emit_ns = now
+
+        self._channel_mags = dict.fromkeys(wanted, _SILENT_SPECTRUM)
+        self._safe_emit("frame_ready")
+
+    def _on_frame_dispatched(self) -> None:
+        """Runs on the UI thread ahead of the widget slots; re-arms emission."""
+        self._frame_pending = False
+
+    def _mark_stopped(self) -> None:
+        """Drop captured history and tell the widgets the stream went away."""
+        with self._lock:
+            if not self._active:
+                return
+            self._active = False
+            self._frame_pending = False
+            self._ring_l.clear()
+            self._ring_r.clear()
+        self._channel_mags = {}
+        self._safe_emit("audio_stopped")

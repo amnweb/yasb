@@ -20,7 +20,7 @@ ALLOWED_PREFIXES = (
     "core.utils.qml",
     "core.utils.win32",
     "core.utils.system",
-    "core.utils.toast",
+    "core.app.windows.toast",
     # Leaf helper for opening URLs in the browser; depends only on stdlib and
     # core.utils.win32, so it drags nothing from the bar in behind it.
     "core.utils.shell_utils",

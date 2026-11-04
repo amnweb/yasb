@@ -14,11 +14,11 @@ from PyQt6.QtQuick import QQuickItem, QQuickWindow
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.wallpapers import images, manager, thumbnails
+from core.services.wallpapers.library import WallpaperLibrary
+from core.services.wallpapers.manager import WallpaperManager
+from core.services.wallpapers.thumbnails import WallpaperThumbnail, thumbnail_file
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.wallpapers import images, manager, thumbnails
-from core.widgets.services.wallpapers.library import WallpaperLibrary
-from core.widgets.services.wallpapers.manager import WallpaperManager
-from core.widgets.services.wallpapers.thumbnails import WallpaperThumbnail, thumbnail_file
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 
@@ -151,7 +151,7 @@ def test_a_random_wallpaper_is_never_the_last_random_one(desktop: FakeDesktop, f
 
 
 def test_the_wallpaper_service_does_not_load_qt_widgets():
-    code = "import sys, core.widgets.services.wallpapers.library; print('PyQt6.QtWidgets' in sys.modules)"
+    code = "import sys, core.services.wallpapers.library; print('PyQt6.QtWidgets' in sys.modules)"
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd="src", check=True)
     assert result.stdout.strip() == "False"
 

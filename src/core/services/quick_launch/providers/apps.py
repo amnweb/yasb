@@ -1,0 +1,507 @@
+import json
+import logging
+import os
+import time
+from typing import TYPE_CHECKING, Any, cast
+
+from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtGui import QGuiApplication
+
+from core.services.quick_launch.base_provider import (
+    BaseProvider,
+    ProviderMenuAction,
+    ProviderMenuActionResult,
+    ProviderResult,
+)
+from core.services.quick_launch.fuzzy import fuzzy_score, split_camel
+from core.services.quick_launch.providers.resources.icons import ICON_APPS
+from core.utils.shell_utils import shell_open
+from core.utils.system import app_data_path
+from core.utils.win32.app_loader import AppEntry, app_icon_source
+from core.utils.win32.bindings.shell32 import read_shortcut
+from core.utils.win32.bindings.version import get_version_strings
+
+if TYPE_CHECKING:
+    from core.services.quick_launch.service import QuickLaunchService
+
+
+class LaunchHistory:
+    """Manages launch history and frecency scoring for apps."""
+
+    def __init__(self):
+        self._recent_file = str(app_data_path("quick_launch_recent.json"))
+        self._history: dict[str, dict[str, Any]] = self._load()
+
+    @property
+    def data(self) -> dict[str, dict[str, Any]]:
+        return self._history
+
+    def record(self, name: str, path: str):
+        key = f"{name}::{path}"
+        now = time.time()
+        entry = self._history.get(key)
+        if entry:
+            entry["count"] += 1
+            entry["last_used"] = now
+        else:
+            self._history[key] = {
+                "name": name,
+                "path": path,
+                "count": 1,
+                "last_used": now,
+            }
+        self.save()
+
+    def remove(self, key: str):
+        self._history.pop(key, None)
+        self.save()
+
+    def get_frecency_score(self, app_key: str) -> float:
+        """Return a frecency boost in range [0.0, 3.0].
+
+        Can promote an app by up to ~2 tiers so frequently/recently used
+        apps outrank apps with a slightly better match quality but no usage
+        history.
+        """
+        entry = self._history.get(app_key)
+        if not entry:
+            return 0.0
+        count = entry.get("count", 0)
+        hours_ago = (time.time() - entry.get("last_used", 0)) / 3600
+        if hours_ago < 4:
+            recency = 1.0
+        elif hours_ago < 24:
+            recency = 0.8
+        elif hours_ago < 168:
+            recency = 0.6
+        else:
+            recency = 0.4
+        return min(count * recency * 1.5, 3.0)
+
+    def save(self):
+        try:
+            os.makedirs(os.path.dirname(self._recent_file), exist_ok=True)
+            with open(self._recent_file, "w", encoding="utf-8") as f:
+                json.dump(self._history, f, indent=2)
+        except Exception:
+            pass
+
+    def _load(self) -> dict[str, dict[str, Any]]:
+        try:
+            if os.path.isfile(self._recent_file):
+                with open(self._recent_file, encoding="utf-8") as f:
+                    data = json.load(f)
+                # Migrate legacy list format
+                if isinstance(data, list):
+                    history: dict[str, dict[str, Any]] = {}
+                    for r in reversed(cast(list[dict[str, Any]], data)):
+                        key = r.get("key", "")
+                        if key:
+                            history[key] = {
+                                "name": r.get("name", ""),
+                                "path": r.get("path", ""),
+                                "count": 1,
+                                "last_used": r.get("timestamp", time.time()),
+                            }
+                    return history
+                if isinstance(data, dict):
+                    return cast(dict[str, dict[str, Any]], data)
+        except Exception:
+            pass
+        return {}
+
+
+def _get_exe_description(exe_path: str) -> str | None:
+    """Extract FileDescription + CompanyName from an exe's version info."""
+    return " - ".join(get_version_strings(exe_path, ("FileDescription", "CompanyName")).values()) or None
+
+
+def _resolve_squirrel_target(target: str, args: str) -> str | None:
+    """For Squirrel/Electron apps (Discord, Slack, etc.) the shortcut points to
+    Update.exe --processStart RealApp.exe. Resolve the real exe from app-* dirs."""
+    if not target or not args:
+        return None
+    if os.path.basename(target).lower() != "update.exe" or "--processstart" not in args.lower():
+        return None
+    parts = args.split()
+    try:
+        idx = [p.lower() for p in parts].index("--processstart")
+        exe_name = parts[idx + 1].strip('"')
+    except ValueError, IndexError:
+        return None
+    parent = os.path.dirname(target)
+    # Pick the highest-versioned app-* directory
+    app_dirs = sorted(
+        (d for d in os.listdir(parent) if d.startswith("app-") and os.path.isdir(os.path.join(parent, d))),
+        reverse=True,
+    )
+    for d in app_dirs:
+        candidate = os.path.join(parent, d, exe_name)
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def _get_lnk_description(lnk_path: str) -> str | None:
+    """Resolve a .lnk shortcut and return description from its target exe,
+    falling back to the shortcut's own Description property, then target path."""
+    shortcut = read_shortcut(lnk_path)
+    if shortcut is not None:
+        target = shortcut.target
+        try:
+            # Squirrel/Electron apps point to Update.exe --processStart RealApp.exe
+            resolved = _resolve_squirrel_target(target, shortcut.arguments)
+        except OSError:
+            resolved = None
+        if resolved and os.path.isfile(resolved):
+            desc = _get_exe_description(resolved)
+            if desc:
+                return desc
+        elif target and os.path.isfile(target):
+            desc = _get_exe_description(target)
+            if desc:
+                return desc
+        if shortcut.description.strip():
+            return shortcut.description.strip()
+        if resolved and os.path.isfile(resolved):
+            return resolved
+        if target and os.path.isfile(target):
+            return target
+    # Fallback: use subfolder name under Start Menu\Programs (e.g. "System Tools")
+    lnk_lower = lnk_path.lower()
+    marker = r"\start menu\programs" + "\\"
+    idx = lnk_lower.find(marker)
+    if idx != -1:
+        relative = lnk_path[idx + len(marker) :]
+        folder = os.path.dirname(relative)
+        if folder:
+            return folder
+    return None
+
+
+class DescriptionResolverWorker(QThread):
+    """Background thread to resolve app descriptions."""
+
+    descriptions_ready = pyqtSignal(dict)
+
+    def __init__(self, apps: list[AppEntry]):
+        super().__init__()
+        self._apps = apps
+
+    def run(self):
+        cache: dict[str, str] = {}
+        # Build UWP package lookup
+        uwp_lookup: dict[str, str] = {}
+        try:
+            from winrt.windows.management.deployment import PackageManager
+
+            pm = PackageManager()
+            for pkg in pm.find_packages_for_user(""):
+                fn = pkg.id.family_name
+                if fn:
+                    dn = pkg.display_name or ""
+                    pub = pkg.publisher_display_name or ""
+                    if dn and pub:
+                        uwp_lookup[fn] = f"{dn} - {pub}"
+                    elif dn:
+                        uwp_lookup[fn] = dn
+        except Exception:
+            pass
+        for _name, path, extra in self._apps:
+            if path.startswith("CPL::"):
+                cache[path] = extra if extra else "Control Panel"
+            elif path.startswith("UWP::"):
+                aumid = path[5:]
+                family = aumid.split("!")[0] if "!" in aumid else aumid
+                cache[path] = uwp_lookup.get(family, "Windows App")
+            elif path.lower().endswith(".lnk") and os.path.isfile(path):
+                cache[path] = _get_lnk_description(path) or path
+            elif os.path.isfile(path):
+                cache[path] = _get_exe_description(path) or path
+        self.descriptions_ready.emit(cache)
+
+
+def _is_subfolder_app(path: str) -> bool:
+    """Return True if the shortcut is inside a subfolder of Start Menu\\Programs."""
+    marker = r"\start menu\programs"
+    idx = path.lower().find(marker)
+    if idx == -1:
+        return False
+    relative = path[idx + len(marker) + 1 :]
+    return "\\" in relative or "/" in relative
+
+
+class AppsProvider(BaseProvider):
+    """Search and launch installed applications."""
+
+    name = "apps"
+    display_name = "Applications"
+    input_placeholder = "Search applications..."
+    icon = ICON_APPS
+
+    def __init__(self, config: dict[str, Any] | None = None):
+        super().__init__(config)
+        self._service: QuickLaunchService | None = None
+        self._history = LaunchHistory()
+        self._desc_cache: dict[str, str] = {}
+        self._desc_worker: DescriptionResolverWorker | None = None
+        self._desc_apps: list[AppEntry] | None = None
+        self._pending_desc_apps: list[AppEntry] | None = None
+
+    @property
+    def service(self) -> QuickLaunchService:
+        if self._service is None:
+            from core.services.quick_launch.service import QuickLaunchService
+
+            self._service = QuickLaunchService.instance()
+        return self._service
+
+    def match(self, text: str) -> bool:
+        return True
+
+    def start_description_resolution(self, apps: list[AppEntry]):
+        """Start background thread to resolve app descriptions."""
+        if apps == self._desc_apps:
+            self._pending_desc_apps = None
+            return
+        if self._desc_worker is not None:
+            self._pending_desc_apps = list(apps)
+            return
+        self._desc_apps = list(apps)
+        self._desc_worker = DescriptionResolverWorker(self._desc_apps)
+        self._desc_worker.descriptions_ready.connect(self._on_descriptions_ready)
+        self._desc_worker.finished.connect(self._on_description_worker_finished)
+        self._desc_worker.start()
+
+    def _on_descriptions_ready(self, cache: dict[str, str]):
+        self._desc_cache = cache
+        if self.request_refresh:
+            self.request_refresh()
+
+    def _on_description_worker_finished(self):
+        worker = self._desc_worker
+        self._desc_worker = None
+        if worker is not None:
+            worker.deleteLater()
+        pending = self._pending_desc_apps
+        self._pending_desc_apps = None
+        if pending is not None:
+            self.start_description_resolution(pending)
+
+    def get_results(self, text: str, **kwargs: Any) -> list[ProviderResult]:
+        svc = self.service
+        show_recent = self.config.get("show_recent", True)
+        max_recent = self.config.get("max_recent", 10)
+
+        query_text = self.get_query_text(text) if self.prefix and text.startswith(self.prefix) else text
+        text_stripped = query_text.strip()
+        text_lower = text_stripped.lower()
+
+        if not text_stripped:
+            if show_recent:
+                # Recent apps first (by last_used timestamp) then the rest
+                # Non-recent apps: root-level first, subfolder apps after
+                recent: list[tuple[float, str, str]] = []
+                rest: list[tuple[str, str]] = []
+                for name, path, _ in svc.apps:
+                    key = f"{name}::{path}"
+                    entry = self._history.data.get(key)
+                    if entry:
+                        recent.append((entry.get("last_used", 0), name, path))
+                    else:
+                        rest.append((name, path))
+                recent.sort(key=lambda x: x[0], reverse=True)
+                rest.sort(key=lambda a: (_is_subfolder_app(a[1]), a[0].lower()))
+                apps = [(n, p) for _, n, p in recent[:max_recent]] + rest
+            else:
+                apps = [(n, p) for n, p, _ in sorted(svc.apps, key=lambda a: (_is_subfolder_app(a[1]), a[0].lower()))]
+        else:
+            # Search query fuzzy match by name, fallback to app id
+            scored_apps: list[tuple[float, str, str]] = []
+            for n, p, _ in svc.apps:
+                fs = fuzzy_score(text_lower, n)
+                if fs is None and p.startswith("UWP::"):
+                    appid = p[5:].split("!")[0].split("_")[0]
+                    pkg_name = appid.rsplit(".", 1)[-1] if "." in appid else appid
+                    # Split CamelCase (WindowsTerminal -> Windows Terminal)
+                    # and match against the human-readable form.
+                    pkg_words = split_camel(pkg_name)
+                    pkg_fs = fuzzy_score(text_lower, pkg_words)
+                    if pkg_fs is not None:
+                        # Cap package-name matches between word-prefix (3)
+                        # and prefix (4). Frecency can bridge the gap to
+                        # higher tiers for frequently used apps.
+                        fs = min(pkg_fs, 3.5)
+                if fs is not None:
+                    scored_apps.append((float(fs), n, p))
+
+            if show_recent:
+                for i, (fs, n, p) in enumerate(scored_apps):
+                    # Only boost apps with a reasonable match quality
+                    # (tier >= 3: word-prefix or better).  Weak matches
+                    # like subsequence shouldn't be promoted by history.
+                    if fs >= 3.0:
+                        key = f"{n}::{p}"
+                        frecency = self._history.get_frecency_score(key)
+                        scored_apps[i] = (fs + frecency, n, p)
+
+            scored_apps.sort(key=lambda x: x[0], reverse=True)
+
+            apps = [(n, p) for _, n, p in scored_apps]
+
+        show_description = self.config.get("show_description", False)
+        results: list[ProviderResult] = []
+        for name, path in apps:
+            app_key = f"{name}::{path}"
+            if show_description:
+                desc = self._desc_cache.get(path, "")
+            else:
+                desc = ""
+            results.append(
+                ProviderResult(
+                    title=name,
+                    description=desc,
+                    icon_source=app_icon_source(path),
+                    provider=self.name,
+                    id=app_key,
+                    action_data={"name": name, "path": path},
+                )
+            )
+        return results
+
+    def execute(self, result: ProviderResult) -> bool:
+        name = result.action_data.get("name", "")
+        path = result.action_data.get("path", "")
+        try:
+            if path.startswith("UWP::"):
+                aumid = path.replace("UWP::", "")
+                shell_open(f"shell:AppsFolder\\{aumid}")
+            elif path.startswith("CPL::"):
+                canonical = path[5:].split("::", 1)[-1] if "::" in path[5:] else path[5:]
+                shell_open("control.exe", parameters=f"/name {canonical}")
+            elif path.startswith(("http://", "https://")):
+                shell_open(path)
+            elif os.path.isfile(path):
+                shell_open(path)
+            else:
+                logging.warning("Quick Launch: path not found: %s", path)
+        except Exception as e:
+            logging.error("Failed to launch %s: %s", name, e)
+        self._history.record(name, path)
+        return True
+
+    def get_context_menu_actions(self, result: ProviderResult) -> list[ProviderMenuAction]:
+        path = result.action_data.get("path", "")
+        if not path:
+            return []
+
+        is_uwp = path.startswith("UWP::")
+        is_cpl = path.startswith("CPL::")
+        is_url = path.startswith(("http://", "https://"))
+        actions: list[ProviderMenuAction] = []
+
+        if not is_url:
+            actions.append(ProviderMenuAction(id="run_as_admin", label="Run as administrator"))
+        if not is_url and not is_uwp and not is_cpl:
+            actions.append(ProviderMenuAction(id="run_as_diff_user", label="Run as different user"))
+
+        if not is_uwp and not is_cpl and not is_url and os.path.isfile(path):
+            actions.append(ProviderMenuAction(id="open_file_location", label="Open file location"))
+
+        if is_uwp:
+            actions.append(ProviderMenuAction(id="copy_app_id", label="Copy App ID"))
+        elif is_cpl:
+            actions.append(ProviderMenuAction(id="copy_canonical_name", label="Copy canonical name"))
+        elif not is_url:
+            actions.append(ProviderMenuAction(id="copy_path", label="Copy path"))
+
+        app_key = result.id or f"{result.action_data.get('name', '')}::{path}"
+        if app_key in self._history.data:
+            actions.append(
+                ProviderMenuAction(id="remove_from_recent", label="Remove from recent", separator_before=True)
+            )
+
+        if not is_url and not is_cpl:
+            actions.append(ProviderMenuAction(id="uninstall", label="Uninstall", separator_before=True))
+
+        return actions
+
+    def execute_context_menu_action(self, action_id: str, result: ProviderResult) -> ProviderMenuActionResult:
+        name = result.action_data.get("name", "")
+        path = result.action_data.get("path", "")
+        if not path:
+            return ProviderMenuActionResult()
+        if action_id.startswith("run_as"):
+            as_user = action_id.endswith("user")
+            launch_verb = "runasuser" if as_user else "runas"
+            try:
+                if path.startswith("UWP::"):
+                    aumid = path.replace("UWP::", "")
+                    shell_open(f"shell:AppsFolder\\{aumid}", verb=launch_verb)
+                elif path.startswith("CPL::"):
+                    canonical = path[5:].split("::", 1)[-1] if "::" in path[5:] else path[5:]
+                    shell_open("control.exe", parameters=f"/name {canonical}", verb=launch_verb)
+                elif os.path.isfile(path):
+                    shell_open(path, verb=launch_verb)
+                self._history.record(name, path)
+            except Exception as e:
+                logging.debug("Failed to run as %s: %s", "user" if as_user else "admin", e)
+            return ProviderMenuActionResult(close_popup=True)
+
+        if action_id == "open_file_location":
+            try:
+                target = self._resolve_app_target(path)
+                shell_open("explorer.exe", parameters=f'/select, "{target}"')
+            except Exception as e:
+                logging.debug("Failed to open file location: %s", e)
+            return ProviderMenuActionResult(close_popup=True)
+
+        if action_id == "copy_path":
+            target = self._resolve_app_target(path)
+            clipboard = QGuiApplication.clipboard()
+            if clipboard:
+                clipboard.setText(target)
+            return ProviderMenuActionResult()
+
+        if action_id == "copy_app_id":
+            clipboard = QGuiApplication.clipboard()
+            if clipboard:
+                clipboard.setText(path[5:] if path.startswith("UWP::") else path)
+            return ProviderMenuActionResult()
+
+        if action_id == "copy_canonical_name":
+            clipboard = QGuiApplication.clipboard()
+            if clipboard:
+                canonical = path[5:].split("::", 1)[-1] if path.startswith("CPL::") and "::" in path[5:] else path[5:]
+                clipboard.setText(canonical)
+            return ProviderMenuActionResult()
+
+        if action_id == "remove_from_recent":
+            app_key = result.id or f"{name}::{path}"
+            self._history.remove(app_key)
+            return ProviderMenuActionResult(refresh_results=True)
+
+        if action_id == "uninstall":
+            try:
+                shell_open("ms-settings:appsfeatures")
+            except Exception as e:
+                logging.debug("Failed to open uninstall settings: %s", e)
+            return ProviderMenuActionResult(close_popup=True)
+
+        return ProviderMenuActionResult()
+
+    @staticmethod
+    def _resolve_app_target(path: str) -> str:
+        """Resolve .lnk shortcut to its target executable path."""
+        if path.lower().endswith(".lnk") and os.path.isfile(path):
+            shortcut = read_shortcut(path)
+            if shortcut is not None:
+                try:
+                    resolved = _resolve_squirrel_target(shortcut.target, shortcut.arguments)
+                except OSError:
+                    resolved = None
+                if resolved and os.path.isfile(resolved):
+                    return resolved
+                if shortcut.target and os.path.isfile(shortcut.target):
+                    return shortcut.target
+        return path

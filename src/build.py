@@ -56,9 +56,9 @@ build_options = {
         ("assets/sound/notification01.wav", "assets/sound/notification01.wav"),
         ("assets/sound/notification02.wav", "assets/sound/notification02.wav"),
         ("core/qml", "core/qml"),
-        (f"core/widgets/services/quick_launch/providers/resources/{everything_dll_name}", f"lib/{everything_dll_name}"),
-        (f"core/widgets/services/systray/hook/{hook_dll_name}", f"lib/{hook_dll_name}"),
-        ("core/widgets/services/quick_launch/providers/resources/emoji.json", "lib/emoji.json"),
+        (f"core/services/quick_launch/providers/resources/{everything_dll_name}", f"lib/{everything_dll_name}"),
+        (f"core/services/systray/hook/{hook_dll_name}", f"lib/{hook_dll_name}"),
+        ("core/services/quick_launch/providers/resources/emoji.json", "lib/emoji.json"),
         *winrt_tables,
     ],
 }

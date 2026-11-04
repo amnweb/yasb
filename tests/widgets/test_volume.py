@@ -10,10 +10,10 @@ from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.volume import output as output_module
+from core.services.volume.output import AudioOutput
 from core.utils.icons.service import IconService
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.volume import output as output_module
-from core.widgets.services.volume.output import AudioOutput
 from settings import QML_IMPORT_PATH
 from tests.support.audio import FakeAudioService
 from tests.support.qt import find_item, wait

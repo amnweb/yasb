@@ -7,7 +7,7 @@ from typing import Any, cast
 from pydantic import ValidationError
 from yaml import YAMLError, safe_load
 
-from core.utils.alert_dialog import show_alert
+from core.app.windows.alert_dialog import show_alert
 from core.utils.validation_errors import format_pydantic_errors_to_yaml
 from core.validation.config import YasbConfig
 from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, GITHUB_URL

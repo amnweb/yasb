@@ -26,8 +26,8 @@ from PyQt6.QtWidgets import QApplication
 
 from core import widget_files
 from core.qml_types import register_qml_types
+from core.services.clock.time_zones import TimeZones
 from core.widget_files import BUILTIN_WIDGETS_DIR, find_widget_file
-from core.widgets.services.clock.time_zones import TimeZones
 from settings import QML_IMPORT_PATH
 from tests.support.widgets import write_widget
 

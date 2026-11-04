@@ -10,8 +10,8 @@ from typing import Any, cast
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from core import tray as tray_module
-from core.tray import TRAY_MESSAGE, SystemTrayManager
+from core.app import tray as tray_module
+from core.app.tray import TRAY_MESSAGE, SystemTrayManager
 from core.utils.win32.bindings.user32 import RegisterWindowMessage, user32
 from core.utils.win32.constants import NIM_ADD, NIM_DELETE, NIM_MODIFY, WM_LBUTTONUP, WM_RBUTTONUP
 from core.utils.win32.structs import NOTIFYICONDATAW

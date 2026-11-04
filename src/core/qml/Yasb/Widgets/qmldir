@@ -5,6 +5,7 @@ AudioVisualizer 1.0 AudioVisualizer/AudioVisualizer.qml
 Battery 1.0 Battery/Battery.qml
 Bluetooth 1.0 Bluetooth/Bluetooth.qml
 Brightness 1.0 Brightness/Brightness.qml
+ClaudeUsage 1.0 ClaudeUsage/ClaudeUsage.qml
 Clock 1.0 Clock/Clock.qml
 Cpu 1.0 Cpu/Cpu.qml
 Dnd 1.0 Dnd/Dnd.qml
@@ -18,6 +19,7 @@ Github 1.0 Github/Github.qml
 GlazewmWorkspaces 1.0 GlazewmWorkspaces/GlazewmWorkspaces.qml
 QuickLaunch 1.0 QuickLaunch/QuickLaunch.qml
 Systray 1.0 Systray/Systray.qml
+Updates 1.0 Updates/Updates.qml
 Volume 1.0 Volume/Volume.qml
 Wallpapers 1.0 Wallpapers/Wallpapers.qml
 Weather 1.0 Weather/Weather.qml

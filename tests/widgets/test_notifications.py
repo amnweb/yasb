@@ -13,9 +13,9 @@ import winrt.windows.ui.notifications.management as management
 from comtypes import GUID  # pyright: ignore[reportMissingTypeStubs]
 from winrt.windows.ui.notifications import UserNotification
 
-from core.widgets.services.notifications import windows_notification
-from core.widgets.services.notifications.toast_activation import _manifest_activator
-from core.widgets.services.notifications.windows_notification import (
+from core.services.notifications import windows_notification
+from core.services.notifications.toast_activation import _manifest_activator
+from core.services.notifications.windows_notification import (
     _find_image,
     _get_app_info,
     _get_image_path,

@@ -4,8 +4,8 @@ import threading
 import time
 from collections.abc import Callable
 
+from core.app.log import CLI_LOG_DATETIME, CLI_LOG_FORMAT, ColoredFormatter
 from core.cli.pipe import BUFSIZE, CLI_SERVER_PIPE_NAME, LOG_SERVER_PIPE_NAME, read_message, write_message
-from core.log import CLI_LOG_DATETIME, CLI_LOG_FORMAT, ColoredFormatter
 from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
     ConnectNamedPipe,

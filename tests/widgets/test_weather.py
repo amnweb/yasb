@@ -16,19 +16,19 @@ from PyQt6.QtQuick import QQuickItem, QQuickWindow
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
-from core.utils.system import app_data_path
-from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.weather import forecast as forecast_module
-from core.widgets.services.weather.api import CURRENT_FIELDS, DAILY_FIELDS, HOURLY_FIELDS
-from core.widgets.services.weather.conditions import condition
-from core.widgets.services.weather.forecast import ForecastFeed, WeatherForecast, forecast_model
-from core.widgets.services.weather.location import (
+from core.services.weather import forecast as forecast_module
+from core.services.weather.api import CURRENT_FIELDS, DAILY_FIELDS, HOURLY_FIELDS
+from core.services.weather.conditions import condition
+from core.services.weather.forecast import ForecastFeed, WeatherForecast, forecast_model
+from core.services.weather.location import (
     LOCATION_FILE,
     load_location,
     load_weather_cache,
     save_location,
     save_weather_cache,
 )
+from core.utils.system import app_data_path
+from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 

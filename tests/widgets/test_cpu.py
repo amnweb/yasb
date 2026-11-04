@@ -5,10 +5,10 @@ from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.cpu import monitor as monitor_module
+from core.services.cpu.cpu_api import CpuData, CpuFreq
+from core.services.cpu.monitor import CpuMonitor
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.cpu import monitor as monitor_module
-from core.widgets.services.cpu.cpu_api import CpuData, CpuFreq
-from core.widgets.services.cpu.monitor import CpuMonitor
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 

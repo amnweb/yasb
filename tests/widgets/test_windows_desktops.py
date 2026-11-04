@@ -11,12 +11,12 @@ from PyQt6.QtQuick import QQuickItem, QQuickWindow
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.windows_desktops import desktops as desktops_module
+from core.services.windows_desktops.com import DesktopInfo, VirtualDesktopError
+from core.services.windows_desktops.desktops import VirtualDesktops
+from core.services.windows_desktops.service import ForegroundView
 from core.utils.hotkey import Hotkey
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.windows_desktops import desktops as desktops_module
-from core.widgets.services.windows_desktops.com import DesktopInfo, VirtualDesktopError
-from core.widgets.services.windows_desktops.desktops import VirtualDesktops
-from core.widgets.services.windows_desktops.service import ForegroundView
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 

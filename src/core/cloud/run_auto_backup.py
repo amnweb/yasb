@@ -53,7 +53,7 @@ def _notify() -> None:
     try:
         import os
 
-        from core.utils.toast import ToastNotifier
+        from core.app.windows.toast import ToastNotifier
         from settings import SCRIPT_PATH
 
         ToastNotifier().show(

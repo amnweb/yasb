@@ -12,11 +12,11 @@ from PyQt6.QtQuick import QQuickItem, QQuickWindow
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.notifications import center as center_module
+from core.services.notifications.center import NotificationCenter
+from core.services.notifications.windows_notification import NotificationItem
 from core.utils.icons.service import IconService
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.notifications import center as center_module
-from core.widgets.services.notifications.center import NotificationCenter
-from core.widgets.services.notifications.windows_notification import NotificationItem
 from settings import QML_IMPORT_PATH
 from tests.support.qt import wait
 

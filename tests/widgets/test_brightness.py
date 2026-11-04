@@ -9,9 +9,9 @@ from PyQt6.QtQuick import QQuickItem, QQuickWindow
 from PyQt6.QtWidgets import QApplication
 
 from core.qml_types import register_qml_types
+from core.services.brightness import control as control_module
+from core.services.brightness.control import DisplayBrightness, DisplayList, is_night
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.brightness import control as control_module
-from core.widgets.services.brightness.control import DisplayBrightness, DisplayList, is_night
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
 

@@ -13,16 +13,17 @@ Item {
 
     property Item bar: null
     // Widgets with the same id show the same saved place; give a widget its own id for another place
-    property alias locationId: forecast.locationId
+    property string locationId: "weather"
     // metric or imperial
-    property alias units: forecast.units
+    property string units: "metric"
     // Days in the popup, 1 to 14
-    property alias forecastDays: forecast.forecastDays
-    // How often the forecast is fetched, in milliseconds
-    property alias updateInterval: forecast.updateInterval
-    property alias hideDecimal: forecast.hideDecimal
+    property int forecastDays: 7
+    // How often the forecast is fetched, in milliseconds, from 60000 to 86400000
+    property int updateInterval: 3600000
+    // Whether temperatures are rounded to whole degrees
+    property bool hideDecimal: false
     // 24h or 12h
-    property alias timeFormat: forecast.timeFormat
+    property string timeFormat: "24h"
     // Label placeholders: {temp}, {feelslike}, {min_temp}, {max_temp}, {humidity}, {pressure}, {precipitation},
     // {precipitation_probability}, {rain_chance}, {snow_chance}, {wind}, {wind_dir}, {cloud}, {uv}, {location},
     // {condition_text}, {is_day}, {sunrise} and {sunset}; empty shows only the picture
@@ -226,7 +227,16 @@ Item {
 
     Component.onDestruction: popup.hide()
 
-    WeatherForecast { id: forecast }
+    WeatherForecast {
+        id: forecast
+
+        locationId: weather.locationId
+        units: weather.units
+        forecastDays: weather.forecastDays
+        updateInterval: weather.updateInterval
+        hideDecimal: weather.hideDecimal
+        timeFormat: weather.timeFormat
+    }
 
     Hotkey {
         keys: weather.keys

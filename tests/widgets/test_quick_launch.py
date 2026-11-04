@@ -11,14 +11,14 @@ from PyQt6.QtQml import QQmlComponent, QQmlEngine, QQmlError
 from PyQt6.QtQuick import QQuickItem, QQuickWindow
 from PyQt6.QtWidgets import QApplication
 
-import core.widgets.services.quick_launch.providers.resources.icons as icons
+import core.services.quick_launch.providers.resources.icons as icons
 from core.qml_types import register_qml_types
+from core.services.quick_launch.base_provider import ProviderResult
+from core.services.quick_launch.search import ROLES, QuickLaunchSearch, image_url
+from core.services.quick_launch.service import QuickLaunchService
 from core.utils.icons.image_provider import _source, icon_url
 from core.utils.icons.sources import AppIcon, FileIcon, ProcessIcon, WindowIcon
 from core.widget_files import BUILTIN_WIDGETS_DIR
-from core.widgets.services.quick_launch.base_provider import ProviderResult
-from core.widgets.services.quick_launch.search import ROLES, QuickLaunchSearch, image_url
-from core.widgets.services.quick_launch.service import QuickLaunchService
 from settings import QML_IMPORT_PATH
 from tests.support.qt import wait
 

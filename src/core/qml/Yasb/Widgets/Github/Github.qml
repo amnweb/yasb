@@ -9,12 +9,18 @@ Item {
     id: github
 
     property Item bar: null
-    property alias token: monitor.token
-    property alias updateInterval: monitor.updateInterval
-    property alias maxNotifications: monitor.maxNotifications
-    property alias onlyUnread: monitor.onlyUnread
-    property alias reasonFilters: monitor.reasonFilters
-    property alias showCommentCount: monitor.showCommentCount
+    // A personal access token; empty signs in from the popup instead. Environment.value("NAME") reads one from an
+    // environment variable, such as one in YASB's .env file, to keep it out of this file
+    property string token: ""
+    // How often the notifications are fetched, in milliseconds, from 60000 to 3600000
+    property int updateInterval: 300000
+    // The most notifications fetched, up to 100
+    property int maxNotifications: 50
+    property bool onlyUnread: false
+    // Only notifications for these reasons, such as ["mention", "review_requested"]; empty shows every reason
+    property list<string> reasonFilters: []
+    // Whether each issue and pull request shows its comment count, which takes a request more for each
+    property bool showCommentCount: true
     property bool hideEmpty: false
     property int popupWidth: 440
     property int popupHeight: 640
@@ -88,7 +94,16 @@ Item {
 
     Component.onDestruction: popup.hide()
 
-    GitHubNotifications { id: monitor }
+    GitHubNotifications {
+        id: monitor
+
+        token: github.token
+        updateInterval: github.updateInterval
+        maxNotifications: github.maxNotifications
+        onlyUnread: github.onlyUnread
+        reasonFilters: github.reasonFilters
+        showCommentCount: github.showCommentCount
+    }
 
     Connections {
         target: github.Window.window

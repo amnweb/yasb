@@ -10,6 +10,7 @@ from uuid import uuid4
 import pytest
 from PyQt6.QtWidgets import QApplication
 
+from core.services.systray import systray_hook
 from core.utils.win32.bindings.kernel32 import CloseHandle, CreateFile, WaitForSingleObject, WaitNamedPipe, WriteFile
 from core.utils.win32.constants import (
     ERROR_BROKEN_PIPE,
@@ -18,7 +19,6 @@ from core.utils.win32.constants import (
     INVALID_HANDLE_VALUE,
     OPEN_EXISTING,
 )
-from core.widgets.services.systray import systray_hook
 
 
 @pytest.fixture
