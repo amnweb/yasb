@@ -159,7 +159,6 @@ Item {
         bottomPadding: 4
         color: checked || chipArea.containsMouse ? github.foreground : Qt.alpha(github.foreground, 0.65)
         opacity: enabled ? 1 : 0.4
-        font.family: "Segoe UI"
         font.pixelSize: 12
         Accessible.role: Accessible.RadioButton
         Accessible.checked: checked
@@ -261,7 +260,6 @@ Item {
                     Layout.rightMargin: 10
                     text: "GitHub"
                     color: github.foreground
-                    font.family: "Segoe UI"
                     font.pixelSize: 16
                     font.weight: Font.Bold
                 }
@@ -323,7 +321,6 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Open notifications on GitHub"
                     color: footerArea.containsMouse ? github.foreground : Qt.alpha(github.foreground, 0.75)
-                    font.family: "Segoe UI"
                     font.pixelSize: 12
                 }
 

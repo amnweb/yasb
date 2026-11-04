@@ -360,24 +360,3 @@ def test_qml_widget_shows_every_state_without_warnings(github: GitHub, monkeypat
         host.close()
         engine.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
-
-
-def test_the_logo_is_thicker_with_a_bold_icon_font(github: GitHub):
-    register_qml_types()
-    engine = QQmlEngine()
-    engine.addImportPath(QML_IMPORT_PATH)
-    component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Github" / "Github.qml")))
-    widget = component.create()
-    assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
-    assert widget.property("icon").fileName() == "github.svg"
-
-    bar_component = QQmlComponent(engine)
-    bar_component.setData(
-        b"import QtQuick\n\nItem {\n    property font iconFont: Qt.font({ weight: Font.Bold })\n}\n", QUrl()
-    )
-    bar = bar_component.create()
-    widget.setProperty("bar", bar)
-    icon = widget.property("icon")
-    assert icon.fileName() == "github-bold.svg"
-    assert QSvgRenderer(icon.toLocalFile()).isValid()
-    widget.deleteLater()

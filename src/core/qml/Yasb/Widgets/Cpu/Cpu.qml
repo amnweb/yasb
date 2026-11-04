@@ -203,7 +203,6 @@ Item {
                         text: "<b>CPU</b> Usage"
                         textFormat: Text.StyledText
                         color: popup.ink
-                        font.family: "Segoe UI"
                         font.pixelSize: 16
 
                         MouseArea {
@@ -251,7 +250,6 @@ Item {
                     bottomPadding: 4
                     text: "Utilization"
                     color: Qt.alpha(popup.ink, 0.5)
-                    font.family: "Segoe UI"
                     font.pixelSize: 12
                 }
 
@@ -371,7 +369,6 @@ Item {
                                     horizontalAlignment: stat.alignment
                                     text: popup.stats[stat.index][0]
                                     color: Qt.alpha(popup.ink, 0.65)
-                                    font.family: "Segoe UI"
                                     font.pixelSize: 13
                                 }
 
@@ -383,7 +380,6 @@ Item {
                                     horizontalAlignment: stat.alignment
                                     text: popup.stats[stat.index][1]
                                     color: popup.ink
-                                    font.family: "Segoe UI"
                                     font.pixelSize: 20
                                     font.weight: Font.Bold
                                 }

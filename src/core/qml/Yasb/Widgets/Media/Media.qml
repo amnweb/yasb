@@ -519,7 +519,6 @@ Item {
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                     color: popup.ink
-                    font.family: "Segoe UI"
                     font.pixelSize: 15
                     font.weight: Font.DemiBold
                 }
@@ -534,7 +533,6 @@ Item {
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                     color: Qt.alpha(popup.ink, 0.65)
-                    font.family: "Segoe UI"
                     font.pixelSize: 12
                     font.weight: Font.DemiBold
                 }
@@ -589,7 +587,6 @@ Item {
                     Text {
                         text: media.time(player.duration > 0 ? Math.min(timeline.pressed ? timeline.value : player.position, player.duration) : 0)
                         color: Qt.alpha(popup.ink, 0.5)
-                        font.family: "Segoe UI"
                         font.pixelSize: 11
                     }
                     Item {
@@ -598,7 +595,6 @@ Item {
                     Text {
                         text: media.time(player.duration)
                         color: Qt.alpha(popup.ink, 0.5)
-                        font.family: "Segoe UI"
                         font.pixelSize: 11
                     }
                 }

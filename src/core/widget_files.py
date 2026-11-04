@@ -1,5 +1,4 @@
 import logging
-import re
 from pathlib import Path
 from typing import NamedTuple
 
@@ -17,17 +16,15 @@ class WidgetFile(NamedTuple):
     path: Path
 
 
-def component_name(widget_name: str) -> str:
-    return "".join(part[:1].upper() + part[1:] for part in re.split(r"[_-]", widget_name) if part)
-
-
 def find_widget_file(widget_name: str) -> Path | None:
-    builtin = component_name(widget_name)
+    """The widget's folder and file are named as config.yaml names it, in any case; the user's comes first."""
     candidates = (
         USER_WIDGETS_DIR / widget_name / f"{widget_name}.qml",
-        BUILTIN_WIDGETS_DIR / builtin / f"{builtin}.qml",
+        BUILTIN_WIDGETS_DIR / widget_name / f"{widget_name}.qml",
     )
-    return next((path for path in candidates if path.is_file()), None)
+    path = next((path for path in candidates if path.is_file()), None)
+    # QML refuses a path whose case differs from the file's; resolving gives the name as it is on disk
+    return path.resolve() if path else None
 
 
 def bar_widget_files(bar: BarConfig) -> dict[str, list[WidgetFile]]:
@@ -47,8 +44,7 @@ def report_undefined_widgets(config: YasbConfig) -> None:
     if not missing:
         return
     details = "\n".join(
-        f' - "{name}": no {name}/{name}.qml in {USER_WIDGETS_DIR} and no built-in {component_name(name)} widget'
-        for name in missing
+        f' - "{name}": no {name}/{name}.qml in {USER_WIDGETS_DIR} and no built-in {name} widget' for name in missing
     )
     logging.error("Undefined widget(s) in %s:\n%s", DEFAULT_CONFIG_FILENAME, details)
     show_alert(

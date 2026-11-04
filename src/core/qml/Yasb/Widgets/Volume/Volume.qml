@@ -218,7 +218,6 @@ Item {
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
                         color: volume.foreground
-                        font.family: "Segoe UI"
                         font.pixelSize: 16
                         font.weight: Font.Bold
                     }
@@ -279,7 +278,6 @@ Item {
                                 textFormat: Text.PlainText
                                 elide: Text.ElideRight
                                 color: Qt.alpha(volume.foreground, device.modelData.current ? 1 : 0.85)
-                                font.family: "Segoe UI"
                                 font.pixelSize: 13
                             }
 
@@ -343,7 +341,6 @@ Item {
                         horizontalAlignment: Text.AlignRight
                         text: audio.volume
                         color: volume.foreground
-                        font.family: "Segoe UI"
                         font.pixelSize: 13
                     }
                     IconButton {
@@ -433,13 +430,11 @@ Item {
                                             textFormat: Text.PlainText
                                             elide: Text.ElideRight
                                             color: Qt.alpha(volume.foreground, app.modelData.muted ? 0.5 : 0.85)
-                                            font.family: "Segoe UI"
                                             font.pixelSize: 12
                                         }
                                         Text {
                                             text: app.modelData.muted ? "Muted" : Math.round(appSlider.value)
                                             color: Qt.alpha(volume.foreground, 0.5)
-                                            font.family: "Segoe UI"
                                             font.pixelSize: 12
                                         }
                                     }
@@ -493,7 +488,6 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Sound settings"
                         color: footerArea.containsMouse ? volume.foreground : Qt.alpha(volume.foreground, 0.75)
-                        font.family: "Segoe UI"
                         font.pixelSize: 12
                     }
 

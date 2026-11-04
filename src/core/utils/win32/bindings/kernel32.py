@@ -226,6 +226,9 @@ kernel32.GetCurrentThreadId.restype = DWORD
 kernel32.GetTickCount64.argtypes = []
 kernel32.GetTickCount64.restype = c_ulonglong
 
+kernel32.SetEnvironmentVariableW.argtypes = [LPCWSTR, LPCWSTR]
+kernel32.SetEnvironmentVariableW.restype = BOOL
+
 kernel32.GetModuleHandleW.argtypes = [LPCWSTR]
 kernel32.GetModuleHandleW.restype = HANDLE
 
@@ -631,6 +634,10 @@ def GetCurrentThreadId() -> int:
 
 def GetTickCount64() -> int:
     return kernel32.GetTickCount64()
+
+
+def SetEnvironmentVariable(name: str, value: str | None) -> bool:
+    return bool(kernel32.SetEnvironmentVariableW(name, value))
 
 
 def GetModuleHandle(lpModuleName: str | None) -> int:

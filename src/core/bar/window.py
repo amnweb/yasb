@@ -5,7 +5,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import override
 
-from PyQt6.QtCore import QObject, QPointF, QRect, QRectF, QSizeF, Qt, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import (
+    QCoreApplication,
+    QEvent,
+    QObject,
+    QPointF,
+    QRect,
+    QRectF,
+    QSizeF,
+    Qt,
+    QTimer,
+    pyqtProperty,
+    pyqtSignal,
+    pyqtSlot,
+)
 from PyQt6.QtGui import QCloseEvent, QColor, QMouseEvent, QRegion, QScreen
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtQuick import QQuickItem, QQuickWindow
@@ -455,6 +468,8 @@ class BarWindow(QQuickWindow):
         if self.item is not None:
             self.item.setParentItem(None)
             self.item.deleteLater()
+            # Windows destroys the windows of the item's popups together with this one, so Qt must delete them first
+            QCoreApplication.sendPostedEvents(self.item, QEvent.Type.DeferredDelete.value)
             self.item = None
 
     @override

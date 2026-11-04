@@ -179,7 +179,6 @@ QtObject {
                         Text {
                             text: String(loupe.center).toUpperCase()
                             color: "#ffffff"
-                            font.family: "Segoe UI"
                             font.pointSize: 9
                             font.bold: true
                         }

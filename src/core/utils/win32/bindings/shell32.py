@@ -395,9 +395,6 @@ class IVirtualDesktopManager(comtypes.IUnknown):
         def GetWindowDesktopId(self, topLevelWindow: int) -> GUID: ...
 
 
-CLSID_UIHostNoLaunch = GUID("{4CE576FA-83DC-4F88-951C-9D0782B4E376}")
-
-
 # Undocumented: the touch keyboard's (TabTip) COM server
 class ITipInvocation(comtypes.IUnknown):
     _iid_ = GUID("{37C994E7-432B-4834-A2F7-DCE1F13B834B}")

@@ -119,11 +119,6 @@ def apply_backdrop(hwnd: int, kind: str, corners: str, border: str, dark: bool) 
         logging.debug("Failed to apply backdrop: %s", e)
 
 
-def is_mica_supported() -> bool:
-    """Return True if the current Windows build supports Mica (Win11 22000+)."""
-    return sys.getwindowsversion().build >= 22000
-
-
 def enable_mica(hwnd: int) -> None:
     """Apply Mica backdrop to a window. Requires Windows 11 build 22000+."""
     build = sys.getwindowsversion().build

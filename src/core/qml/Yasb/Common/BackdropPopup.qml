@@ -54,15 +54,17 @@ QtObject {
             : popup.side === "right" ? 0 : (popup.windowWidth - popup.width) / 2)
         readonly property real roomY: Math.round(popup.side === "above" ? popup.windowHeight - popup.height
             : popup.side === "below" ? 0 : (popup.windowHeight - popup.height) / 2)
+        readonly property rect frame: Qt.rect(Math.round(popup.x) - roomX, Math.round(popup.y) - roomY,
+            Math.ceil(Math.max(popup.windowWidth, popup.width)), Math.ceil(Math.max(popup.windowHeight, popup.height)))
 
         // A window owned by the bar would be destroyed by Windows together with it, before QML cleans up
         transientParent: null
         flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.NoDropShadowWindowHint
         color: "transparent"
-        x: Math.round(popup.x) - roomX
-        y: Math.round(popup.y) - roomY
-        width: Math.ceil(Math.max(popup.windowWidth, popup.width))
-        height: Math.ceil(Math.max(popup.windowHeight, popup.height))
+        x: frame.x
+        y: frame.y
+        width: frame.width
+        height: frame.height
 
         onActiveChanged: {
             if (!active && !popup.opening && !popup.pinned) {
@@ -124,6 +126,11 @@ QtObject {
         opening = true
         side = sideOfAnchor()
         makeRoom()
+        // Windows rescales only visible windows, so one hidden during a scale change is sized again here
+        window.setWidth(window.frame.width)
+        window.setHeight(window.frame.height)
+        window.setX(window.frame.x)
+        window.setY(window.frame.y)
         window.show()
         window.requestActivate()
         enter?.restart()

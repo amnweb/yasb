@@ -1,147 +1,164 @@
 import json
 import logging
-import traceback
-from datetime import datetime
-from random import randint
-from typing import Any
+import unicodedata
+from collections.abc import Callable
+from typing import Any, cast
 
-from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
+from PyQt6.QtCore import QUrl, QUrlQuery
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
-HEADER = (b"User-Agent", b"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0")
-CACHE_CONTROL = (b"Cache-Control", b"no-cache")
+from settings import BUILD_VERSION
+
+FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
+TIMEOUT_MS = 20000
+
+# Everything asked of Open-Meteo, by the name the forecast gives each value
+CURRENT_FIELDS = {
+    "temperature": "temperature_2m",
+    "feelsLike": "apparent_temperature",
+    "humidity": "relative_humidity_2m",
+    "isDay": "is_day",
+    "precipitation": "precipitation",
+    "rain": "rain",
+    "showers": "showers",
+    "snowfall": "snowfall",
+    "weatherCode": "weather_code",
+    "cloudCover": "cloud_cover",
+    "pressure": "pressure_msl",
+    "windSpeed": "wind_speed_10m",
+    "windDirection": "wind_direction_10m",
+    "windGusts": "wind_gusts_10m",
+}
+HOURLY_FIELDS = {
+    "temperature": "temperature_2m",
+    "feelsLike": "apparent_temperature",
+    "humidity": "relative_humidity_2m",
+    "dewPoint": "dew_point_2m",
+    "precipitationChance": "precipitation_probability",
+    "precipitation": "precipitation",
+    "rain": "rain",
+    "showers": "showers",
+    "snowfall": "snowfall",
+    "weatherCode": "weather_code",
+    "cloudCover": "cloud_cover",
+    "pressure": "pressure_msl",
+    "visibility": "visibility",
+    "windSpeed": "wind_speed_10m",
+    "windDirection": "wind_direction_10m",
+    "windGusts": "wind_gusts_10m",
+    "uvIndex": "uv_index",
+    "isDay": "is_day",
+}
+DAILY_FIELDS = {
+    "weatherCode": "weather_code",
+    "high": "temperature_2m_max",
+    "low": "temperature_2m_min",
+    "feelsLikeHigh": "apparent_temperature_max",
+    "feelsLikeLow": "apparent_temperature_min",
+    "sunrise": "sunrise",
+    "sunset": "sunset",
+    "daylight": "daylight_duration",
+    "uvIndex": "uv_index_max",
+    "precipitation": "precipitation_sum",
+    "rain": "rain_sum",
+    "showers": "showers_sum",
+    "snowfall": "snowfall_sum",
+    "precipitationHours": "precipitation_hours",
+    "precipitationChance": "precipitation_probability_max",
+    "windSpeed": "wind_speed_10m_max",
+    "windGusts": "wind_gusts_10m_max",
+    "windDirection": "wind_direction_10m_dominant",
+}
+# Open-Meteo's unit names that read better shortened
+UNIT_NAMES = {"mp/h": "mph", "inch": "in"}
+
+# Fields of a geocoding result that the text after a comma is matched against, as in "Paris, Texas"
+REGION_FIELDS = ("admin3", "admin2", "admin1", "country", "country_code")
 
 
-class BadRequestError(Exception):
-    pass
+def forecast_url(latitude: float, longitude: float, units: str, days: int) -> QUrl:
+    imperial = units == "imperial"
+    query = QUrlQuery()
+    for name, value in (
+        ("latitude", str(latitude)),
+        ("longitude", str(longitude)),
+        ("current", ",".join(CURRENT_FIELDS.values())),
+        ("hourly", ",".join(HOURLY_FIELDS.values())),
+        ("daily", ",".join(DAILY_FIELDS.values())),
+        ("timezone", "auto"),
+        ("forecast_days", str(days)),
+        ("temperature_unit", "fahrenheit" if imperial else "celsius"),
+        ("wind_speed_unit", "mph" if imperial else "kmh"),
+        ("precipitation_unit", "inch" if imperial else "mm"),
+    ):
+        query.addQueryItem(name, value)
+    url = QUrl(FORECAST_URL)
+    url.setQuery(query)
+    return url
 
 
-class HostNotFoundError(Exception):
-    pass
+def search_url(name: str, count: int, language: str) -> QUrl:
+    query = QUrlQuery()
+    for key, value in (
+        ("name", QUrl.toPercentEncoding(name).data().decode()),
+        ("count", str(count)),
+        ("language", language),
+        ("format", "json"),
+    ):
+        query.addQueryItem(key, value)
+    url = QUrl(GEOCODING_URL)
+    url.setQuery(query)
+    return url
 
 
-class WeatherDataFetcher(QObject):
-    """Fetches and processes weather data from a URL."""
+def fold(value: str) -> str:
+    """Lowercase and without accents, so "Zurich" matches "Zürich"."""
+    stripped = unicodedata.normalize("NFKD", value)
+    return "".join(c for c in stripped if not unicodedata.combining(c)).casefold()
 
-    finished = pyqtSignal(dict)
 
-    _cached_url = None
-    _instance: WeatherDataFetcher | None = None
+def in_region(place: dict[str, Any], region: str) -> bool:
+    """Whether a geocoding result lies in the region typed after the comma, given folded."""
+    return not region or any(fold(str(place.get(field) or "")).startswith(region) for field in REGION_FIELDS)
 
-    @classmethod
-    def get_instance(cls, parent: QObject, url: QUrl, timeout: int):
-        if cls._cached_url == url and cls._instance is not None:
-            return cls._instance
-        cls._cached_url = url
-        cls._instance = WeatherDataFetcher(parent, url, timeout)
-        return cls._instance
 
-    def __init__(self, parent: QObject, url: QUrl, timeout: int):
-        super().__init__(parent)
-        self.started = False
-        self._manager = QNetworkAccessManager(self)
-        self._manager.finished.connect(self.handle_response)  # type: ignore[reportUnknownMemberType]
-        self._fetch_weather_data_timer = QTimer(self)
-        self._fetch_weather_data_timer.timeout.connect(self.make_request)  # type: ignore[reportUnknownMemberType]
-        self._url = url
-        self._timeout = timeout
-        self._weather_cache: dict[str, Any] = {}
+def read_reply(reply: QNetworkReply) -> tuple[Any, str]:
+    """The reply's JSON and "", or None and what went wrong."""
+    body = reply.readAll().data()
+    try:
+        data = json.loads(body) if body else None
+    except ValueError:
+        data = None
+    error = reply.error()
+    if error == QNetworkReply.NetworkError.NoError:
+        return (data, "") if data is not None else (None, "Open-Meteo sent an answer YASB could not read.")
+    status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+    reason = cast(dict[str, Any], data).get("reason") if isinstance(data, dict) else None
+    logging.warning("Open-Meteo request failed: %s %s %s", error.name, status, reason or "")
+    if reason:
+        return None, f"Open-Meteo: {reason}"
+    if status:
+        return None, f"Open-Meteo returned HTTP {status}."
+    return None, "Could not connect to Open-Meteo."
 
-    def start(self):
-        # To not make two or more requests at the same time
-        QTimer.singleShot(randint(200, 600), self.make_request)  # type: ignore[reportUnknownMemberType]
-        self._fetch_weather_data_timer.start(self._timeout)
-        self.started = True
 
-    def make_request(self, url: QUrl | None = None):
-        if url is None:
-            url = self._url
-        request = QNetworkRequest(url)
-        request.setRawHeader(*HEADER)
-        request.setRawHeader(*CACHE_CONTROL)
-        self._manager.get(request)
+def get_json(network: QNetworkAccessManager, url: QUrl, done: Callable[[Any, str], None]) -> None:
+    """Calls done(data, "") with what the URL returns, or done(None, error)."""
+    request = QNetworkRequest(url)
+    request.setRawHeader(b"User-Agent", f"YASB/{BUILD_VERSION}".encode())
+    request.setTransferTimeout(TIMEOUT_MS)
+    reply = network.get(request)
+    if reply is None:
+        done(None, "Could not connect to Open-Meteo.")
+        return
 
-    def handle_response(self, reply: QNetworkReply):
-        try:
-            error = reply.error()
-            status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
-            if error == QNetworkReply.NetworkError.NoError:
-                logging.info("Fetching new weather data at %s", datetime.now())
-                data = json.loads(reply.readAll().data().decode())
-                self.finished.emit(data)
-                reply.deleteLater()
-                return
-            elif error == QNetworkReply.NetworkError.HostNotFoundError:
-                raise HostNotFoundError("No internet connection or host not found. Unable to fetch weather.")
-            elif status in {400, 401, 403}:
-                data = json.loads(reply.readAll().data().decode())
-                raise BadRequestError(f"Weather response error {status}: {data['error']['message']}")
-            else:
-                logging.warning("Weather API returned error %s. Will retry on next interval.", status)
-        except json.JSONDecodeError as e:
-            logging.error("Weather API invalid JSON response: %s", e)
-        except (BadRequestError, HostNotFoundError) as e:
-            logging.error(e)
-        except Exception as e:
-            logging.error("%s\n%s", e, traceback.format_exc())
-        self.finished.emit({})
+    def finished() -> None:
         reply.deleteLater()
-
-
-class IconFetcher(QObject):
-    """Fetches and caches icons from a list of URLs."""
-
-    finished = pyqtSignal()
-
-    _instance: IconFetcher | None = None
-
-    @classmethod
-    def get_instance(cls, parent: QObject):
-        if cls._instance is not None:
-            return cls._instance
-        cls._instance = IconFetcher(parent)
-        return cls._instance
-
-    def __init__(self, parent: QObject):
-        super().__init__(parent)
-        self._manager = QNetworkAccessManager(self)
-        self._pending_icons: set[str] = set()
-        self._icon_cache: dict[str, bytes] = {}
-
-    def fetch_icons(self, icon_urls: list[str]):
-        for url in icon_urls:
-            if url in self._icon_cache and self._icon_cache[url]:
-                continue
-            if url in self._pending_icons:
-                continue
-            self._pending_icons.add(url)
-            request = QNetworkRequest(QUrl(url))
-            request.setRawHeader(*HEADER)
-            request.setRawHeader(*CACHE_CONTROL)
-            reply = self._manager.get(request)
-            reply.finished.connect(lambda reply=reply, url=url: self._handle_reply(reply, url))  # type: ignore
-        if len(self._pending_icons) == 0:
-            self.finished.emit()
-
-    def _handle_reply(self, reply: QNetworkReply, url: str):
         try:
-            if reply.error() == QNetworkReply.NetworkError.NoError:
-                data = reply.readAll().data()
-                if not data:
-                    raise Exception(f"Failed to fetch icon {url}: No data received")
-                self._icon_cache[url] = data
-                self._pending_icons.discard(url)
-            else:
-                raise Exception(f"Failed to fetch icon {url}: {reply.error().name} {reply.error().value}")
-        except Exception as e:
-            logging.warning(e)
-        finally:
-            if len(self._pending_icons) == 0:
-                self.finished.emit()
-            reply.deleteLater()
+            done(*read_reply(reply))
+        except RuntimeError:
+            # Whoever asked was destroyed while Open-Meteo answered
+            pass
 
-    def get_icon(self, url: str) -> bytes:
-        return self._icon_cache.get(url, b"")
-
-    def set_icon(self, url: str, data: bytes):
-        self._icon_cache[url] = data
+    reply.finished.connect(finished)

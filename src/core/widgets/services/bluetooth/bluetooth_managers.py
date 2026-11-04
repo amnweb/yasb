@@ -1,10 +1,13 @@
 import asyncio
+import contextlib
 import logging
 import threading
 from collections.abc import Callable, Coroutine
+from dataclasses import replace
 from typing import Any, ClassVar
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QCoreApplication, QObject, pyqtSignal
+from winrt.runtime import ApartmentType, init_apartment
 from winrt.windows.devices.bluetooth import BluetoothConnectionStatus
 
 from core.widgets.services.bluetooth.bluetooth_api import (
@@ -49,6 +52,8 @@ def _connect_error(action: str, reason: str) -> str:
 
 
 class BluetoothManager(QObject):
+    """Runs on an asyncio loop in a thread of its own. Signals carry copies, never the devices the loop changes."""
+
     scan_started = pyqtSignal()
     scan_completed = pyqtSignal(object, object)  # ScanResultStatus, list[DeviceInfo]
     status_updated = pyqtSignal(object)  # BluetoothStatus
@@ -59,11 +64,9 @@ class BluetoothManager(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        try:
-            self._loop: asyncio.AbstractEventLoop | None = asyncio.get_running_loop()
-        except RuntimeError:
-            self._loop = None
-            logger.warning("BluetoothManager created without a running asyncio loop")
+        self._loop = asyncio.new_event_loop()
+        self._tasks: set[asyncio.Task[Any]] = set()
+        self._stopping = False
         self._native: BluetoothNativeApi | None = None
         try:
             self._native = BluetoothNativeApi()
@@ -87,6 +90,11 @@ class BluetoothManager(QObject):
         self._adapter_watch: Any | None = None
         self._enum_lock: asyncio.Lock | None = None
         self._connect_cancel = threading.Event()
+        self._thread = threading.Thread(target=self._run, name="BluetoothManager", daemon=True)
+        self._thread.start()
+        app = QCoreApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self._quit)
 
     @classmethod
     def acquire(cls) -> BluetoothManager:
@@ -99,22 +107,45 @@ class BluetoothManager(QObject):
         type(self)._users = max(type(self)._users - 1, 0)
         if type(self)._users > 0:
             return
-        self.shutdown()
         type(self)._instance = None
+        self._call(self._stop)
 
-    def _ensure_loop(self) -> asyncio.AbstractEventLoop | None:
-        if self._loop is not None and self._loop.is_running():
-            return self._loop
+    def _run(self) -> None:
+        asyncio.set_event_loop(self._loop)
         try:
-            self._loop = asyncio.get_running_loop()
-        except RuntimeError:
-            self._loop = None
-        return self._loop
+            init_apartment(ApartmentType.MULTI_THREADED)
+            self._loop.run_forever()
+        except Exception:
+            logger.exception("The Bluetooth thread stopped")
+        finally:
+            self._loop.run_until_complete(self._cancel_tasks())
+            self._loop.run_until_complete(self._loop.shutdown_default_executor())
+            self._loop.close()
+
+    def _stop(self) -> None:
+        # The last widget's release and the app quitting both stop the loop, the second while it already winds down
+        if self._stopping:
+            return
+        self._stopping = True
+        self.shutdown()
+        self._loop.stop()
+
+    def _quit(self) -> None:
+        self._call(self._stop)
+        self._thread.join(2)
+
+    async def _cancel_tasks(self) -> None:
+        tasks = list(self._tasks)
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    def _call(self, callback: Callable[..., Any], *args: Any) -> None:
+        """Runs callback on the Bluetooth thread; safe from any thread, and a no-op once the thread stopped."""
+        with contextlib.suppress(RuntimeError):
+            self._loop.call_soon_threadsafe(callback, *args)
 
     def _ensure_enum_lock(self) -> asyncio.Lock | None:
-        loop = self._ensure_loop()
-        if loop is None:
-            return None
         if self._enum_lock is None:
             self._enum_lock = asyncio.Lock()
         return self._enum_lock
@@ -124,10 +155,10 @@ class BluetoothManager(QObject):
         return self._pending_scan
 
     def start(self) -> None:
+        self._call(self._start)
+
+    def _start(self) -> None:
         if self._started:
-            return
-        if self._ensure_loop() is None:
-            logger.error("BluetoothManager.start() aborted: no asyncio loop")
             return
         self._ensure_enum_lock()
         self._started = True
@@ -150,12 +181,6 @@ class BluetoothManager(QObject):
         self._devices.clear()
         logger.info("BluetoothManager stopped...")
 
-    def devices(self) -> list[DeviceInfo]:
-        return list(self._devices.values())
-
-    def is_radio_on(self) -> bool:
-        return self._radio_on
-
     def refresh(self) -> None:
         self._refresh_le_pending = True
         self._schedule(self._refresh_async())
@@ -176,55 +201,39 @@ class BluetoothManager(QObject):
         self._schedule(self._connect_async(address, False))
 
     def _schedule(self, coro: Coroutine[Any, Any, Any]) -> None:
-        loop = self._ensure_loop()
-        if loop is None:
-            return
         try:
-            loop.create_task(coro)
+            self._loop.call_soon_threadsafe(self._start_task, coro)
         except RuntimeError:
-            pass
+            coro.close()
+
+    def _start_task(self, coro: Coroutine[Any, Any, Any]) -> None:
+        # The loop holds tasks weakly, a task nothing else holds can vanish halfway
+        task = self._loop.create_task(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
 
     def _safe_create_task(self, callback: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None:
         if not self._started:
             return
-        loop = self._ensure_loop()
-        if loop is None:
-            return
-        try:
-            loop.create_task(callback(*args))
-        except RuntimeError:
-            pass
+        self._start_task(callback(*args))
 
     def _bridge(self, callback: Callable[..., Coroutine[Any, Any, Any]]) -> Callable[[Any, Any], None]:
         def wrapper(sender: Any, _args: Any) -> None:
-            if not self._started:
-                return
-            try:
-                loop = self._loop
-                if loop is None:
-                    return
-                loop.call_soon_threadsafe(self._safe_create_task, callback, sender)
-            except RuntimeError:
-                pass
+            if self._started:
+                self._call(self._safe_create_task, callback, sender)
 
         return wrapper
 
     def _bridge_plain(self, callback: Callable[..., Coroutine[Any, Any, Any]]) -> Callable[..., None]:
         def wrapper(*args: Any) -> None:
-            if not self._started:
-                return
-            try:
-                loop = self._loop
-                if loop is None:
-                    return
-                loop.call_soon_threadsafe(self._safe_create_task, callback, *args)
-            except RuntimeError:
-                pass
+            if self._started:
+                self._call(self._safe_create_task, callback, *args)
 
         return wrapper
 
     def _emit_status(self) -> None:
-        self.status_updated.emit(BluetoothStatus(radio_on=self._radio_on, devices=list(self._devices.values())))
+        devices = [replace(device) for device in self._devices.values()]
+        self.status_updated.emit(BluetoothStatus(radio_on=self._radio_on, devices=devices))
 
     def _set_connected(self, device: DeviceInfo, connected: bool) -> None:
         device.connected = connected
@@ -410,7 +419,7 @@ class BluetoothManager(QObject):
                 if not self._alive():
                     return
                 self._emit_status()
-                self.scan_completed.emit(ScanResultStatus.SUCCESS, devices)
+                self.scan_completed.emit(ScanResultStatus.SUCCESS, [replace(device) for device in devices])
         except Exception as e:
             logger.error("Bluetooth scan failed: %s", e)
             if self._alive():
@@ -455,10 +464,10 @@ class BluetoothManager(QObject):
             self.connection_finished.emit(False, "Device not found", DeviceInfo(name="", address=address))
             return
         if self._connect_running:
-            self.connection_finished.emit(False, "Another connection is in progress", device)
+            self.connection_finished.emit(False, "Another connection is in progress", replace(device))
             return
         if not device.supports_connect:
-            self.connection_finished.emit(False, "Use Windows Settings to manage this device", device)
+            self.connection_finished.emit(False, "Use Windows Settings to manage this device", replace(device))
             return
 
         self._connect_running = True
@@ -499,7 +508,7 @@ class BluetoothManager(QObject):
 
     def _finish_connect(self, device: DeviceInfo, success: bool, message: str) -> None:
         self._connect_running = False
-        self.connection_finished.emit(success, message, device)
+        self.connection_finished.emit(success, message, replace(device))
         self._emit_status()
         if self._alive() and self._refresh_pending:
             self._refresh_pending = False

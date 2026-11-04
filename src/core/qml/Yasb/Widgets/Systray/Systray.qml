@@ -577,7 +577,6 @@ Item {
                     visible: popup.iconCount === 0
                     text: systray.dragging ? "Drop here" : "No icons"
                     color: Qt.alpha(systray.foreground, 0.5)
-                    font.family: "Segoe UI"
                     font.pixelSize: 12
                 }
 

@@ -33,6 +33,7 @@ from PyQt6.QtCore import QByteArray, QEasingCurve, QPointF, QRectF, Qt, QThread,
 from PyQt6.QtGui import (
     QCloseEvent,
     QColor,
+    QGuiApplication,
     QImage,
     QImageReader,
     QPainter,
@@ -40,9 +41,10 @@ from PyQt6.QtGui import (
     QPaintEvent,
     QPixmap,
     QPolygonF,
+    QRasterWindow,
 )
-from PyQt6.QtWidgets import QApplication, QWidget
 
+from core.utils.win32.bindings.kernel32 import SetEnvironmentVariable
 from core.utils.win32.bindings.user32 import (
     MONITORENUMPROC,
     EnumChildWindows,
@@ -394,7 +396,7 @@ class _ImageLoader(QThread):
         self.loaded.emit(new_img, old_img)
 
 
-class WallpaperEngine(QWidget):
+class WallpaperEngine(QRasterWindow):
     _ANIMATION_MS = 1200
     _FRAME_MS = 16
 
@@ -416,15 +418,20 @@ class WallpaperEngine(QWidget):
         self._pixmap_old = QPixmap()
         self._resources_freed = False
 
-        primary = QApplication.primaryScreen()
+        primary = QGuiApplication.primaryScreen()
         if primary is not None:
             self.setGeometry(primary.geometry())
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
-        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-        self.winId()
+        self.setFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowTransparentForInput)
+        self.setProperty("_q_showWithoutActivating", True)
+        # YASB turns off the redirection surface for its Direct3D windows; this one paints with GDI and needs it
+        redirection = os.environ.pop("QT_QPA_DISABLE_REDIRECTION_SURFACE", None)
+        try:
+            self.winId()
+        finally:
+            if redirection is not None:
+                os.environ["QT_QPA_DISABLE_REDIRECTION_SURFACE"] = redirection
+                # Kept out of Windows' copy, which programs YASB starts get, as env.py does
+                SetEnvironmentVariable("QT_QPA_DISABLE_REDIRECTION_SURFACE", None)
 
         self._timeline = QTimeLine(self._ANIMATION_MS, self)
         self._timeline.setUpdateInterval(self._FRAME_MS)
@@ -448,7 +455,7 @@ class WallpaperEngine(QWidget):
             self.deleteLater()
             return
 
-        self.setWindowOpacity(0.0)
+        self.setOpacity(0.0)
         if not _attach_to_workerw(self):
             self.finished.emit()
             self.deleteLater()
@@ -460,12 +467,12 @@ class WallpaperEngine(QWidget):
     def _start_fade_in(self) -> None:
         self._fade_timeline = QTimeLine(50, self)
         self._fade_timeline.setUpdateInterval(self._FRAME_MS)
-        self._fade_timeline.valueChanged.connect(self.setWindowOpacity)
+        self._fade_timeline.valueChanged.connect(self.setOpacity)
         self._fade_timeline.finished.connect(self._on_fade_in_done)
         self._fade_timeline.start()
 
     def _on_fade_in_done(self) -> None:
-        self.setWindowOpacity(1.0)
+        self.setOpacity(1.0)
         self._timeline.start()
 
     def set_screen_areas(self, areas: list[ScreenArea]) -> None:
@@ -741,7 +748,7 @@ class WallpaperEngine(QWidget):
     @override
     def nativeEvent(
         self, eventType: QByteArray | bytes | bytearray | memoryview, message: sip.voidptr | None
-    ) -> tuple[bool, sip.voidptr | None]:
+    ) -> tuple[bool, sip.voidptr]:
         if message is None:
             return False, sip.voidptr(0)
         msg = ctypes.cast(int(message), ctypes.POINTER(wintypes.MSG)).contents

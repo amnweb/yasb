@@ -4,7 +4,7 @@ import pytest
 
 from core import widget_files
 from core.validation.config import YasbConfig
-from core.widget_files import WidgetFile, bar_widget_files, component_name, find_widget_file, undefined_widgets
+from core.widget_files import WidgetFile, bar_widget_files, find_widget_file, undefined_widgets
 
 
 @pytest.fixture
@@ -24,36 +24,46 @@ def _widget(folder: Path, name: str) -> Path:
     return path
 
 
-@pytest.mark.parametrize(
-    ("name", "component"),
-    [("clock", "Clock"), ("active_window", "ActiveWindow"), ("media-lite", "MediaLite"), ("cpu2", "Cpu2")],
-)
-def test_component_name(name: str, component: str):
-    assert component_name(name) == component
+# Windows paths compare equal whatever their case, so these compare the text QML is given
 
 
 def test_a_user_file_overrides_the_builtin(widget_dirs: tuple[Path, Path]):
     user, builtin = widget_dirs
     _widget(builtin, "Clock")
-    path = _widget(user, "clock")
-    assert find_widget_file("clock") == path
+    path = _widget(user, "Clock")
+    assert str(find_widget_file("Clock")) == str(path)
 
 
-def test_a_builtin_is_used_without_a_user_file(widget_dirs: tuple[Path, Path]):
-    _, builtin = widget_dirs
-    path = _widget(builtin, "ActiveWindow")
-    assert find_widget_file("active_window") == path
+@pytest.mark.parametrize("name", ["wallpapers", "Wallpapers", "WALLPAPERS"])
+def test_any_case_finds_the_widget_spelled_as_on_disk(widget_dirs: tuple[Path, Path], name: str):
+    user, builtin = widget_dirs
+    path = _widget(user, "Wallpapers")
+    assert str(find_widget_file(name)) == str(path)
+    path.unlink()
+    path.parent.rmdir()
+    builtin_path = _widget(builtin, "Wallpapers")
+    assert str(find_widget_file(name)) == str(builtin_path)
 
 
 def test_a_user_file_can_add_its_own_widget(widget_dirs: tuple[Path, Path]):
     user, _ = widget_dirs
     path = _widget(user, "clock_utc")
-    assert find_widget_file("clock_utc") == path
+    assert str(find_widget_file("clock_utc")) == str(path)
+
+
+@pytest.mark.parametrize("name", ["windows_desktops", "windows-desktops", "Windows_Desktops"])
+def test_underscores_and_dashes_name_another_widget(widget_dirs: tuple[Path, Path], name: str):
+    user, builtin = widget_dirs
+    _widget(builtin, "WindowsDesktops")
+    _widget(user, "WindowsDesktops")
+    assert find_widget_file(name) is None
 
 
 def test_a_widget_file_lives_in_its_own_folder(widget_dirs: tuple[Path, Path]):
     user, _ = widget_dirs
     (user / "clock.qml").touch()
+    (user / "clock").mkdir()
+    (user / "clock" / "main.qml").touch()
     assert find_widget_file("clock") is None
 
 

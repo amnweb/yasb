@@ -7,8 +7,7 @@ from ctypes import POINTER, addressof, byref, cast, string_at
 from ctypes.wintypes import BYTE, DWORD, HWND, MSG, RECT
 from typing import ClassVar
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QCoreApplication, QObject, pyqtSignal
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.win32.bindings.dxva2 import PHYSICAL_MONITOR, VCP_BRIGHTNESS, VCP_CONTRAST, dxva2
@@ -93,7 +92,7 @@ class BrightnessService(QObject):
         self._wndproc_ref = None
         self._policy_guid = policy_brightness_guid()
 
-        app = QApplication.instance()
+        app = QCoreApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self._stop)
 

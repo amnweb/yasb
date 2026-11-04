@@ -23,13 +23,12 @@ Item {
     property bool hideIfEthernet: false
     property int iconSize: 16
     // Signal glyphs, weakest first; the strongest forms a faint background.
-    property string iconFont: Qt.fontFamilies().includes("Segoe Fluent Icons") ? "Segoe Fluent Icons" : "Segoe MDL2 Assets"
-    property list<string> wifiIcons: ["", "", "", ""]
+    property list<string> wifiIcons: ["\ue872", "\ue873", "\ue874", "\ue701"]
     // Networks in the popup, with and without a password
-    property list<string> securedIcons: ["", "", "", ""]
-    property list<string> openIcons: ["", "", "", ""]
-    property string ethernetIcon: ""
-    property string disconnectedIcon: ""
+    property list<string> securedIcons: ["\ue670", "\ue671", "\ue672", "\ue673"]
+    property list<string> openIcons: ["\uec3c", "\uec3d", "\uec3e", "\uec3f"]
+    property string ethernetIcon: "\ue839"
+    property string disconnectedIcon: "\uf384"
     property int popupWidth: 360
     // Popup alignment relative to the widget on a horizontal bar: left, right, or center.
     property string popupAlignment: "center"
@@ -52,6 +51,10 @@ Item {
     font.letterSpacing: bar?.font.letterSpacing ?? 0
     font.capitalization: bar?.font.capitalization ?? Font.MixedCase
     font.variableAxes: bar?.font.variableAxes ?? ({})
+    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    property font iconFont
+    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
+    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
     readonly property string edge: bar?.edge ?? "top"
 
     // Connection kind: wifi, ethernet, or none.
@@ -171,7 +174,8 @@ Item {
 
     component Glyph: Text {
         textFormat: Text.PlainText
-        font.family: wifi.iconFont
+        font.family: wifi.iconFont.family
+        font.weight: wifi.iconFont.weight
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
     }
@@ -294,7 +298,6 @@ Item {
                     text: "<b>Wi-Fi</b> Networks"
                     textFormat: Text.StyledText
                     color: popup.ink
-                    font.family: "Segoe UI"
                     font.pixelSize: 16
                 }
 
@@ -330,7 +333,6 @@ Item {
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
                         color: popup.ink
-                        font.family: "Segoe UI"
                         font.pixelSize: 13
                     }
 
@@ -339,7 +341,6 @@ Item {
                             anchors.right: parent.right
                             text: "Connected"
                             color: Qt.alpha(popup.ink, 0.65)
-                            font.family: "Segoe UI"
                             font.pixelSize: 12
                         }
 
@@ -348,7 +349,6 @@ Item {
                             visible: text !== ""
                             text: wifi.status.ipAddress
                             color: Qt.alpha(popup.ink, 0.5)
-                            font.family: "Segoe UI"
                             font.pixelSize: 12
                         }
                     }
@@ -366,7 +366,6 @@ Item {
                     wrapMode: Text.WordWrap
                     horizontalAlignment: Text.AlignHCenter
                     color: wifi.errorColor
-                    font.family: "Segoe UI"
                     font.pixelSize: 12
                     font.underline: monitor.errorLink !== "" && errorArea.containsMouse
                     Accessible.role: monitor.errorLink ? Accessible.Link : Accessible.StaticText
@@ -395,7 +394,6 @@ Item {
                     text: monitor.scanning ? "Looking for networks..." : "No networks found"
                     horizontalAlignment: Text.AlignHCenter
                     color: Qt.alpha(popup.ink, 0.5)
-                    font.family: "Segoe UI"
                     font.pixelSize: 13
                 }
 
@@ -509,7 +507,6 @@ Item {
                                         textFormat: Text.PlainText
                                         elide: Text.ElideRight
                                         color: network.hidden ? Qt.alpha(popup.ink, 0.65) : popup.ink
-                                        font.family: "Segoe UI"
                                         font.pixelSize: 13
                                     }
 
@@ -518,7 +515,6 @@ Item {
                                             anchors.right: parent.right
                                             text: network.statusText
                                             color: Qt.alpha(popup.ink, 0.65)
-                                            font.family: "Segoe UI"
                                             font.pixelSize: 12
                                         }
 
@@ -526,7 +522,6 @@ Item {
                                             anchors.right: parent.right
                                             text: `${network.quality}%`
                                             color: Qt.alpha(popup.ink, 0.5)
-                                            font.family: "Segoe UI"
                                             font.pixelSize: 12
                                         }
                                     }
@@ -621,7 +616,6 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "More Wi-Fi settings"
                         color: settingsArea.containsMouse ? popup.ink : Qt.alpha(popup.ink, 0.65)
-                        font.family: "Segoe UI"
                         font.pixelSize: 12
                         Accessible.role: Accessible.Link
                         Accessible.name: text
@@ -663,7 +657,7 @@ Item {
 
                         Glyph {
                             anchors.fill: parent
-                            text: ""
+                            text: "\ue72c"
                             color: popup.ink
                             font.pixelSize: 14
                         }

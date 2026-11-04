@@ -32,7 +32,7 @@ class YASBApplication(QGuiApplication):
     """Owns the QML engine, the bars, the tray and the file watcher, and runs them until YASB exits."""
 
     def __init__(self, args: list[str]):
-        super().__init__(args)
+        super().__init__([*args, "-style", "FluentWinUI3"])
         # Alerts and popups are windows too, and closing the last one must not end YASB
         self.setQuitOnLastWindowClosed(False)
         register_qml_types()

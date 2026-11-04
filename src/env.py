@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from PyQt6.QtQuick import QQuickWindow, QSGRendererInterface
 
+from core.utils.win32.bindings.kernel32 import SetEnvironmentVariable
 from settings import DEFAULT_CONFIG_DIRECTORY
 
 
@@ -27,4 +28,5 @@ def set_defaults():
     QQuickWindow.setGraphicsApi(QSGRendererInterface.GraphicsApi.Direct3D11)
     # Direct3D windows need no GDI redirection surface, which some systems paint opaque over a backdrop
     os.environ["QT_QPA_DISABLE_REDIRECTION_SURFACE"] = "1"
-    os.environ["QT_QUICK_CONTROLS_STYLE"] = "FluentWinUI3"
+    # Qt reads it from the C runtime's copy of the environment, programs YASB starts get Windows' copy
+    SetEnvironmentVariable("QT_QPA_DISABLE_REDIRECTION_SURFACE", None)

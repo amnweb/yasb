@@ -124,7 +124,7 @@ Item {
 
         Text {
             anchors.centerIn: parent
-            text: center.doNotDisturb ? "\ue708" : "\uea8f"
+            text: center.doNotDisturb ? "\ue7ed" : "\uea8f"
             color: notifications.textColor
             font.family: notifications.iconFont.family
             font.weight: notifications.iconFont.weight
@@ -242,13 +242,12 @@ Item {
                         Layout.fillWidth: true
                         text: "Notifications"
                         color: notifications.foreground
-                        font.family: "Segoe UI"
                         font.pixelSize: 16
                         font.weight: Font.Bold
                     }
                     IconButton {
                         visible: center.doNotDisturbAvailable
-                        glyph: "\ue708"
+                        glyph: "\ue7ed"
                         checked: center.doNotDisturb
                         tip: center.doNotDisturb ? "Do not disturb is on" : "Do not disturb"
                         onClicked: center.setDoNotDisturb(!center.doNotDisturb)
@@ -289,7 +288,6 @@ Item {
                             text: center.allowed ? "No new notifications"
                                 : "Notification access is turned off in Windows privacy settings"
                             color: notifications.secondary
-                            font.family: "Segoe UI"
                             font.pixelSize: 13
                         }
                     }
@@ -332,7 +330,6 @@ Item {
                                             text: group.modelData.appName
                                             textFormat: Text.PlainText
                                             color: notifications.secondary
-                                            font.family: "Segoe UI"
                                             font.pixelSize: 12
                                             font.weight: Font.DemiBold
                                             elide: Text.ElideRight
@@ -440,7 +437,6 @@ Item {
                                                                 text: card.modelData.title
                                                                 textFormat: Text.PlainText
                                                                 color: notifications.foreground
-                                                                font.family: "Segoe UI"
                                                                 font.pixelSize: 13
                                                                 font.weight: Font.DemiBold
                                                                 elide: Text.ElideRight
@@ -454,7 +450,6 @@ Item {
                                                                     visible: !hover.hovered
                                                                     text: notifications.age(card.modelData.time)
                                                                     color: notifications.secondary
-                                                                    font.family: "Segoe UI"
                                                                     font.pixelSize: 11
                                                                 }
                                                                 IconButton {
@@ -475,7 +470,6 @@ Item {
                                                             text: card.modelData.body
                                                             textFormat: Text.PlainText
                                                             color: Qt.alpha(notifications.foreground, 0.85)
-                                                            font.family: "Segoe UI"
                                                             font.pixelSize: 12
                                                             wrapMode: Text.Wrap
                                                             maximumLineCount: 4
@@ -487,7 +481,6 @@ Item {
                                                             text: card.modelData.attribution
                                                             textFormat: Text.PlainText
                                                             color: notifications.secondary
-                                                            font.family: "Segoe UI"
                                                             font.pixelSize: 11
                                                             elide: Text.ElideRight
                                                         }
@@ -543,7 +536,6 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Open Notification Center"
                         color: footerArea.containsMouse ? notifications.foreground : Qt.alpha(notifications.foreground, 0.75)
-                        font.family: "Segoe UI"
                         font.pixelSize: 12
                     }
 

@@ -378,7 +378,7 @@ Item {
             border.width: 1
             border.color: launcher.dark ? Qt.alpha("#3A3A3A", 1) : Qt.alpha("#D9D9D9", 1)      
             opacity: popup.reveal
-            scale: 0.85 + popup.reveal * 0.15
+            scale: 0.92 + popup.reveal * 0.08
 
             ColumnLayout {
                 anchors.fill: parent
