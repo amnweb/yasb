@@ -213,8 +213,8 @@ class GitHubDataManager:
                 pass
         except urllib.error.HTTPError as e:
             logging.error("GitHubDataManager HTTP error marking notification as read: %s - %s", e.code, e.reason)
-        except urllib.error.URLError:
-            logging.error("GitHubDataManager no internet connection. Unable to mark notification as read.")
+        except OSError as e:
+            logging.error("GitHubDataManager network error marking notification as read: %s", e)
         except Exception as e:
             logging.error("GitHubDataManager error marking notification as read: %s", e)
 
@@ -258,8 +258,8 @@ class GitHubDataManager:
                     logging.info("GitHubDataManager marked all notifications as read on GitHub")
             except urllib.error.HTTPError as e:
                 logging.error("GitHubDataManager HTTP error marking all as read: %s - %s", e.code, e.reason)
-            except urllib.error.URLError:
-                logging.error("GitHubDataManager no internet connection. Unable to mark all as read.")
+            except OSError as e:
+                logging.error("GitHubDataManager network error marking all as read: %s", e)
             except Exception as e:
                 logging.error("GitHubDataManager error marking all as read: %s", e)
 
@@ -280,8 +280,8 @@ class GitHubDataManager:
         except urllib.error.HTTPError as e:
             logging.error("GitHubDataManager HTTP error occurred: %s - %s", e.code, e.reason)
             return []
-        except urllib.error.URLError:
-            logging.error("GitHubDataManager no internet connection. Unable to fetch notifications.")
+        except OSError as e:
+            logging.error("GitHubDataManager network error fetching notifications: %s", e)
             return []
         except Exception as e:
             logging.error("GitHubDataManager an unexpected error occurred: %s", e)
@@ -544,8 +544,8 @@ class GitHubDataManager:
             logging.error(
                 "GitHubDataManager GraphQL HTTP error: %s - %s", getattr(exc, "code", "?"), getattr(exc, "reason", "")
             )
-        except urllib.error.URLError:
-            logging.error("GitHubDataManager no internet connection. Unable to enrich notifications via GraphQL.")
+        except OSError as exc:
+            logging.error("GitHubDataManager network error enriching notifications via GraphQL: %s", exc)
         except Exception as exc:
             logging.error("GitHubDataManager unexpected error enriching notifications: %s", exc)
 

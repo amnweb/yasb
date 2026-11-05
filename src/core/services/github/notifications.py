@@ -209,7 +209,10 @@ class GitHubNotifications(QObject):
                 data = GitHubDataManager.fetch_all_notifications(token, maximum, comments)
             except urllib.error.HTTPError as e:
                 error, rejected = f"GitHub returned HTTP {e.code}.", e.code == 401
-            except urllib.error.URLError:
+            except TimeoutError:
+                error = "GitHub took too long to respond."
+            except OSError:
+                # URLError, connection resets and SSL errors
                 error = "Could not connect to GitHub."
             except Exception:
                 error = "Could not fetch GitHub notifications."
