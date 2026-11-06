@@ -9,6 +9,7 @@ Clock 1.0 Clock/Clock.qml
 Cpu 1.0 Cpu/Cpu.qml
 Dnd 1.0 Dnd/Dnd.qml
 Gpu 1.0 Gpu/Gpu.qml
+Language 1.0 Language/Language.qml
 Memory 1.0 Memory/Memory.qml
 Microphone 1.0 Microphone/Microphone.qml
 Media 1.0 Media/Media.qml
