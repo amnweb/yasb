@@ -22,7 +22,7 @@ from core.utils.win32.constants import (
 )
 from core.utils.win32.structs import COORD, PROCESS_INFORMATION, STARTUPINFOEXW
 
-NAME = "winget"
+NAME = "Winget"
 CHECK_COMMAND = "winget upgrade --include-unknown --accept-source-agreements --disable-interactivity"
 TIMEOUT_S = 120
 
@@ -162,7 +162,7 @@ def parse_table(output: str) -> list[dict[str, str]]:
                 rest = line[start:].strip()
                 value = rest.split(" ")[0] if rest else ""
             # winget ends a value it had to cut with an ellipsis
-            row[field] = value.removesuffix("…")
+            row[field] = value.removesuffix("...")
         if row["name"] and row["id"] and " " not in row["id"] and any(c.isdigit() for c in row["availableVersion"]):
             row.setdefault("origin", "")
             packages.append(row)

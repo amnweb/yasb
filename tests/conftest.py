@@ -4,12 +4,12 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 _REDIRECTED_ENV = ("YASB_CONFIG_HOME", "LOCALAPPDATA")
 _saved_env: dict[str, str | None] = {}
 _sandbox: Path | None = None
-_qapp: QApplication | None = None
+_qapp: QGuiApplication | None = None
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -38,8 +38,8 @@ def pytest_unconfigure(config: pytest.Config) -> None:
 
 
 @pytest.fixture(scope="session")
-def qapp() -> QApplication:
+def qapp() -> QGuiApplication:
     global _qapp
-    app = QApplication.instance()
-    _qapp = app if isinstance(app, QApplication) else QApplication([])
+    app = QGuiApplication.instance()
+    _qapp = app if isinstance(app, QGuiApplication) else QGuiApplication([])
     return _qapp

@@ -74,16 +74,20 @@ powrprof.PowerWriteDCValueIndex.restype = wintypes.DWORD
 powrprof.SetSuspendState.argtypes = [wintypes.BOOLEAN, wintypes.BOOLEAN, wintypes.BOOLEAN]
 powrprof.SetSuspendState.restype = wintypes.BOOLEAN
 
-# Power mode overlay exports: undocumented and missing on older Windows 10 builds
+# User-configured Power Mode APIs are optional on older Windows builds.
 try:
     powrprof.PowerGetUserConfiguredACPowerMode.argtypes = [POINTER(GUID)]
     powrprof.PowerGetUserConfiguredACPowerMode.restype = wintypes.DWORD
+    powrprof.PowerGetUserConfiguredDCPowerMode.argtypes = [POINTER(GUID)]
+    powrprof.PowerGetUserConfiguredDCPowerMode.restype = wintypes.DWORD
     powrprof.PowerSetUserConfiguredACPowerMode.argtypes = [POINTER(GUID)]
     powrprof.PowerSetUserConfiguredACPowerMode.restype = wintypes.DWORD
     powrprof.PowerSetUserConfiguredDCPowerMode.argtypes = [POINTER(GUID)]
     powrprof.PowerSetUserConfiguredDCPowerMode.restype = wintypes.DWORD
 except AttributeError:
-    pass
+    has_power_mode_api = False
+else:
+    has_power_mode_api = True
 
 
 # -- Power management function wrappers -- #
@@ -185,6 +189,10 @@ def SetSuspendState(bHibernate: bool, bForce: bool, bWakeupEventsDisabled: bool)
 
 def PowerGetUserConfiguredACPowerMode(PowerModeGuid: GUID) -> int:
     return powrprof.PowerGetUserConfiguredACPowerMode(byref(PowerModeGuid))
+
+
+def PowerGetUserConfiguredDCPowerMode(PowerModeGuid: GUID) -> int:
+    return powrprof.PowerGetUserConfiguredDCPowerMode(byref(PowerModeGuid))
 
 
 def PowerSetUserConfiguredACPowerMode(PowerModeGuid: GUID) -> int:

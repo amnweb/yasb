@@ -5,7 +5,6 @@ Handles all pinned application functionality including:
 - Loading/saving pinned apps from/to JSON file
 - Icon caching and management
 - App identification (AUMID, exe path, explorer folders)
-- Signal coordination between taskbar instances
 - Launching pinned applications
 """
 
@@ -17,8 +16,6 @@ import subprocess
 from ctypes import WinError
 from pathlib import Path
 from typing import Any, TypedDict
-
-from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.services.taskbar.pin_context import (
     WindowContext,
@@ -39,15 +36,6 @@ from core.utils.win32.bindings.kernel32 import GetLastError
 from core.utils.win32.bindings.shell32 import read_shortcut, shell_execute
 from core.utils.win32.bindings.user32 import FindWindowEx, get_window_thread_process_id
 from core.utils.win32.utils import get_app_name_from_aumid
-
-
-class TaskbarSignalBus(QObject):
-    """Signal bus for coordinating pinned app changes across multiple taskbar instances."""
-
-    pinned_apps_changed = pyqtSignal(str, str)  # action, unique_id
-
-
-_taskbar_signal_bus = TaskbarSignalBus()
 
 
 class _AppsCache(TypedDict):
@@ -100,12 +88,6 @@ class PinManager:
         """Initialize the pin manager."""
         self.pinned_apps: dict[str, dict[str, str]] = {}
         self.pinned_order: list[str] = []
-        self.running_pinned: dict[int, str] = {}
-
-    @staticmethod
-    def get_signal_bus():
-        """Get the shared signal bus for taskbar communication."""
-        return _taskbar_signal_bus
 
     @staticmethod
     def get_path_for_pinned_app(unique_id: str) -> str | None:
@@ -477,6 +459,17 @@ class PinManager:
         return parts[1] if len(parts) > 1 else None
 
     @staticmethod
+    def get_app_name(hwnd: int, window_data: dict[str, Any]) -> str:
+        """The name Windows shows for a window's app: a File Explorer window's folder, else its Store app's or exe's
+        name, else the window's title."""
+        context = collect_window_context(hwnd, window_data)
+        if context is None:
+            return ""
+        if context.is_explorer:
+            return context.window_title or ""
+        return PinManager._lookup_app_name(hwnd, context) or context.window_title or context.process_name or ""
+
+    @staticmethod
     def _app_display_name(hwnd: int, context: WindowContext) -> str:
         name: str | None = None
         if context.is_explorer:
@@ -546,13 +539,7 @@ class PinManager:
                 else:
                     self.pinned_order.append(unique_id)
 
-            self.running_pinned[hwnd] = unique_id
-
-            # Save once with correct position
             self.save_pinned_apps()
-
-            # Notify other taskbar instances
-            _taskbar_signal_bus.pinned_apps_changed.emit("pin", unique_id)
 
             return unique_id
 
@@ -560,37 +547,19 @@ class PinManager:
             logging.error("Error pinning app: %s", e)
             return None
 
-    def unpin_app(self, hwnd: int, window_data: dict[str, Any] | None = None) -> None:
-        """Unpin an application from the taskbar."""
-        try:
-            # Get unique_id for this app
-            unique_id = self.running_pinned.get(hwnd)
-            if not unique_id and window_data:
-                unique_id = self.get_app_unique_id(hwnd, window_data)
-
-            if unique_id and unique_id in self.pinned_apps:
-                del self.pinned_apps[unique_id]
-                self.pinned_order.remove(unique_id)
-                self.running_pinned.pop(hwnd, None)
-                self.save_pinned_apps()
-
-                # Notify other taskbar instances
-                _taskbar_signal_bus.pinned_apps_changed.emit("unpin", unique_id)
-        except Exception as e:
-            logging.error("Error unpinning app: %s", e)
-
-    def is_app_pinned(self, hwnd: int) -> bool:
-        """Check if an app is pinned."""
-        return hwnd in self.running_pinned
+    def unpin(self, unique_id: str) -> None:
+        """Unpin an app by its unique id."""
+        if self.pinned_apps.pop(unique_id, None) is None:
+            return
+        if unique_id in self.pinned_order:
+            self.pinned_order.remove(unique_id)
+        self.save_pinned_apps()
 
     def update_pinned_order(self, new_order: list[str]) -> None:
-        """Update the pinned order and notify other instances."""
+        """Update the pinned order."""
         if new_order != self.pinned_order:
             self.pinned_order = new_order
             self.save_pinned_apps()
-
-            # Notify other taskbar instances about the reorder
-            _taskbar_signal_bus.pinned_apps_changed.emit("reorder", "")
 
     @staticmethod
     def _launch_exe(exe_path: str, arguments: str = "", working_dir: str | None = None) -> None:

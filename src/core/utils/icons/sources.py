@@ -25,6 +25,7 @@ from core.utils.icons.extract import (
     get_own_icon,
     get_resource_icon,
     get_shell_icon,
+    get_stock_icon,
 )
 from core.utils.win32.aumid import get_aumid_for_process, get_aumid_for_window
 from core.utils.win32.bindings.shell32 import get_shell_item_icon_location, read_shortcut
@@ -53,7 +54,13 @@ class FileIcon:
     path: str
 
 
-type IconSource = WindowIcon | ProcessIcon | AppIcon | FileIcon
+@dataclass(frozen=True)
+class StockIcon:
+    # SHSTOCKICONID, such as 31 and 32 for the empty and full Recycle Bin
+    kind: int
+
+
+type IconSource = WindowIcon | ProcessIcon | AppIcon | FileIcon | StockIcon
 
 
 @dataclass
@@ -74,6 +81,8 @@ def load_icon(source: IconSource, size: int) -> LoadedIcon:
             return LoadedIcon(_store_app_icon(aumid, size) or _toast_app_icon(aumid, size) or get_default_app_icon())
         case FileIcon(path):
             return LoadedIcon(_file_icon(path, size) or get_default_app_icon())
+        case StockIcon(kind):
+            return LoadedIcon(get_stock_icon(kind))
 
 
 def _window_icon(hwnd: int, size: int) -> LoadedIcon:

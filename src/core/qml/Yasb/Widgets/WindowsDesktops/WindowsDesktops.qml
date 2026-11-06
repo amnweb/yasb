@@ -26,31 +26,33 @@ Item {
     property bool scrollSwitching: true
     property bool reverseScroll: false
     // Global hotkeys, with the actions that need no button. Set to [] for none
-    property var keybindings: [
-        { keys: "alt+1", action: "switch_desktop 1" },
-        { keys: "alt+2", action: "switch_desktop 2" },
-        { keys: "alt+3", action: "switch_desktop 3" },
-        { keys: "alt+4", action: "switch_desktop 4" },
-        { keys: "alt+5", action: "switch_desktop 5" },
-        { keys: "alt+6", action: "switch_desktop 6" },
-        { keys: "alt+7", action: "switch_desktop 7" },
-        { keys: "alt+8", action: "switch_desktop 8" },
-        { keys: "alt+9", action: "switch_desktop 9" },
-        { keys: "alt+shift+1", action: "move_window_to 1" },
-        { keys: "alt+shift+2", action: "move_window_to 2" },
-        { keys: "alt+shift+3", action: "move_window_to 3" },
-        { keys: "alt+shift+4", action: "move_window_to 4" },
-        { keys: "alt+shift+5", action: "move_window_to 5" },
-        { keys: "alt+shift+6", action: "move_window_to 6" },
-        { keys: "alt+shift+7", action: "move_window_to 7" },
-        { keys: "alt+shift+8", action: "move_window_to 8" },
-        { keys: "alt+shift+9", action: "move_window_to 9" },
-        { keys: "alt+pagedown", action: "next_desktop" },
-        { keys: "alt+pageup", action: "prev_desktop" },
-        { keys: "alt+shift+n", action: "create_desktop" },
-        { keys: "alt+shift+d", action: "delete_desktop" },
-        { keys: "alt+shift+r", action: "rename_desktop" }
-    ]
+    property var keybindings: []
+    // Example below, with the default hotkeys for switching and moving windows.
+    // property var keybindings: [
+    //     { keys: "alt+1", action: "switch_desktop 1" },
+    //     { keys: "alt+2", action: "switch_desktop 2" },
+    //     { keys: "alt+3", action: "switch_desktop 3" },
+    //     { keys: "alt+4", action: "switch_desktop 4" },
+    //     { keys: "alt+5", action: "switch_desktop 5" },
+    //     { keys: "alt+6", action: "switch_desktop 6" },
+    //     { keys: "alt+7", action: "switch_desktop 7" },
+    //     { keys: "alt+8", action: "switch_desktop 8" },
+    //     { keys: "alt+9", action: "switch_desktop 9" },
+    //     { keys: "alt+shift+1", action: "move_window_to 1" },
+    //     { keys: "alt+shift+2", action: "move_window_to 2" },
+    //     { keys: "alt+shift+3", action: "move_window_to 3" },
+    //     { keys: "alt+shift+4", action: "move_window_to 4" },
+    //     { keys: "alt+shift+5", action: "move_window_to 5" },
+    //     { keys: "alt+shift+6", action: "move_window_to 6" },
+    //     { keys: "alt+shift+7", action: "move_window_to 7" },
+    //     { keys: "alt+shift+8", action: "move_window_to 8" },
+    //     { keys: "alt+shift+9", action: "move_window_to 9" },
+    //     { keys: "alt+pagedown", action: "next_desktop" },
+    //     { keys: "alt+pageup", action: "prev_desktop" },
+    //     { keys: "alt+shift+n", action: "create_desktop" },
+    //     { keys: "alt+shift+d", action: "delete_desktop" },
+    //     { keys: "alt+shift+r", action: "rename_desktop" }
+    // ]
     // active, cursor or primary: which screen's widget runs a hotkey when several bars have one
     property string hotkeyScreen: "active"
     property int spacing: 4
@@ -76,8 +78,6 @@ Item {
 
     readonly property alias service: service
     property real scrolled: 0
-    // Where the last click on a button was, where its menu opens
-    property point clickPoint
     // Held so the garbage collector doesn't destroy the open menu
     property Window openedMenu: null
 
@@ -137,10 +137,13 @@ Item {
         // Before the menu takes focus from the window its entries act on
         service.readForeground()
         openedMenu?.close()
+        const index = service.desktops.findIndex(desktop => desktop.number === (number || service.current))
+        const button = desktopButtons.itemAt(index) ?? desktops
+        const start = button.mapToGlobal(0, 0)
         const screen = desktops.Screen
         openedMenu = menuWindow.createObject(null, {
             number: number,
-            position: desktops.clickPoint,
+            anchor: Qt.rect(start.x, start.y, button.width, button.height),
             area: Qt.rect(screen.virtualX, screen.virtualY, screen.width, screen.desktopAvailableHeight)
         })
     }
@@ -210,6 +213,8 @@ Item {
         spacing: desktops.spacing
 
         Repeater {
+            id: desktopButtons
+
             model: service.desktops
 
             delegate: Item {
@@ -253,12 +258,9 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-                    onClicked: mouse => {
-                        desktops.clickPoint = mapToGlobal(mouse.x, mouse.y)
-                        desktops.run(mouse.button === Qt.LeftButton ? desktops.leftClick
-                            : mouse.button === Qt.MiddleButton ? desktops.middleClick : desktops.rightClick,
-                            button.modelData.number)
-                    }
+                    onClicked: mouse => desktops.run(mouse.button === Qt.LeftButton ? desktops.leftClick
+                        : mouse.button === Qt.MiddleButton ? desktops.middleClick : desktops.rightClick,
+                        button.modelData.number)
                 }
             }
         }
@@ -289,17 +291,29 @@ Item {
             id: menuHost
 
             required property int number
-            required property point position
+            required property rect anchor
             required property rect area
             // Room beside the menu for the window submenu, which only exists when a window was in front
             readonly property bool withSubmenu: service.hasWindow
+            readonly property int gap: 6
+            readonly property string iconFamily: Qt.fontFamilies().includes("Segoe Fluent Icons")
+                ? "Segoe Fluent Icons" : "Segoe MDL2 Assets"
+            readonly property int menuX: {
+                const wanted = desktops.edge === "left" ? anchor.x + anchor.width + gap
+                    : desktops.edge === "right" ? anchor.x - menu.width - gap : anchor.x + (anchor.width - menu.width) / 2
+                return Math.round(Math.max(area.x, Math.min(wanted, area.x + area.width - menu.width)))
+            }
+            readonly property int menuY: {
+                const wanted = desktops.edge === "bottom" ? anchor.y - menu.implicitHeight - gap
+                    : desktops.edge === "top" ? anchor.y + anchor.height + gap : anchor.y
+                return Math.round(Math.max(area.y, Math.min(wanted, area.y + area.height - menu.implicitHeight)))
+            }
 
             flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.NoDropShadowWindowHint
             color: "transparent"
-            x: Math.max(area.x, Math.min(desktops.edge === "right" ? position.x - menu.width : position.x,
-                area.x + area.width - width))
-            y: Math.max(area.y, Math.min(desktops.edge === "bottom" ? position.y - menu.implicitHeight
-                : position.y + desktops.height, area.y + area.height - height))
+            // Keep the submenu's room on screen without shifting the main menu away from the button.
+            x: Math.min(menuX, Math.max(area.x, area.x + area.width - width))
+            y: Math.min(menuY, Math.max(area.y, area.y + area.height - height))
             width: menu.width + (withSubmenu ? moveMenu.width : 0)
             height: menu.implicitHeight + (withSubmenu ? moveMenu.implicitHeight : 0)
 
@@ -333,6 +347,25 @@ Item {
                     destroy()
             }
 
+            component ActionItem: MenuItem {
+                id: actionItem
+
+                property string glyph: ""
+                property int iconSize: 14
+                leftPadding: mirrored ? 12 : Math.max(34, iconSize + 18)
+                rightPadding: mirrored ? Math.max(34, iconSize + 18) : 12
+
+                Text {
+                    x: actionItem.mirrored ? actionItem.width - width - 10 : 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: actionItem.glyph
+                    font.family: menuHost.iconFamily
+                    font.pixelSize: actionItem.iconSize
+                    color: actionItem.palette.text
+                    Accessible.ignored: true
+                }
+            }
+
             // Looks like the bar's own right-click menu
             component BarLikeMenu: Menu {
                 topInset: 0
@@ -351,24 +384,33 @@ Item {
             BarLikeMenu {
                 id: menu
 
+                x: menuHost.menuX - menuHost.x
+                y: menuHost.menuY - menuHost.y
                 popupType: Popup.Item
                 onClosed: menuHost.close()
 
-                MenuItem {
+                delegate: ActionItem {
+                    glyph: subMenu ? "\ue7c2" : ""
+                }
+
+                ActionItem {
+                    glyph: "\ue70f"
                     text: qsTr("Rename")
                     onTriggered: desktops.openRename(menuHost.number)
                 }
 
-                MenuItem {
+                ActionItem {
                     id: deleteItem
 
+                    glyph: "\ue74d"
                     text: qsTr("Delete")
                     onTriggered: service.remove(menuHost.number)
                 }
 
                 MenuSeparator {}
 
-                MenuItem {
+                ActionItem {
+                    glyph: "\ue710"
                     text: qsTr("Create new desktop")
                     onTriggered: service.create()
                 }
@@ -377,9 +419,10 @@ Item {
                     id: windowSeparator
                 }
 
-                MenuItem {
+                ActionItem {
                     id: moveHereItem
 
+                    glyph: "\ue7c2"
                     text: qsTr("Move window here")
                     onTriggered: service.moveWindowTo(menuHost.number)
                 }
@@ -405,16 +448,18 @@ Item {
                     }
                 }
 
-                MenuItem {
+                ActionItem {
                     id: windowPinItem
 
+                    glyph: service.windowPinned ? "\ue77a" : "\ue718"
                     text: service.windowPinned ? qsTr("Unpin window from all desktops") : qsTr("Pin window to all desktops")
                     onTriggered: service.toggleWindowPin()
                 }
 
-                MenuItem {
+                ActionItem {
                     id: appPinItem
 
+                    glyph: service.appPinned ? "\ue77a" : "\ue718"
                     text: service.appPinned ? qsTr("Unpin app from all desktops") : qsTr("Pin app to all desktops")
                     onTriggered: service.toggleAppPin()
                 }
@@ -423,16 +468,18 @@ Item {
                     id: wallpaperSeparator
                 }
 
-                MenuItem {
+                ActionItem {
                     id: wallpaperItem
 
+                    glyph: "\ue8b9"
                     text: qsTr("Set wallpaper on this desktop")
                     onTriggered: desktops.chooseWallpaper(menuHost.number)
                 }
 
-                MenuItem {
+                ActionItem {
                     id: wallpaperAllItem
 
+                    glyph: "\ue8b9"
                     text: qsTr("Set wallpaper on all desktops")
                     onTriggered: desktops.chooseWallpaper(0)
                 }

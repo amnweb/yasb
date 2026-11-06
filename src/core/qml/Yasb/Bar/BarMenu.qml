@@ -11,6 +11,9 @@ Window {
     required property point position
     required property rect area
 
+    readonly property string iconFamily: Qt.fontFamilies().includes("Segoe Fluent Icons")
+        ? "Segoe Fluent Icons" : "Segoe MDL2 Assets"
+
     // At the click, opening away from the bar's edge, and inside the screen
     readonly property real menuX: Math.max(area.x, Math.min(bar.edge === "right" ? position.x - menu.width : position.x,
         area.x + area.width - menu.width))
@@ -44,10 +47,29 @@ Window {
         id: commands
     }
 
+    component ActionItem: MenuItem {
+        id: actionItem
+
+        required property string glyph
+        property int iconSize: 14
+        leftPadding: mirrored ? 12 : Math.max(34, iconSize + 18)
+        rightPadding: mirrored ? Math.max(34, iconSize + 18) : 12
+
+        Text {
+            x: actionItem.mirrored ? actionItem.width - width - 10 : 10
+            anchors.verticalCenter: parent.verticalCenter
+            text: actionItem.glyph
+            font.family: barMenu.iconFamily
+            font.pixelSize: actionItem.iconSize
+            color: actionItem.palette.text
+            Accessible.ignored: true
+        }
+    }
+
     Menu {
         id: menu
-        
-        // Custom menu colors
+
+        font: barMenu.bar.font
         topInset: 0
         leftInset: 0
         rightInset: 0
@@ -72,29 +94,35 @@ Window {
 
         MenuSeparator {}
 
-        MenuItem {
+        ActionItem {
+            glyph: "\uf120"
             text: "Task Manager"
             onTriggered: commands.execute("taskmgr")
         }
 
-        MenuItem {
+        ActionItem {
+            glyph: "\ue722"
             text: "Take Screenshot"
             onTriggered: barMenu.bar.context.screenshot()
         }
 
         MenuSeparator {}
 
-        MenuItem {
+        ActionItem {
+            glyph: barMenu.bar.context.autoHide ? "\ue718" : "\ue77a"
             text: barMenu.bar.context.autoHide ? "Disable Auto Hide" : "Enable Auto Hide"
             onTriggered: barMenu.bar.context.autoHide = !barMenu.bar.context.autoHide
         }
 
-        MenuItem {
+        ActionItem {
+            glyph: "\ue72c"
             text: "Reload Bar"
             onTriggered: barMenu.bar.context.reload()
         }
 
-        MenuItem {
+        ActionItem {
+            glyph: "\ue8bb"
+            iconSize: 11
             text: "Exit"
             onTriggered: barMenu.bar.context.exit()
         }

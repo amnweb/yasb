@@ -12,7 +12,6 @@ from PyQt6.QtGui import QCursor, QGuiApplication
 from winrt.windows.applicationmodel import Package
 from winrt.windows.management.deployment import PackageManager
 
-from core.utils.system import is_windows_10
 from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
     GetCurrentProcess,
@@ -50,7 +49,7 @@ from core.utils.win32.registry_keys import RUN_KEY
 from core.utils.win32.structs import WINDOWPLACEMENT
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QMenu
+    pass
 
 
 def get_windows_host_arch():
@@ -289,40 +288,6 @@ def get_hwnd_info(hwnd: int) -> WindowInfo | None:
             "monitor_info": monitor_info,
             "rect": get_window_rect(hwnd),
         }
-
-
-def apply_qmenu_style(qwidget: QMenu):
-    """
-    Set blur and rounded corners for a QMenu on Windows 11.
-    Fusion style is required for correct rendering and removing qmenu shadow.
-    """
-    if is_windows_10():
-        return
-    try:
-        from PyQt6.QtWidgets import QStyleFactory
-
-        from core.utils.win32.backdrop import enable_blur
-
-        # First we need to set Fusion style to remove shadow artifacts
-        # Keep a reference so Python GC doesn't destroy the C++ QStyle
-        # while Qt still holds a raw pointer to it (prevents DEP crash).
-        style = QStyleFactory.create("Fusion")
-        qwidget.setStyle(style)
-        setattr(qwidget, "_fusion_style_ref", style)
-
-        def apply_blur():
-            try:
-                hwnd = int(qwidget.winId())
-                enable_blur(hwnd, DarkMode=False, RoundCorners=True, RoundCornersType="normal", BorderColor="None")
-            except Exception:
-                pass
-
-        # When the menu is shown, apply blur and rounded corners
-        qwidget.aboutToShow.connect(apply_blur)
-
-    except Exception:
-        # If anything goes wrong, just skip it.
-        pass
 
 
 def _monitor_device(monitor: int | None) -> str | None:

@@ -5,12 +5,14 @@ import time
 from types import ModuleType
 from typing import Any, ClassVar, cast
 
-from PyQt6.QtCore import QDateTime, QObject, QRunnable, QThreadPool, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt6 import sip
+from PyQt6.QtCore import QDateTime, QObject, pyqtProperty, pyqtSignal, pyqtSlot
 
 from core.services.updates import scoop, windows, winget
 from core.utils.feed import Feed
 from core.utils.qml import qml_property
 from core.utils.system import app_data_path
+from core.utils.worker import run_in_worker
 
 # Each source's module has NAME, installed() and check(), and winget and Scoop have install(ids)
 SOURCES: dict[str, ModuleType] = {"windows": windows, "winget": winget, "scoop": scoop}
@@ -42,53 +44,6 @@ def _write_json(name: str, data: dict[str, Any]) -> None:
         logging.debug("Could not save %s", name, exc_info=True)
 
 
-class JobSignals(QObject):
-    finished = pyqtSignal(object, str)
-
-
-class CheckJob(QRunnable):
-    """Checks one source off the GUI thread; the tools can take minutes."""
-
-    def __init__(self, source: str) -> None:
-        super().__init__()
-        self.source = source
-        self.signals = JobSignals()
-
-    def run(self) -> None:
-        try:
-            self.signals.finished.emit(SOURCES[self.source].check(), "")
-        except RuntimeError as error:
-            self.signals.finished.emit(None, str(error))
-        except Exception:
-            logging.exception("Could not check %s", SOURCES[self.source].NAME)
-            self.signals.finished.emit(None, f"Could not check {SOURCES[self.source].NAME}.")
-
-
-class WaitJob(QRunnable):
-    """Waits off the GUI thread for an update terminal to close."""
-
-    def __init__(self, process: subprocess.Popen[bytes]) -> None:
-        super().__init__()
-        self.process = process
-        self.signals = JobSignals()
-
-    def run(self) -> None:
-        self.process.wait()
-        self.signals.finished.emit(None, "")
-
-
-_pool: QThreadPool | None = None
-
-
-def _jobs() -> QThreadPool:
-    global _pool
-    if _pool is None:
-        _pool = QThreadPool()
-        # A check per source at once, and a wait for each terminal
-        _pool.setMaxThreadCount(6)
-    return _pool
-
-
 class SourceFeed(Feed[tuple[str, int]]):
     """One source's updates, checked every interval and shared by every widget with the same key."""
 
@@ -103,7 +58,6 @@ class SourceFeed(Feed[tuple[str, int]]):
         # When the source was last checked, in ms since the epoch
         self.checked_at = 0
         self.installing = False
-        self._jobs: set[QRunnable] = set()
         if self.installed:
             self._timer.start(FIRST_CHECK_MS[self.source])
 
@@ -114,20 +68,17 @@ class SourceFeed(Feed[tuple[str, int]]):
         self._timer.stop()
         self._request += 1
         request = self._request
-        job = CheckJob(self.source)
-
-        def finished(result: object, error: str) -> None:
-            self._jobs.discard(job)
-            self._receive(request, result, error)
-
-        job.signals.finished.connect(finished)
-        self._jobs.add(job)
         self.loading = True
         self.changed.emit()
-        _jobs().start(job)
+        run_in_worker(
+            SOURCES[self.source].check,
+            lambda result, error: self._receive(request, result, error),
+            f"Could not check {SOURCES[self.source].NAME}.",
+        )
 
     def _receive(self, request: int, result: object, error: str) -> None:
-        if request != self._request:
+        # Answers to an earlier request are dropped, as are those reaching a feed that has gone with its last widget
+        if request != self._request or sip.isdeleted(self):
             return
         if isinstance(result, dict):
             self._take(cast(dict[str, Any], result))
@@ -158,19 +109,17 @@ class SourceFeed(Feed[tuple[str, int]]):
             self.error = "Could not open a terminal to update in."
             self.changed.emit()
             return
-        job = WaitJob(process)
 
         def closed(_result: object, _error: str) -> None:
-            self._jobs.discard(job)
+            if sip.isdeleted(self):
+                return
             self.installing = False
             self.changed.emit()
             self.fetch()
 
-        job.signals.finished.connect(closed)
-        self._jobs.add(job)
         self.installing = True
         self.changed.emit()
-        _jobs().start(job)
+        run_in_worker(process.wait, closed, "Could not wait for the update terminal.")
 
 
 class SkippedVersions(QObject):

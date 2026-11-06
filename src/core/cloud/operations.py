@@ -1,9 +1,4 @@
-"""Backup, restore and save-a-copy as objects that own what they create.
-
-Split from the window on purpose: the CLI runs the same three jobs and must not import
-QtWidgets to do it. Everything here needs only a Qt event loop, which both a QApplication
-and the CLI's QCoreApplication provide.
-"""
+"""Backup, restore and save-a-copy as objects that own what they create."""
 
 import logging
 from collections.abc import Callable

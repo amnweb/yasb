@@ -5,9 +5,8 @@ from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QGuiApplication
 from PyQt6.QtQml import QQmlEngine
-from PyQt6.QtWidgets import QApplication
 from watchdog.events import FileModifiedEvent, FileMovedEvent
 
 from core import widget_files
@@ -48,7 +47,7 @@ def alerts(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 
 @pytest.fixture
-def make_manager(qapp: QApplication, fake_app_bar: None) -> Iterator[MakeManager]:
+def make_manager(qapp: QGuiApplication, fake_app_bar: None) -> Iterator[MakeManager]:
     register_qml_types()
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)

@@ -67,7 +67,7 @@ def main() -> int:
         return 0
 
     set_defaults()
-    app = QGuiApplication(sys.argv)
+    app = QGuiApplication([*sys.argv, "-style", "FluentWinUI3"])
     app.setApplicationName("YASB Cloud")
     app.setWindowIcon(QIcon(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")))
 

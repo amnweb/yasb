@@ -1,107 +1,195 @@
 import logging
-from typing import Any, ClassVar
+import os
+from dataclasses import dataclass
+from threading import Event
+from typing import Any, ClassVar, cast
 
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+from PyQt6.QtCore import QDateTime, QObject, pyqtProperty, pyqtSignal, pyqtSlot
+from winrt.windows.networking.connectivity import NetworkConnectivityLevel, NetworkInformation
 
-from core.services.server_monitor.worker import ServerCheckWorker
+from core.app.windows.toast import ToastNotifier
+from core.services.server_monitor.worker import ServerStatus, check_server
+from core.utils.feed import Feed
+from core.utils.worker import run_in_worker
+from settings import SCRIPT_PATH
 
 logger = logging.getLogger("server_monitor")
 
-type ServiceKey = tuple[tuple[str, ...], bool, bool, int, int]
+
+@dataclass(frozen=True)
+class ServerSettings:
+    servers: tuple[tuple[str, str], ...]
+    ssl_verify: bool
+    ssl_check: bool
+    timeout: int
+    interval: int
+    ssl_warning: int
+    notify_offline: bool
+    notify_ssl: bool
 
 
-class ServerCheckService(QObject):
-    """Server-check runner."""
+@dataclass
+class CheckResult:
+    servers: list[ServerStatus]
+    disconnected: bool
 
-    status_updated = pyqtSignal(int, list)
-    refresh_started = pyqtSignal()
 
-    _instances: ClassVar[dict[ServiceKey, ServerCheckService]] = {}
+def _network_disconnected() -> bool:
+    try:
+        return all(
+            profile.get_network_connectivity_level() == NetworkConnectivityLevel.NONE
+            for profile in NetworkInformation.get_connection_profiles()
+        )
+    except OSError, RuntimeError:
+        logger.debug("Could not read Windows network connectivity", exc_info=True)
+        return False
 
-    @classmethod
-    def get_instance(
-        cls,
-        servers: list[dict[str, Any]],
-        ssl_verify: bool,
-        ssl_check: bool,
-        timeout: int,
-        update_interval_s: int,
-    ) -> ServerCheckService:
-        key: ServiceKey = (tuple(s["url"] for s in servers), ssl_verify, ssl_check, timeout, int(update_interval_s))
-        inst = cls._instances.get(key)
-        if inst is None:
-            inst = cls(
-                servers=list(servers),
-                ssl_verify=ssl_verify,
-                ssl_check=ssl_check,
-                timeout=timeout,
-                update_interval_s=int(update_interval_s),
-                _key=key,
-            )
-            cls._instances[key] = inst
-        inst._refcount += 1
-        return inst
 
-    def __init__(
+def _check(settings: ServerSettings, stopped: Event) -> CheckResult:
+    results: list[ServerStatus] = []
+    for name, url in settings.servers:
+        if stopped.is_set():
+            return CheckResult(results, False)
+        results.append(check_server(name, url, settings.ssl_verify, settings.ssl_check, settings.timeout))
+
+    # A failed request alone cannot distinguish a down server from a disconnected PC.
+    disconnected = (
+        settings.notify_offline
+        and not stopped.is_set()
+        and all(server["response_code"] is None for server in results)
+        and _network_disconnected()
+    )
+    return CheckResult(results, disconnected)
+
+
+class ServerCheckFeed(Feed[ServerSettings]):
+    _feeds: ClassVar[dict[Any, Any]] = {}
+
+    def __init__(self, key: ServerSettings) -> None:
+        super().__init__(key)
+        self.results: list[ServerStatus] = []
+        self.updated = QDateTime()
+        self._stopped = Event()
+        self._timer.start(0)
+
+    def _user_destroyed(self) -> None:
+        if self._users == 1:
+            self._stopped.set()
+        super()._user_destroyed()
+
+    @pyqtSlot()
+    def fetch(self) -> None:
+        if self.loading or self._stopped.is_set():
+            return
+        self._timer.stop()
+        self.loading = True
+        self.error = ""
+        self.changed.emit()
+        key, stopped = self.key, self._stopped
+        run_in_worker(lambda: _check(key, stopped), self._receive, "Could not check servers.")
+
+    def _receive(self, result: object, error: str) -> None:
+        if self._stopped.is_set():
+            return
+        self.loading = False
+        self.error = error
+        self._timer.start(self.key.interval * 1000)
+        if isinstance(result, CheckResult):
+            self.results = result.servers
+            self.updated = QDateTime.currentDateTime()
+            self._notify(result)
+        self.changed.emit()
+
+    def _notify(self, result: CheckResult) -> None:
+        offline = sum(server["status"] == "Offline" for server in result.servers)
+        messages: list[str] = []
+        if self.key.notify_offline and offline and not result.disconnected:
+            messages.append(f"{offline} server(s) are offline")
+        if self.key.notify_ssl and any(
+            (days := server["ssl"]) is not None and days < self.key.ssl_warning for server in result.servers
+        ):
+            messages.append("Some servers have SSL certificates expiring soon")
+        if messages:
+            try:
+                toaster = ToastNotifier()
+                icon = os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png")
+                for message in messages:
+                    toaster.show(icon, "Server Monitor", message)
+            except OSError, RuntimeError:
+                logger.warning("Could not show Server Monitor notification", exc_info=True)
+
+
+class ServerChecks(QObject):
+    changed = pyqtSignal()
+
+    def __init__(self, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self._feed: ServerCheckFeed | None = None
+
+    @pyqtProperty("QVariantList", notify=changed)
+    def results(self) -> list[ServerStatus]:
+        return self._feed.results if self._feed else []
+
+    @pyqtProperty(bool, notify=changed)
+    def loading(self) -> bool:
+        return self._feed.loading if self._feed else False
+
+    @pyqtProperty(bool, notify=changed)
+    def configured(self) -> bool:
+        return self._feed is not None
+
+    @pyqtProperty(str, notify=changed)
+    def error(self) -> str:
+        return self._feed.error if self._feed else ""
+
+    @pyqtProperty(QDateTime, notify=changed)
+    def updated(self) -> QDateTime:
+        return self._feed.updated if self._feed else QDateTime()
+
+    @pyqtSlot("QVariantList", bool, bool, int, int, int, bool, bool)
+    def configure(
         self,
-        servers: list[dict[str, Any]],
+        servers: list[Any],
         ssl_verify: bool,
         ssl_check: bool,
         timeout: int,
-        update_interval_s: int,
-        _key: ServiceKey,
-    ):
-        super().__init__()
-        self._key = _key
-        self._refcount = 0
-        self._run_id = 0
+        interval: int,
+        ssl_warning: int,
+        notify_offline: bool,
+        notify_ssl: bool,
+    ) -> None:
+        entries: list[tuple[str, str]] = []
+        for server in servers:
+            if isinstance(server, str) and (url := server.strip()):
+                entries.append((url, url))
+            elif isinstance(server, dict):
+                entry = cast(dict[str, Any], server)
+                raw_url = entry.get("url")
+                if isinstance(raw_url, str) and (url := raw_url.strip()):
+                    name = entry.get("name")
+                    entries.append((name.strip() if isinstance(name, str) and name.strip() else url, url))
 
-        self._worker = ServerCheckWorker()
-        self._worker.set_servers(servers, ssl_verify, ssl_check, timeout)
-        self._worker.status_updated.connect(self._on_worker_status_updated)
+        key = ServerSettings(
+            tuple(entries),
+            ssl_verify,
+            ssl_check,
+            max(1, min(timeout, 30)),
+            max(10, min(interval, 36000)),
+            max(1, min(ssl_warning, 365)),
+            notify_offline,
+            notify_ssl,
+        )
+        if self._feed is not None:
+            if self._feed.key == key:
+                return
+            self._feed.changed.disconnect(self.changed)
+            self._feed.leave(self)
+        self._feed = ServerCheckFeed.join(key, self) if entries else None
+        if self._feed is not None:
+            self._feed.changed.connect(self.changed)
+        self.changed.emit()
 
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self._start_if_idle)
-        self._timer.start(max(int(update_interval_s), 1) * 1000)
-
-        self._start_if_idle()
-        logger.info("ServerCheckWorker started...")
-
-    def release(self) -> None:
-        self._refcount -= 1
-        if self._refcount > 0:
-            return
-        try:
-            self._timer.stop()
-        except Exception:
-            pass
-        try:
-            self._worker.stop()
-        except Exception:
-            pass
-        ServerCheckService._instances.pop(self._key, None)
-        try:
-            self.deleteLater()
-        except Exception:
-            pass
-
-    def is_running(self) -> bool:
-        try:
-            return self._worker.isRunning()
-        except RuntimeError:
-            return False
-
-    def start_now(self) -> None:
-        self._start_if_idle()
-
-    def _start_if_idle(self) -> None:
-        try:
-            if not self._worker.isRunning():
-                self._run_id += 1
-                self.refresh_started.emit()
-                self._worker.start()
-        except RuntimeError:
-            return
-
-    def _on_worker_status_updated(self, status_list: list[dict[str, Any]]) -> None:
-        self.status_updated.emit(self._run_id, status_list)
+    @pyqtSlot()
+    def refresh(self) -> None:
+        if self._feed is not None:
+            self._feed.fetch()

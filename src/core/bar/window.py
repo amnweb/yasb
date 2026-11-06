@@ -214,7 +214,7 @@ class BarWindow(QQuickWindow):
         self.item, self.context, self.shown_file = item, context, path
         item.setParentItem(self.contentItem())
         if self.config.length == "auto":
-            (item.implicitHeightChanged if self.config.vertical else item.implicitWidthChanged).connect(self.reposition)
+            (item.implicitHeightChanged if self.config.vertical else item.implicitWidthChanged).connect(self._fit_item)
         if item.property("edgeRadius") is not None:
             getattr(item, "edgeRadiusChanged").connect(self.reposition)
         getattr(item, "backdropShapesChanged").connect(self._fit_backdrop)
@@ -230,14 +230,27 @@ class BarWindow(QQuickWindow):
     def _fit_item(self) -> None:
         if self.item is None:
             return
-        edge, overhang = self.config.edge, self.overhang
-        self.item.setX(overhang if edge == "right" else 0)
-        self.item.setY(overhang if edge == "bottom" else 0)
-        if self.config.vertical:
-            self.item.setSize(QSizeF(self.width() - overhang, self.height()))
+        edge, vertical, overhang = self.config.edge, self.config.vertical, self.overhang
+        available = self.height() if vertical else self.width()
+        length = available
+        offset = 0
+        if self._fits_content():
+            length = max(0, min(self._content_length(), available))
+            if self.config.align == "center":
+                offset = (available - length) // 2
+            elif self.config.align in ("right", "bottom"):
+                offset = available - length
+        if vertical:
+            self.item.setX(overhang if edge == "right" else 0)
+            self.item.setY(offset)
+            self.item.setSize(QSizeF(max(0, self.width() - overhang), length))
         else:
-            self.item.setSize(QSizeF(self.width(), self.height() - overhang))
+            self.item.setX(offset)
+            self.item.setY(overhang if edge == "bottom" else 0)
+            self.item.setSize(QSizeF(length, max(0, self.height() - overhang)))
         self._fit_backdrop()
+        if overhang:
+            self._update_mask()
 
     def _fit_backdrop(self) -> None:
         item = self.item
@@ -326,7 +339,14 @@ class BarWindow(QQuickWindow):
             return 0
         return math.ceil(self.item.implicitHeight() if self.config.vertical else self.item.implicitWidth())
 
+    def _fits_content(self) -> bool:
+        # Island bars are made to run the full screen edge, so they ignore length auto
+        return self.config.length == "auto" and (self.item is None or self.item.property("edgeRadius") is None)
+
     def _edge_overhang(self, bar: QRect, screen: QRect) -> int:
+        if self._fits_content():
+            # We don't want islands of the bar's edge curves to hang in the screen area when the bar is auto-sized
+            return 0
         radius = self.item.property("edgeRadius") if self.item is not None else None
         if self.config.vertical:
             spans = bar.top() == screen.top() and bar.height() == screen.height()
@@ -336,7 +356,14 @@ class BarWindow(QQuickWindow):
 
     def reposition(self) -> None:
         screen = self.target_screen.geometry()
-        geometry = bar_geometry(self.config, screen, bar_length(self.config, screen, self._content_length()))
+        # Auto-sized content animates inside a stable window spanning the available
+        # screen edge. Content changes must not resize or reposition a sliding window.
+        content_length = (
+            (screen.height() if self.config.vertical else screen.width())
+            if self.config.length == "auto"
+            else self._content_length()
+        )
+        geometry = bar_geometry(self.config, screen, bar_length(self.config, screen, content_length))
         self.overhang = self._edge_overhang(geometry, screen)
         geometry.adjust(*(side * self.overhang for side in OVERHANG_SIDES[self.config.edge]))
         self.setGeometry(geometry)
@@ -345,7 +372,8 @@ class BarWindow(QQuickWindow):
 
     def _update_mask(self) -> None:
         if not self.overhang:
-            self.setMask(QRegion())
+            if not self.mask().isEmpty():
+                self.setMask(QRegion())
             return
         # Transparent pixels of this window still take clicks, so of the strip the edge curves hang in,
         # only the two corners holding the curves keep them
@@ -360,7 +388,8 @@ class BarWindow(QQuickWindow):
             corners = [QRegion(0, strip, size, size), QRegion(width - size, strip, size, size)]
         for corner in corners:
             mask = mask.united(corner)
-        self.setMask(mask)
+        if mask != self.mask():
+            self.setMask(mask)
 
     def _on_screen_changed(self) -> None:
         logging.info(

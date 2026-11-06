@@ -5,6 +5,7 @@ from typing import Any, override
 
 import PyQt6.sip as sip
 from PyQt6.QtCore import QAbstractNativeEventFilter, QCoreApplication, QObject, QTimer, pyqtSignal
+from PyQt6.QtGui import QWindow
 
 from core.services.taskbar.application_window import ApplicationWindow
 from core.utils.win32 import constants as WCONST
@@ -27,6 +28,8 @@ logger.setLevel(logging.INFO)
 # Global shared instance
 _shared_task_manager: TaskbarWindowManager | None = None
 _shellhook_event_filter: _ShellHookEventFilter | None = None
+# Never shown; the shell sends its window messages to it
+_hook_window: QWindow | None = None
 
 
 def get_shared_task_manager() -> TaskbarWindowManager:
@@ -37,65 +40,26 @@ def get_shared_task_manager() -> TaskbarWindowManager:
     return _shared_task_manager
 
 
-def connect_taskbar(widget: Any) -> TaskbarWindowManager:
-    """Wire a taskbar widget to the shared manager and push current windows to it."""
+def start_shared_task_manager() -> TaskbarWindowManager:
+    """Start the shared manager, once, on a hidden window of its own that receives the shell's messages.
+
+    Cloaked windows, such as those on other virtual desktops, are kept; each widget leaves them out if it wants.
+    """
+    global _shellhook_event_filter, _hook_window
     task_manager = get_shared_task_manager()
-
-    # Connect signals if the widget implements them
-    if hasattr(widget, "_on_window_added"):
-        task_manager.window_added.connect(widget._on_window_added)
-    if hasattr(widget, "_on_window_removed"):
-        task_manager.window_removed.connect(widget._on_window_removed)
-    if hasattr(widget, "_on_window_updated"):
-        task_manager.window_updated.connect(widget._on_window_updated)
-    if hasattr(widget, "_on_window_monitor_changed"):
-        task_manager.window_monitor_changed.connect(widget._on_window_monitor_changed)
-    if hasattr(widget, "_on_window_minimize_changed"):
-        task_manager.window_minimize_changed.connect(widget._on_window_minimize_changed)
-
-    # Install native event filter once to catch SHELLHOOK via Qt
-    global _shellhook_event_filter
-    try:
-        app = QCoreApplication.instance()
-        if _shellhook_event_filter is None and app is not None:
-            _shellhook_event_filter = _ShellHookEventFilter(lambda: _shared_task_manager)
-            app.installNativeEventFilter(_shellhook_event_filter)
-    except Exception as e:
-        logger.warning("Failed to install native event filter: %s", e)
-
-    # Try to obtain the top-level Qt window handle
-    hwnd = None
-    try:
-        top = widget.window() if hasattr(widget, "window") else None
-        if top is not None and hasattr(top, "winId"):
-            hwnd = int(top.winId())
-    except Exception as e:
-        logger.warning("Unable to obtain Qt window handle for shell hook: %s", e)
-
-    # Keep cloaked tasks if any connected widget has show_only_visible=False.
-    # Once set to True, never downgrade - each widget filters independently via _should_show_window.
-    try:
-        keep_cloaked = bool(getattr(widget, "_show_only_visible", True) is False)
-        if keep_cloaked:
-            setattr(task_manager, "keep_cloaked_tasks", True)
-        elif not hasattr(task_manager, "keep_cloaked_tasks"):
-            setattr(task_manager, "keep_cloaked_tasks", False)
-    except Exception:
-        if not hasattr(task_manager, "keep_cloaked_tasks"):
-            setattr(task_manager, "keep_cloaked_tasks", False)
-
-    # Start the task manager using the Qt hwnd
-    task_manager.start(hwnd)
-
-    # Send existing windows to this widget
-    if hasattr(widget, "_on_window_added"):
-        for hwnd, app_window in task_manager.get_windows().items():
-            try:
-                window_data = app_window.as_dict()
-                widget._on_window_added(hwnd, window_data)
-            except Exception as e:
-                logger.error("Error sending existing window %s to widget: %s", hwnd, e)
-
+    if task_manager.is_initialized():
+        return task_manager
+    app = QCoreApplication.instance()
+    if _shellhook_event_filter is None and app is not None:
+        _shellhook_event_filter = _ShellHookEventFilter(lambda: _shared_task_manager)
+        app.installNativeEventFilter(_shellhook_event_filter)
+    if _hook_window is None:
+        _hook_window = QWindow()
+    task_manager.keep_cloaked_tasks = True
+    task_manager.start(int(_hook_window.winId()))
+    if app is not None:
+        # Its shell and event hooks are taken down with YASB, as the taskbar widget did
+        app.aboutToQuit.connect(task_manager.stop)
     return task_manager
 
 
@@ -107,27 +71,27 @@ class _ShellHookEventFilter(QAbstractNativeEventFilter):
         self._get_manager = manager_getter  # callable returning TaskbarWindowManager
 
     @override
-    def nativeEventFilter(self, eventType: Any, message: sip.voidptr | None) -> tuple[bool, sip.voidptr | None]:
+    def nativeEventFilter(self, eventType: Any, message: sip.voidptr | None) -> tuple[bool, sip.voidptr]:
         # On Windows + PyQt6, eventType is 'windows_generic_MSG' and message is MSG*
         try:
             if eventType != "windows_generic_MSG" or message is None:
-                return False, 0  # pyright: ignore[reportReturnType]
+                return False, sip.voidptr(0)
 
             msg = ctypes.cast(int(message), ctypes.POINTER(MSG)).contents
             manager = self._get_manager()
             if not manager or manager.shell_hook_message is None:
-                return False, 0  # pyright: ignore[reportReturnType]
+                return False, sip.voidptr(0)
 
             if msg.message == manager.shell_hook_message:
                 # Forward to the manager's handler
                 manager.handle_shell_hook_message(int(msg.wParam), int(msg.lParam))
-                return True, 0  # pyright: ignore[reportReturnType]
+                return True, sip.voidptr(0)
 
         except KeyboardInterrupt, SystemExit:
             raise
         except Exception:
             pass
-        return False, 0  # pyright: ignore[reportReturnType]
+        return False, sip.voidptr(0)
 
 
 class TaskbarWindowManager(QObject):

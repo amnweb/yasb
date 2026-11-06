@@ -5,7 +5,7 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtQuick import QQuickImageProvider
 
 from core.utils.icons.service import IconService
-from core.utils.icons.sources import AppIcon, FileIcon, IconSource, ProcessIcon, WindowIcon
+from core.utils.icons.sources import AppIcon, FileIcon, IconSource, ProcessIcon, StockIcon, WindowIcon
 
 ICON_PROVIDER = "icon"
 
@@ -26,6 +26,8 @@ def icon_url(source: IconSource, revision: int) -> str:
             kind, value = "app", base64.urlsafe_b64encode(aumid.encode()).decode()
         case FileIcon(path):
             kind, value = "file", base64.urlsafe_b64encode(path.encode()).decode()
+        case StockIcon(stock):
+            kind, value = "stock", str(stock)
     return f"image://{ICON_PROVIDER}/{kind}/{value}/{revision}"
 
 
@@ -40,6 +42,8 @@ def _source(kind: str, value: str) -> IconSource | None:
                 return AppIcon(base64.urlsafe_b64decode(value).decode())
             case "file":
                 return FileIcon(base64.urlsafe_b64decode(value).decode())
+            case "stock" if value.isdigit():
+                return StockIcon(int(value))
             case _:
                 return None
     except ValueError:

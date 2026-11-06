@@ -19,18 +19,26 @@ The tests never touch your real YASB setup. `tests/conftest.py` points `YASB_CON
 
 ## What's in here
 
+The folders follow `src/core`, so a test sits where its code does: the test for `core/services/taskbar`
+is `services/test_taskbar.py`, and the one for `core/utils/worker.py` is `utils/test_worker.py`. The
+top folder keeps only `conftest.py` and this file.
+
 | Folder | What it checks |
 |---|---|
-| `smoke/` | Every module imports, every widget's config schema builds, and no dependency is in `BLOCKED_PACKAGES` in `test_dependencies.py` (pywin32, for one). |
-| `widgets/` | Bar widgets: rules every widget follows (for example, a widget never calls `winId()` on itself), and focused tests for widgets whose logic can break, such as the custom widget's command output, labels and callbacks. |
-| `bar/` | The bar window: building it with each config option, its place on the screen, auto-hide, animations and the context menu, plus the adaptive style's islands, rail, border and edge curves in every combination. Registering it as a Windows app bar is faked. |
+| `services/` | The services behind the QML widgets in `core/services`, such as the taskbar, updates and `Process`, and the built-in widget that uses each one: that it loads, shows its data and runs its actions. Windows, the network and other programs are faked unless a test says otherwise. |
+| `bar/` | The bar window: building it with each config option, its place on the screen, auto-hide, animations and the context menu, plus the island bar's islands, rail, border and edge curves in every combination. Registering it as a Windows app bar is faked. |
+| `app/` | The application in `core/app`: the tray icon, the updater and the alert dialog. |
+| `utils/` | Helpers in `core/utils`, such as the `Environment` singleton and `run_in_worker`. |
+| `qml/` | Finding the widget files a bar uses (`core/widget_files.py`) and the QML type files made from the Python types (`core/qml_typegen.py`). |
 | `win32/` | Our ctypes code against the real Windows SDK, plus window helpers tested on real windows. |
 | `cloud/` | YASB Cloud: API errors, encryption, backups, restores, settings. None of them contact the real server. |
+| `smoke/` | Every module imports, every config schema builds, and no dependency is in `BLOCKED_PACKAGES` in `test_dependencies.py` (pywin32, for one). |
 | `support/` | Helpers the tests share. |
 
 ## Writing a test
 
-Add a file named `test_<something>.py` to the folder that fits. Each test is a function whose name
+Add a file named `test_<something>.py` to the folder that matches where your code lives in `src/core`, or
+make that folder, with an empty `__init__.py`, if it's not here yet. Each test is a function whose name
 starts with `test_` and checks things with `assert`. This one is from `cloud/test_footer_reason.py`:
 
 ```python
@@ -45,7 +53,7 @@ def test_never_having_subscribed_is_not_an_expiry():
 A few things that help:
 
 - `src` is on the import path, so import YASB code as `core.something`.
-- Ask for the `qapp` fixture if your test creates Qt widgets.
+- Ask for the `qapp` fixture if your test creates Qt objects, such as QML components, windows or timers.
 - Use pytest's `tmp_path` for files and `monkeypatch` to swap a function or an environment variable
   for one test.
 - Don't call real servers or depend on hardware. CI runs on GitHub's Windows machines (x64 and ARM64),
@@ -82,7 +90,7 @@ Some checks in `win32/` don't need the compiler:
 - Structs live in `structs.py` and COM interfaces in the bindings. `OWN_CTYPES_MODULES` in `specs.py` lists
   the modules that keep their own ctypes code.
 - Errors are read with `GetLastError()` from `core.utils.win32.bindings.kernel32`.
-- `test_bindings.py` and `test_window_actions.py` run the bindings and the window helpers on real Windows.
+- `test_bindings.py` runs the bindings and the window helpers on real Windows.
 
 With the compiler, one more check fails on an integer constant outside `constants.py`, `undocumented.py`
 and the bindings when the Windows SDK declares its name.

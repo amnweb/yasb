@@ -1,90 +1,164 @@
 import ctypes
-import uuid
-import winreg
-from ctypes import byref
+from collections.abc import Callable
+from ctypes import byref, wintypes
+from dataclasses import dataclass
 
+from PyQt6 import sip
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
+
+from core.utils.qml import qml_property
 from core.utils.win32.bindings.kernel32 import LocalFree
 from core.utils.win32.bindings.powrprof import (
     PowerGetActiveScheme,
     PowerGetUserConfiguredACPowerMode,
+    PowerGetUserConfiguredDCPowerMode,
+    PowerReadACValueIndex,
     PowerSetUserConfiguredACPowerMode,
     PowerSetUserConfiguredDCPowerMode,
+    has_power_mode_api,
 )
-from core.utils.win32.constants import GUID_POWERSCHEME_PERSONALITY
-from core.utils.win32.registry_keys import POWER_SCHEMES_KEY
+from core.utils.win32.constants import ERROR_SUCCESS, GUID_POWERSCHEME_PERSONALITY
 from core.utils.win32.structs import GUID
 from core.utils.win32.undocumented import POWER_MODE_BALANCED, POWER_MODE_BEST_EFFICIENCY, POWER_MODE_BEST_PERFORMANCE
+from core.utils.worker import run_in_worker
 
-_MODES: list[tuple[str, GUID]] = [
-    ("Best power efficiency", POWER_MODE_BEST_EFFICIENCY),
-    ("Balanced", POWER_MODE_BALANCED),
-    ("Best performance", POWER_MODE_BEST_PERFORMANCE),
-]
+_NO_SUBGROUP = GUID.from_string("fea3413e-7e05-4911-9a71-700331f1c294")
+_BALANCED_PERSONALITY = 2
+_MODES = {
+    "efficiency": ("Best power efficiency", POWER_MODE_BEST_EFFICIENCY),
+    "balanced": ("Balanced", POWER_MODE_BALANCED),
+    "performance": ("Best performance", POWER_MODE_BEST_PERFORMANCE),
+}
 
 
-def get_modes() -> list[tuple[str, GUID]]:
-    return list(_MODES)
+@dataclass(frozen=True)
+class _Modes:
+    supported: bool = False
+    ac_id: str = ""
+    dc_id: str = ""
 
 
-def is_mode_supported() -> bool:
-    """Return True if the active plan supports Power Mode overlays.
-
-    Only Balanced plans (personality value: 2) support Windows 11 Power Mode overlays.
-    This works for both built-in and custom power plans.
-    """
-    plan = _get_active_scheme_str()
-    if plan is None:
+def _supports_active_plan() -> bool:
+    if not has_power_mode_api:
         return False
 
+    active = ctypes.POINTER(GUID)()
+    result = PowerGetActiveScheme(None, byref(active))
+    if result != ERROR_SUCCESS:
+        raise ctypes.WinError(result)
+    if not active:
+        raise RuntimeError("Windows did not return an active power plan.")
     try:
-        path = f"{POWER_SCHEMES_KEY}\\{plan}\\{GUID_POWERSCHEME_PERSONALITY.to_uuid()}"
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path) as key:
-            personality, _ = winreg.QueryValueEx(key, "ACSettingIndex")
-            return personality == 2
-    except OSError:
-        return False
+        personality = wintypes.DWORD()
+        result = PowerReadACValueIndex(
+            None, byref(active.contents), byref(_NO_SUBGROUP), byref(GUID_POWERSCHEME_PERSONALITY), byref(personality)
+        )
+        if result != ERROR_SUCCESS:
+            raise ctypes.WinError(result)
+        return personality.value == _BALANCED_PERSONALITY
+    finally:
+        LocalFree(active)
 
 
-def get_active_mode() -> tuple[str, GUID] | None:
+def _read_mode(read: Callable[[GUID], int]) -> str:
     guid = GUID()
-    if PowerGetUserConfiguredACPowerMode(guid) == 0:
-        return _mode_name(guid)
-
-    try:
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, POWER_SCHEMES_KEY) as key:
-            guid_str = winreg.QueryValueEx(key, "ActiveOverlayAcPowerScheme")[0].strip("{}")
-            return _mode_name(GUID.from_buffer_copy(uuid.UUID(guid_str).bytes_le))
-    except Exception:
-        return None
+    result = read(guid)
+    if result != ERROR_SUCCESS:
+        raise ctypes.WinError(result)
+    return next((mode_id for mode_id, (_, mode_guid) in _MODES.items() if bytes(mode_guid) == bytes(guid)), "")
 
 
-def set_mode(guid: GUID) -> bool:
-    ok = True
-
-    if PowerSetUserConfiguredACPowerMode(guid) != 0:
-        ok = False
-    if PowerSetUserConfiguredDCPowerMode(guid) != 0:
-        ok = False
-
-    return ok
-
-
-def guids_equal(a: GUID, b: GUID) -> bool:
-    return ctypes.string_at(byref(a), ctypes.sizeof(GUID)) == ctypes.string_at(byref(b), ctypes.sizeof(GUID))
+def _read_modes() -> _Modes:
+    if not _supports_active_plan():
+        return _Modes()
+    return _Modes(
+        supported=True,
+        ac_id=_read_mode(PowerGetUserConfiguredACPowerMode),
+        dc_id=_read_mode(PowerGetUserConfiguredDCPowerMode),
+    )
 
 
-def _get_active_scheme_str() -> str | None:
-    """Return the active power scheme GUID as a lowercase string, or None on failure."""
-    ptr = ctypes.POINTER(GUID)()
-    if PowerGetActiveScheme(None, byref(ptr)) != 0 or not ptr:
-        return None
-    result = str(GUID.from_buffer_copy(ptr.contents))
-    LocalFree(ptr)
-    return result
+def _set_mode(mode_id: str, source: str) -> _Modes:
+    if not _supports_active_plan():
+        return _Modes()
+    setter = PowerSetUserConfiguredACPowerMode if source == "ac" else PowerSetUserConfiguredDCPowerMode
+    result = setter(_MODES[mode_id][1])
+    if result != ERROR_SUCCESS:
+        raise RuntimeError(f"Could not change the power mode. {ctypes.FormatError(result).strip()}")
+    return _read_modes()
 
 
-def _mode_name(guid: GUID) -> tuple[str, GUID] | None:
-    for name, g in _MODES:
-        if guids_equal(guid, g):
-            return (name, guid)
-    return None
+class PowerModes(QObject):
+    """Windows' configured power modes for plugged-in and battery power, shared by the QML engine."""
+
+    changed = pyqtSignal()
+
+    def __init__(self, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self._state = _Modes()
+        self._loading = False
+        self._error = ""
+        self.refresh()
+
+    @qml_property("QVariantList", constant=True)
+    def modes(self) -> list[dict[str, str]]:
+        return [{"id": mode_id, "name": name} for mode_id, (name, _) in _MODES.items()]
+
+    @qml_property(str, notify=changed)
+    def acModeId(self) -> str:
+        return self._state.ac_id
+
+    @qml_property(str, notify=changed)
+    def dcModeId(self) -> str:
+        return self._state.dc_id
+
+    @qml_property(bool, notify=changed)
+    def supported(self) -> bool:
+        return self._state.supported
+
+    @qml_property(bool, notify=changed)
+    def loading(self) -> bool:
+        return self._loading
+
+    @qml_property(str, notify=changed)
+    def error(self) -> str:
+        return self._error
+
+    @pyqtSlot()
+    def refresh(self) -> None:
+        if self._loading:
+            return
+        self._start()
+        run_in_worker(_read_modes, self._receive, "Could not read Windows power modes.")
+
+    @pyqtSlot(str, str)
+    def setMode(self, mode_id: str, source: str) -> None:
+        if self._loading or not self._state.supported:
+            return
+        if mode_id not in _MODES or source not in ("ac", "dc"):
+            self._error = "Invalid power mode or power source."
+            self.changed.emit()
+            return
+        self._start()
+        run_in_worker(
+            lambda: _set_mode(mode_id, source),
+            lambda result, error: self._receive(result, error, mode_id, source),
+            "Could not change the power mode.",
+        )
+
+    def _start(self) -> None:
+        self._loading = True
+        self._error = ""
+        self.changed.emit()
+
+    def _receive(self, result: object, error: str, requested_id: str = "", source: str = "") -> None:
+        if sip.isdeleted(self):
+            return
+        if isinstance(result, _Modes):
+            self._state = result
+            configured_id = result.ac_id if source == "ac" else result.dc_id
+            if requested_id and configured_id != requested_id:
+                error = "Windows did not apply the requested power mode."
+        self._error = error
+        self._loading = False
+        self.changed.emit()

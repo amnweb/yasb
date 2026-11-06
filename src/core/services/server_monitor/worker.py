@@ -1,25 +1,36 @@
 import http.client
 import logging
+import re
 import socket
 import ssl
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
-from typing import Any, override
+from time import perf_counter
+from typing import TypedDict
 from urllib.parse import urlsplit
-
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 logger = logging.getLogger("server_monitor")
 
 _DER_EXPLICIT_VERSION = 0xA0
 _DER_UTC_TIME = 0x17
+_EXPLICIT_SCHEME = re.compile(r"^[a-z][a-z\d+.-]*://", re.IGNORECASE)
+
+
+class ServerStatus(TypedDict):
+    url: str
+    name: str
+    status: str
+    response_time: int | None
+    response_code: int | None
+    ssl: int | None
 
 
 def _build_url(server: str, ssl_check: bool) -> str:
-    if "://" in server:
+    server = server.strip()
+    if _EXPLICIT_SCHEME.match(server):
         return server
-    return f"{'https' if ssl_check else 'http'}://{server}"
+    return f"{'https' if ssl_check else 'http'}://{server.removeprefix('//')}"
 
 
 def _ssl_context(verify: bool) -> ssl.SSLContext:
@@ -58,161 +69,56 @@ def _cert_not_after(der: bytes) -> datetime:
     return datetime.strptime(der[start:end].decode("ascii"), fmt).replace(tzinfo=UTC)
 
 
-class ServerCheckWorker(QThread):
-    status_updated = pyqtSignal(list)
-
-    def __init__(self, parent: QObject | None = None):
-        super().__init__(parent)
-        self.servers: list[dict[str, Any]] = []
-        self.ssl_check: bool = True
-        self.ssl_verify: bool = True
-        self.timeout: int = 5
-        self.running = True
-
-    def set_servers(self, servers: list[dict[str, Any]], ssl_verify: bool, ssl_check: bool, timeout: int) -> None:
-        self.servers = servers
-        self.ssl_check = ssl_check
-        self.ssl_verify = ssl_verify
-        self.timeout = timeout
-
-    def stop(self) -> None:
-        self.running = False
-        self.wait(2000)
-
-    def _has_internet(self) -> bool:
-        """Check if internet is available."""
-        test_servers = [
-            ("8.8.8.8", 53),  # Google DNS
-            ("1.1.1.1", 53),  # Cloudflare DNS
-        ]
-        for host, port in test_servers:
-            try:
-                sock = socket.create_connection((host, port), timeout=3)
-                sock.close()
-                return True
-            except OSError:
-                continue
-        return False
-
-    @override
-    def run(self) -> None:
-        if not self.running:
-            return
-
-        if not self._has_internet():
-            logger.warning("No internet connection detected, skipping server checks")
-            server_statuses: list[dict[str, Any]] = [
-                {
-                    "url": _build_url(s["url"], self.ssl_check),
-                    "name": s["name"],
-                    "status": "Offline",
-                    "response_time": None,
-                    "response_code": None,
-                    "ssl": None,
-                    "no_internet": True,
-                }
-                for s in self.servers
-            ]
-            self.status_updated.emit(server_statuses)
-            return
-
-        server_statuses = []
-
-        for server in self.servers:
-            if not self.running:
-                break
-
-            status = self.check_single_server(server["url"], self.ssl_verify, self.ssl_check, self.timeout)
-            status["name"] = server["name"]
-            server_statuses.append(status)
-
-        self.status_updated.emit(server_statuses)
-
-    def check_single_server(self, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict[str, Any]:
-        url = _build_url(server, ssl_check)
-        ping_result = self.ping_server(url, ssl_verify, ssl_check, timeout)
-
-        return {
-            "url": url,
-            "ssl": ping_result["ssl"],
-            "response_time": f"{ping_result['response_time']}ms" if ping_result["response_time"] else None,
-            "response_code": ping_result["response_code"],
-            "status": ping_result["status"],
-            "no_internet": ping_result.get("no_internet", False),
-        }
-
-    def ping_server(self, url: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict[str, Any]:
-        """Check server availability and collect status information."""
-        http_status = None
-        response_time = None
-        final_url = url
+def check_server(name: str, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> ServerStatus:
+    url = _build_url(server, ssl_check)
+    result: ServerStatus = {
+        "url": url,
+        "name": name,
+        "status": "Offline",
+        "response_time": None,
+        "response_code": None,
+        "ssl": None,
+    }
+    try:
+        target = urlsplit(url)
+        if target.scheme not in ("http", "https") or not target.hostname:
+            raise ValueError("Expected an HTTP or HTTPS URL with a host")
+        if target.port == 0:
+            raise ValueError("Port must be between 1 and 65535")
         context = _ssl_context(ssl_verify)
-
+        request = urllib.request.Request(url, method="GET", headers={"User-Agent": "YASB Server Monitor"})
+        start = perf_counter()
         try:
-            start_time = datetime.now()
-            request = urllib.request.Request(url, method="GET", headers={"User-Agent": "YASB Server Monitor"})
+            with urllib.request.urlopen(request, timeout=timeout, context=context) as response:
+                code, final_url = response.getcode(), response.geturl()
+        except urllib.error.HTTPError as response:
+            with response:
+                code, final_url = response.code, response.url
+    except (OSError, ValueError, http.client.HTTPException) as exc:
+        logger.debug("Server '%s' is unreachable: %s", url, exc)
+        return result
 
-            try:
-                with urllib.request.urlopen(request, timeout=timeout, context=context) as response:
-                    http_status = response.status
-                    final_url = response.url
-            except urllib.error.HTTPError as e:
-                http_status = e.code
-                final_url = e.url
+    if code is None:
+        return result
+    result["response_time"] = int((perf_counter() - start) * 1000)
+    result["response_code"] = code
+    if code < 500:
+        result["status"] = "Online"
+        if ssl_check and target.scheme == "https":
+            result["ssl"] = _check_ssl_expiry(final_url, context, timeout)
+    return result
 
-            if http_status is not None:
-                response_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
-        except OSError as e:
-            reason = str(e).lower()
-            if "getaddrinfo" in reason or "name or service not known" in reason:
-                logger.debug("Server '%s' is unreachable", url)
-                return {
-                    "status": "Offline",
-                    "response_time": None,
-                    "response_code": None,
-                    "ssl": None,
-                    "no_internet": True,
-                }
-            elif "timed out" in reason:
-                logger.debug("Server '%s' is unreachable: connection timed out", url)
-            else:
-                logger.debug("Server '%s' is unreachable: connection failed", url)
-        except ValueError, http.client.HTTPException:
-            logger.debug("Server '%s' is unreachable: invalid URL or response", url)
-
-        status = "Online" if http_status is not None and http_status < 500 else "Offline"
-
-        # Only attempt SSL expiry checks when online.
-        ssl_days = None
-        final = urlsplit(final_url)
-        if ssl_check and status == "Online" and urlsplit(url).scheme == "https" and final.hostname:
-            ssl_days = self.check_ssl_expiry(final.hostname, final.port or 443, ssl_verify, timeout)
-
-        return {
-            "status": status,
-            "response_time": response_time,
-            "response_code": http_status,
-            "ssl": ssl_days,
-            "no_internet": False,
-        }
-
-    def check_ssl_expiry(self, hostname: str, port: int, ssl_verify: bool, timeout: int) -> int | None:
-        try:
-            context = _ssl_context(ssl_verify)
-            with socket.create_connection((hostname, port), timeout=timeout) as sock:
-                with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-                    der = ssock.getpeercert(binary_form=True)
-            if not der:
-                return None
+def _check_ssl_expiry(url: str, context: ssl.SSLContext, timeout: int) -> int | None:
+    try:
+        target = urlsplit(url)
+        if target.scheme != "https" or not target.hostname:
+            return None
+        with socket.create_connection((target.hostname, target.port or 443), timeout=timeout) as sock:
+            with context.wrap_socket(sock, server_hostname=target.hostname) as ssock:
+                der = ssock.getpeercert(binary_form=True)
+        if der:
             return (_cert_not_after(der) - datetime.now(UTC)).days
-        except OSError as e:
-            reason = str(e).lower()
-            if "getaddrinfo" in reason or "name or service not known" in reason:
-                logger.debug("SSL check skipped for '%s'", hostname)
-            else:
-                logger.debug("SSL check failed for '%s': connection error", hostname)
-            return None
-        except ValueError, IndexError:
-            logger.debug("SSL check failed for '%s': unreadable certificate", hostname)
-            return None
+    except (OSError, ValueError, IndexError) as exc:
+        logger.debug("SSL check failed for '%s': %s", url, exc)
+    return None

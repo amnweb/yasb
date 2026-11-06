@@ -62,8 +62,8 @@ def layout_stereo(left: list[float], right: list[float], reverse: bool = False) 
     """Join left and right bands into one row.
 
     Left half = left channel, right half = right channel.
-    reverse=False: bass in the center  (highs…bass | bass…highs)
-    reverse=True:  bass on the edges   (bass…highs | highs…bass)
+    reverse=False: bass in the center  (highs...bass | bass...highs)
+    reverse=True:  bass on the edges   (bass...highs | highs...bass)
     """
     if reverse:
         return left + list(reversed(right))

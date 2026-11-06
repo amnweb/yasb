@@ -11,7 +11,6 @@ from PyQt6.QtGui import QColor, QContextMenuEvent, QGuiApplication, QWindow
 from PyQt6.QtQml import QQmlEngine
 from PyQt6.QtQuick import QQuickItem
 from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication
 
 from core import widget_files
 from core.bar import window
@@ -30,7 +29,7 @@ type MakeBar = Callable[..., BarWindow]
 
 
 @pytest.fixture
-def make_bar(qapp: QApplication, fake_app_bar: None) -> Iterator[MakeBar]:
+def make_bar(qapp: QGuiApplication, fake_app_bar: None) -> Iterator[MakeBar]:
     register_qml_types()
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)
@@ -100,9 +99,13 @@ def test_auto_width_follows_the_qml_content(make_bar: MakeBar):
     bar = make_bar(length="auto")
     root = bar.item
     assert root is not None
-    assert bar.width() == math.ceil(root.implicitWidth())
+    width = bar.width()
+    assert width == bar.target_screen.geometry().width()
+    assert root.width() == math.ceil(root.implicitWidth())
     root.setImplicitWidth(321)
-    assert bar.width() == 321
+    assert bar.width() == width
+    assert root.width() == 321
+    assert root.x() == (width - 321) // 2
 
 
 def test_auto_hide_sets_up_its_manager(make_bar: MakeBar):
@@ -211,9 +214,9 @@ def test_sections_split_the_bar_and_keep_the_yaml_order(make_bar: MakeBar, widge
 def test_auto_width_fits_the_widgets(make_bar: MakeBar, widget_dir: Path):
     bar = make_bar(length="auto", widgets=WIDGETS)
     wait(50)
-    assert bar.width() == PADDING + LEFT + 100 + 40 + PADDING
+    assert _root(bar).width() == PADDING + LEFT + 100 + 40 + PADDING
     assert _left(bar, "c") == PADDING + LEFT
-    assert _left(bar, "d") + 40 == bar.width() - PADDING
+    assert _left(bar, "d") + 40 == _root(bar).width() - PADDING
 
 
 def _bar_file(folder: Path, body: str) -> str:
@@ -404,9 +407,16 @@ def test_an_island_follows_its_widgets(make_bar: MakeBar, widget_dir: Path):
 
 
 def test_touching_islands_merge(make_bar: MakeBar, widget_dir: Path):
+    # Just long enough for the widgets, so the slots touch
+    bar = make_bar(length=PADDING + LEFT + 100 + 40 + PADDING, widgets=WIDGETS, file=_bar_file(widget_dir, ISLAND_BAR))
+    wait(50)
+    assert _islands(bar) == [[0, _root(bar).width()]]
+
+
+def test_an_island_bar_ignores_auto_length(make_bar: MakeBar, widget_dir: Path):
     bar = make_bar(length="auto", widgets=WIDGETS, file=_bar_file(widget_dir, ISLAND_BAR))
     wait(50)
-    assert _islands(bar) == [[0, bar.width()]]
+    assert _root(bar).width() == bar.width() == bar.target_screen.geometry().width()
 
 
 def test_a_widget_can_sit_outside_the_islands(make_bar: MakeBar, widget_dir: Path):
@@ -604,7 +614,7 @@ def test_a_vertical_island_bar_curves_into_the_screen_edges(
 
 
 @pytest.mark.parametrize("edge", ["top", "bottom", "left", "right"])
-def test_the_app_bar_reserves_its_screen_edge(qapp: QApplication, edge: str):
+def test_the_app_bar_reserves_its_screen_edge(qapp: QGuiApplication, edge: str):
     screen = QGuiApplication.primaryScreen()
     assert screen is not None
     area = screen.geometry()
@@ -629,7 +639,7 @@ def _open_windows() -> set[QWindow]:
 
 def _right_click(bar: BarWindow, x: float) -> None:
     point = QPoint(round(x), bar.height() // 2)
-    QApplication.sendEvent(bar, QContextMenuEvent(QContextMenuEvent.Reason.Mouse, point, bar.mapToGlobal(point)))
+    QGuiApplication.sendEvent(bar, QContextMenuEvent(QContextMenuEvent.Reason.Mouse, point, bar.mapToGlobal(point)))
     wait(100)
 
 
@@ -664,7 +674,7 @@ def test_a_right_click_on_a_widget_that_shrinks_opens_no_bar_menu(make_bar: Make
     QTest.mouseClick(bar, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, point)  # pyright: ignore[reportCallIssue, reportArgumentType]
     wait(50)
     assert _left(bar, "shrinks") > point.x()
-    QApplication.sendEvent(bar, QContextMenuEvent(QContextMenuEvent.Reason.Mouse, point, bar.mapToGlobal(point)))
+    QGuiApplication.sendEvent(bar, QContextMenuEvent(QContextMenuEvent.Reason.Mouse, point, bar.mapToGlobal(point)))
     wait(100)
     assert _open_windows() == before
 

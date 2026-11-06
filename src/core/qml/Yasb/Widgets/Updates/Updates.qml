@@ -113,9 +113,12 @@ Item {
         popup.open()
     }
 
-    implicitWidth: row.implicitWidth
-    implicitHeight: row.implicitHeight
-    visible: !hideWhenNone || updates.count > 0 || updates.restartRequired
+    // A hidden widget takes no room on the bar, as its slot keeps the size it asks for
+    readonly property bool shown: !hideWhenNone || updates.count > 0 || updates.restartRequired
+
+    implicitWidth: shown ? row.implicitWidth : 0
+    implicitHeight: shown ? row.implicitHeight : 0
+    visible: shown
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: qsTr("%n update(s) available", "", updates.count)
@@ -390,7 +393,7 @@ Item {
             if (checking.length > 0) {
                 const names = checking.length === 1 ? checking[0]
                     : qsTr("%1 and %2").arg(checking.slice(0, -1).join(", ")).arg(checking[checking.length - 1])
-                return qsTr("Checking %1…").arg(names)
+                return qsTr("Checking %1...").arg(names)
             }
             if (updates.count > 0)
                 return qsTr("%n available", "", updates.count)
@@ -526,7 +529,7 @@ Item {
                     Label {
                         Layout.alignment: Qt.AlignHCenter
                         Layout.topMargin: 8
-                        text: updates.checking && widget.checked === "" ? qsTr("Checking for updates…")
+                        text: updates.checking && widget.checked === "" ? qsTr("Checking for updates...")
                             : qsTr("Everything is up to date")
                         font.pixelSize: 14
                     }
@@ -617,7 +620,7 @@ Item {
 
                                     Label {
                                         visible: section.modelData.installing
-                                        text: qsTr("Updating…")
+                                        text: qsTr("Updating...")
                                         muted: true
                                         font.pixelSize: 12
                                     }
@@ -746,7 +749,8 @@ Item {
                                                         Label {
                                                             width: parent.width
                                                             text: updateRow.modelData.name
-                                                            font.pixelSize: 14
+                                                            font.pixelSize: 13
+                                                            font.weight: Font.DemiBold
                                                         }
 
                                                         // The installed version, then the new one in the accent colour
@@ -755,14 +759,14 @@ Item {
                                                             visible: updateRow.packaged
 
                                                             Label {
-                                                                text: `${updateRow.modelData.installedVersion || qsTr("Unknown")} → `
+                                                                text: `${updateRow.modelData.installedVersion || qsTr("Unknown")} · `
                                                                 muted: true
                                                                 font.pixelSize: 12
                                                             }
 
                                                             Label {
                                                                 text: updateRow.modelData.availableVersion
-                                                                color: widget.accentColor
+                                                                muted: true
                                                                 font.pixelSize: 12
                                                             }
                                                         }

@@ -11,7 +11,7 @@ and in another one, which is what stops a CLI restore running under the window's
 from pathlib import Path
 
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QGuiApplication
 
 from core.cloud.api import ApiClient
 from core.cloud.constants import BUSY_MESSAGE
@@ -29,7 +29,7 @@ def cloud_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture
-def ops(qapp: QApplication, cloud_home: Path) -> Operations:
+def ops(qapp: QGuiApplication, cloud_home: Path) -> Operations:
     session = _signed_in()
     return Operations(ApiClient(session), session)
 
@@ -104,7 +104,7 @@ def test_a_second_operation_is_refused_while_one_is_active(ops: Operations):
     ops.cancel_active()
 
 
-def test_closing_the_window_cancels_rather_than_refusing(qapp: QApplication, cloud_home: Path):
+def test_closing_the_window_cancels_rather_than_refusing(qapp: QGuiApplication, cloud_home: Path):
     """Closing always closes. Whatever is running is cancelled and released; the user is
     never asked to wait and never shown a dialog about it."""
     cloud = Cloud()
