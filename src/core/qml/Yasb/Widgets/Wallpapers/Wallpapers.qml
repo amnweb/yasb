@@ -38,6 +38,7 @@ Item {
             required property int index
             readonly property real growth: Number.isFinite(PathView.itemScale) ? PathView.itemScale : 1
             readonly property real nearness: Math.max(0, Math.min(1, (growth - 1) / Math.max(0.01, wallpapers.selectedScale - 1)))
+            readonly property real pixelRatio: Screen.devicePixelRatio || 1
 
             width: wallpapers.thumbnailWidth
             height: wallpapers.thumbnailHeight
@@ -54,7 +55,7 @@ Item {
             WallpaperThumbnail {
                 id: made
 
-                readonly property real ratio: (card.Screen.devicePixelRatio || 1) * wallpapers.selectedScale
+                readonly property real ratio: card.pixelRatio * wallpapers.selectedScale
 
                 path: card.modelData.path
                 size: Qt.size(Math.round(card.width * made.ratio), Math.round(card.height * made.ratio))
@@ -84,9 +85,9 @@ Item {
                 ShapePath {
                     strokeColor: "transparent"
                     fillItem: picture
-                    // The fill takes the picture's pixels one to one; scaled to the card, the whole thumbnail shows
-                    fillTransform: PlanarTransform.fromScale(card.width / Math.max(1, picture.implicitWidth),
-                        card.height / Math.max(1, picture.implicitHeight))
+                    // Adjust for scaling using pixelRatio
+                    fillTransform: PlanarTransform.fromScale(card.width * card.pixelRatio / Math.max(1, picture.implicitWidth),
+                        card.height * card.pixelRatio / Math.max(1, picture.implicitHeight))
 
                     PathRectangle {
                         width: card.width
