@@ -15,6 +15,8 @@ from core.services.glazewm.client import GlazewmClient
 from core.services.glazewm.connection import GlazewmConnection
 from core.services.glazewm.tiling_direction import GlazewmTiling
 from core.services.glazewm.workspaces import GlazewmWorkspaceList
+from core.utils.icons.image_provider import window_icon_url
+from core.utils.icons.service import IconService
 from tests.support.qt import wait
 
 
@@ -178,6 +180,28 @@ def test_workspaces_still_connect_through_the_shared_base(glazewm: FakeGlazewm):
     assert [workspace["name"] for workspace in model.property("workspaces")] == ["1", "2"]
     model.activateWorkspace("2")
     until(lambda: glazewm.commands == ["focus --workspace 2"])
+
+
+def test_workspace_icons_use_the_shared_icon_revision(glazewm: FakeGlazewm):
+    # A private counter starting at 0 (as after a bar reload) could land on a URL another widget already got a
+    # loading placeholder for, and QML would keep showing that cached placeholder.
+    window = {"type": "window", "handle": 1234, "title": "App", "processName": "app", "state": {"type": "tiling"}}
+    workspace = {"type": "workspace", "name": "1", "hasFocus": True, "children": [window]}
+    glazewm.answers["query monitors"] = {"monitors": [{"hardwareId": "screen", "handle": 1, "children": [workspace]}]}
+    icons = IconService.instance()
+    icons.icons_changed.emit()  # the service has moved on before this model exists
+    model = GlazewmWorkspaceList()
+    model.setProperty("monitorExclusive", False)
+    model.setProperty("appIcons", {"enabledPopulated": True, "enabledFocused": True})
+    connected(model, glazewm)
+
+    def source() -> str | None:
+        workspaces = model.property("workspaces")
+        return workspaces[0]["icons"][0]["source"] if workspaces and workspaces[0]["icons"] else None
+
+    until(lambda: source() == window_icon_url(1234, icons.revision))
+    icons.icons_changed.emit()
+    assert source() == window_icon_url(1234, icons.revision)
 
 
 @pytest.mark.parametrize("name", ["GlazewmTiling", "GlazewmBindingModes"])

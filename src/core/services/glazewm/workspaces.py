@@ -54,8 +54,7 @@ class GlazewmWorkspaceList(GlazewmConnection):
         }
         self._monitors: list[Monitor] = []
         self._workspaces: list[dict[str, Any]] = []
-        self._icon_revision = 0
-        IconService.instance().icons_changed.connect(self._on_icons_changed)
+        IconService.instance().icons_changed.connect(self._publish)
 
     def setting(self, name: str) -> Any:
         return self._settings[name]
@@ -132,6 +131,7 @@ class GlazewmWorkspaceList(GlazewmConnection):
 
         icons: list[dict[str, Any]] = []
         pids: set[int] = set()
+        revision = IconService.instance().revision
         maximum = max(0, options.get("maxIcons", 0))
         for window in workspace.windows:
             if not window.handle or (options.get("hideFloating") and window.is_floating):
@@ -150,16 +150,12 @@ class GlazewmWorkspaceList(GlazewmConnection):
                 {
                     "hwnd": window.handle,
                     "title": window.title or window.process_name or "",
-                    "source": window_icon_url(window.handle, self._icon_revision),
+                    "source": window_icon_url(window.handle, revision),
                 }
             )
             if maximum and len(icons) >= maximum:
                 break
         return icons
-
-    def _on_icons_changed(self) -> None:
-        self._icon_revision += 1
-        self._publish()
 
     @pyqtSlot(str)
     def activateWorkspace(self, name: str) -> None:
