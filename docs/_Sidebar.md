@@ -16,6 +16,7 @@
     - [Battery](./(Widget)-Battery)
     - [Bluetooth](./(Widget)-Bluetooth)
     - [Brightness](./(Widget)-Brightness)
+    - [Calculator](./(Widget)-Calculator)
     - [Cava](./(Widget)-Cava)
     - [Claude Usage](./(Widget)-Claude-Usage)
     - [Codex Usage](./(Widget)-Codex-Usage)
