@@ -107,7 +107,7 @@ weather:
 - **label**: (Required) The format string.
 - **label_alt**: The alternative format string. Default is `""`.
 - **label_placeholder**: Placeholder text when data is not available. Default is `"Loading..."`.
-- **label_max_length**: The maximum length of the label. Minimum value is 1. Default is `None`.
+- **label_max_length**: The maximum length of the label. Full-width characters (Chinese, Japanese, Korean, most emoji) count as two. Minimum value is 1. Default is `None`.
 - **tooltip**: Whether to show the tooltip on hover. Default is `false`.
 - **tooltip_label**: Custom format string for the tooltip. Use `{data}` to reference the command output data. If not specified, shows the raw data representation (JSON for dict, string for other types).
 - **class_name**: (Required) The CSS class name for the widget.

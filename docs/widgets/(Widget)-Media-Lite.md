@@ -11,7 +11,7 @@ A vertical and minimal album-style media widget. Cover art and track info on the
 | `scrolling_label` | boolean | `false` | Scroll the bar text on one line (CSS class `label`). With title and artist both enabled: `Title - Artist`. Scroll style is fixed in the widget. |
 | `image_size` | integer | `28` | Bar thumbnail size in pixels. |
 | `thumbnail_corner_radius` | integer | `6` | Corner radius for the bar thumbnail. |
-| `max_label_size` | integer | `20` | Max characters for **both** title and artist on the bar. |
+| `max_label_size` | integer | `20` | Max characters for **both** title and artist on the bar. Full-width characters (Chinese, Japanese, Korean, most emoji) count as two. |
 | `tooltip` | boolean | `true` | Show tooltips on the bar (title + artist) and popup controls. |
 | `media_menu` | dict | [See below](#media-menu-options) | Popup menu options. |
 | `callbacks` | dict | [See below](#available-callbacks) | Mouse callbacks. |
