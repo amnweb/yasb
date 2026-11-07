@@ -15,7 +15,9 @@ from core.services.clock.time_zones import TimeZones
 from core.services.cpu.monitor import CpuMonitor
 from core.services.dnd.status import DoNotDisturb
 from core.services.github.notifications import GitHubNotifications
-from core.services.glazewm.workspaces import GlazewmWorkspacesModel
+from core.services.glazewm.binding_mode import GlazewmBindingModes
+from core.services.glazewm.tiling_direction import GlazewmTiling
+from core.services.glazewm.workspaces import GlazewmWorkspaceList
 from core.services.gpu.monitor import GpuMonitor
 from core.services.komorebi.workspaces import KomorebiWorkspacesModel
 from core.services.language.keyboard import KeyboardLanguage
@@ -62,8 +64,10 @@ QML_TYPES: tuple[type[QObject], ...] = (
     NetworkTrafficMonitor,
     ServerChecks,
     GitHubNotifications,
-    GlazewmWorkspacesModel,
     KomorebiWorkspacesModel,
+    GlazewmWorkspaceList,
+    GlazewmTiling,
+    GlazewmBindingModes,
     QuickLaunchSearch,
     NowPlaying,
     AudioOutput,
