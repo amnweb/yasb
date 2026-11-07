@@ -52,6 +52,7 @@ class BrightnessConfig(CustomBaseModel):
         "\udb80\udce0",  # Icon for 76-100% brightness
     ]
     brightness_toggle_level: list[int] = []
+    link_monitors: bool = False
     brightness_menu: BrightnessMenuConfig = BrightnessMenuConfig()
     ddc_poll_interval: int = Field(default=60, ge=0, le=600)
     auto_light: bool = False
