@@ -656,6 +656,11 @@
           "title": "Class Name",
           "type": "string"
         },
+        "source": {
+          "default": "auto",
+          "title": "Source",
+          "type": "string"
+        },
         "style": {
           "default": "bars",
           "enum": [
@@ -6334,7 +6339,7 @@
       "additionalProperties": false,
       "properties": {
         "label": {
-          "default": "<span>\ud83e\ude78<span><span class='sgv'>{sgv}</span><span>{direction}</span>",
+          "default": "<span>\ud83e\ude78</span><span class='sgv'>{sgv}</span><span>{direction}</span>",
           "title": "Label",
           "type": "string"
         },
@@ -9922,7 +9927,7 @@
       "additionalProperties": false,
       "properties": {
         "on_left": {
-          "default": "toggle_label",
+          "default": "toggle_menu",
           "title": "On Left",
           "type": "string"
         },
@@ -9972,7 +9977,24 @@
           "$ref": "#/$defs/NotificationsIconsConfig",
           "default": {
             "new": "\udb80\udc9e",
-            "default": "\udb80\udc9a"
+            "default": "\udb80\udc9a",
+            "dnd_on": "\udb80\udc9b",
+            "dnd_off": "\udb80\udc9a",
+            "dismiss": "\uf00d"
+          }
+        },
+        "menu": {
+          "$ref": "#/$defs/NotificationsMenuConfig",
+          "default": {
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "alignment": "right",
+            "direction": "down",
+            "offset_top": 6,
+            "offset_left": 0,
+            "app_icon_size": 16
           }
         },
         "keybindings": {
@@ -9986,7 +10008,7 @@
         "callbacks": {
           "$ref": "#/$defs/NotificationsCallbacksConfig",
           "default": {
-            "on_left": "toggle_label",
+            "on_left": "toggle_menu",
             "on_middle": "do_nothing",
             "on_right": "do_nothing"
           }
@@ -10025,9 +10047,78 @@
           "type": "string",
           "default": "\udb80\udc9a",
           "title": "Default"
+        },
+        "dnd_on": {
+          "default": "\udb80\udc9b",
+          "title": "Dnd On",
+          "type": "string"
+        },
+        "dnd_off": {
+          "default": "\udb80\udc9a",
+          "title": "Dnd Off",
+          "type": "string"
+        },
+        "dismiss": {
+          "default": "\uf00d",
+          "title": "Dismiss",
+          "type": "string"
         }
       },
       "title": "NotificationsIconsConfig",
+      "type": "object"
+    },
+    "NotificationsMenuConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "alignment": {
+          "default": "right",
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_top": {
+          "default": 6,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        },
+        "app_icon_size": {
+          "default": 16,
+          "maximum": 64,
+          "minimum": 8,
+          "title": "App Icon Size",
+          "type": "integer"
+        }
+      },
+      "title": "NotificationsMenuConfig",
       "type": "object"
     },
     "ObsConfig": {
@@ -12484,7 +12575,7 @@
           "type": "string"
         },
         "label_alt": {
-          "default": "{online}/{offline} of {total} servers",
+          "default": "{online}/{offline} of {total}",
           "title": "Label Alt",
           "type": "string"
         },
@@ -13299,7 +13390,7 @@
           "type": "boolean"
         },
         "use_hook": {
-          "default": false,
+          "default": true,
           "title": "Use Hook",
           "type": "boolean"
         }
@@ -15708,6 +15799,7 @@
         },
         "max_visible_apps": {
           "default": 5,
+          "minimum": 1,
           "title": "Max Visible Apps",
           "type": "integer"
         },
@@ -15715,6 +15807,13 @@
           "default": true,
           "title": "Show Title",
           "type": "boolean"
+        },
+        "preview": {
+          "$ref": "#/$defs/WindowSwitcherPreviewConfig",
+          "default": {
+            "enabled": false,
+            "width": 240
+          }
         },
         "popup": {
           "$ref": "#/$defs/WindowSwitcherPopupConfig",
@@ -15796,6 +15895,25 @@
       "title": "WindowSwitcherPopupConfig",
       "type": "object"
     },
+    "WindowSwitcherPreviewConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "width": {
+          "default": 240,
+          "maximum": 360,
+          "minimum": 100,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "title": "WindowSwitcherPreviewConfig",
+      "type": "object"
+    },
     "WindowSwitcherProviderConfig": {
       "additionalProperties": false,
       "properties": {
@@ -15852,6 +15970,28 @@
           "default": "{index}",
           "title": "Label Workspace Active Btn",
           "type": "string"
+        },
+        "label_workspace_populated_btn": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label Workspace Populated Btn"
+        },
+        "enable_scroll_switching": {
+          "default": false,
+          "title": "Enable Scroll Switching",
+          "type": "boolean"
+        },
+        "reverse_scroll_direction": {
+          "default": false,
+          "title": "Reverse Scroll Direction",
+          "type": "boolean"
         },
         "callbacks": {
           "$ref": "#/$defs/WindowsDesktopsCallbacksConfig",
