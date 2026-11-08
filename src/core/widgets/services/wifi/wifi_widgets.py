@@ -326,6 +326,7 @@ class WifiList(QScrollArea):
 
         self.container = QFrame(self)
         self.container.setProperty("class", "wifi-list")
+        self.container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         self._main_layout = QVBoxLayout(self.container)
         self._main_layout.setContentsMargins(0, 0, 0, 0)
         self._main_layout.setSpacing(2)
