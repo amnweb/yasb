@@ -17,6 +17,7 @@ from core.bar_helper import (
 )
 from core.bar_style import AdaptiveBarFrame, BarFrame
 from core.events.service import EventService
+from core.utils.controller import reload_application
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32 import app_bar
 from core.utils.win32.backdrop import enable_blur
@@ -69,6 +70,7 @@ class Bar(QWidget):
         self._auto_width_manager = None
         self._cli_manager = None
         self.target_screen = bar_screen
+        self._device_pixel_ratio = bar_screen.devicePixelRatio()
 
         self.screen_name = self.target_screen.name()
         self.app_bar_edge = app_bar.AppBarEdge.Top if self.alignment["position"] == "top" else app_bar.AppBarEdge.Bottom
@@ -157,6 +159,10 @@ class Bar(QWidget):
         return self._bar_id
 
     def on_geometry_changed(self, geo: QRect) -> None:
+        # A DPI change on a connected screen fires no screenAdded/screenRemoved, so BarManager never reloads.
+        if self.target_screen.devicePixelRatio() != self._device_pixel_ratio:
+            reload_application("Reloading Application because of screen DPI change.")
+            return
         logging.info(
             "Screen geometry changed. Updating position for bar %s on screen %s",
             self._bar_name,
