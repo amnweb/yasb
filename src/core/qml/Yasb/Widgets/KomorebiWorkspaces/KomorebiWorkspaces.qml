@@ -42,8 +42,8 @@ Item {
 
     component AppIcons: QtObject {
         // Show the icons of the windows in each workspace with windows, and in the one the monitor shows
-        property bool enabledPopulated: true
-        property bool enabledActive: true
+        property bool enabledPopulated: false
+        property bool enabledActive: false
         // In pixels
         property int size: 16
         // The most icons a workspace shows, 0 for all of them
