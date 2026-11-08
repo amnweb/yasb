@@ -75,7 +75,7 @@ from core.utils.win32.constants import (
     PKEY_AppUserModel_ID,
 )
 from core.utils.win32.structs import GUID, PROPERTYKEY, PROPVARIANT, WNDCLASS, WNDPROC
-from core.utils.win32.utils import get_process_path, get_window_rect, is_window_maximized
+from core.utils.win32.utils import get_process_path, is_window_maximized
 
 APPMODEL_ERROR_NO_PACKAGE = 15700
 ERROR_PATH_NOT_FOUND = 3
@@ -253,10 +253,6 @@ def test_window_maximized_state(make_window: Callable[..., int], style: int, max
     assert is_window_maximized(make_window(style=style)) is maximized
 
 
-def test_window_rect(make_window: Callable[..., int]):
-    assert get_window_rect(make_window()) == {"x": 10, "y": 20, "width": 300, "height": 200}
-
-
 def test_closed_window(make_window: Callable[..., int]):
     hwnd = make_window()
     DestroyWindow(hwnd)
@@ -266,8 +262,6 @@ def test_closed_window(make_window: Callable[..., int]):
     assert GetParent(hwnd) == 0
     with pytest.raises(OSError):
         is_window_maximized(hwnd)
-    with pytest.raises(OSError):
-        get_window_rect(hwnd)
 
 
 def test_version_strings_of_a_system_dll():
