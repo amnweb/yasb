@@ -15,7 +15,6 @@ from core.services.brightness.scheme import (
     policy_brightness_guid,
     set_scheme_brightness,
 )
-from core.utils.qobject import is_valid_qobject
 from core.utils.win32.bindings.dxva2 import PHYSICAL_MONITOR, VCP_BRIGHTNESS, VCP_CONTRAST, dxva2
 from core.utils.win32.bindings.kernel32 import GetLastError, kernel32
 from core.utils.win32.bindings.user32 import MONITORENUMPROC, user32
@@ -336,7 +335,7 @@ class BrightnessService(QObject):
                 was_reported = monitor.reported
                 monitor.brightness = value
                 monitor.reported = True
-            if (not was_reported or old != value) and is_valid_qobject(self) and self._running:
+            if (not was_reported or old != value) and self._running:
                 self.brightness_changed.emit(owner, value)
             return 1
         return user32.DefWindowProcW(hwnd, msg, wparam, lparam)
@@ -389,7 +388,7 @@ class BrightnessService(QObject):
                             monitor.supports_contrast = contrast is not None
                             if contrast is not None:
                                 monitor.contrast = contrast
-                    if contrast is not None and is_valid_qobject(self) and self._running:
+                    if contrast is not None and self._running:
                         self.contrast_changed.emit(hmonitor, contrast)
                 else:
                     pending_scheme.append(hmonitor)
@@ -471,7 +470,7 @@ class BrightnessService(QObject):
             supports_ddc = monitor.supports_ddc
             already_tested = monitor.contrast_tested
 
-        if (not was_reported or old_brightness != brightness) and is_valid_qobject(self) and self._running:
+        if (not was_reported or old_brightness != brightness) and self._running:
             self.brightness_changed.emit(hmonitor, brightness)
 
         if not supports_ddc:
@@ -490,7 +489,7 @@ class BrightnessService(QObject):
                 monitor.supports_contrast = contrast is not None
             if monitor.supports_contrast and monitor.contrast != contrast:
                 monitor.contrast = contrast
-                if is_valid_qobject(self) and self._running:
+                if self._running:
                     self.contrast_changed.emit(hmonitor, contrast)
 
     def _enumerate_monitors(self) -> None:

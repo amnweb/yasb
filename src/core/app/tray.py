@@ -16,6 +16,7 @@ from core.app.update.service import ReleaseInfo, register_update_callback
 from core.app.windows.about import About
 from core.bar.manager import BarManager
 from core.utils.shell_utils import shell_open
+from core.utils.win32.autostart import disable_autostart, enable_autostart, is_autostart_enabled
 from core.utils.win32.bindings.kernel32 import GetLastError, GetModuleHandle
 from core.utils.win32.bindings.shell32 import shell32
 from core.utils.win32.bindings.user32 import (
@@ -55,7 +56,6 @@ from core.utils.win32.constants import (
 )
 from core.utils.win32.structs import NOTIFYICONDATAW, WNDCLASS, WNDPROC
 from core.utils.win32.undocumented import PREFERRED_APP_MODE_ALLOW_DARK
-from core.utils.win32.utils import disable_autostart, enable_autostart, is_autostart_enabled
 from settings import (
     APP_NAME,
     DEFAULT_CONFIG_DIRECTORY,

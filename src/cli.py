@@ -22,6 +22,7 @@ from typing import Any
 
 from core.cli.pipe import CLI_SERVER_PIPE_NAME, LOG_SERVER_PIPE_NAME, read_message, write_message
 from core.utils.process import is_process_running
+from core.utils.win32.autostart import disable_autostart, enable_autostart, is_autostart_enabled
 from core.utils.win32.bindings.advapi32 import get_current_user_sid
 from core.utils.win32.bindings.kernel32 import CloseHandle, CreateFile, GetLastError, ReadFile, WriteFile
 from core.utils.win32.bindings.ole32 import create_dispatch
@@ -41,7 +42,7 @@ from core.utils.win32.constants import (
     MINIDUMP_WITH_UNLOADED_MODULES,
     OPEN_EXISTING,
 )
-from core.utils.win32.registry_keys import RUN_KEY, WER_LOCAL_DUMPS_KEY
+from core.utils.win32.registry_keys import WER_LOCAL_DUMPS_KEY
 from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL, SCRIPT_PATH
 
 YASB_VERSION = BUILD_VERSION
@@ -134,42 +135,17 @@ class CLIHandler:
         except Exception as e:
             print(f"Error: {e}")
 
-    def _open_startup_registry(self, access_flag: int):
-        """Helper function to open the startup registry key."""
-        return winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, access_flag)
-
-    def is_autostart_enabled(self, app_name: str) -> bool:
-        """Check if application is in Windows startup."""
-        try:
-            with self._open_startup_registry(winreg.KEY_READ) as key:
-                winreg.QueryValueEx(key, APP_NAME)
-            return True
-        except FileNotFoundError:
-            return False
-        except Exception as e:
-            print(f"Failed to check startup status for {app_name}: {e}")
-            return False
-
     def enable_startup(self):
-        if self.is_autostart_enabled(APP_NAME):
+        if is_autostart_enabled(APP_NAME):
             print(f"{APP_NAME} is already set to start on boot.")
-            return
-        try:
-            with self._open_startup_registry(winreg.KEY_SET_VALUE) as key:
-                winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, f"{AUTOSTART_FILE}")
+        elif enable_autostart(APP_NAME, f"{AUTOSTART_FILE}"):
             print(f"{APP_NAME} added to startup.")
-        except Exception as e:
-            print(f"Failed to add {APP_NAME} to startup: {e}")
 
     def disable_startup(self):
-        try:
-            with self._open_startup_registry(winreg.KEY_ALL_ACCESS) as key:
-                winreg.DeleteValue(key, APP_NAME)
-            print(f"{APP_NAME} removed from startup.")
-        except FileNotFoundError:
+        if not is_autostart_enabled(APP_NAME):
             print(f"Startup entry for {APP_NAME} not found.")
-        except Exception as e:
-            print(f"Failed to remove {APP_NAME} from startup: {e}")
+        elif disable_autostart(APP_NAME):
+            print(f"{APP_NAME} removed from startup.")
 
     def parse_arguments(self):
         parser = CustomArgumentParser(
