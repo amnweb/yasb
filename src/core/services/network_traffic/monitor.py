@@ -6,9 +6,9 @@ from datetime import date
 from typing import Any, ClassVar
 
 from PyQt6.QtCore import QCoreApplication, QMetaObject, QObject, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
-from winrt.windows.networking.connectivity import NetworkConnectivityLevel
+from winrt.windows.networking.connectivity import ConnectionProfile, NetworkConnectivityLevel, NetworkInformation
 
-from core.services.network_traffic.adapters import ProfileKey, find_profile, read_adapter
+from core.services.network_traffic.adapters import Adapter, ProfileKey, find_profile, read_adapter, read_counters
 from core.services.network_traffic.usage import Session, read_history
 from core.utils.qml import qml_property
 from core.utils.worker import run_in_worker
@@ -64,6 +64,10 @@ class TrafficSampler(QObject):
         self._reset = False
         self._thread: threading.Thread | None = None
         self._session = Session()
+        # The network and its adapter, looked up again when Windows reports a network change
+        self._network_changed = threading.Event()
+        self._active: tuple[ProfileKey, ConnectionProfile] | None = None
+        self._adapter: Adapter | None = None
         self.history = EMPTY_HISTORY
         self._history_key: tuple[ProfileKey, date] | None = None
         self._history_pending = False
@@ -142,7 +146,10 @@ class TrafficSampler(QObject):
 
     def _run(self) -> None:
         last_error = ""
+        token = None
+        self._network_changed.set()
         try:
+            token = NetworkInformation.add_network_status_changed(lambda _sender: self._network_changed.set())
             while not self._stopping.is_set():
                 self._wake.clear()
                 if self._stopping.is_set():
@@ -159,6 +166,7 @@ class TrafficSampler(QObject):
                     error = last_error = ""
                 except Exception as problem:
                     self._session.previous = None
+                    self._network_changed.set()
                     key, data, error = None, EMPTY_DATA, "Network statistics are unavailable."
                     if str(problem) != last_error:
                         logger.exception("Could not read network traffic")
@@ -171,17 +179,23 @@ class TrafficSampler(QObject):
                 logger.exception("The network traffic worker stopped unexpectedly")
                 self._failed.emit()
         finally:
+            if token is not None:
+                NetworkInformation.remove_network_status_changed(token)
             atexit.unregister(self._finish)
 
     def _sample(self, reset: bool) -> tuple[ProfileKey | None, dict[str, Any]]:
-        active = find_profile(self.interface)
+        if self._network_changed.is_set():
+            self._network_changed.clear()
+            self._active = find_profile(self.interface)
+            self._adapter = read_adapter(self._active[0][0]) if self._active is not None else None
+        active = self._active
         if active is None:
             self._session.previous = None
             if reset:
                 self._session = Session()
             return None, EMPTY_DATA
         key, profile = active
-        adapter = read_adapter(key[0])
+        adapter = read_counters(self._adapter) if self._adapter is not None else None
         try:
             level = profile.get_network_connectivity_level()
         except OSError:

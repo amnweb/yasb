@@ -2,6 +2,7 @@
 
 import threading
 from collections.abc import Callable, Iterator
+from dataclasses import replace
 from datetime import UTC, date, datetime, time, timedelta
 from types import SimpleNamespace
 from typing import Any, cast
@@ -354,6 +355,41 @@ def test_history_requests_are_shared_and_old_profile_results_are_discarded(
         assert not source.history["loading"]
     finally:
         source.stop()
+        sip.delete(source)
+
+
+def test_the_network_is_looked_up_again_only_when_windows_reports_a_change(
+    qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch
+):
+    lookups: list[str] = []
+    received = 0
+    profile = SimpleNamespace(get_network_connectivity_level=lambda: None, is_wlan_connection_profile=False)
+
+    def find_profile(interface: str) -> tuple[tuple[str, str], SimpleNamespace]:
+        lookups.append(interface)
+        return KEY, profile
+
+    def read_adapter(_key: str) -> Adapter:
+        return Adapter("wired", "Ethernet", 0, 0, True)
+
+    def read_counters(adapter: Adapter) -> Adapter:
+        nonlocal received
+        received += 1000
+        return replace(adapter, downloaded=received)
+
+    monkeypatch.setattr(monitor_module, "find_profile", find_profile)
+    monkeypatch.setattr(monitor_module, "read_adapter", read_adapter)
+    monkeypatch.setattr(monitor_module, "read_counters", read_counters)
+    source = TrafficSampler()
+    source._network_changed.set()
+    try:
+        source._sample(False)
+        _, data = source._sample(False)
+        assert lookups == ["auto"] and data["downloadRate"] > 0
+        source._network_changed.set()
+        source._sample(False)
+        assert lookups == ["auto", "auto"]
+    finally:
         sip.delete(source)
 
 

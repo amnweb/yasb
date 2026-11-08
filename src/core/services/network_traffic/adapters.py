@@ -4,7 +4,7 @@ import ctypes
 import socket
 from collections.abc import Iterator, Sequence
 from ctypes import byref, wintypes
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import cast
 from uuid import UUID
 
@@ -33,6 +33,7 @@ class Adapter:
     downloaded: int
     connected: bool = False
     ip_address: str = ""
+    index: int = 0
 
 
 type ProfileKey = tuple[str, str]
@@ -76,8 +77,17 @@ def read_adapter(key: str) -> Adapter | None:
                 address = socket.inet_ntoa(bytes(ipv4.sin_addr))
                 break
             unicast = unicast.contents.Next
-        return Adapter(key, adapter.FriendlyName, row.OutOctets, row.InOctets, row.OperStatus == 1, address)
+        return Adapter(
+            key, adapter.FriendlyName, row.OutOctets, row.InOctets, row.OperStatus == 1, address, adapter.IfIndex
+        )
     return None
+
+
+def read_counters(adapter: Adapter) -> Adapter | None:
+    row = MIB_IF_ROW2(InterfaceIndex=adapter.index)
+    if iphlpapi.GetIfEntry2(byref(row)) != ERROR_SUCCESS:
+        return None
+    return replace(adapter, uploaded=row.OutOctets, downloaded=row.InOctets, connected=row.OperStatus == 1)
 
 
 def _adapters() -> Iterator[tuple[str, IP_ADAPTER_ADDRESSES, MIB_IF_ROW2]]:
