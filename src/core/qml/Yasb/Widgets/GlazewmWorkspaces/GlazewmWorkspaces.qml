@@ -170,7 +170,7 @@ Item {
                             required property var modelData
 
                             objectName: "app-icon"
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.verticalCenter: parent?.verticalCenter
                             width: Math.max(1, root.appIcons.size)
                             height: width
                             sourceSize: Qt.size(width, height)
