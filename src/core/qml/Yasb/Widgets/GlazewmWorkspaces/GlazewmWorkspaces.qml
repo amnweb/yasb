@@ -39,14 +39,14 @@ Item {
 
     property AppIcons appIcons: AppIcons {}
 
-    readonly property QtObject model: workspaceModel
+    readonly property QtObject model: workspaceList
     readonly property bool dark: Application.styleHints.colorScheme === Qt.ColorScheme.Dark
     readonly property color textColor: bar ? bar.textColor : dark ? "white" : "black"
     readonly property bool vertical: bar?.vertical ?? false
-    readonly property bool shown: workspaceModel.connected || (!hideIfOffline && offlineLabel !== "")
+    readonly property bool shown: workspaceList.connected || (!hideIfOffline && offlineLabel !== "")
 
-    implicitWidth: !shown ? 0 : workspaceModel.connected ? buttons.implicitWidth : offline.implicitWidth
-    implicitHeight: !shown ? 0 : workspaceModel.connected ? buttons.implicitHeight : offline.implicitHeight
+    implicitWidth: !shown ? 0 : workspaceList.connected ? buttons.implicitWidth : offline.implicitWidth
+    implicitHeight: !shown ? 0 : workspaceList.connected ? buttons.implicitHeight : offline.implicitHeight
     visible: shown
 
     function label(workspace: var): string {
@@ -65,11 +65,11 @@ Item {
 
     function scroll(delta: int): void {
         if (enableScrollSwitching)
-            workspaceModel.switchWorkspace(reverseScrollDirection ? -delta : delta)
+            workspaceList.switchWorkspace(reverseScrollDirection ? -delta : delta)
     }
 
-    GlazewmWorkspacesModel {
-        id: workspaceModel
+    GlazewmWorkspaceList {
+        id: workspaceList
 
         serverUri: root.serverUri
         screenName: root.bar?.screenName ?? ""
@@ -89,7 +89,7 @@ Item {
 
         objectName: "offline"
         anchors.verticalCenter: parent.verticalCenter
-        visible: !workspaceModel.connected && root.shown
+        visible: !workspaceList.connected && root.shown
         text: root.offlineLabel
         textFormat: Text.PlainText
         color: root.textColor
@@ -103,10 +103,10 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         flow: root.vertical ? Flow.TopToBottom : Flow.LeftToRight
         spacing: root.spacing
-        visible: workspaceModel.connected
+        visible: workspaceList.connected
 
         Repeater {
-            model: workspaceModel.workspaces
+            model: workspaceList.workspaces
 
             delegate: Control {
                 id: button
@@ -145,7 +145,7 @@ Item {
                     hoverEnabled: true
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: workspaceModel.activateWorkspace(button.modelData.name)
+                    onClicked: workspaceList.activateWorkspace(button.modelData.name)
                 }
 
                 contentItem: Row {
@@ -170,7 +170,7 @@ Item {
                             required property var modelData
 
                             objectName: "app-icon"
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.verticalCenter: parent?.verticalCenter
                             width: Math.max(1, root.appIcons.size)
                             height: width
                             sourceSize: Qt.size(width, height)
@@ -183,7 +183,7 @@ Item {
     }
 
     WheelHandler {
-        enabled: root.enableScrollSwitching && workspaceModel.connected
+        enabled: root.enableScrollSwitching && workspaceList.connected
         onWheel: event => {
             const delta = event.angleDelta.y || event.angleDelta.x
             if (delta !== 0) {

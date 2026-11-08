@@ -177,14 +177,18 @@ class GlazewmClient(QObject):
                     return
                 self.workspaces_data_processed.emit(self._process_workspaces(cast(list[dict[str, Any]], monitors)))
             elif response.get("clientMessage") == QueryType.TILING_DIRECTION:
-                tiling_direction = TilingDirection(data.get("tilingDirection", TilingDirection.HORIZONTAL))
+                try:
+                    tiling_direction = TilingDirection(data.get("tilingDirection", TilingDirection.HORIZONTAL))
+                except ValueError:
+                    logger.warning("Unknown tiling direction: %s", data.get("tilingDirection"))
+                    return
                 self.tiling_direction_processed.emit(tiling_direction)
             elif response.get("clientMessage") == QueryType.BINDING_MODES:
                 binding_modes = data.get("bindingModes", [])
-                if binding_modes is None:
+                if not isinstance(binding_modes, list):
                     logger.warning("Expected 'bindingModes' to be a list, got %s", type(binding_modes).__name__)
                     return
-                self.binding_mode_changed.emit(self._process_binding_modes(binding_modes))
+                self.binding_mode_changed.emit(self._process_binding_modes(cast(list[dict[str, Any]], binding_modes)))
 
     def _process_workspaces(self, data: list[dict[str, Any]]) -> list[Monitor]:
         monitors: list[Monitor] = []

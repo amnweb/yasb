@@ -2,13 +2,13 @@ import logging
 import re
 from typing import Any
 
-from PyQt6.QtCore import QObject, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QObject, pyqtProperty, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QGuiApplication
 
 from core.services.glazewm.client import GlazewmClient, Monitor, Workspace
+from core.services.glazewm.connection import GlazewmConnection
 from core.utils.icons.image_provider import window_icon_url
 from core.utils.icons.service import IconService
-from core.utils.qml import qml_property
 from core.utils.win32.bindings.user32 import get_window_thread_process_id
 from core.utils.win32.utils import screen_monitor
 
@@ -26,21 +26,21 @@ def natural_sort_key(name: str) -> list[int | str]:
 
 
 def _setting(kind: type | str, name: str, notify: pyqtSignal) -> pyqtProperty[Any]:
-    def get(model: GlazewmWorkspacesModel) -> Any:
+    def get(model: GlazewmWorkspaceList) -> Any:
         return model.setting(name)
 
-    def set_value(model: GlazewmWorkspacesModel, value: Any) -> None:
+    def set_value(model: GlazewmWorkspaceList, value: Any) -> None:
         model.change_setting(name, value)
 
     return pyqtProperty(kind, get, set_value, notify=notify)
 
 
-class GlazewmWorkspacesModel(QObject):
+class GlazewmWorkspaceList(GlazewmConnection):
     dataChanged = pyqtSignal()
-    connectionChanged = pyqtSignal()
     settingsChanged = pyqtSignal()
 
-    serverUri = _setting(str, "serverUri", settingsChanged)
+    MESSAGES = WORKSPACE_MESSAGES
+
     screenName = _setting(str, "screenName", settingsChanged)
     monitorExclusive = _setting(bool, "monitorExclusive", settingsChanged)
     appIcons = _setting("QVariantMap", "appIcons", settingsChanged)
@@ -48,24 +48,13 @@ class GlazewmWorkspacesModel(QObject):
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._settings: dict[str, Any] = {
-            "serverUri": "ws://localhost:6123",
             "screenName": "",
             "monitorExclusive": True,
             "appIcons": {},
         }
-        self._client: GlazewmClient | None = None
-        self._connected = False
         self._monitors: list[Monitor] = []
         self._workspaces: list[dict[str, Any]] = []
-        self._icon_revision = 0
-
-        # QML supplies the server and screen after constructing the model.
-        self._start_timer = QTimer(self)
-        self._start_timer.setSingleShot(True)
-        self._start_timer.setInterval(0)
-        self._start_timer.timeout.connect(self._start)
-        self._start_timer.start()
-        IconService.instance().icons_changed.connect(self._on_icons_changed)
+        IconService.instance().icons_changed.connect(self._publish)
 
     def setting(self, name: str) -> Any:
         return self._settings[name]
@@ -75,39 +64,21 @@ class GlazewmWorkspacesModel(QObject):
             return
         self._settings[name] = value
         self.settingsChanged.emit()
-        if name == "serverUri":
-            self._start_timer.start()
-        else:
-            self._publish()
+        self._publish()
 
-    @qml_property(bool, notify=connectionChanged)
-    def connected(self) -> bool:
-        return self._connected
-
-    @qml_property("QVariantList", notify=dataChanged)
+    @pyqtProperty("QVariantList", notify=dataChanged)
     def workspaces(self) -> list[dict[str, Any]]:
         return self._workspaces
 
-    def _start(self) -> None:
-        if self._client is not None:
-            self._client.workspaces_data_processed.disconnect(self._on_data)
-            self._client.glazewm_connection_status.disconnect(self._on_connection)
-            self._client.close()
-            self._client.deleteLater()
-        self._on_connection(False)
-        self._client = GlazewmClient(self.setting("serverUri"), WORKSPACE_MESSAGES, parent=self)
-        self._client.workspaces_data_processed.connect(self._on_data)
-        self._client.glazewm_connection_status.connect(self._on_connection)
-        self._client.connect()
+    def _bind(self, client: GlazewmClient) -> None:
+        client.workspaces_data_processed.connect(self._on_data)
 
-    @pyqtSlot(bool)
-    def _on_connection(self, connected: bool) -> None:
-        if not connected:
-            self._monitors = []
-            self._publish()
-        if connected != self._connected:
-            self._connected = connected
-            self.connectionChanged.emit()
+    def _unbind(self, client: GlazewmClient) -> None:
+        client.workspaces_data_processed.disconnect(self._on_data)
+
+    def _reset(self) -> None:
+        self._monitors = []
+        self._publish()
 
     @pyqtSlot(list)
     def _on_data(self, monitors: list[Monitor]) -> None:
@@ -160,6 +131,7 @@ class GlazewmWorkspacesModel(QObject):
 
         icons: list[dict[str, Any]] = []
         pids: set[int] = set()
+        revision = IconService.instance().revision
         maximum = max(0, options.get("maxIcons", 0))
         for window in workspace.windows:
             if not window.handle or (options.get("hideFloating") and window.is_floating):
@@ -178,32 +150,28 @@ class GlazewmWorkspacesModel(QObject):
                 {
                     "hwnd": window.handle,
                     "title": window.title or window.process_name or "",
-                    "source": window_icon_url(window.handle, self._icon_revision),
+                    "source": window_icon_url(window.handle, revision),
                 }
             )
             if maximum and len(icons) >= maximum:
                 break
         return icons
 
-    def _on_icons_changed(self) -> None:
-        self._icon_revision += 1
-        self._publish()
-
     @pyqtSlot(str)
     def activateWorkspace(self, name: str) -> None:
-        if self._connected and self._client is not None:
-            self._client.activate_workspace(name)
+        if (client := self.client) is not None:
+            client.activate_workspace(name)
 
     @pyqtSlot(int)
     def switchWorkspace(self, direction: int) -> None:
-        if not self._connected or self._client is None or not direction:
+        if (client := self.client) is None or not direction:
             return
         if self.setting("monitorExclusive"):
             if direction > 0:
-                self._client.focus_prev_workspace()
+                client.focus_prev_workspace()
             else:
-                self._client.focus_next_workspace()
+                client.focus_next_workspace()
         elif direction > 0:
-            self._client.focus_prev_workspace_global()
+            client.focus_prev_workspace_global()
         else:
-            self._client.focus_next_workspace_global()
+            client.focus_next_workspace_global()
