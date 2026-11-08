@@ -1,35 +1,36 @@
-import ctypes
 import logging
 from collections.abc import Callable
-from typing import Any, override
+from contextlib import suppress
 
-import PyQt6.sip as sip
-from PyQt6.QtCore import QAbstractNativeEventFilter, QCoreApplication, QObject, QTimer, pyqtSignal
-from PyQt6.QtGui import QWindow
+from PyQt6.QtCore import QCoreApplication, QObject, QTimer, pyqtBoundSignal, pyqtSignal
 
+from core.events.win32 import WinEvent
 from core.services.taskbar.application_window import ApplicationWindow
 from core.utils.win32 import constants as WCONST
 from core.utils.win32.bindings.ole32 import ole32
 from core.utils.win32.bindings.user32 import (
-    DeregisterShellHookWindow,
     EnumWindows,
     GetForegroundWindow,
     IsWindow,
-    RegisterShellHookWindow,
-    RegisterWindowMessage,
-    SetWinEventHook,
-    UnhookWinEvent,
 )
 from core.utils.win32.bindings.user32 import user32 as _user32_raw
-from core.utils.win32.structs import MSG, WINEVENTPROC, WNDENUMPROC
+from core.utils.win32.event_listener import win_event
+from core.utils.win32.shell_hook import shell_event
+from core.utils.win32.structs import WNDENUMPROC
 
 logger = logging.getLogger("taskbar_window_manager")
 logger.setLevel(logging.INFO)
+# The WinEvents the manager follows, from the shared hook in core.utils.win32.event_listener
+WIN_EVENTS = (
+    WinEvent.EventObjectCloaked,
+    WinEvent.EventObjectUncloaked,
+    WinEvent.EventObjectShow,
+    WinEvent.EventObjectHide,
+    WinEvent.EventSystemMinimizeStart,
+    WinEvent.EventSystemMinimizeEnd,
+)
 # Global shared instance
 _shared_task_manager: TaskbarWindowManager | None = None
-_shellhook_event_filter: _ShellHookEventFilter | None = None
-# Never shown; the shell sends its window messages to it
-_hook_window: QWindow | None = None
 
 
 def get_shared_task_manager() -> TaskbarWindowManager:
@@ -41,63 +42,26 @@ def get_shared_task_manager() -> TaskbarWindowManager:
 
 
 def start_shared_task_manager() -> TaskbarWindowManager:
-    """Start the shared manager, once, on a hidden window of its own that receives the shell's messages.
+    """Start the shared manager, once.
 
     Cloaked windows, such as those on other virtual desktops, are kept; each widget leaves them out if it wants.
     """
-    global _shellhook_event_filter, _hook_window
     task_manager = get_shared_task_manager()
     if task_manager.is_initialized():
         return task_manager
     app = QCoreApplication.instance()
-    if _shellhook_event_filter is None and app is not None:
-        _shellhook_event_filter = _ShellHookEventFilter(lambda: _shared_task_manager)
-        app.installNativeEventFilter(_shellhook_event_filter)
-    if _hook_window is None:
-        _hook_window = QWindow()
     task_manager.keep_cloaked_tasks = True
-    task_manager.start(int(_hook_window.winId()))
+    task_manager.start()
     if app is not None:
         # Its shell and event hooks are taken down with YASB, as the taskbar widget did
         app.aboutToQuit.connect(task_manager.stop)
     return task_manager
 
 
-class _ShellHookEventFilter(QAbstractNativeEventFilter):
-    """Qt native event filter that forwards SHELLHOOK messages to the manager."""
-
-    def __init__(self, manager_getter: Callable[[], TaskbarWindowManager | None]):
-        super().__init__()
-        self._get_manager = manager_getter  # callable returning TaskbarWindowManager
-
-    @override
-    def nativeEventFilter(self, eventType: Any, message: sip.voidptr | None) -> tuple[bool, sip.voidptr]:
-        # On Windows + PyQt6, eventType is 'windows_generic_MSG' and message is MSG*
-        try:
-            if eventType != "windows_generic_MSG" or message is None:
-                return False, sip.voidptr(0)
-
-            msg = ctypes.cast(int(message), ctypes.POINTER(MSG)).contents
-            manager = self._get_manager()
-            if not manager or manager.shell_hook_message is None:
-                return False, sip.voidptr(0)
-
-            if msg.message == manager.shell_hook_message:
-                # Forward to the manager's handler
-                manager.handle_shell_hook_message(int(msg.wParam), int(msg.lParam))
-                return True, sip.voidptr(0)
-
-        except KeyboardInterrupt, SystemExit:
-            raise
-        except Exception:
-            pass
-        return False, sip.voidptr(0)
-
-
 class TaskbarWindowManager(QObject):
     """
     Tracks top-level windows and emits signals on create/destroy/update/activation.
-    Receives SHELLHOOK via the application's Qt top-level window; uses WinEvent hooks for cloak changes.
+    Gets the shell's messages from core.utils.win32.shell_hook and WinEvents from core.utils.win32.event_listener.
     """
 
     # Signal definitions for Qt integration
@@ -107,15 +71,13 @@ class TaskbarWindowManager(QObject):
     window_monitor_changed = pyqtSignal(int, dict)
     window_minimize_changed = pyqtSignal(int, bool)
 
-    shell_hook_message: int | None = None
-
     def __init__(self):
         super().__init__()
         self._windows: dict[int, ApplicationWindow] = {}
         self._initialized = False
-        self._shell_hook_registered = False
-        self._shell_hook_hwnd: int | None = None
-        self._win_event_hooks: list[int] = []
+        # What start connected, so stop disconnects without asking the shared hooks again
+        self._shell_connections: list[tuple[pyqtBoundSignal, Callable[[int], object]]] = []
+        self._win_signals: list[pyqtBoundSignal] = []
         self._com_initialized = False
         self.keep_cloaked_tasks = False
         # Debounce timers for per-hwnd coalesced updates (e.g., Explorer icon settling)
@@ -132,16 +94,14 @@ class TaskbarWindowManager(QObject):
         except Exception as e:
             logger.warning("CoInitialize failed or already initialized: %s", e)
 
-    def start(self, hwnd: int | None = None):
-        """Register shell hooks on provided Qt hwnd; set WinEvent hooks and enumerate existing windows."""
+    def start(self):
+        """Follow the shell's messages and WinEvents, and enumerate existing windows."""
         if self._initialized:
             return
 
         try:
-            if not hwnd:
-                raise RuntimeError("Qt top-level window handle (hwnd) is required for shell hooks")
-            self._register_shell_hooks(hwnd)
-            self._set_win_event_hooks()
+            self._connect_shell_messages()
+            self._connect_win_events()
 
             # Enumerate existing windows
             self._enumerate_existing_windows()
@@ -170,8 +130,8 @@ class TaskbarWindowManager(QObject):
                         pass
             finally:
                 self._pending_updates.clear()
-            self._cleanup_win_event_hooks()
-            self._unregister_shell_hooks()
+            self._disconnect_win_events()
+            self._disconnect_shell_messages()
 
             self._initialized = False
             logger.info("TaskbarWindowManager stopped")
@@ -187,135 +147,56 @@ class TaskbarWindowManager(QObject):
         except Exception as e:
             logger.warning("CoUninitialize failed: %s", e)
 
-    def _register_shell_hooks(self, hwnd: int):
-        """Register shell hook messages on an existing Qt top-level window handle."""
-        try:
-            if not hwnd:
-                raise ValueError("Invalid hwnd for shell hook registration")
+    def _connect_shell_messages(self) -> None:
+        handlers = {
+            WCONST.HSHELL_WINDOWCREATED: self._on_window_created,
+            WCONST.HSHELL_WINDOWDESTROYED: self._on_window_destroyed,
+            WCONST.HSHELL_ENDTASK: self._on_window_destroyed,
+            WCONST.HSHELL_WINDOWACTIVATED: self._on_window_activated,
+            WCONST.HSHELL_RUDEAPPACTIVATED: self._on_window_activated,
+            WCONST.HSHELL_REDRAW: self._on_window_redraw,
+            WCONST.HSHELL_FLASH: self._on_window_flash,
+            WCONST.HSHELL_WINDOWREPLACING: self._on_window_replacing,
+            WCONST.HSHELL_WINDOWREPLACED: self._on_window_replaced,
+            WCONST.HSHELL_MONITORCHANGED: self._on_window_monitor_changed,
+        }
+        for code, handler in handlers.items():
+            signal = shell_event(code)
+            signal.connect(handler)
+            self._shell_connections.append((signal, handler))
 
-            if not RegisterShellHookWindow(hwnd):
-                raise RuntimeError("Failed to register shell hook on provided hwnd")
+    def _disconnect_shell_messages(self) -> None:
+        for signal, handler in self._shell_connections:
+            with suppress(TypeError):
+                signal.disconnect(handler)
+        self._shell_connections.clear()
 
-            self.shell_hook_message = RegisterWindowMessage("SHELLHOOK")
-            if not self.shell_hook_message:
-                raise RuntimeError("Failed to register SHELLHOOK message")
+    def _connect_win_events(self) -> None:
+        for event in WIN_EVENTS:
+            signal = win_event(event)
+            signal.connect(self._on_win_event)
+            self._win_signals.append(signal)
 
-            self._shell_hook_registered = True
-            self._shell_hook_hwnd = int(hwnd)
+    def _disconnect_win_events(self) -> None:
+        for signal in self._win_signals:
+            with suppress(TypeError):
+                signal.disconnect(self._on_win_event)
+        self._win_signals.clear()
 
-        except Exception as e:
-            logger.error("Failed to register shell hooks on hwnd %s: %s", hwnd, e)
-            raise
-
-    def _set_win_event_hooks(self):
-        """Install WinEvent hooks for cloak/uncloak, show/hide and minimize/restore."""
-        try:
-
-            def win_event_callback(
-                hWinEventHook: int | None,
-                eventType: int,
-                hWnd: int | None,
-                idObject: int,
-                idChild: int,
-                dwEventThread: int,
-                dwmsEventTime: int,
-            ) -> None:
-                try:
-                    if hWnd and idObject == 0 and idChild == 0:
-                        hwnd_int = int(hWnd)
-
-                        if eventType == WCONST.EVENT_OBJECT_UNCLOAKED:
-                            QTimer.singleShot(100, lambda: self._on_window_uncloaked(hwnd_int))
-                        elif eventType == WCONST.EVENT_OBJECT_CLOAKED:
-                            QTimer.singleShot(50, lambda: self._on_window_cloaked(hwnd_int))
-                        elif eventType == WCONST.EVENT_OBJECT_SHOW:
-                            QTimer.singleShot(0, lambda: self._on_window_show(hwnd_int))
-                        elif eventType == WCONST.EVENT_OBJECT_HIDE:
-                            QTimer.singleShot(0, lambda: self._on_window_hide(hwnd_int))
-                        elif eventType == WCONST.EVENT_SYSTEM_MINIMIZESTART:
-                            QTimer.singleShot(0, lambda: self._on_window_minimized(hwnd_int, True))
-                        elif eventType == WCONST.EVENT_SYSTEM_MINIMIZEEND:
-                            QTimer.singleShot(0, lambda: self._on_window_minimized(hwnd_int, False))
-                        else:
-                            if hwnd_int in self._windows:
-                                self._schedule_window_update(hwnd_int)
-                except KeyboardInterrupt, SystemExit:
-                    raise
-                except Exception:
-                    return
-
-            self._win_event_callback = WINEVENTPROC(win_event_callback)
-            callback_ptr = self._win_event_callback
-
-            flags = WCONST.WINEVENT_OUTOFCONTEXT | WCONST.WINEVENT_SKIPOWNPROCESS
-
-            cloak_hook = SetWinEventHook(
-                WCONST.EVENT_OBJECT_CLOAKED, WCONST.EVENT_OBJECT_UNCLOAKED, 0, callback_ptr, 0, 0, flags
-            )
-
-            if cloak_hook:
-                self._win_event_hooks.append(cloak_hook)
-            else:
-                logger.warning("Failed to set cloak/uncloak event hooks")
-
-            minimize_hook = SetWinEventHook(
-                WCONST.EVENT_SYSTEM_MINIMIZESTART,
-                WCONST.EVENT_SYSTEM_MINIMIZEEND,
-                0,
-                callback_ptr,
-                0,
-                0,
-                flags,
-            )
-            if minimize_hook:
-                self._win_event_hooks.append(minimize_hook)
-            else:
-                logger.warning("Failed to set minimize/restore event hooks")
-
-            # SHOW/HIDE hooks unconditionally to capture transient windows
-            show_hide_hook = SetWinEventHook(
-                WCONST.EVENT_OBJECT_SHOW, WCONST.EVENT_OBJECT_HIDE, 0, callback_ptr, 0, 0, flags
-            )
-            if show_hide_hook:
-                self._win_event_hooks.append(show_hide_hook)
-            else:
-                logger.warning("Failed to set show/hide event hooks")
-
-        except Exception as e:
-            logger.error("Failed to set WinEvent hooks: %s", e)
-
-    def handle_shell_hook_message(self, wparam: int, lparam: int) -> int:
-        """Handle shell hook messages and schedule appropriate updates."""
-        try:
-            event = wparam
-            hwnd_int = int(lparam) if lparam else 0
-
-            if event == WCONST.HSHELL_WINDOWCREATED:
-                self._on_window_created(hwnd_int)
-            elif event == WCONST.HSHELL_WINDOWDESTROYED:
-                self._on_window_destroyed(hwnd_int)
-            elif event in (WCONST.HSHELL_WINDOWACTIVATED, WCONST.HSHELL_RUDEAPPACTIVATED):
-                self._on_window_activated(hwnd_int)
-            elif event == WCONST.HSHELL_REDRAW:
-                self._on_window_redraw(hwnd_int)
-            elif event == WCONST.HSHELL_FLASH:
-                self._on_window_flash(hwnd_int)
-            elif event == WCONST.HSHELL_ENDTASK:
-                self._on_window_destroyed(hwnd_int)
-            elif event == WCONST.HSHELL_WINDOWREPLACING:
-                self._on_window_replacing(hwnd_int)
-            elif event == WCONST.HSHELL_WINDOWREPLACED:
-                self._on_window_replaced(hwnd_int)
-            elif event == WCONST.HSHELL_MONITORCHANGED:
-                self._on_window_monitor_changed(hwnd_int)
-            else:
-                pass
-
-            return 0
-
-        except Exception as e:
-            logger.error("Error handling shell hook message: %s", e)
-            return 0
+    def _on_win_event(self, hwnd: int, event: WinEvent) -> None:
+        """A window was cloaked, shown, hidden or minimized; each is looked at after a short wait."""
+        if event == WinEvent.EventObjectUncloaked:
+            QTimer.singleShot(100, lambda: self._on_window_uncloaked(hwnd))
+        elif event == WinEvent.EventObjectCloaked:
+            QTimer.singleShot(50, lambda: self._on_window_cloaked(hwnd))
+        elif event == WinEvent.EventObjectShow:
+            QTimer.singleShot(0, lambda: self._on_window_show(hwnd))
+        elif event == WinEvent.EventObjectHide:
+            QTimer.singleShot(0, lambda: self._on_window_hide(hwnd))
+        elif event == WinEvent.EventSystemMinimizeStart:
+            QTimer.singleShot(0, lambda: self._on_window_minimized(hwnd, True))
+        elif event == WinEvent.EventSystemMinimizeEnd:
+            QTimer.singleShot(0, lambda: self._on_window_minimized(hwnd, False))
 
     def _on_window_created(self, hwnd: int) -> None:
         """Create or update immediately; rely on HSHELL_MONITORCHANGED for monitor updates."""
@@ -703,25 +584,6 @@ class TaskbarWindowManager(QObject):
             logger.error("Error enumerating existing windows: %s", e)
 
     # Removed helper: simplified to call _on_window_monitor_changed after creation
-
-    def _cleanup_win_event_hooks(self):
-        """Uninstall WinEvent hooks."""
-        for hook in self._win_event_hooks:
-            try:
-                UnhookWinEvent(hook)
-            except:
-                pass
-        self._win_event_hooks.clear()
-
-    def _unregister_shell_hooks(self):
-        """Unregister shell hook window."""
-        if self._shell_hook_registered and self._shell_hook_hwnd:
-            try:
-                DeregisterShellHookWindow(self._shell_hook_hwnd)
-                self._shell_hook_registered = False
-                self._shell_hook_hwnd = None
-            except Exception as e:
-                logger.error("Error unregistering shell hooks: %s", e)
 
     # Hidden window creation/destruction removed
 

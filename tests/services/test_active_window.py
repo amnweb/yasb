@@ -13,6 +13,14 @@ from core.qml_types import register_qml_types
 from core.services.active_window import tracker as tracker_module
 from core.services.active_window.tracker import ActiveWindowTracker
 from core.utils.win32 import event_listener
+from core.utils.win32.constants import (
+    HSHELL_MONITORCHANGED,
+    HSHELL_REDRAW,
+    HSHELL_RUDEAPPACTIVATED,
+    HSHELL_WINDOWACTIVATED,
+    HSHELL_WINDOWDESTROYED,
+)
+from core.utils.win32.shell_hook import shell_event
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
@@ -40,7 +48,7 @@ class Desktop:
     def focus(self, window: dict[str, Any]) -> None:
         self.windows[window["hwnd"]] = window
         self.foreground = window["hwnd"]
-        EventService().emit_event(WinEvent.EventSystemForeground, window["hwnd"], WinEvent.EventSystemForeground)
+        shell_event(HSHELL_WINDOWACTIVATED).emit(window["hwnd"])
 
 
 @pytest.fixture
@@ -68,12 +76,96 @@ def test_the_tracker_follows_the_foreground_window(desktop: Desktop):
     assert tracker.property("window")["app_name"] == "App 1001"
 
 
+def test_each_uwp_app_is_named_from_its_frames_aumid(desktop: Desktop, monkeypatch: pytest.MonkeyPatch):
+    calculator = "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"
+    settings = "windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
+    aumids = {1: calculator, 2: settings}
+    names = {calculator: "Calculator", settings: "Settings"}
+    monkeypatch.setattr(tracker_module, "get_aumid_for_window", aumids.get)
+    monkeypatch.setattr(tracker_module, "get_app_name_from_aumid", names.get)
+    tracker = ActiveWindowTracker()
+    for hwnd, name in ((1, "Calculator"), (2, "Settings")):
+        # The frames of every UWP app belong to the same ApplicationFrameHost.exe
+        frame = _window(hwnd, name, process="ApplicationFrameHost.exe")
+        frame["class_name"] = "ApplicationFrameWindow"
+        frame["process"]["pid"] = 500
+        desktop.focus(frame)
+        assert tracker.property("window")["app_name"] == name
+
+
 def test_an_ignored_window_keeps_the_last_one(desktop: Desktop):
     tracker = ActiveWindowTracker()
     tracker.setProperty("ignoreProcesses", ["skip.exe"])
     desktop.focus(_window(1, "Notes"))
     desktop.focus(_window(2, "Skipped", process="skip.exe"))
     assert tracker.property("text") == "Notes"
+
+
+def test_a_cloaked_window_is_not_kept(desktop: Desktop):
+    tracker = ActiveWindowTracker()
+
+    def cloak(hwnd: int) -> None:
+        EventService().emit_event(WinEvent.EventObjectCloaked, hwnd, WinEvent.EventObjectCloaked)
+
+    desktop.focus(_window(1, "Notes"))
+    cloak(5)
+    assert tracker.property("text") == "Notes"
+
+    # komorebi cloaks the windows of the workspace it leaves, and on an empty one focuses the desktop, which has
+    # no title
+    desktop.foreground = 99
+    cloak(1)
+    assert not tracker.property("hasWindow")
+
+    # A window already in front takes its place
+    desktop.focus(_window(1, "Notes"))
+    desktop.windows[2] = _window(2, "Mail")
+    desktop.foreground = 2
+    cloak(1)
+    assert tracker.property("text") == "Mail"
+
+
+def test_the_shell_reports_title_changes_and_closing(desktop: Desktop):
+    tracker = ActiveWindowTracker()
+    desktop.focus(_window(1, "Notes"))
+    # A full-screen app is activated with the shell's rude code
+    desktop.windows[2] = _window(2, "Game")
+    desktop.foreground = 2
+    shell_event(HSHELL_RUDEAPPACTIVATED).emit(2)
+    assert tracker.property("text") == "Game"
+
+    desktop.windows[2]["title"] = "Game - paused"
+    shell_event(HSHELL_REDRAW).emit(1)
+    assert tracker.property("text") == "Game"
+    shell_event(HSHELL_REDRAW).emit(2)
+    assert tracker.property("text") == "Game - paused"
+
+    desktop.foreground = 0
+    shell_event(HSHELL_WINDOWDESTROYED).emit(2)
+    assert not tracker.property("hasWindow")
+
+
+def test_minimizing_the_window_clears_it_and_restoring_brings_it_back(desktop: Desktop):
+    tracker = ActiveWindowTracker()
+
+    def minimize(hwnd: int, event: WinEvent) -> None:
+        EventService().emit_event(event, hwnd, event)
+
+    desktop.focus(_window(1, "Notes"))
+    # The only window on screen: nothing else comes to the front
+    desktop.foreground = 0
+    minimize(1, WinEvent.EventSystemMinimizeStart)
+    assert not tracker.property("hasWindow")
+
+    desktop.foreground = 1
+    minimize(1, WinEvent.EventSystemMinimizeEnd)
+    assert tracker.property("text") == "Notes"
+
+    # With another window behind it, that one takes its place
+    desktop.windows[2] = _window(2, "Mail")
+    desktop.foreground = 2
+    minimize(1, WinEvent.EventSystemMinimizeStart)
+    assert tracker.property("text") == "Mail"
 
 
 def test_rewrite_max_length_and_the_alternate_label(desktop: Desktop):
@@ -104,6 +196,24 @@ def test_only_windows_on_the_bars_monitor_are_shown(desktop: Desktop, monkeypatc
     wait(10)
     assert not tracker.property("hasWindow")
     assert tracker.property("text") == "Desktop"
+
+
+def test_a_window_moved_to_another_monitor_follows_it(desktop: Desktop, monkeypatch: pytest.MonkeyPatch):
+    def screen_monitor(screen_name: str) -> int:
+        return 1 if screen_name == "DELL P2419H (1)" else 2
+
+    monkeypatch.setattr(tracker_module, "screen_monitor", screen_monitor)
+    first, second = ActiveWindowTracker(), ActiveWindowTracker()
+    first.setProperty("screenName", "DELL P2419H (1)")
+    second.setProperty("screenName", "DELL P2419H (2)")
+    wait(10)
+    desktop.focus(_window(1, "Notes"))
+    assert first.property("text") == "Notes" and not second.property("hasWindow")
+
+    # komorebi moves the window in front without a focus change, and only the shell says so
+    desktop.windows[1]["monitor_hwnd"] = 2
+    shell_event(HSHELL_MONITORCHANGED).emit(1)
+    assert not first.property("hasWindow") and second.property("text") == "Notes"
 
 
 def test_the_widget_shows_the_active_window(desktop: Desktop):

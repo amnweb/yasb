@@ -16,6 +16,8 @@ from winrt.windows.ui.notifications import UserNotification
 from core.services.notifications import windows_notification
 from core.services.notifications.toast_activation import _manifest_activator
 from core.services.notifications.windows_notification import (
+    NotificationItem,
+    WindowsNotificationEventListener,
     _find_image,
     _get_app_info,
     _get_image_path,
@@ -342,6 +344,44 @@ def manifest(folder: Path, *apps: str) -> Path:
     folder.mkdir()
     (folder / "AppxManifest.xml").write_text(MANIFEST.format("".join(apps)), encoding="utf-8")
     return folder
+
+
+@pytest.mark.parametrize(
+    ("launch", "activator_takes_it", "window_too"),
+    [
+        # Discord's activator answers, but with no launch arguments it has nothing to act on
+        ("", True, True),
+        # The activator opens what the toast is about itself
+        ("chat=42", True, False),
+        # Nothing took the toast
+        ("chat=42", False, True),
+    ],
+)
+def test_a_click_brings_the_app_forward(
+    monkeypatch: pytest.MonkeyPatch, launch: str, activator_takes_it: bool, window_too: bool
+):
+    calls: list[str] = []
+
+    def activator(_aumid: str, _launch: str, _kind: str) -> bool:
+        calls.append("activator")
+        return activator_takes_it
+
+    def window(_aumid: str) -> bool:
+        calls.append("window")
+        return True
+
+    removed: list[int] = []
+
+    async def remove(notification_id: int) -> None:
+        removed.append(notification_id)
+
+    monkeypatch.setattr(windows_notification, "activate_toast", activator)
+    monkeypatch.setattr(windows_notification, "show_app", window)
+    item = NotificationItem(7, "com.squirrel.Discord.Discord", "Discord", "", "", CREATED, launch=launch)
+    listener = cast(WindowsNotificationEventListener, SimpleNamespace(_remove=remove))
+    asyncio.run(WindowsNotificationEventListener._activate(listener, item))
+    assert calls == (["activator", "window"] if window_too else ["activator"])
+    assert removed == [7]
 
 
 def test_each_app_of_a_package_gets_its_own_activator(tmp_path: Path):

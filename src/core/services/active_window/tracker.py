@@ -5,18 +5,21 @@ from typing import Any
 
 from PyQt6.QtCore import QElapsedTimer, QObject, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
 
-from core.events.service import EventService
 from core.events.win32 import WinEvent
 from core.utils.icons.image_provider import window_icon_url
 from core.utils.icons.service import IconService
 from core.utils.qml import qml_property
-from core.utils.win32.bindings.user32 import (
-    GetForegroundWindow,
-    GetParent,
-    enum_child_windows,
-    get_window_thread_process_id,
+from core.utils.win32.aumid import get_aumid_for_window
+from core.utils.win32.bindings.user32 import GetForegroundWindow, GetParent
+from core.utils.win32.constants import (
+    HSHELL_MONITORCHANGED,
+    HSHELL_REDRAW,
+    HSHELL_RUDEAPPACTIVATED,
+    HSHELL_WINDOWACTIVATED,
+    HSHELL_WINDOWDESTROYED,
 )
 from core.utils.win32.event_listener import win_event
+from core.utils.win32.shell_hook import shell_event
 from core.utils.win32.utils import (
     WindowInfo,
     get_app_name_from_aumid,
@@ -73,8 +76,6 @@ class ActiveWindowTracker(QObject):
     settingsChanged = pyqtSignal()
     windowChanged = pyqtSignal()
 
-    _workspace = pyqtSignal(str)
-
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
         self._settings: dict[str, Any] = {
@@ -93,14 +94,8 @@ class ActiveWindowTracker(QObject):
         }
         self._win_info: WindowInfo | None = None
         self._text = ""
-        self._uwp_retries = 0
-        self._workspace_retries = 0
-        self._app_names: dict[int, str] = {}
-
-        self._retry_hwnd = 0
-        self._retry_timer = QTimer(self)
-        self._retry_timer.setSingleShot(True)
-        self._retry_timer.timeout.connect(lambda: self._on_focus_change(self._retry_hwnd))
+        # By process id, or by AUMID for UWP apps, whose frames all belong to ApplicationFrameHost.exe
+        self._app_names: dict[int | str, str] = {}
 
         self._throttled_hwnd = 0
         self._last_update = QElapsedTimer()
@@ -116,13 +111,18 @@ class ActiveWindowTracker(QObject):
         self._evaluate_timer.timeout.connect(self._evaluate_foreground)
         self._evaluate_timer.start()
 
-        win_event(WinEvent.EventSystemForeground).connect(self._on_focus_change)
+        shell_event(HSHELL_WINDOWACTIVATED).connect(self._on_focus_change)
+        shell_event(HSHELL_RUDEAPPACTIVATED).connect(self._on_focus_change)
+        shell_event(HSHELL_REDRAW).connect(self._on_name_change)
+        shell_event(HSHELL_WINDOWDESTROYED).connect(self._on_window_gone)
+        shell_event(HSHELL_MONITORCHANGED).connect(self._on_monitor_changed)
         win_event(WinEvent.EventSystemMoveSizeEnd).connect(self._on_focus_change)
-        win_event(WinEvent.EventObjectNameChange).connect(self._on_name_change)
-        win_event(WinEvent.EventObjectStateChange).connect(self._on_name_change)
-        win_event(WinEvent.EventObjectDestroy).connect(self._on_window_destroyed)
-        self._workspace.connect(self._on_workspace)
-        EventService().register_event("workspace_update", self._workspace)
+        # Minimizing the only window on screen hands the focus to the desktop, which the shell does not report
+        win_event(WinEvent.EventSystemMinimizeStart).connect(self._on_window_gone)
+        win_event(WinEvent.EventSystemMinimizeEnd).connect(self._on_focus_change)
+        # Window managers such as komorebi, and virtual desktops, cloak the windows they hide. Switching to an empty
+        # workspace then focuses the desktop, which has no title and is passed over, so the hidden window would stay
+        win_event(WinEvent.EventObjectCloaked).connect(self._on_window_gone)
         IconService.instance().icons_changed.connect(self._on_icons_changed)
 
     def setting(self, name: str) -> Any:
@@ -201,10 +201,7 @@ class ActiveWindowTracker(QObject):
                 self._text = template
         self.windowChanged.emit()
 
-    def _retry(self, hwnd: int, delay_ms: int) -> None:
-        self._retry_hwnd = hwnd
-        self._retry_timer.start(delay_ms)
-
+    @pyqtSlot(int)
     @pyqtSlot(int, object)
     def _on_focus_change(self, hwnd: int, _event: WinEvent | None = None) -> None:
         win_info = get_hwnd_info(hwnd) if hwnd else None
@@ -223,47 +220,28 @@ class ActiveWindowTracker(QObject):
         if win_info["title"] in IGNORED_TITLES:
             self._show(None)
 
-    def _app_name(self, hwnd: int, win_info: WindowInfo) -> str | None:
-        """Name of the app owning the window. A UWP app's frame belongs to ApplicationFrameHost.exe,
-        the app itself runs in a child window's process, which can attach a moment after focus."""
+    def _app_name(self, hwnd: int, win_info: WindowInfo) -> str:
+        """Name of the app owning the window. A UWP app's frame belongs to ApplicationFrameHost.exe, but carries the
+        app's AUMID from the moment the shell reports it, before the app's own window is attached inside it."""
         process = win_info["process"]
-        pid = process["pid"]
-        is_uwp = win_info["class_name"] == "ApplicationFrameWindow"
-        if is_uwp:
-            try:
-                for child in enum_child_windows(hwnd):
-                    _, child_pid = get_window_thread_process_id(child)
-                    if child_pid and child_pid != process["pid"]:
-                        pid = child_pid
-                        break
-            except Exception:
-                pass
-            if pid == process["pid"] and self._uwp_retries < 5:
-                self._uwp_retries += 1
-                self._retry(hwnd, 100)
-                return None
-        self._uwp_retries = 0
-
-        name = self._app_names.get(pid)
+        aumid = get_aumid_for_window(hwnd) if win_info["class_name"] == "ApplicationFrameWindow" else None
+        key = aumid or process["pid"]
+        name = self._app_names.get(key)
         if name is None:
-            if is_uwp and pid == process["pid"]:
-                try:
-                    from core.utils.win32.aumid import get_aumid_for_window
-
-                    if aumid := get_aumid_for_window(hwnd):
-                        name = get_app_name_from_aumid(aumid)
-                except Exception:
-                    pass
-            name = name or get_app_name_from_pid(pid) or process["name"] or win_info["title"]
-            self._app_names[pid] = name
+            name = (
+                (get_app_name_from_aumid(aumid) if aumid else None)
+                or get_app_name_from_pid(process["pid"])
+                or process["name"]
+                or win_info["title"]
+            )
+            self._app_names[key] = name
         return name
 
     def _update_window(self, hwnd: int, win_info: WindowInfo) -> None:
         try:
             if hwnd != GetForegroundWindow():
                 return
-            if (app_name := self._app_name(hwnd, win_info)) is None:
-                return
+            app_name = self._app_name(hwnd, win_info)
             win_info["app_name"] = app_name
             title, class_name, process = win_info["title"], win_info["class_name"], win_info["process"]
             if (
@@ -285,8 +263,8 @@ class ActiveWindowTracker(QObject):
         except Exception:
             logging.exception("Failed to update the active window for HWND %s", hwnd)
 
-    @pyqtSlot(int, object)
-    def _on_name_change(self, hwnd: int, _event: WinEvent | None = None) -> None:
+    @pyqtSlot(int)
+    def _on_name_change(self, hwnd: int) -> None:
         if self._win_info is None or hwnd != self._win_info["hwnd"]:
             return
         if self._win_info["class_name"] in THROTTLED_CLASSES and self._last_update.elapsed() < THROTTLE_MS:
@@ -303,8 +281,9 @@ class ActiveWindowTracker(QObject):
             self._on_focus_change(hwnd)
             self._last_update.restart()
 
+    @pyqtSlot(int)
     @pyqtSlot(int, object)
-    def _on_window_destroyed(self, hwnd: int, _event: WinEvent | None = None) -> None:
+    def _on_window_gone(self, hwnd: int, _event: WinEvent | None = None) -> None:
         if self._win_info is None or hwnd != self._win_info["hwnd"]:
             return
         try:
@@ -317,25 +296,15 @@ class ActiveWindowTracker(QObject):
                     self._on_focus_change(foreground)
                     return
         except Exception:
-            logging.exception("Failed handling destroy event for HWND %s", hwnd)
+            logging.exception("Failed handling the window %s going away", hwnd)
         self._show(None)
 
-    def _on_workspace(self, event: str) -> None:
-        # komorebi's MoveWindow says nothing about the monitor, and the window is still animating,
-        # so it is looked at again a few times
-        if event in ("Hide", "Destroy"):
-            self._show(None)
-            return
-        hwnd = GetForegroundWindow()
-        if not hwnd:
-            self._show(None)
-            return
-        self._on_focus_change(hwnd)
-        if event == "MoveWindow" and self._workspace_retries < 3:
-            self._workspace_retries += 1
-            self._retry(hwnd, 200)
-        else:
-            self._workspace_retries = 0
+    @pyqtSlot(int)
+    def _on_monitor_changed(self, hwnd: int) -> None:
+        # Window managers such as komorebi move the window in front to another monitor without changing the focus,
+        # so only the shell says so
+        if self.setting("monitorExclusive") and hwnd and hwnd == GetForegroundWindow():
+            self._on_focus_change(hwnd)
 
     def _on_icons_changed(self) -> None:
         if self._win_info is not None:

@@ -1,6 +1,6 @@
 import ctypes
 import logging
-import time
+import threading
 from ctypes import wintypes
 
 from PyQt6.QtCore import QCoreApplication, QObject, QThread, pyqtBoundSignal, pyqtSignal
@@ -8,19 +8,33 @@ from PyQt6.QtCore import QCoreApplication, QObject, QThread, pyqtBoundSignal, py
 from core.events.service import EventService
 from core.events.win32 import WinEvent
 from core.utils.win32.bindings.kernel32 import GetCurrentThreadId
-from core.utils.win32.bindings.ole32 import ole32
-from core.utils.win32.bindings.user32 import GetForegroundWindow, user32
+from core.utils.win32.bindings.user32 import GetAncestor, PostThreadMessage, user32
+from core.utils.win32.constants import (
+    CHILDID_SELF,
+    GA_ROOT,
+    OBJID_WINDOW,
+    PM_NOREMOVE,
+    WINEVENT_OUTOFCONTEXT,
+    WINEVENT_SKIPOWNPROCESS,
+    WM_APP,
+    WM_QUIT,
+    WM_USER,
+)
 from core.utils.win32.structs import WINEVENTPROC
 
-msg = wintypes.MSG()
+# Posted to the hook thread when a widget asks for an event it doesn't hook yet
+WM_HOOK_EVENTS = WM_APP + 1
 
 
 class SystemEventListener(QThread):
     def __init__(self):
         super().__init__()
-        self._hooks: list[int] = []
+        self._hooks: dict[WinEvent, int] = {}
         self._event_service = EventService()
         self._win_event_process = WINEVENTPROC(self._event_handler)
+        self._lock = threading.Lock()
+        self._thread_id = 0
+        self._stopping = False
 
     def __str__(self):
         return "Win32 System Event Listener"
@@ -30,76 +44,66 @@ class SystemEventListener(QThread):
         _win_event_hook: int | None,
         event: int,
         hwnd: int | None,
-        _id_object: int,
-        _id_child: int,
+        id_object: int,
+        id_child: int,
         _event_thread: int,
         _event_time: int,
     ) -> None:
-        if event in WinEvent:
-            event_type = WinEvent(event)
-            try:
-                self._event_service.emit_event(event_type, hwnd, event_type)
-            except Exception:
-                logging.exception("Failed to emit event %s for %s", event_type, hwnd)
+        # Only events about windows themselves, not the objects inside them
+        if not hwnd or id_object != OBJID_WINDOW or id_child != CHILDID_SELF:
+            return
+        # Nor windows inside another window, such as a button or panel, no widget uses them
+        root = GetAncestor(hwnd, GA_ROOT)
+        if root and root != hwnd:
+            return
+        event_type = WinEvent(event)
+        try:
+            self._event_service.emit_event(event_type, hwnd, event_type)
+        except Exception:
+            logging.exception("Failed to emit event %s for %s", event_type, hwnd)
 
-    def _hook_range(self, event_min: int, event_max: int) -> int:
-        return user32.SetWinEventHook(
-            event_min,
-            event_max,
-            0,
-            self._win_event_process,
-            0,
-            0,
-            WinEvent.WinEventOutOfContext.value,
-        )
+    def request_hooks(self) -> None:
+        with self._lock:
+            if self._thread_id:
+                PostThreadMessage(self._thread_id, WM_HOOK_EVENTS, 0, 0)
 
-    def _build_event_hooks(self) -> list[int]:
-        # A hook covers one contiguous range, so skipping EventObjectLocationChange
-        skipped = WinEvent.EventObjectLocationChange.value
-        hooks = [
-            self._hook_range(WinEvent.EventMin.value, skipped - 1),
-            self._hook_range(skipped + 1, WinEvent.EventObjectEnd.value),
-        ]
-
-        if not all(hooks):
-            for hook in hooks:
-                user32.UnhookWinEvent(hook)
-            return []
-
-        return hooks
-
-    def _emit_foreground_window_event(self):
-        foreground_event = WinEvent.EventSystemForeground
-        foreground_window_hwnd = GetForegroundWindow()
-
-        if foreground_window_hwnd:
-            self._event_service.emit_event(foreground_event, foreground_window_hwnd, foreground_event)
+    def _hook_wanted(self) -> None:
+        with _wanted_lock:
+            missing = [event for event in _wanted if event not in self._hooks]
+        flags = WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS
+        for event in missing:
+            if hook := user32.SetWinEventHook(event.value, event.value, 0, self._win_event_process, 0, 0, flags):
+                self._hooks[event] = hook
+            else:
+                logging.error("SetWinEventHook failed for %s", event.name)
 
     def run(self):
-        ole32.CoInitialize(0)
+        msg = wintypes.MSG()
         try:
-            self._thread_id = GetCurrentThreadId()
-            self._hooks = self._build_event_hooks()
-
-            if not self._hooks:
-                logging.warning("SetWinEventHook failed. Retrying indefinitely...")
-
-            while not self._hooks:
-                time.sleep(1)
-                self._hooks = self._build_event_hooks()
-
-            self._emit_foreground_window_event()
-
-            user32.GetMessageW(ctypes.byref(msg), 0, 0, 0)
+            # Makes the thread's message queue, so messages posted to it from now on are not lost
+            user32.PeekMessageW(ctypes.byref(msg), None, WM_USER, WM_USER, PM_NOREMOVE)
+            with self._lock:
+                if self._stopping:
+                    return
+                self._thread_id = GetCurrentThreadId()
+            self._hook_wanted()
+            while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+                if msg.message == WM_HOOK_EVENTS:
+                    self._hook_wanted()
         finally:
-            ole32.CoUninitialize()
+            # Windows frees the id with the thread and may give it to another one, so nothing is posted to it after
+            with self._lock:
+                self._thread_id = 0
+            # Only the thread that set a hook can remove it
+            for hook in self._hooks.values():
+                user32.UnhookWinEvent(hook)
+            self._hooks.clear()
 
     def stop(self):
-        for hook in self._hooks:
-            user32.UnhookWinEvent(hook)
-        self._hooks = []
-        # Post WM_QUIT to unblock GetMessageW
-        user32.PostThreadMessageW(self._thread_id, 0x0012, 0, 0)
+        with self._lock:
+            self._stopping = True
+            if self._thread_id:
+                PostThreadMessage(self._thread_id, WM_QUIT, 0, 0)
 
 
 class _WinEventSignal(QObject):
@@ -108,6 +112,10 @@ class _WinEventSignal(QObject):
 
 _listener: SystemEventListener | None = None
 _signals: dict[WinEvent, _WinEventSignal] = {}
+_wanted: set[WinEvent] = set()
+_wanted_lock = threading.Lock()
+# Set on quit, so a service stopping after the hook cannot start it again
+_quitting = False
 
 
 def win_event(event: WinEvent) -> pyqtBoundSignal:
@@ -116,6 +124,10 @@ def win_event(event: WinEvent) -> pyqtBoundSignal:
     if event not in _signals:
         _signals[event] = _WinEventSignal()
         EventService().register_event(event, _signals[event].triggered)
+        with _wanted_lock:
+            _wanted.add(event)
+        if _listener is not None:
+            _listener.request_hooks()
     ensure_system_event_listener()
     return _signals[event].triggered
 
@@ -123,7 +135,7 @@ def win_event(event: WinEvent) -> pyqtBoundSignal:
 def ensure_system_event_listener() -> None:
     """Start the one shared WinEvent hook the first time a widget needs it."""
     global _listener
-    if _listener is not None:
+    if _listener is not None or _quitting:
         return
     _listener = SystemEventListener()
     _listener.start()
@@ -133,7 +145,8 @@ def ensure_system_event_listener() -> None:
 
 
 def _stop_system_event_listener() -> None:
-    global _listener
+    global _listener, _quitting
+    _quitting = True
     if _listener is None:
         return
     _listener.stop()

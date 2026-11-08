@@ -9,14 +9,21 @@ from PyQt6.QtGui import QColor, QGuiApplication
 from PyQt6.QtQml import QQmlComponent, QQmlEngine, QQmlError, QQmlProperty
 from PyQt6.QtQuick import QQuickItem, QQuickWindow
 
+from core.events.service import EventService
+from core.events.win32 import WinEvent
 from core.qml_types import register_qml_types
 from core.services.recycle_bin import recycle_bin_monitor
 from core.services.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
 from core.services.taskbar import apps as apps_module
+from core.services.taskbar import window_manager
 from core.services.taskbar.apps import OpenWindows, TaskbarApps
 from core.services.taskbar.jump_list import jump_list
 from core.services.taskbar.pin_manager import PinManager
+from core.services.taskbar.window_manager import TaskbarWindowManager
 from core.utils.icons.image_provider import ICON_PROVIDER, IconImageProvider
+from core.utils.win32 import event_listener
+from core.utils.win32.constants import HSHELL_FLASH, HSHELL_WINDOWCREATED
+from core.utils.win32.shell_hook import shell_event
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
 from tests.support.qt import find_item, wait
@@ -528,3 +535,69 @@ def test_the_recycle_bin_menu_runs_its_action_after_the_trigger_handler(
     assert pins().launched == ([(bin_id, "")] if action == "launch" else [])
     assert emptied == ([True] if action == "emptyBin" else [])
     assert not warnings, warnings
+
+
+def test_the_window_manager_hears_the_shell_and_win_events_only_while_it_runs(
+    qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    def nothing(_manager: TaskbarWindowManager) -> None:
+        pass
+
+    # The shared WinEvent thread and the windows already open stay out of the test
+    monkeypatch.setattr(event_listener, "ensure_system_event_listener", lambda: None)
+    monkeypatch.setattr(TaskbarWindowManager, "_enumerate_existing_windows", nothing)
+    manager = TaskbarWindowManager()
+    created: list[int] = []
+    flashing: list[int] = []
+    cloaked: list[int] = []
+    minimized: list[tuple[int, bool]] = []
+    monkeypatch.setattr(manager, "_on_window_created", created.append)
+    monkeypatch.setattr(manager, "_on_window_flash", flashing.append)
+    monkeypatch.setattr(manager, "_on_window_cloaked", cloaked.append)
+
+    def minimize(hwnd: int, state: bool) -> None:
+        minimized.append((hwnd, state))
+
+    monkeypatch.setattr(manager, "_on_window_minimized", minimize)
+
+    def win(event: WinEvent, hwnd: int) -> None:
+        EventService().emit_event(event, hwnd, event)
+
+    manager.start()
+    shell_event(HSHELL_WINDOWCREATED).emit(5)
+    shell_event(HSHELL_FLASH).emit(6)
+    win(WinEvent.EventObjectCloaked, 7)
+    win(WinEvent.EventSystemMinimizeStart, 8)
+    wait(100)
+    assert (created, flashing, cloaked, minimized) == ([5], [6], [7], [(8, True)])
+
+    # Stopping on quit uses the signals it kept: asking the shared hooks again could start the WinEvent thread
+    def no_hooks(_event: object) -> None:
+        raise AssertionError("stop asked a shared hook again")
+
+    with monkeypatch.context() as stopping:
+        stopping.setattr(window_manager, "win_event", no_hooks)
+        stopping.setattr(window_manager, "shell_event", no_hooks)
+        manager.stop()
+    shell_event(HSHELL_WINDOWCREATED).emit(9)
+    win(WinEvent.EventObjectCloaked, 9)
+    wait(100)
+    assert created == [5] and cloaked == [7] and not manager.is_initialized()
+    assert "Error" not in caplog.text
+
+
+def test_two_taskbars_share_one_window_manager(qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch):
+    def nothing(_manager: TaskbarWindowManager) -> None:
+        pass
+
+    monkeypatch.setattr(event_listener, "ensure_system_event_listener", lambda: None)
+    monkeypatch.setattr(TaskbarWindowManager, "_enumerate_existing_windows", nothing)
+    monkeypatch.setattr(window_manager, "_shared_task_manager", None)
+    first, second = window_manager.start_shared_task_manager(), window_manager.start_shared_task_manager()
+    try:
+        assert first is second
+        # Connected once: ten shell messages and six WinEvents
+        shell, win = first._shell_connections, first._win_signals  # pyright: ignore[reportPrivateUsage]
+        assert (len(shell), len(win)) == (10, 6)
+    finally:
+        first.stop()

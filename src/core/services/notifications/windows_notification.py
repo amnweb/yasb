@@ -284,8 +284,9 @@ class WindowsNotificationEventListener(QThread):
 
     async def _activate(self, item: NotificationItem):
         handled = activate_toast(item.aumid, item.launch, item.activation_type)
-        if not handled:
-            handled = show_app(item.aumid)
+        # Without launch arguments the app's activator can't tell which toast was clicked, so the app's window comes forward as well
+        if not handled or not item.launch:
+            handled = show_app(item.aumid) or handled
         if handled:
             await self._remove(item.id)
 
