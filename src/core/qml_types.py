@@ -17,6 +17,7 @@ from core.services.dnd.status import DoNotDisturb
 from core.services.github.notifications import GitHubNotifications
 from core.services.glazewm.workspaces import GlazewmWorkspacesModel
 from core.services.gpu.monitor import GpuMonitor
+from core.services.komorebi.workspaces import KomorebiWorkspacesModel
 from core.services.language.keyboard import KeyboardLanguage
 from core.services.media.now_playing import NowPlaying
 from core.services.memory.monitor import MemoryMonitor
@@ -62,6 +63,7 @@ QML_TYPES: tuple[type[QObject], ...] = (
     ServerChecks,
     GitHubNotifications,
     GlazewmWorkspacesModel,
+    KomorebiWorkspacesModel,
     QuickLaunchSearch,
     NowPlaying,
     AudioOutput,

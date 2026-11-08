@@ -20,6 +20,7 @@ PowerMenu 1.0 PowerMenu/PowerMenu.qml
 PowerPlan 1.0 PowerPlan/PowerPlan.qml
 Github 1.0 Github/Github.qml
 GlazewmWorkspaces 1.0 GlazewmWorkspaces/GlazewmWorkspaces.qml
+KomorebiWorkspaces 1.0 KomorebiWorkspaces/KomorebiWorkspaces.qml
 QuickLaunch 1.0 QuickLaunch/QuickLaunch.qml
 ServerMonitor 1.0 ServerMonitor/ServerMonitor.qml
 Systray 1.0 Systray/Systray.qml
