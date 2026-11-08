@@ -45,7 +45,6 @@ from core.services.wallpapers.thumbnails import WallpaperThumbnail
 from core.services.weather.forecast import WeatherForecast
 from core.services.wifi.monitor import NetworkList, WifiMonitor
 from core.services.windows_desktops.desktops import VirtualDesktops
-from core.utils.commands import Commands
 from core.utils.environment import Environment
 from core.utils.hotkey import Hotkey
 
@@ -55,7 +54,6 @@ QML_VERSION = (1, 0)
 QML_TYPES: tuple[type[QObject], ...] = (
     Backdrop,
     TimeZones,
-    Commands,
     Hotkey,
     ActiveWindowTracker,
     CpuMonitor,

@@ -51,6 +51,32 @@ def make(qapp: QGuiApplication) -> Iterator[Callable[..., Process]]:
             sip.delete(process)
 
 
+def test_start_opens_the_program_with_its_arguments_and_leaves_it(
+    make: Callable[..., Process], monkeypatch: pytest.MonkeyPatch
+):
+    opened: list[tuple[str, str | None, str | None]] = []
+
+    def shell_open(file: str, parameters: str | None = None, directory: str | None = None) -> None:
+        opened.append((file, parameters, directory))
+
+    monkeypatch.setattr(process_module, "shell_open", shell_open)
+    for command in (
+        "taskmgr",
+        "wt -p PowerShell",
+        '"C:\\Program Files\\App\\app.exe" --new "a b"',
+        ["wt", "-p", "My Profile"],
+    ):
+        process = make(command=command, workingDirectory="C:\\Work")
+        process.start()
+        assert not process.property("running")
+    assert opened == [
+        ("taskmgr", None, "C:\\Work"),
+        ("wt", "-p PowerShell", "C:\\Work"),
+        ("C:\\Program Files\\App\\app.exe", '--new "a b"', "C:\\Work"),
+        ("wt", '-p "My Profile"', "C:\\Work"),
+    ]
+
+
 def test_a_command_line_keeps_its_quotes(make: Callable[..., Process]):
     # The curl case of issue 815: a quoted argument with spaces reaches the program whole
     line = f'"{PYTHON}" -c "import sys; print(sys.argv[1])" "Authorization: Bearer KEY"'

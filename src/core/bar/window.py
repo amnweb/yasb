@@ -33,7 +33,6 @@ from core.bar.revisions import Revisions, path_key
 from core.events.service import EventService
 from core.utils.qml import qml_property
 from core.utils.win32 import app_bar
-from core.utils.win32.bindings.user32 import MonitorFromWindow
 from core.utils.win32.composition import BackdropWindow
 from core.validation.bar import BarConfig
 from core.widget_files import bar_widget_files
@@ -160,7 +159,6 @@ class BarWindow(QQuickWindow):
 
         self.create()
         self.hwnd = int(self.winId())
-        self.monitor_hwnd = MonitorFromWindow(self.hwnd)
 
         self.reposition()
         if config.backdrop:

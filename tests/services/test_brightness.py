@@ -160,6 +160,7 @@ def load_widget() -> tuple[QQuickItem, QQuickWindow, QQmlEngine, list[str]]:
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     host = QQuickWindow()
     widget.setParentItem(host.contentItem())
+    host.show()
     wait(10)
     return widget, host, engine, warnings
 
@@ -182,6 +183,7 @@ def test_the_bar_shows_the_level_and_hides_where_brightness_cant_be_controlled(
     service.displays[EXTERNAL]["brightness"] = None
     service.brightness_changed.emit(EXTERNAL, None)
     assert widget.property("visible") is False and widget.property("implicitWidth") == 0
+    assert icon.property("text") == ""
     assert not warnings
     sip.delete(widget)
     sip.delete(host)

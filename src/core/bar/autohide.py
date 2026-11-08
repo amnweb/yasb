@@ -174,7 +174,7 @@ class MaximizedWindowWatcher(QObject):
         self._timer.timeout.connect(self._check)
         self._timer.start()
 
-    def _has_maximized_window(self) -> bool:
+    def _has_maximized_window(self, monitor: int) -> bool:
         found = False
 
         def visit(hwnd: int, _: object) -> bool:
@@ -185,7 +185,7 @@ class MaximizedWindowWatcher(QObject):
                 class_name = GetClassName(hwnd) or ""
                 if class_name in EXCLUDED_WINDOW_CLASSES or class_name.endswith(EXCLUDED_WINDOW_CLASS_SUFFIXES):
                     return True
-                if MonitorFromWindow(hwnd) == self.bar.monitor_hwnd and is_window_maximized(hwnd):
+                if MonitorFromWindow(hwnd) == monitor and is_window_maximized(hwnd):
                     found = True
                     return False
             except Exception:
@@ -196,10 +196,11 @@ class MaximizedWindowWatcher(QObject):
         return found
 
     def _check(self) -> None:
-        if not self.bar.monitor_hwnd:
+        monitor = MonitorFromWindow(self.bar.hwnd)
+        if not monitor:
             return
         try:
-            maximized = self._has_maximized_window()
+            maximized = self._has_maximized_window(monitor)
         except Exception:
             logging.exception("Failed to check maximized windows")
             return

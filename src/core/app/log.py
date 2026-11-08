@@ -1,8 +1,8 @@
+import copy
 import faulthandler
 import logging
 import re
 import warnings
-from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from os.path import join
 
@@ -21,7 +21,6 @@ CLI_LOG_FORMAT = "%(asctime)s,%(msecs)03d %(levelname)s: %(message)s"
 CLI_LOG_DATETIME = "%H:%M:%S"
 
 
-@dataclass
 class Format:
     reset = "\033[0m"
     green = "\033[92m"
@@ -46,9 +45,18 @@ LOG_COLORS = {
 
 class ColoredFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
+        # The handlers after this one get the same record
+        record = copy.copy(record)
         log_color = LOG_COLORS.get(record.levelname, LOG_COLORS["RESET"])
         record.levelname = f"{log_color}{record.levelname:>8}{LOG_COLORS['RESET']}"
         return super().format(record)
+
+
+class _LogFile(RotatingFileHandler):
+    def doRollover(self) -> None:
+        super().doRollover()
+        if self.stream is not None:
+            faulthandler.enable(file=self.stream, all_threads=True, c_stack=False)
 
 
 def _suppress_third_party_warnings():
@@ -86,9 +94,7 @@ def init_logger():
     _suppress_third_party_warnings()
     _install_qt_message_filter()
     # File handler should be without colors
-    file_handler = RotatingFileHandler(
-        join(get_config_dir(), DEFAULT_LOG_FILENAME), maxBytes=1024 * 1024, backupCount=5, encoding="utf-8"
-    )
+    file_handler = _LogFile(LOG_PATH, maxBytes=1024 * 1024, backupCount=5, encoding="utf-8")
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(logging.Formatter(LOG_FORMAT, datefmt=LOG_DATETIME))
     # Configure logging with colors

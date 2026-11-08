@@ -8,8 +8,7 @@ from core.utils.icons.image_provider import icon_url
 from core.utils.icons.service import IconService
 from core.utils.icons.sources import AppIcon
 from core.utils.qml import qml_property
-from core.utils.system import is_windows_10
-from core.utils.win32.system_function import notification_center, quick_settings
+from core.utils.shell_utils import shell_open
 
 if TYPE_CHECKING:
     from core.services.notifications.windows_notification import (
@@ -185,7 +184,4 @@ class NotificationCenter(QObject):
 
     @pyqtSlot()
     def openNotificationCenter(self) -> None:
-        if is_windows_10():
-            quick_settings()
-        else:
-            notification_center()
+        shell_open("ms-actioncenter:")

@@ -26,6 +26,11 @@ A command run on demand, through cmd.exe so pipes work:
     Process { id: address; command: 'ipconfig | findstr /c:"IPv4"' }
     Button { text: address.running ? "..." : address.output || "My address"; onClicked: address.run() }
 
+An app opened and left to run, without waiting for it or reading what it prints:
+
+    Process { id: terminal; command: "wt -p PowerShell" }
+    Button { onClicked: terminal.start() }
+
 Stopping a program does not stop the programs it started: a command run through cmd.exe that never ends keeps
 running after cmd.exe is stopped, so long-running commands should be a list.
 """
@@ -45,6 +50,7 @@ from PyQt6 import sip
 from PyQt6.QtCore import QCoreApplication, QObject, QTimer, QVariant, pyqtProperty, pyqtSignal, pyqtSlot
 
 from core.utils.qml import qml_property
+from core.utils.shell_utils import shell_open
 
 # text and json give the whole output once a run ends; lines and jsonLines give each line as it is printed
 FORMATS = ("text", "json", "lines", "jsonLines")
@@ -397,6 +403,19 @@ class Process(QObject):
         self._started = time.monotonic()
         self._last_run = int(time.time() * 1000)
         self.changed.emit()
+
+    @pyqtSlot()
+    def start(self) -> None:
+        """Opens the program and leaves it running: no output, exit code or running state, as for an app."""
+        command: Command = self.settings["command"]
+        if isinstance(command, tuple):
+            program, parameters = (command[0], subprocess.list2cmdline(command[1:])) if command else ("", "")
+        else:
+            line = command.strip()
+            program = program_name(line)
+            parameters = line[len(program) + 2 if line.startswith('"') else len(program) :].strip()
+        if program:
+            shell_open(program, parameters=parameters or None, directory=self.settings["workingDirectory"] or None)
 
     @pyqtSlot()
     def kill(self) -> None:

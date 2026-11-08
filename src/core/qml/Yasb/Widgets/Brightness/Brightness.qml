@@ -63,7 +63,9 @@ Item {
     }
 
     function icon(value: int): string {
-        return icons.length > 0 ? icons[Math.min(icons.length - 1, Math.floor(value * icons.length / 101))] : ""
+        if (value < 0 || icons.length === 0)
+            return ""
+        return icons[Math.min(icons.length - 1, Math.floor(value * icons.length / 101))]
     }
 
     function applyAutoLight() {

@@ -43,8 +43,9 @@ Window {
             destroy()
     }
 
-    Commands {
-        id: commands
+    Process {
+        id: taskManager
+        command: "taskmgr"
     }
 
     component ActionItem: MenuItem {
@@ -97,7 +98,7 @@ Window {
         ActionItem {
             glyph: "\uf120"
             text: "Task Manager"
-            onTriggered: commands.execute("taskmgr")
+            onTriggered: taskManager.start()
         }
 
         ActionItem {
