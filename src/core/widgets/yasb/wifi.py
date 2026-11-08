@@ -6,7 +6,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QLabel,
 )
-from winrt.windows.networking.connectivity import NetworkInformation
 
 from core.validation.widgets.yasb.wifi import WifiConfig
 from core.widgets.base import BaseWidget
@@ -114,21 +113,23 @@ class WifiWidget(BaseWidget):
         self._update_label()
 
     def _update_label(self):
+        wifi_info = self._cached_wifi_info
+        vpn_name = wifi_info.vpn_name
+        vpn_icon = self.config.vpn_icon if vpn_name else ""
         try:
-            connection_info = NetworkInformation.get_internet_connection_profile()
             ip_addr = socket.gethostbyname(socket.gethostname())
-            if connection_info is None or connection_info.is_wlan_connection_profile:  # type: ignore
+            if not wifi_info.ethernet:
                 was_ethernet = self._ethernet_active
                 self._ethernet_active = False
                 if was_ethernet and self.config.hide_if_ethernet:
                     self.show()
 
-                if self.config.get_exact_wifi_strength and self._cached_wifi_info.exact_quality >= 0:
-                    wifi_strength = self._cached_wifi_info.exact_quality
+                if self.config.get_exact_wifi_strength and wifi_info.exact_quality >= 0:
+                    wifi_strength = wifi_info.exact_quality
                 else:
-                    wifi_strength = min(self._cached_wifi_info.bars, 4) * 25
+                    wifi_strength = min(wifi_info.bars, 4) * 25
                 wifi_icon = self._get_wifi_icon(wifi_strength)
-                wifi_name = self._cached_wifi_info.name
+                wifi_name = wifi_info.name
             else:
                 self._ethernet_active = True
                 if self.config.hide_if_ethernet:
@@ -161,6 +162,8 @@ class WifiWidget(BaseWidget):
             "{wifi_name}": wifi_name,
             "{wifi_strength}": wifi_strength,
             "{ip_addr}": ip_addr,
+            "{vpn_icon}": vpn_icon,
+            "{vpn_name}": vpn_name,
         }
         for part in label_parts:
             part = part.strip()
@@ -170,6 +173,9 @@ class WifiWidget(BaseWidget):
                     formatted_text = formatted_text.replace(option, str(value))
                 if widget_index < len(active_widgets):
                     active_widgets[widget_index].setText(formatted_text)
+                    # Hide parts that format to nothing, e.g. a {vpn_icon} span while no VPN is connected
+                    if not re.sub(r"<span.*?>|</span>", "", formatted_text).strip():
+                        active_widgets[widget_index].hide()
                 widget_index += 1
 
     def _get_wifi_icon(self, strength: int) -> str:

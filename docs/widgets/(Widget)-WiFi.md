@@ -12,13 +12,30 @@ Displays your Wi-Fi signal strength and the name of the network (SSID) you are c
 | `ethernet_label`          | string    | `"{wifi_icon}"`                                                                          | The label format during active Ethernet connection.             |
 | `ethernet_label_alt`      | string    | `"{wifi_icon} {ip_addr}"`                                                                | The alternative label format during active Ethernet connection. |
 | `ethernet_icon`           | string    | `"\ueba9"`                                                                               | The icon to indicate Ethernet connection.                       |
+| `vpn_icon`                | string    | `"\udb82\udd9d"`                                                                         | The icon `{vpn_icon}` shows while a VPN is connected.           |
 | `get_exact_wifi_strength` | boolean   | `false`                                                                                  | Whether to get the exact WiFi signal strength.                  |
 | `hide_if_ethernet`        | boolean   | `false`                                                                                  | Whether to hide the widget if an Ethernet connection is active. |
 | `callbacks`               | dict      | [See below](#callbacks) | Callbacks for mouse events on the widget.                       |
 | `menu_config`             | dict      | [See below](#menu-config-options) | Popup menu configuration.                                       |
 | `keybindings`             | list      | `[]`                                                                                     | Optional hotkeys. See [Keybindings](./Keybindings).             |
 
-> **Note:** Available label replacements: "{wifi_icon}", "{wifi_name}", "{wifi_strength}", "{ip_addr}"
+> **Note:** Available label replacements: "{wifi_icon}", "{wifi_name}", "{wifi_strength}", "{ip_addr}", "{vpn_icon}", "{vpn_name}"
+
+## VPN Connections
+
+While a VPN is connected, Windows routes internet traffic through the VPN adapter. The widget keeps showing the Wi-Fi network underneath it (or Ethernet when the VPN runs over a wired connection). `{vpn_icon}` and `{vpn_name}` are empty while no VPN is connected, and a label part that ends up empty is hidden, so a VPN badge only appears while a VPN is up:
+
+```yaml
+label: "<span>{wifi_icon}</span><span class=\"vpn\">{vpn_icon}</span>"
+label_alt: "<span>{wifi_icon}</span>{wifi_name} {vpn_name}"
+ethernet_label: "<span>{wifi_icon}</span><span class=\"vpn\">{vpn_icon}</span>"
+```
+
+```css
+.wifi-widget .vpn {
+    color: #a6d189;
+}
+```
 
 ## Callbacks
 
@@ -133,6 +150,7 @@ wifi:
 - **ethernet_label:** The format string for the WiFi Widget during active Ethernet connection. Default is `"{wifi_icon}"`.
 - **ethernet_label_alt:** The format string for the WiFi Widget during active Ethernet connection when the widget is in the alternative state. Default is `"{wifi_icon} {ip_addr}"`.
 - **ethernet_icon**: The icon that indicates an active Ethernet connection. It will be used as `{wifi_icon}` whenever there's no active WiFi connection. Default is "\ueba9".
+- **vpn_icon:** The icon `{vpn_icon}` shows while a VPN is connected. It is empty otherwise. Default is `"\udb82\udd9d"`.
 - **hide_if_ethernet:** A boolean value that determines whether to hide the widget if an Ethernet connection is active. Default is `False`.
 - **wifi_icons:** A list of icons to use for different WiFi signal strengths. Default is `["\udb82\udd2e","\udb82\udd1f","\udb82\udd22","\udb82\udd25","\udb82\udd28",]`.
 - **keybindings:** A list of global hotkeys for this widget. See [Keybindings](./Keybindings).

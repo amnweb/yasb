@@ -24,7 +24,7 @@ from winrt.windows.devices.wifi import (
     WiFiNetworkReport,
     WiFiReconnectionKind,
 )
-from winrt.windows.networking.connectivity import NetworkConnectivityLevel, NetworkInformation
+from winrt.windows.networking.connectivity import ConnectionProfile, NetworkConnectivityLevel, NetworkInformation
 from winrt.windows.security.credentials import PasswordCredential
 
 from core.utils.win32.bindings.wlanapi import (
@@ -84,6 +84,10 @@ class ScanResultStatus(StrEnum):
     ERROR = "Error"
 
 
+# IANA interface types VPN adapters use: PPP, proprietary virtual (WireGuard, OpenVPN DCO...) and tunnel
+VPN_INTERFACE_TYPES = frozenset({23, 53, 131})
+
+
 @dataclass
 class WiFiInfo:
     """Info used by wifi widget"""
@@ -91,6 +95,45 @@ class WiFiInfo:
     bars: int
     name: str
     exact_quality: int
+    ethernet: bool = False
+    vpn_name: str = ""
+
+
+@dataclass(frozen=True)
+class ConnectionSnapshot:
+    """The parts of a connection profile needed to tell Wi-Fi, Ethernet and VPN apart"""
+
+    name: str
+    is_wlan: bool
+    iana_type: int
+    signal_bars: int | None = None
+
+    @property
+    def is_vpn(self) -> bool:
+        return not self.is_wlan and self.iana_type in VPN_INTERFACE_TYPES
+
+
+def classify_connections(online: list[ConnectionSnapshot], internet: ConnectionSnapshot | None) -> WiFiInfo:
+    """
+    Build the widget info from the profiles that have internet access and the profile Windows routes
+    internet traffic through. A VPN becomes that profile while connected, so the Wi-Fi or Ethernet
+    connection carrying it is looked up among the other online profiles.
+    """
+    wlan = next((p for p in online if p.is_wlan), None)
+    vpn = next((p for p in online if p.is_vpn), None)
+    if internet is not None and internet.is_vpn:
+        vpn = vpn or internet
+        ethernet = wlan is None
+    else:
+        ethernet = internet is not None and not internet.is_wlan
+    bars = wlan.signal_bars if wlan is not None and wlan.signal_bars is not None else 0
+    return WiFiInfo(
+        bars=bars,
+        name=wlan.name if wlan is not None else "Disconnected",
+        exact_quality=-1,
+        ethernet=ethernet,
+        vpn_name=vpn.name if vpn is not None else "",
+    )
 
 
 @dataclass
@@ -146,11 +189,10 @@ class WiFiWorker(QThread):
         self._stop_event.clear()
         while not self._stop_event.is_set():
             try:
-                bars = self._get_wifi_strength()
-                name = self._get_wifi_name()
-                exact_quality = self._get_exact_quality()
+                info = self._get_connection_info()
+                info.exact_quality = self._get_exact_quality()
                 if not self._stop_event.is_set():
-                    self.last_result = WiFiInfo(bars, name, exact_quality)
+                    self.last_result = info
                     self.result.emit(self.last_result)
             except Exception as e:
                 logger.error("WiFiWorker error: %s", e)
@@ -158,25 +200,32 @@ class WiFiWorker(QThread):
                     self.result.emit(WiFiInfo(0, "Error", -1))
             self._stop_event.wait(self._poll_interval / 1000)
 
-    def _get_wifi_strength(self) -> int:
+    def _get_connection_info(self) -> WiFiInfo:
         """
-        Get WiFi signal strength in bars
+        Get the connection type, WiFi name and signal strength in bars
         Imprecise, but does not require location permissions
         """
-        connections = NetworkInformation.get_connection_profiles()
-        for connection in connections:
-            if connection.get_network_connectivity_level() == NetworkConnectivityLevel.INTERNET_ACCESS:
-                signal_strength = connection.get_signal_bars()
-                if signal_strength is not None:
-                    return int(signal_strength)
-        return 0
+        online = [
+            self._snapshot(connection)
+            for connection in NetworkInformation.get_connection_profiles()
+            if connection.get_network_connectivity_level() == NetworkConnectivityLevel.INTERNET_ACCESS
+        ]
+        # The stubs say this is never None, but Windows returns None while offline
+        internet = NetworkInformation.get_internet_connection_profile()
+        snapshot = self._snapshot(internet) if internet is not None else None  # pyright: ignore[reportUnnecessaryComparison]
+        return classify_connections(online, snapshot)
 
-    def _get_wifi_name(self) -> str:
-        connections = NetworkInformation.get_connection_profiles()
-        for connection in connections:
-            if connection.get_network_connectivity_level() == NetworkConnectivityLevel.INTERNET_ACCESS:
-                return connection.profile_name
-        return "Disconnected"
+    @staticmethod
+    def _snapshot(connection: ConnectionProfile) -> ConnectionSnapshot:
+        adapter = connection.network_adapter
+        is_wlan = bool(connection.is_wlan_connection_profile)
+        bars = connection.get_signal_bars() if is_wlan else None
+        return ConnectionSnapshot(
+            name=connection.profile_name,
+            is_wlan=is_wlan,
+            iana_type=adapter.iana_interface_type if adapter is not None else 0,  # pyright: ignore[reportUnnecessaryComparison]
+            signal_bars=int(bars) if bars is not None else None,
+        )
 
     def _get_exact_quality(self) -> int:
         """Get exact WiFi quality via WLAN API. Returns -1 if unavailable."""

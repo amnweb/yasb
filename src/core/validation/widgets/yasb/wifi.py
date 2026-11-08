@@ -49,6 +49,7 @@ class WifiConfig(CustomBaseModel):
     ethernet_label: str = "{wifi_icon}"
     ethernet_label_alt: str = "{wifi_icon} {ip_addr}"
     ethernet_icon: str = "\ueba9"
+    vpn_icon: str = "\udb82\udd9d"
     get_exact_wifi_strength: bool = False
     hide_if_ethernet: bool = False
     keybindings: list[KeybindingConfig] = []
