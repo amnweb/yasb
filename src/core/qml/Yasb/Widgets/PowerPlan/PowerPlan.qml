@@ -220,7 +220,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.margins: 16
                     visible: PowerPlans.error !== "" || PowerPlans.plans.length === 0
-                    text: PowerPlans.error || (PowerPlans.loading ? qsTr("Reading power plans…") : qsTr("No power plans found"))
+                    text: PowerPlans.error || (PowerPlans.loading ? qsTr("Reading power plans...") : qsTr("No power plans found"))
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: PowerPlans.error ? widget.errorColor : popup.secondary

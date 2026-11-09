@@ -692,6 +692,11 @@ Item {
                     apps.activate(windows[(index + 1) % windows.length].hwnd)
                 }
 
+                // Moves animate once the button has its first place
+                function place() {
+                    placedOnce = true
+                }
+
                 onCurrentChanged: {
                     if (current)
                         kept = current
@@ -713,7 +718,8 @@ Item {
                         shown = 0
                         appear.start()
                     }
-                    Qt.callLater(() => placedOnce = true)
+                    // Qt drops the call if the button is destroyed first, as when the bar closes
+                    Qt.callLater(button.place)
                 }
 
                 // Where it starts along the bar and how long it is there, animated; x, y, width and height follow
