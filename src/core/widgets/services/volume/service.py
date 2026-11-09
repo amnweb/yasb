@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any, Protocol, TypedDict
 
 from pycaw.api.audioclient import ISimpleAudioVolume
+from pycaw.api.audiopolicy import IAudioSessionControl2
 from pycaw.api.endpointvolume import IAudioEndpointVolume
 from pycaw.api.mmdeviceapi import IMMDeviceEnumerator
 from pycaw.callbacks import AudioEndpointVolumeCallback, MMNotificationClient
@@ -350,6 +351,19 @@ class AudioOutputService(QObject):
 
         sessions.sort(key=lambda s: s["app_name"].lower())
         return sessions
+
+    def get_system_sounds_volume(self) -> ISimpleAudioVolume | None:
+        """Volume of the "System sounds" session on the default output device."""
+        try:
+            enumerator = AudioUtilities.GetAudioSessionManager().GetSessionEnumerator()
+            for i in range(enumerator.GetCount()):
+                control = enumerator.GetSession(i)
+                # S_OK (0) for the system sounds session, S_FALSE (1) for every other one
+                if control.QueryInterface(IAudioSessionControl2).IsSystemSoundsSession() == 0:
+                    return control.QueryInterface(ISimpleAudioVolume)
+        except Exception as e:
+            logging.debug("Failed to get the system sounds session: %s", e)
+        return None
 
 
 class _SharedVolumeCallback(AudioEndpointVolumeCallback):

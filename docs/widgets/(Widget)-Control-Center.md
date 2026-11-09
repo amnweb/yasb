@@ -108,6 +108,7 @@ control_center:
           icon: "\uE767"
           show_source_selector: true
           source_selector_icon: "\uE972"
+          show_app_mixer: true
         microphone:
           show_slider: true
           icon: "\uE720"
@@ -204,6 +205,7 @@ Systems sliders for volume, microphone, and display brightness.
 - **icon**: Glyph for the slider icon.
 - **show_source_selector**: (default `false`) Toggle visibility of device selection dropdowns (e.g. switch active audio output, input, or target monitor).
 - **source_selector_icon**: Dropdown arrow icon glyph.
+- **show_app_mixer**: (volume only, default `true`) Click the volume icon to open a volume mixer: a dropdown with System sounds and a slider for every app playing audio. Click an app's icon to mute it. The dropdown grows with the number of apps and scrolls once it reaches the bottom of the Control Center.
 
 ### Power Plan (`power`)
 Manage system power profiles.
@@ -262,6 +264,17 @@ Common class names for styling the control center. Each section is wrapped in `.
 .control-center-menu .section.sliders .slider .slider-control {}
 .control-center-menu .section.sliders .slider .value {}
 .control-center-menu .section.sliders .slider .source-selector {}
+
+/* Volume mixer dropdown (click the volume icon) */
+.control-center-menu .app-mixer {}
+.control-center-menu .app-mixer .app-volume {}
+.control-center-menu .app-mixer .app-volume.muted {}
+.control-center-menu .app-mixer .app-icon {}
+.control-center-menu .app-mixer .app-icon.system {}
+.control-center-menu .app-mixer .app-name {}
+.control-center-menu .app-mixer .slider-control {}
+.control-center-menu .app-mixer .value {}
+.control-center-menu .app-mixer .empty {}
 
 /* Power plan and mode selectors */
 .control-center-menu .section.power {}
@@ -456,6 +469,40 @@ which is 16 pixels same as the other sections. */
 }
 .control-center-menu .section.sliders .slider .source-selector:hover {
     background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* VOLUME MIXER */
+.control-center-menu .app-mixer .app-volume {
+    padding: 6px 8px 6px 0;
+}
+.control-center-menu .app-mixer .app-icon {
+    min-width: 36px;
+    max-width: 36px;
+}
+.control-center-menu .app-mixer .app-icon.system {
+    font-family: "Segoe Fluent Icons";
+    font-size: 16px;
+    color: rgb(255, 255, 255);
+}
+.control-center-menu .app-mixer .app-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+}
+.control-center-menu .app-mixer .value {
+    min-width: 36px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgb(255, 255, 255);
+}
+.control-center-menu .app-mixer .app-volume.muted .app-name,
+.control-center-menu .app-mixer .app-volume.muted .value,
+.control-center-menu .app-mixer .app-volume.muted .app-icon.system {
+    color: rgba(255, 255, 255, 0.4);
+}
+.control-center-menu .app-mixer .empty {
+    padding: 8px 12px;
+    color: rgba(255, 255, 255, 0.6);
 }
 
 /* POWER PLAN & POWER MODE */
