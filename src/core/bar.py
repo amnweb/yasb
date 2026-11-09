@@ -292,6 +292,10 @@ class Bar(QWidget):
 
         self.bar_frame.setLayout(bar_layout)
 
+        from core.widgets.services.systray.placement import attach_tray_placement
+
+        attach_tray_placement(self, widgets)
+
     def show_bar(self):
         if self._animation_manager:
             self._animation_manager.show_bar()
