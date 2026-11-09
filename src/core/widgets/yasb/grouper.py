@@ -1,15 +1,20 @@
+import json
 import logging
 from collections.abc import Callable, Mapping
-from typing import Any, override
+from typing import Any, cast, override
 
 from PyQt6.QtCore import QEvent, QObject, QThread
 from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QPushButton
 
+from core.utils.system import app_data_path
 from core.utils.widget_builder import WidgetBuilder
 from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.validation.widgets.yasb.grouper import GrouperWidgetConfig
 from core.widgets.base import BaseWidget
+
+# Collapsed state of each grouper, keyed by screen and widget name, so it survives restarts
+STATE_FILE = "grouper_state.json"
 
 
 class GrouperWidget(BaseWidget):
@@ -32,6 +37,7 @@ class GrouperWidget(BaseWidget):
         self._child_widgets: list[BaseWidget] = []
         self._child_widget_names: dict[BaseWidget, str] = {}
         self._local_listeners: set[type[QThread]] = set()
+        self._state_restored = False
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -150,6 +156,10 @@ class GrouperWidget(BaseWidget):
     @override
     def showEvent(self, a0: QShowEvent | None) -> None:
         self._propagate_bar_context()
+        # widget_name and screen_name are only set after construction, so restore on the first show
+        if not self._state_restored:
+            self._state_restored = True
+            self._restore_collapsed_state()
         if self._hide_empty:
             self._update_grouper_visibility()
         super().showEvent(a0)
@@ -191,13 +201,57 @@ class GrouperWidget(BaseWidget):
             logging.error("GrouperWidget failed to update visibility based on child widgets")
 
     def _toggle_collapsed(self):
-        self._collapsed = not self._collapsed
+        self._set_collapsed(not self._collapsed)
+        self._save_collapsed_state()
+
+    def _set_collapsed(self, collapsed: bool) -> None:
+        self._collapsed = collapsed
         if self._collapse_button:
             if self._collapsed:
                 self._collapse_button.setText(self._collapsed_icon)
             else:
                 self._collapse_button.setText(self._expanded_icon)
         self._apply_collapsed_state()
+
+    def _state_key(self) -> str | None:
+        # Only groupers with a collapse button have a state worth remembering
+        if not self._collapse_button or not self.widget_name or not self.screen_name:
+            return None
+        return f"{self.screen_name}:{self.widget_name}"
+
+    @staticmethod
+    def _load_saved_states() -> dict[str, bool]:
+        try:
+            with open(app_data_path(STATE_FILE), encoding="utf-8") as f:
+                data: object = json.load(f)
+        except FileNotFoundError:
+            return {}
+        except OSError, ValueError:
+            logging.warning("GrouperWidget failed to read %s, ignoring it", STATE_FILE)
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        return {k: v for k, v in cast(dict[str, object], data).items() if isinstance(v, bool)}
+
+    def _restore_collapsed_state(self) -> None:
+        key = self._state_key()
+        if key is None:
+            return
+        collapsed = self._load_saved_states().get(key)
+        if collapsed is not None and collapsed != self._collapsed:
+            self._set_collapsed(collapsed)
+
+    def _save_collapsed_state(self) -> None:
+        key = self._state_key()
+        if key is None:
+            return
+        states = self._load_saved_states()
+        states[key] = self._collapsed
+        try:
+            with open(app_data_path(STATE_FILE), "w", encoding="utf-8") as f:
+                json.dump(states, f, indent=2)
+        except OSError:
+            logging.warning("GrouperWidget failed to save %s", STATE_FILE)
 
     def _apply_collapsed_state(self):
         # Hide or show children based on collapse state, respecting exclude_widgets
