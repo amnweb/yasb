@@ -32,6 +32,8 @@ Item {
     property string disconnectedIcon: "\uf384"
     // Shown small over the icon while the connection has no internet
     property string noInternetIcon: "\ue7ba"
+    // Windows' caution colors, so the badge stands out from the icon
+    property color noInternetColor: dark ? "#fce100" : "#9d5d00"
     property int popupWidth: 360
     // Popup alignment relative to the widget on a horizontal bar: left, right, or center.
     property string popupAlignment: "center"
@@ -225,6 +227,7 @@ Item {
         property string badge: ""
         property int size: 16
         property color color
+        property color badgeColor: color
 
         implicitWidth: size
         implicitHeight: size
@@ -253,7 +256,7 @@ Item {
             anchors.bottomMargin: -signal.size / 6
             visible: signal.badge !== ""
             text: signal.badge
-            color: signal.color
+            color: signal.badgeColor
             font.pixelSize: Math.round(signal.size / 2)
         }
     }
@@ -299,6 +302,7 @@ Item {
             glyph: network.connectionIcon
             badge: network.primary.kind !== "none" && !network.online ? network.noInternetIcon : ""
             color: network.textColor
+            badgeColor: network.noInternetColor
         }
 
         Text {
