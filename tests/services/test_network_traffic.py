@@ -18,14 +18,15 @@ from winrt.windows.foundation import AsyncStatus
 from winrt.windows.networking.connectivity import DataUsageGranularity
 
 from core.qml_types import register_qml_types
-from core.services.network_traffic import adapters as adapters_module
+from core.services.network.adapters import Adapter
+from core.services.network.connections import ConnectionWatcher
 from core.services.network_traffic import monitor as monitor_module
 from core.services.network_traffic import usage as usage_module
-from core.services.network_traffic.adapters import Adapter
 from core.services.network_traffic.monitor import EMPTY_DATA, EMPTY_HISTORY, NetworkTrafficMonitor, TrafficSampler
 from core.services.network_traffic.usage import Session
 from core.widget_files import BUILTIN_WIDGETS_DIR, find_widget_file
 from settings import QML_IMPORT_PATH
+from tests.support.network import FakeWatcher, connection
 from tests.support.qt import find_item, wait
 
 KEY = ("wired", "Home")
@@ -48,6 +49,13 @@ SAMPLE: dict[str, Any] = {
 STAMP = int(datetime.combine(date.today(), time.min).timestamp() * 1000)
 POINT = {"stamp": STAMP, "downloaded": 1024**3, "uploaded": 1024**2}
 HISTORY = {**EMPTY_HISTORY, "daily": [POINT], "hourly": [POINT], "updatedAt": STAMP}
+
+
+@pytest.fixture(autouse=True)
+def watcher(monkeypatch: pytest.MonkeyPatch) -> FakeWatcher:
+    fake = FakeWatcher()
+    monkeypatch.setattr(ConnectionWatcher, "instance", lambda: fake)
+    return fake
 
 
 def test_live_rates_and_session_restart_when_the_profile_changes_or_is_reset():
@@ -94,12 +102,12 @@ def test_daily_history_keeps_local_midnights_across_a_clock_change(monkeypatch: 
     monkeypatch.setattr(usage_module, "datetime", Clock)
     monkeypatch.setattr(usage_module, "_midnight", midnight)
 
-    def find_profile(_interface: str) -> tuple[tuple[str, str], SimpleNamespace]:
-        return KEY, SimpleNamespace(get_network_usage_async=request)
+    def connection_profile(_adapter_id: str) -> SimpleNamespace:
+        return SimpleNamespace(profile_name="Home", get_network_usage_async=request)
 
-    monkeypatch.setattr(usage_module, "find_profile", find_profile)
+    monkeypatch.setattr(usage_module, "connection_profile", connection_profile)
 
-    history = usage_module.read_history("auto", KEY, now.date())
+    history = usage_module.read_history(KEY, now.date())
     days = [datetime.fromtimestamp(point["stamp"] / 1000, zone) for point in history["daily"]]
     assert len(days) == 30 and len(history["hourly"]) == 12
     assert all(day.time() == time.min for day in days)
@@ -108,21 +116,6 @@ def test_daily_history_keeps_local_midnights_across_a_clock_change(monkeypatch: 
         end - start == timedelta(hours=25) and grain == DataUsageGranularity.TOTAL for start, end, grain in calls
     )
     assert history["daily"][-1]["downloaded"] == 2400
-
-
-def test_a_named_adapter_is_watched_on_the_network_it_is_connected_to(monkeypatch: pytest.MonkeyPatch):
-    def profile(name: str, adapter_id: str) -> SimpleNamespace:
-        return SimpleNamespace(profile_name=name, network_adapter=SimpleNamespace(network_adapter_id=adapter_id))
-
-    home, lan = profile("Home", "wireless"), profile("Lab", "wired")
-    windows = SimpleNamespace(get_internet_connection_profile=lambda: home, get_connection_profiles=lambda: [home, lan])
-    monkeypatch.setattr(adapters_module, "NetworkInformation", windows)
-    monkeypatch.setattr(adapters_module, "adapter_key", {"Ethernet": "wired", "Wi-Fi": "wireless"}.get)
-
-    assert adapters_module.find_profile("auto") == (("wireless", "Home"), home)
-    # Ethernet only reaches the local network, while Wi-Fi carries the internet
-    assert adapters_module.find_profile("Ethernet") == (("wired", "Lab"), lan)
-    assert adapters_module.find_profile("Bluetooth") is None
 
 
 def test_widgets_naming_the_same_adapter_share_one_sampler(qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch):
@@ -328,7 +321,7 @@ def test_history_requests_are_shared_and_old_profile_results_are_discarded(
     def schedule(work: Callable[[], object], done: Callable[[object, str], None], _failure: str) -> None:
         jobs.append((work, done))
 
-    def read(_interface: str, key: tuple[str, str], _today: date) -> dict[str, Any]:
+    def read(key: tuple[str, str], _today: date) -> dict[str, Any]:
         keys.append(key)
         return HISTORY
 
@@ -358,16 +351,15 @@ def test_history_requests_are_shared_and_old_profile_results_are_discarded(
         sip.delete(source)
 
 
-def test_the_network_is_looked_up_again_only_when_windows_reports_a_change(
-    qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch
+def test_the_network_is_looked_up_again_only_when_the_network_changes(
+    qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch, watcher: FakeWatcher
 ):
     lookups: list[str] = []
     received = 0
-    profile = SimpleNamespace(get_network_connectivity_level=lambda: None, is_wlan_connection_profile=False)
 
-    def find_profile(interface: str) -> tuple[tuple[str, str], SimpleNamespace]:
+    def read_connection(interface: str) -> dict[str, Any]:
         lookups.append(interface)
-        return KEY, profile
+        return connection("ethernet", "Home", adapterId="wired")
 
     def read_adapter(_key: str) -> Adapter:
         return Adapter("wired", "Ethernet", 0, 0, True)
@@ -377,18 +369,36 @@ def test_the_network_is_looked_up_again_only_when_windows_reports_a_change(
         received += 1000
         return replace(adapter, downloaded=received)
 
-    monkeypatch.setattr(monitor_module, "find_profile", find_profile)
+    monkeypatch.setattr(monitor_module, "read_connection", read_connection)
     monkeypatch.setattr(monitor_module, "read_adapter", read_adapter)
     monkeypatch.setattr(monitor_module, "read_counters", read_counters)
     source = TrafficSampler()
     source._network_changed.set()
     try:
-        source._sample(False)
+        key, _ = source._sample(False)
         _, data = source._sample(False)
-        assert lookups == ["auto"] and data["downloadRate"] > 0
-        source._network_changed.set()
+        assert key == KEY and lookups == ["auto"]
+        assert data["downloadRate"] > 0 and data["internetAvailable"] is True and data["isWifi"] is False
+        watcher.networkChanged.emit()
         source._sample(False)
         assert lookups == ["auto", "auto"]
+    finally:
+        sip.delete(source)
+
+
+def test_the_sampler_watches_connections_only_while_widgets_use_it(
+    qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch, watcher: FakeWatcher
+):
+    source = TrafficSampler()
+    monkeypatch.setattr(source, "_start_worker", lambda: None)
+    try:
+        source.subscribe(1, 1000)
+        source.subscribe(2, 2000)
+        assert watcher.subscribers == {id(source): 0}
+        source.unsubscribe(1)
+        assert id(source) in watcher.subscribers
+        source.unsubscribe(2)
+        assert not watcher.subscribers
     finally:
         sip.delete(source)
 

@@ -6,10 +6,14 @@ from typing import Any
 from winrt.windows.foundation import AsyncStatus
 from winrt.windows.networking.connectivity import ConnectionProfile, DataUsageGranularity, NetworkUsageStates
 
-from core.services.network_traffic.adapters import Adapter, ProfileKey, find_profile
+from core.services.network.adapters import Adapter
+from core.services.network.connections import connection_profile
 
 DAY = timedelta(days=1)
 HOUR = timedelta(hours=1)
+
+# The adapter id and network name of a connection
+type ProfileKey = tuple[str, str]
 
 
 class Session:
@@ -69,11 +73,10 @@ def _midnight(day: date) -> datetime:
     return datetime.combine(day, time.min).astimezone(UTC)
 
 
-def read_history(interface: str, key: ProfileKey, today: date) -> dict[str, Any]:
-    active = find_profile(interface)
-    if active is None or active[0] != key:
+def read_history(key: ProfileKey, today: date) -> dict[str, Any]:
+    profile = connection_profile(key[0])
+    if profile is None or profile.profile_name != key[1]:
         return {}
-    profile = active[1]
     now = datetime.now(UTC)
     midnights = [_midnight(today - timedelta(days=days)) for days in range(29, -1, -1)]
     daily: list[dict[str, int]] = []

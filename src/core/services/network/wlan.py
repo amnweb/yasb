@@ -43,7 +43,7 @@ from core.utils.win32.structs import (
 )
 from core.utils.win32.typecheck import CPointer
 
-logger = logging.getLogger("wifi_widget")
+logger = logging.getLogger("network")
 
 CONNECTION_MODE = re.compile(r"<connectionMode>(.*?)</connectionMode>", re.IGNORECASE)
 
@@ -57,7 +57,7 @@ class ScanStatus(StrEnum):
 
 
 @dataclass
-class Network:
+class WifiNetwork:
     # "" for networks that hide their name
     ssid: str
     quality: int
@@ -78,13 +78,21 @@ def _ssid(network: WLAN_AVAILABLE_NETWORK) -> str:
 
 
 class WlanClient:
-    """WLAN handle opened on demand. Use one worker thread; calls can block. Notifications run on a system thread."""
+    """WLAN handle opened on demand. Use one worker thread; calls can block. Notifications run on a system thread and
+    their data is only valid during the call."""
 
-    def __init__(self, on_notification: Callable[[int], None] | None = None):
+    def __init__(
+        self,
+        on_notification: Callable[[WLAN_NOTIFICATION_DATA], None] | None = None,
+        source: int = WLAN_NOTIFICATION_SOURCE_ACM,
+    ):
         self._handle = HANDLE()
         self._on_notification = on_notification
+        self._source = source
         # Keep the callback alive while Windows may call it.
         self._callback = WLAN_NOTIFICATION_CALLBACK(self._notify) if on_notification else None
+        # Windows accepted the notification registration; MSM needs location access.
+        self.notifying = False
 
     def open(self) -> bool:
         if self._handle.value is not None:
@@ -96,10 +104,10 @@ class WlanClient:
             logger.debug("WLAN service unavailable: %s", format_error_message(result))
             return False
         if self._callback is not None:
-            result = WlanRegisterNotification(
-                self._handle, WLAN_NOTIFICATION_SOURCE_ACM, True, self._callback, None, None, None
-            )
-            if result != ERROR_SUCCESS:
+            result = WlanRegisterNotification(self._handle, self._source, True, self._callback, None, None, None)
+            self.notifying = result == ERROR_SUCCESS
+            # Signal changes need location access, so Windows refusing them is expected.
+            if result not in (ERROR_SUCCESS, ACCESS_DENIED):
                 logger.debug("Could not register for WLAN notifications: %s", format_error_message(result))
         return True
 
@@ -111,10 +119,11 @@ class WlanClient:
         # Wait for any in-progress notification callback.
         WlanCloseHandle(self._handle, None)
         self._handle = HANDLE()
+        self.notifying = False
 
     def _notify(self, data: CPointer[WLAN_NOTIFICATION_DATA], _context: c_void_p) -> None:
         if self._on_notification is not None:
-            self._on_notification(data.contents.NotificationCode)
+            self._on_notification(data.contents)
 
     def _interfaces(self) -> list[GUID]:
         pointer = POINTER(WLAN_INTERFACE_INFO_LIST)()
@@ -140,51 +149,69 @@ class WlanClient:
             result = WlanScan(self._handle, byref(interface), None, None, None)
             if result == ERROR_SUCCESS:
                 continue
-            logger.debug("Could not scan for Wi-Fi networks: %s", format_error_message(result))
             if result == ACCESS_DENIED:
                 return ScanStatus.ACCESS_DENIED
             if result == ERROR_NDIS_DOT11_POWER_STATE_INVALID:
                 return ScanStatus.ADAPTER_OFF
+            logger.debug("Could not scan for Wi-Fi networks: %s", format_error_message(result))
             return ScanStatus.ERROR
         return ScanStatus.SUCCESS
 
-    def networks(self, profiles: bool = True) -> list[Network]:
+    def _available(self, interface: GUID) -> list[WLAN_AVAILABLE_NETWORK]:
+        """Copies of the latest scan results on an interface; empty when Windows refuses, as without location access."""
+        pointer = POINTER(WLAN_AVAILABLE_NETWORK_LIST)()
+        result = WlanGetAvailableNetworkList(self._handle, byref(interface), 0, None, byref(pointer))
+        if result != ERROR_SUCCESS:
+            # Without location access or with the radio off, Windows refuses; the scan reports both.
+            if result not in (ACCESS_DENIED, ERROR_NDIS_DOT11_POWER_STATE_INVALID):
+                logger.debug("Could not list Wi-Fi networks: %s", format_error_message(result))
+            return []
+        try:
+            listing = pointer.contents
+            entries = (WLAN_AVAILABLE_NETWORK * int(listing.dwNumberOfItems)).from_address(addressof(listing.Network))
+            return [WLAN_AVAILABLE_NETWORK.from_buffer_copy(entry) for entry in entries]
+        finally:
+            WlanFreeMemory(pointer)
+
+    def networks(self, profiles: bool = True) -> list[WifiNetwork]:
         """Return the latest scan results by SSID, optionally reading auto-connect settings."""
         if not self.open():
             return []
-        found: dict[str, Network] = {}
+        found: dict[str, WifiNetwork] = {}
         for interface in self._interfaces():
-            pointer = POINTER(WLAN_AVAILABLE_NETWORK_LIST)()
-            result = WlanGetAvailableNetworkList(self._handle, byref(interface), 0, None, byref(pointer))
-            if result != ERROR_SUCCESS:
-                logger.debug("Could not list Wi-Fi networks: %s", format_error_message(result))
-                continue
-            try:
-                listing = pointer.contents
-                entries = (WLAN_AVAILABLE_NETWORK * int(listing.dwNumberOfItems)).from_address(
-                    addressof(listing.Network)
-                )
-                for entry in entries:
-                    self._add(found, interface, entry, profiles)
-            finally:
-                WlanFreeMemory(pointer)
+            for entry in self._available(interface):
+                self._add(found, interface, entry, profiles)
         return list(found.values())
 
-    def _add(self, found: dict[str, Network], interface: GUID, entry: WLAN_AVAILABLE_NETWORK, profiles: bool) -> None:
+    def connected_qualities(self) -> dict[str, int]:
+        """The signal quality of each interface's connected network, by interface id."""
+        if not self.open():
+            return {}
+        qualities: dict[str, int] = {}
+        for interface in self._interfaces():
+            entries = self._available(interface)
+            quality = next(
+                (int(entry.wlanSignalQuality) for entry in entries if entry.dwFlags & WLAN_AVAILABLE_NETWORK_CONNECTED),
+                None,
+            )
+            if quality is not None:
+                qualities[str(interface.to_uuid())] = quality
+        return qualities
+
+    def _add(
+        self, found: dict[str, WifiNetwork], interface: GUID, entry: WLAN_AVAILABLE_NETWORK, profiles: bool
+    ) -> None:
         # Windows lists a network once per saved profile and once without a profile.
         ssid = _ssid(entry)
         connected = bool(entry.dwFlags & WLAN_AVAILABLE_NETWORK_CONNECTED)
         profile = entry.strProfileName if entry.dwFlags & WLAN_AVAILABLE_NETWORK_HAS_PROFILE else ""
-        network = found.setdefault(ssid, Network(ssid, 0, False, False))
+        network = found.setdefault(ssid, WifiNetwork(ssid, 0, False, False))
         network.quality = max(network.quality, int(entry.wlanSignalQuality))
         network.secured = network.secured or bool(entry.bSecurityEnabled)
         if profile and (connected or not network.profile):
             network.profile = profile
             network.auto_connect = profiles and self._auto_connect(interface, profile)
         network.connected = network.connected or connected
-
-    def connected_quality(self) -> int | None:
-        return next((network.quality for network in self.networks(profiles=False) if network.connected), None)
 
     def _profile_xml(self, interface: GUID, profile: str) -> str:
         xml = LPWSTR()

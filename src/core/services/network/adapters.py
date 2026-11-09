@@ -1,14 +1,11 @@
-"""Network adapter counters and connectivity reported by Windows."""
+"""Network adapters and their counters reported by Windows."""
 
 import ctypes
 import socket
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator
 from ctypes import byref, wintypes
 from dataclasses import dataclass, replace
-from typing import cast
 from uuid import UUID
-
-from winrt.windows.networking.connectivity import ConnectionProfile, NetworkAdapter, NetworkInformation
 
 from core.utils.win32.bindings.iphlpapi import iphlpapi
 from core.utils.win32.constants import (
@@ -34,28 +31,6 @@ class Adapter:
     connected: bool = False
     ip_address: str = ""
     index: int = 0
-
-
-type ProfileKey = tuple[str, str]
-
-
-def _adapter_id(profile: ConnectionProfile) -> str | None:
-    adapter = cast(NetworkAdapter | None, profile.network_adapter)
-    return str(adapter.network_adapter_id) if adapter is not None else None
-
-
-def find_profile(interface: str) -> tuple[ProfileKey, ConnectionProfile] | None:
-    """The network to watch: with auto the one Windows uses for internet, otherwise the one the adapter with this
-    name, such as Ethernet or Wi-Fi, is connected to."""
-    if interface == "auto":
-        profile = cast(ConnectionProfile | None, NetworkInformation.get_internet_connection_profile())
-    else:
-        key = adapter_key(interface)
-        profiles: Sequence[ConnectionProfile] = NetworkInformation.get_connection_profiles() if key is not None else []
-        profile = next((profile for profile in profiles if _adapter_id(profile) == key), None)
-    if profile is not None and (key := _adapter_id(profile)) is not None:
-        return (key, profile.profile_name), profile
-    return None
 
 
 def adapter_key(name: str) -> str | None:

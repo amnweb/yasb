@@ -45,6 +45,7 @@ dependencies = [
     "winrt.windows.devices.enumeration==4!10.0.28000.2705",
     "winrt.windows.devices.radios==4!10.0.28000.2705",
     "winrt.windows.devices.wifi==4!10.0.28000.2705",
+    "winrt.windows.security.authorization.appcapabilityaccess==4!10.0.28000.2705",
     "winrt.windows.security.credentials==4!10.0.28000.2705",
     "winrt.windows.ui.viewmanagement==4!10.0.28000.2705",
     "winrt.windows.ui.composition==4!10.0.28000.2705.1",

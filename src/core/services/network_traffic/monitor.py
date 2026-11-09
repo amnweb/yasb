@@ -6,10 +6,10 @@ from datetime import date
 from typing import Any, ClassVar
 
 from PyQt6.QtCore import QCoreApplication, QMetaObject, QObject, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
-from winrt.windows.networking.connectivity import ConnectionProfile, NetworkConnectivityLevel, NetworkInformation
 
-from core.services.network_traffic.adapters import Adapter, ProfileKey, find_profile, read_adapter, read_counters
-from core.services.network_traffic.usage import Session, read_history
+from core.services.network.adapters import Adapter, read_adapter, read_counters
+from core.services.network.connections import ConnectionWatcher, read_connection
+from core.services.network_traffic.usage import ProfileKey, Session, read_history
 from core.utils.qml import qml_property
 from core.utils.worker import run_in_worker
 
@@ -64,10 +64,12 @@ class TrafficSampler(QObject):
         self._reset = False
         self._thread: threading.Thread | None = None
         self._session = Session()
-        # The network and its adapter, looked up again when Windows reports a network change
+        # The connection and its adapter, looked up again when the network changes
         self._network_changed = threading.Event()
-        self._active: tuple[ProfileKey, ConnectionProfile] | None = None
+        self._connection: dict[str, Any] | None = None
         self._adapter: Adapter | None = None
+        self._watcher = ConnectionWatcher.instance()
+        self._watcher.networkChanged.connect(self._on_network_changed)
         self.history = EMPTY_HISTORY
         self._history_key: tuple[ProfileKey, date] | None = None
         self._history_pending = False
@@ -78,8 +80,8 @@ class TrafficSampler(QObject):
         self._restart.setSingleShot(True)
         self._restart.setInterval(1000)
         self._restart.timeout.connect(self._restart_worker)
-        stopping, wake = self._stopping, self._wake
-        self.destroyed.connect(lambda: (stopping.set(), wake.set()))
+        stopping, wake, watcher, key = self._stopping, self._wake, self._watcher, id(self)
+        self.destroyed.connect(lambda: (stopping.set(), wake.set(), watcher.unsubscribe(key)))
         if (app := QCoreApplication.instance()) is not None:
             app.aboutToQuit.connect(self.stop)
 
@@ -88,6 +90,7 @@ class TrafficSampler(QObject):
             return
         with self._lock:
             self._subscribers[key] = interval
+        self._watcher.subscribe(id(self))
         if self._thread is None or not self._thread.is_alive():
             self._start_worker()
         self._wake.set()
@@ -95,6 +98,9 @@ class TrafficSampler(QObject):
     def unsubscribe(self, key: int) -> None:
         with self._lock:
             self._subscribers.pop(key, None)
+            watched = bool(self._subscribers)
+        if not watched:
+            self._watcher.unsubscribe(id(self))
         self._wake.set()
 
     def reset(self) -> None:
@@ -110,6 +116,12 @@ class TrafficSampler(QObject):
         self._stopping.set()
         self._wake.set()
         self._restart.stop()
+        self._watcher.unsubscribe(id(self))
+
+    @pyqtSlot()
+    def _on_network_changed(self) -> None:
+        self._network_changed.set()
+        self._wake.set()
 
     def _finish(self) -> None:
         self._stopping.set()
@@ -146,10 +158,8 @@ class TrafficSampler(QObject):
 
     def _run(self) -> None:
         last_error = ""
-        token = None
         self._network_changed.set()
         try:
-            token = NetworkInformation.add_network_status_changed(lambda _sender: self._network_changed.set())
             while not self._stopping.is_set():
                 self._wake.clear()
                 if self._stopping.is_set():
@@ -179,28 +189,22 @@ class TrafficSampler(QObject):
                 logger.exception("The network traffic worker stopped unexpectedly")
                 self._failed.emit()
         finally:
-            if token is not None:
-                NetworkInformation.remove_network_status_changed(token)
             atexit.unregister(self._finish)
 
     def _sample(self, reset: bool) -> tuple[ProfileKey | None, dict[str, Any]]:
         if self._network_changed.is_set():
             self._network_changed.clear()
-            self._active = find_profile(self.interface)
-            self._adapter = read_adapter(self._active[0][0]) if self._active is not None else None
-        active = self._active
-        if active is None:
+            self._connection = read_connection(self.interface)
+            self._adapter = read_adapter(self._connection["adapterId"]) if self._connection is not None else None
+        connection = self._connection
+        if connection is None:
             self._session.previous = None
             if reset:
                 self._session = Session()
             return None, EMPTY_DATA
-        key, profile = active
+        key = (connection["adapterId"], connection["name"])
         adapter = read_counters(self._adapter) if self._adapter is not None else None
-        try:
-            level = profile.get_network_connectivity_level()
-        except OSError:
-            level = None
-        connected = adapter.connected if adapter is not None else level not in (None, NetworkConnectivityLevel.NONE)
+        connected = adapter.connected if adapter is not None else connection["connectivity"] != "none"
         data = {
             **EMPTY_DATA,
             **self._session.sample(key, adapter, time.monotonic(), reset),
@@ -210,8 +214,8 @@ class TrafficSampler(QObject):
             "interfaces": [adapter.name] if adapter else [],
             "connected": connected,
             "available": connected,
-            "internetAvailable": level == NetworkConnectivityLevel.INTERNET_ACCESS if level is not None else None,
-            "isWifi": profile.is_wlan_connection_profile,
+            "internetAvailable": connection["connectivity"] == "internet",
+            "isWifi": connection["kind"] == "wifi",
         }
         return key if connected else None, data
 
@@ -261,7 +265,7 @@ class TrafficSampler(QObject):
                     logger.debug("Windows usage history unavailable: %s", error)
 
         try:
-            run_in_worker(lambda: read_history(self.interface, *key), done, "Could not read Windows usage history.")
+            run_in_worker(lambda: read_history(*key), done, "Could not read Windows usage history.")
         except RuntimeError as error:
             done(None, str(error))
 
