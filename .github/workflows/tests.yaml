@@ -52,6 +52,9 @@ jobs:
           YASB_REQUIRE_SDK: '1'
         run: |
           New-Item -ItemType Directory -Force reports | Out-Null
+          # On arm64 the runner's OpenSSL has the same DLL names as Python's own, so Qt would load the runner's libssl
+          # and Windows would pair it with Python's libcrypto, an older version it cannot load with
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_.TrimEnd('\') -ne "$env:ProgramFiles\OpenSSL\bin" }) -join ';'
           python -m pytest --junitxml=reports/junit.xml 2>&1 | Tee-Object -FilePath reports/pytest.log
           $code = $LASTEXITCODE
           Set-Content -Path reports/exit_code.txt -Value $code
