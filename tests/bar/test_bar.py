@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from PyQt6 import sip
 from PyQt6.QtCore import QCoreApplication, QEvent, QMetaObject, QPoint, QPointF, QRectF, Qt, QUrl
 from PyQt6.QtGui import QColor, QContextMenuEvent, QGuiApplication, QWindow
 from PyQt6.QtQml import QQmlEngine
@@ -49,6 +50,8 @@ def make_bar(qapp: QGuiApplication, fake_app_bar: None) -> Iterator[MakeBar]:
         bar.deleteLater()
     # Like close_bars: a closed backdrop left alive until Python exits crashes the process there
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    # Deleted here, after the items it created; left to Python, the garbage collector can delete it on any thread
+    sip.delete(engine)
 
 
 # One entry per option that switches on its own code path

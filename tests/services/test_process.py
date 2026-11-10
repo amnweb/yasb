@@ -1,5 +1,6 @@
 # pyright: reportPrivateUsage=false
 
+import gc
 import subprocess
 import sys
 import threading
@@ -127,6 +128,22 @@ def test_a_failed_run_keeps_the_last_good_result(make: Callable[..., Process], t
     assert process.property("error") == "Exited with code 3: disk full"
     assert process.property("data") == {"ok": 1}
     assert process.property("errorOutput").strip() == "disk full"
+
+
+def test_a_finished_run_deletes_its_signals_on_the_gui_thread(make: Callable[..., Process]):
+    # Left to the garbage collector, they would be deleted on whichever thread it runs, which Qt does not allow
+    process = make(command=python("print(1)"))
+    finished: list[int] = []
+    process.finished.connect(finished.append)
+    gc.collect()
+    gc.disable()
+    try:
+        process.run()
+        until(lambda: finished)
+        wait(50)
+        assert not [obj for obj in gc.get_objects() if isinstance(obj, process_module._RunSignals)]
+    finally:
+        gc.enable()
 
 
 def test_each_json_line_arrives_as_it_is_printed(make: Callable[..., Process]):

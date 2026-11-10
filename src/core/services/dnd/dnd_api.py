@@ -1,8 +1,7 @@
 import logging
 from contextlib import suppress
-from ctypes import byref, c_void_p
+from ctypes import COMError, byref, c_void_p
 
-from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
 from PyQt6.QtCore import QCoreApplication, Qt
 
 from core.events.service import EventService
@@ -110,7 +109,7 @@ class DndService:
                 # Ensure cleanup is run when YASB exits
                 app = QCoreApplication.instance()
                 if app:
-                    app.aboutToQuit.connect(cls.shutdown_wnf_listener, Qt.ConnectionType.UniqueConnection)  # pyright: ignore[reportCallIssue]
+                    app.aboutToQuit.connect(cls.shutdown_wnf_listener, Qt.ConnectionType.UniqueConnection)
             else:
                 logging.warning("DndService failed with status: 0x%08X", status & 0xFFFFFFFF)
         except Exception:

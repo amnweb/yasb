@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 from PyQt6 import sip
-from PyQt6.QtCore import QModelIndex, QUrl
+from PyQt6.QtCore import QCoreApplication, QEvent, QModelIndex, QUrl
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtQuick import QQuickItem
@@ -455,6 +455,15 @@ def radio(qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch) -> FakeRadio:
     return fake
 
 
+@pytest.fixture
+def wifi(client: FakeWlan, radio: FakeRadio) -> Iterator[WifiNetworks]:
+    networks = WifiNetworks()
+    yield networks
+    # A Qt object without a parent is deleted by whoever created it, on its own thread. Left to Python, the garbage
+    # collector can delete it from whichever thread it runs on.
+    sip.delete(networks)
+
+
 def rows(model: WifiNetworkList) -> list[str]:
     return [row["ssid"] for row in model.rows]
 
@@ -479,8 +488,7 @@ def test_the_list_updates_rows_in_place(qapp: QGuiApplication):
     assert inserted == []
 
 
-def test_watching_reads_the_list_and_scans(client: FakeWlan, radio: FakeRadio):
-    wifi = WifiNetworks()
+def test_watching_reads_the_list_and_scans(client: FakeWlan, wifi: WifiNetworks):
     wifi.setProperty("watching", True)
     wait(50)
     assert client.scans == 1 and wifi.property("scanning") is True
@@ -497,26 +505,23 @@ def test_watching_reads_the_list_and_scans(client: FakeWlan, radio: FakeRadio):
     assert client.reads == reads + 1
 
 
-def test_without_a_wifi_adapter_nothing_is_an_error(client: FakeWlan, radio: FakeRadio):
+def test_without_a_wifi_adapter_nothing_is_an_error(client: FakeWlan, wifi: WifiNetworks):
     client.scan_result = ScanStatus.UNAVAILABLE
-    wifi = WifiNetworks()
     wifi.setProperty("watching", True)
     wait(50)
     assert wifi.property("available") is False and wifi.property("error") == ""
 
 
-def test_a_failed_scan_reports_its_error_code(client: FakeWlan, radio: FakeRadio):
+def test_a_failed_scan_reports_its_error_code(client: FakeWlan, wifi: WifiNetworks):
     client.scan_result = ScanStatus.ACCESS_DENIED
-    wifi = WifiNetworks()
     wifi.setProperty("watching", True)
     wait(50)
     assert wifi.property("error") == "accessDenied"
     assert wifi.property("networks").property("count") == 0
 
 
-def test_the_switch_follows_and_changes_the_radio(client: FakeWlan, radio: FakeRadio):
+def test_the_switch_follows_and_changes_the_radio(client: FakeWlan, radio: FakeRadio, wifi: WifiNetworks):
     client.scan_result = ScanStatus.ACCESS_DENIED
-    wifi = WifiNetworks()
     wifi.setProperty("watching", True)
     wait(50)
     assert radio.handlers and wifi.property("error") == "accessDenied"
@@ -543,7 +548,7 @@ def test_the_switch_follows_and_changes_the_radio(client: FakeWlan, radio: FakeR
     assert not radio.handlers
 
 
-def test_a_wrong_password_reports_its_error_code(client: FakeWlan, radio: FakeRadio, monkeypatch: pytest.MonkeyPatch):
+def test_a_wrong_password_reports_its_error_code(wifi: WifiNetworks, monkeypatch: pytest.MonkeyPatch):
     joined: list[tuple[str, str, bool, bool]] = []
 
     def connect(ssid: str, password: str, auto: bool, hidden: bool = False) -> WiFiConnectionStatus:
@@ -551,7 +556,6 @@ def test_a_wrong_password_reports_its_error_code(client: FakeWlan, radio: FakeRa
         return WiFiConnectionStatus.INVALID_CREDENTIAL
 
     monkeypatch.setattr(wifi_module.wlan, "connect", connect)
-    wifi = WifiNetworks()
     wifi.connectTo("Neighbour", "hunter22", False)
     assert wifi.property("connecting") is True and wifi.property("connectingTo") == "Neighbour"
     wait(100)
@@ -560,30 +564,27 @@ def test_a_wrong_password_reports_its_error_code(client: FakeWlan, radio: FakeRa
     assert wifi.property("error") == "invalidCredential"
 
 
-def test_a_connection_that_fails_stops_connecting(client: FakeWlan, radio: FakeRadio, monkeypatch: pytest.MonkeyPatch):
+def test_a_connection_that_fails_stops_connecting(wifi: WifiNetworks, monkeypatch: pytest.MonkeyPatch):
     def connect(*_args: Any) -> WiFiConnectionStatus:
         problem = OSError("Access is denied")
         problem.winerror = E_ACCESSDENIED
         raise problem
 
     monkeypatch.setattr(wifi_module.wlan, "connect", connect)
-    wifi = WifiNetworks()
     wifi.connectTo("Neighbour", "", True)
     wait(100)
     assert wifi.property("connecting") is False
     assert wifi.property("error") == "accessDenied"
 
 
-def test_forgetting_uses_the_saved_profile(client: FakeWlan, radio: FakeRadio):
-    wifi = WifiNetworks()
+def test_forgetting_uses_the_saved_profile(client: FakeWlan, wifi: WifiNetworks):
     wifi.forget("Neighbour")
     wifi.forget("Home")
     wait(50)
     assert client.forgotten == ["Home"]
 
 
-def test_the_wlan_handle_is_only_used_off_the_ui_thread(client: FakeWlan, radio: FakeRadio):
-    wifi = WifiNetworks()
+def test_the_wlan_handle_is_only_used_off_the_ui_thread(client: FakeWlan, wifi: WifiNetworks):
     wifi.setProperty("watching", True)
     client.notification(WlanNotificationAcm.SCAN_COMPLETE)
     wifi.forget("Home")
@@ -594,18 +595,35 @@ def test_the_wlan_handle_is_only_used_off_the_ui_thread(client: FakeWlan, radio:
     assert threading.main_thread() not in client.threads
 
 
-def create_widget() -> tuple[QQmlEngine, QQuickItem, QQuickItem]:
-    register_qml_types()
-    engine = QQmlEngine()
-    engine.addImportPath(QML_IMPORT_PATH)
-    component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Network" / "Network.qml")))
-    widget = component.create()
-    assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
-    wait(10)
-    # Qt counts an item as visible only when its parent is visible.
-    root = QQuickItem()
-    widget.setParentItem(root)
-    return engine, root, widget
+@pytest.fixture
+def make_widget(fake_watcher: FakeWatcher, client: FakeWlan) -> Iterator[Callable[[], QQuickItem]]:
+    """Creates the widget when called, so a test can set up the connection first, and deletes it with its root item and
+    QML engine when the test ends; objects an engine created go before the engine."""
+    made: list[tuple[QQmlEngine, QQuickItem, QQuickItem]] = []
+
+    def create() -> QQuickItem:
+        register_qml_types()
+        engine = QQmlEngine()
+        engine.addImportPath(QML_IMPORT_PATH)
+        component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Network" / "Network.qml")))
+        widget = component.create()
+        assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+        wait(10)
+        # Qt counts an item as visible only when its parent is visible.
+        root = QQuickItem()
+        widget.setParentItem(root)
+        made.append((engine, root, widget))
+        return widget
+
+    yield create
+    for engine, root, widget in made:
+        widget.setParentItem(None)
+        sip.delete(widget)
+        sip.delete(root)
+        # QML deletes the widget's own objects, such as its WifiNetworks, with deleteLater: run those deletions now,
+        # while their engine exists, as YASB does when it closes a bar
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+        sip.delete(engine)
 
 
 def item(widget: QQuickItem, name: str) -> QQuickItem:
@@ -618,8 +636,8 @@ def test_network_is_discovered_as_a_builtin_qml_widget():
     assert find_widget_file("Network") == BUILTIN_WIDGETS_DIR / "Network/Network.qml"
 
 
-def test_the_widget_fills_the_label_placeholders(fake_watcher: FakeWatcher, client: FakeWlan):
-    _engine, _root, widget = create_widget()
+def test_the_widget_fills_the_label_placeholders(fake_watcher: FakeWatcher, make_widget: Callable[[], QQuickItem]):
+    widget = make_widget()
     label = item(widget, "label")
     widget.setProperty("label", "")
     assert label.property("visible") is False
@@ -635,9 +653,9 @@ def test_the_widget_fills_the_label_placeholders(fake_watcher: FakeWatcher, clie
     assert item(widget, "icon").property("glyph") == widget.property("disconnectedIcon")
 
 
-def test_the_widget_shows_ethernet_a_vpn_and_mobile(fake_watcher: FakeWatcher, client: FakeWlan):
+def test_the_widget_shows_ethernet_a_vpn_and_mobile(fake_watcher: FakeWatcher, make_widget: Callable[[], QQuickItem]):
     fake_watcher.connection = ETHERNET
-    _engine, _root, widget = create_widget()
+    widget = make_widget()
     # A cable has no signal, so a signal label leaves only the icon.
     widget.setProperty("label", "{signal}")
     assert item(widget, "label").property("visible") is False
@@ -661,8 +679,10 @@ def test_the_widget_shows_ethernet_a_vpn_and_mobile(fake_watcher: FakeWatcher, c
     assert item(widget, "label").property("text") == "Sieć komórkowa"
 
 
-def test_the_widget_marks_a_connection_without_internet(fake_watcher: FakeWatcher, client: FakeWlan):
-    _engine, _root, widget = create_widget()
+def test_the_widget_marks_a_connection_without_internet(
+    fake_watcher: FakeWatcher, make_widget: Callable[[], QQuickItem]
+):
+    widget = make_widget()
     assert item(widget, "icon").property("badge") == ""
     fake_watcher.change({**HOME, "connectivity": "constrained"})
     assert item(widget, "icon").property("badge") == widget.property("noInternetIcon")

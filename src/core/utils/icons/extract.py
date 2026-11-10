@@ -1,9 +1,8 @@
 import ctypes
 import logging
 import struct
-from ctypes import byref, c_size_t
+from ctypes import COMError, byref, c_size_t
 
-from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
 from PIL import Image
 
 from core.utils.icons.convert import hbitmap_to_image, hicon_to_image

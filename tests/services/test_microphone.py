@@ -1,9 +1,10 @@
+from collections.abc import Callable, Iterator
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from PyQt6 import sip
-from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import QCoreApplication, QEvent, QUrl
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtQml import QQmlComponent, QQmlEngine, QQmlError
 from PyQt6.QtQuick import QQuickItem
@@ -55,8 +56,27 @@ def service(qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch) -> FakeInput
     return service
 
 
-def test_the_level_device_and_devices_come_from_the_service(service: FakeInputService):
-    audio = AudioInput()
+@pytest.fixture
+def make_audio(service: FakeInputService) -> Iterator[Callable[[], AudioInput]]:
+    """Creates an AudioInput when called, after a test has set up the service, and deletes it when the test ends: a Qt
+    object without a parent is deleted by whoever created it, on its own thread. Left to Python, the garbage collector
+    can delete it from whichever thread it runs on."""
+    made: list[AudioInput] = []
+
+    def create() -> AudioInput:
+        audio = AudioInput()
+        made.append(audio)
+        return audio
+
+    yield create
+    for audio in made:
+        sip.delete(audio)
+
+
+def test_the_level_device_and_devices_come_from_the_service(
+    service: FakeInputService, make_audio: Callable[[], AudioInput]
+):
+    audio = make_audio()
     assert (audio.property("volume"), audio.property("muted"), audio.property("deviceName")) == (40, False, "Headset")
     assert audio.property("available") is True
     assert [(device["name"], device["current"]) for device in audio.property("devices")] == [
@@ -67,8 +87,10 @@ def test_the_level_device_and_devices_come_from_the_service(service: FakeInputSe
     assert service.default == "webcam"
 
 
-def test_the_microphone_mutes_at_zero_and_unmutes_above_it(service: FakeInputService):
-    audio = AudioInput()
+def test_the_microphone_mutes_at_zero_and_unmutes_above_it(
+    service: FakeInputService, make_audio: Callable[[], AudioInput]
+):
+    audio = make_audio()
     audio.setVolume(-5)
     assert service.volume is not None
     assert (service.volume.level, service.volume.muted, audio.property("muted")) == (0.0, True, True)
@@ -78,8 +100,8 @@ def test_the_microphone_mutes_at_zero_and_unmutes_above_it(service: FakeInputSer
     assert service.volume.muted and audio.property("muted")
 
 
-def test_changes_from_windows_reach_the_widget(service: FakeInputService):
-    audio = AudioInput()
+def test_changes_from_windows_reach_the_widget(service: FakeInputService, make_audio: Callable[[], AudioInput]):
+    audio = make_audio()
     volume_changes: list[bool] = []
     device_changes: list[bool] = []
     audio.volumeChanged.connect(lambda: volume_changes.append(True))
@@ -96,9 +118,9 @@ def test_changes_from_windows_reach_the_widget(service: FakeInputService):
     assert (audio.property("volume"), audio.property("muted")) == (20, False) and device_changes
 
 
-def test_without_a_microphone_nothing_is_set(service: FakeInputService):
+def test_without_a_microphone_nothing_is_set(service: FakeInputService, make_audio: Callable[[], AudioInput]):
     service.volume = None
-    audio = AudioInput()
+    audio = make_audio()
     assert (audio.property("available"), audio.property("deviceName"), audio.property("volume")) == (False, "", 0)
     audio.setVolume(50)
     audio.toggleMute()
@@ -142,3 +164,6 @@ def test_the_bar_icon_shows_muted_and_a_missing_microphone(service: FakeInputSer
     assert icon.property("text") == "off"
     assert not warnings
     sip.delete(widget)
+    # QML deletes the widget's own objects with deleteLater: run those deletions now, while their engine exists
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    sip.delete(engine)

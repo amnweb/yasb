@@ -1,10 +1,10 @@
 """Wrappers for ole32 win32 API functions to make them easier to use and have proper types"""
 
-from ctypes import POINTER, WinDLL, byref, c_long, c_ulong, c_void_p
+from ctypes import POINTER, COMError, WinDLL, byref, c_long, c_ulong, c_void_p
 from typing import Any
 
-import comtypes  # pyright: ignore[reportMissingTypeStubs]
-import comtypes.client  # pyright: ignore[reportMissingTypeStubs]
+import comtypes
+import comtypes.client
 
 from core.utils.win32.structs import GUID, PROPVARIANT
 from core.utils.win32.typecheck import CArgObject
@@ -59,7 +59,7 @@ def PropVariantClear(pvar: PROPVARIANT) -> int:
 def create_com_object[T: comtypes.IUnknown](clsid: comtypes.GUID, interface: type[T], clsctx: int) -> T | None:
     try:
         return comtypes.CoCreateInstance(clsid, interface, clsctx)
-    except comtypes.COMError, OSError:
+    except COMError, OSError:
         return None
 
 

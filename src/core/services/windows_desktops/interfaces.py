@@ -16,19 +16,18 @@ Interfaces and GUIDs from https://github.com/Ciantic/VirtualDesktopAccessor
 
 import logging
 import sys
-from ctypes import HRESULT, POINTER, c_ulonglong, c_void_p
+from ctypes import HRESULT, POINTER, COMError, c_ulonglong, c_void_p
 from ctypes.wintypes import BOOL, DWORD, HWND, INT, LPCWSTR, LPVOID, RECT, SIZE, UINT, ULONG
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any
 
-from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
+from comtypes import (
     CLSCTX_LOCAL_SERVER,
-    COMMETHOD,  # pyright: ignore[reportUnknownVariableType]
+    COMMETHOD,
     GUID,
-    STDMETHOD,  # pyright: ignore[reportUnknownVariableType]
+    STDMETHOD,
     CoCreateInstance,
-    COMError,
     IUnknown,
 )
 

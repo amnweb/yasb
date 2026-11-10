@@ -9,7 +9,7 @@ from functools import cache
 from types import ModuleType
 from typing import TypedDict
 
-import comtypes  # pyright: ignore[reportMissingTypeStubs]
+import comtypes
 
 from tests.support.source import (
     SRC_ROOT,

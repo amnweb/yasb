@@ -10,7 +10,7 @@ from urllib.parse import quote
 
 import pytest
 import winrt.windows.ui.notifications.management as management
-from comtypes import GUID  # pyright: ignore[reportMissingTypeStubs]
+from comtypes import GUID
 from winrt.windows.ui.notifications import UserNotification
 
 from core.services.notifications import windows_notification

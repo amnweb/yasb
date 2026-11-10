@@ -2,9 +2,10 @@ import logging
 import re
 import winreg
 import xml.etree.ElementTree as ET
+from ctypes import COMError
 from pathlib import Path
 
-from comtypes import GUID, COMError  # pyright: ignore[reportMissingTypeStubs]
+from comtypes import GUID
 from winrt.windows.applicationmodel import AppInfo
 
 from core.services.taskbar.shortcut_resolver import find_shortcut_by_aumid

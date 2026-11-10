@@ -4,14 +4,13 @@ import logging
 import threading
 import time
 from array import array
-from ctypes import POINTER, Array, c_ubyte, c_void_p, cast
+from ctypes import POINTER, Array, COMError, c_ubyte, c_void_p, cast
 from ctypes.wintypes import HANDLE
 from typing import Any
 
-from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
+from comtypes import (
     CLSCTX_ALL,
     GUID,
-    COMError,
 )
 from pycaw.api.mmdeviceapi import PROPERTYKEY, IMMDevice, IMMDeviceEnumerator
 from pycaw.callbacks import MMNotificationClient

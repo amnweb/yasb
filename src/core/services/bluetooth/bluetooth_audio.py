@@ -5,7 +5,7 @@ import threading
 import time
 from ctypes import POINTER, byref
 
-from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
+from comtypes import (
     CLSCTX_ALL,
     GUID,
     CoCreateInstance,

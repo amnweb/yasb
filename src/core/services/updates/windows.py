@@ -1,9 +1,8 @@
 """Windows Update's pending updates, through the Windows Update Agent's COM API."""
 
 import logging
+from ctypes import COMError
 from typing import Any
-
-from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
 
 from core.utils.shell_utils import shell_open
 from core.utils.win32.bindings.ole32 import CoInitialize, CoUninitialize, create_dispatch

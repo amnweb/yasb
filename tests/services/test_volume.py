@@ -1,10 +1,11 @@
 # pyright: reportPrivateUsage=false
 
+from collections.abc import Callable, Iterator
 from types import SimpleNamespace
 
 import pytest
 from PyQt6 import sip
-from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import QCoreApplication, QEvent, QUrl
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtQuick import QQuickItem
@@ -33,8 +34,25 @@ def service(qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch) -> FakeAudio
     return service
 
 
-def test_the_volume_device_and_devices_come_from_the_service(service: FakeAudioService):
-    audio = AudioOutput()
+@pytest.fixture
+def make_audio(service: FakeAudioService) -> Iterator[Callable[[], AudioOutput]]:
+    """Creates an AudioOutput when called, after a test has set up the service, and deletes it when the test ends: a Qt
+    object without a parent is deleted by whoever created it, on its own thread. Left to Python, the garbage collector
+    can delete it from whichever thread it runs on."""
+    made: list[AudioOutput] = []
+
+    def create() -> AudioOutput:
+        audio = AudioOutput()
+        made.append(audio)
+        return audio
+
+    yield create
+    for audio in made:
+        sip.delete(audio)
+
+
+def test_the_volume_device_and_devices_come_from_the_service(make_audio: Callable[[], AudioOutput]):
+    audio = make_audio()
     assert (audio.property("volume"), audio.property("muted"), audio.property("deviceName")) == (30, False, "Speakers")
     assert [(device["name"], device["current"]) for device in audio.property("devices")] == [
         ("Headphones", False),
@@ -42,16 +60,18 @@ def test_the_volume_device_and_devices_come_from_the_service(service: FakeAudioS
     ]
 
 
-def test_setting_the_volume_clamps_it_and_mute_toggles(service: FakeAudioService):
-    audio = AudioOutput()
+def test_setting_the_volume_clamps_it_and_mute_toggles(
+    service: FakeAudioService, make_audio: Callable[[], AudioOutput]
+):
+    audio = make_audio()
     audio.setVolume(150)
     assert (service.volume.level, audio.property("volume")) == (1.0, 100)
     audio.toggleMute()
     assert service.volume.muted and audio.property("muted")
 
 
-def test_a_change_from_windows_reaches_the_widget(service: FakeAudioService):
-    audio = AudioOutput()
+def test_a_change_from_windows_reaches_the_widget(service: FakeAudioService, make_audio: Callable[[], AudioOutput]):
+    audio = make_audio()
     changes: list[bool] = []
     audio.volumeChanged.connect(lambda: changes.append(True))
     service.volume.level = 0.6
@@ -60,8 +80,10 @@ def test_a_change_from_windows_reaches_the_widget(service: FakeAudioService):
     assert audio.property("volume") == 60 and changes
 
 
-def test_apps_are_read_on_request_and_a_volume_drag_does_not_rebuild_them(service: FakeAudioService):
-    audio = AudioOutput()
+def test_apps_are_read_on_request_and_a_volume_drag_does_not_rebuild_them(
+    service: FakeAudioService, make_audio: Callable[[], AudioOutput]
+):
+    audio = make_audio()
     assert audio.property("apps") == []
     audio.refreshApps()
     [app] = audio.property("apps")
@@ -81,8 +103,8 @@ def test_apps_are_read_on_request_and_a_volume_drag_does_not_rebuild_them(servic
     assert service.app_volume.muted and rebuilt and audio.property("apps")[0]["muted"]
 
 
-def test_app_icons_ask_again_once_the_icon_service_loaded_them(service: FakeAudioService):
-    audio = AudioOutput()
+def test_app_icons_ask_again_once_the_icon_service_loaded_them(make_audio: Callable[[], AudioOutput]):
+    audio = make_audio()
     audio.refreshApps()
     before = audio.property("apps")[0]["icon"]
     IconService.instance().icons_changed.emit()
@@ -90,14 +112,16 @@ def test_app_icons_ask_again_once_the_icon_service_loaded_them(service: FakeAudi
     assert after != before
 
 
-def test_a_widget_made_again_does_not_reuse_an_icon_url_from_before_the_icon_loaded(service: FakeAudioService):
-    first = AudioOutput()
+def test_a_widget_made_again_does_not_reuse_an_icon_url_from_before_the_icon_loaded(
+    make_audio: Callable[[], AudioOutput],
+):
+    first = make_audio()
     first.refreshApps()
     # The provider answered this URL with a placeholder, which QML keeps in its cache
     placeholder = first.property("apps")[0]["icon"]
     IconService.instance().icons_changed.emit()
     # Like a bar reload, which makes the widgets again
-    second = AudioOutput()
+    second = make_audio()
     second.refreshApps()
     assert second.property("apps")[0]["icon"] != placeholder
 
@@ -122,3 +146,6 @@ def test_the_widget_shows_the_level(service: FakeAudioService):
     # 30% is one wave
     assert icon.property("text") == "\ue993"
     sip.delete(widget)
+    # QML deletes the widget's own objects with deleteLater: run those deletions now, while their engine exists
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    sip.delete(engine)

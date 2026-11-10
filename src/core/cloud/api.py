@@ -83,7 +83,7 @@ def reply_error(reply: QNetworkReply) -> ApiError:
         # We aborted it, so there is nothing to report.
         return ApiError("", code="cancelled")
     status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute) or 0
-    return error_from(status, bytes(reply.readAll()))  # pyright: ignore[reportArgumentType]
+    return error_from(status, bytes(reply.readAll()))
 
 
 def save_reply(reply: QNetworkReply, path: Path) -> ApiError | None:
@@ -96,7 +96,7 @@ def save_reply(reply: QNetworkReply, path: Path) -> ApiError | None:
         if reply.error() != QNetworkReply.NetworkError.NoError:
             return reply_error(reply)
         try:
-            path.write_bytes(bytes(reply.readAll()))  # pyright: ignore[reportArgumentType]
+            path.write_bytes(bytes(reply.readAll()))
         except OSError as exc:
             return ApiError(f"Could not save the download: {exc.strerror or exc}", code="write_failed")
         return None
@@ -155,7 +155,7 @@ class Call(QObject):
 
         self._reply = None
         status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute) or 0
-        body = bytes(reply.readAll())  # pyright: ignore[reportArgumentType]
+        body = bytes(reply.readAll())
         error = reply.error()
         # Not on the abort path: Qt reads the device again while the event loop unwinds it.
         if self._device is not None:

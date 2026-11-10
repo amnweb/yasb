@@ -1,11 +1,11 @@
 """Wrappers for dxgi win32 API functions and the DXGI adapter enumeration interfaces"""
 
-from ctypes import POINTER, WinDLL, byref, c_long, c_void_p
+from ctypes import HRESULT, POINTER, WinDLL, byref, c_long, c_void_p
 from ctypes.wintypes import BOOL, HMODULE, HWND, LARGE_INTEGER, UINT
 from typing import TYPE_CHECKING, cast
 
-import comtypes  # pyright: ignore[reportMissingTypeStubs]
-from comtypes import COMMETHOD, GUID, HRESULT  # pyright: ignore[reportUnknownVariableType, reportMissingTypeStubs]
+import comtypes
+from comtypes import COMMETHOD, GUID
 
 from core.utils.win32.structs import DXGI_ADAPTER_DESC
 

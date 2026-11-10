@@ -10,11 +10,11 @@ from ctypes.wintypes import UINT
 from pathlib import Path
 from typing import Any
 
-import comtypes  # pyright: ignore[reportMissingTypeStubs]
+import comtypes
 import pytest
-from comtypes.client import CreateObject  # pyright: ignore[reportMissingTypeStubs]
-from comtypes.persist import IPersistFile  # pyright: ignore[reportMissingTypeStubs]
-from comtypes.shelllink import IShellLinkW, ShellLink  # pyright: ignore[reportMissingTypeStubs]
+from comtypes.client import CreateObject
+from comtypes.persist import IPersistFile
+from comtypes.shelllink import IShellLinkW, ShellLink
 
 from core.utils.win32.aumid import get_aumid_for_process, get_aumid_from_shortcut
 from core.utils.win32.bindings.advapi32 import (

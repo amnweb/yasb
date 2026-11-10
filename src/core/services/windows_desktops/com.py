@@ -15,12 +15,12 @@ require.
 import logging
 import sys
 import threading
-from ctypes import POINTER
+from ctypes import POINTER, COMError
 from dataclasses import dataclass
 from typing import Any
 
-import comtypes  # pyright: ignore[reportMissingTypeStubs]
-from comtypes import GUID, COMError, IUnknown  # pyright: ignore[reportMissingTypeStubs]
+import comtypes
+from comtypes import GUID, IUnknown
 
 from core.services.windows_desktops.interfaces import (
     TIER_21313,

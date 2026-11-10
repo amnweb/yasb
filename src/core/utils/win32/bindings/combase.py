@@ -8,7 +8,7 @@ import weakref
 from ctypes import POINTER, WinDLL, c_long, c_uint32, c_void_p
 from ctypes.wintypes import WCHAR
 
-from comtypes import GUID  # pyright: ignore[reportMissingTypeStubs]
+from comtypes import GUID
 
 from core.utils.win32.constants import E_BOUNDS, E_NOINTERFACE, E_NOTIMPL
 from core.utils.win32.typecheck import CArgObject
