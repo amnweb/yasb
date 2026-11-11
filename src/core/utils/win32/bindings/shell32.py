@@ -9,6 +9,7 @@ from ctypes import (
     HRESULT,
     POINTER,
     Array,
+    COMError,
     WinDLL,
     byref,
     c_int,
@@ -24,10 +25,10 @@ from ctypes import (
 from ctypes.wintypes import BOOL, DWORD, HANDLE, HBITMAP, HWND, LPCWSTR, LPVOID, UINT, ULONG
 from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
-import comtypes  # pyright: ignore[reportMissingTypeStubs]
-from comtypes import COMMETHOD, GUID, STDMETHOD, COMError  # pyright: ignore[reportUnknownVariableType, reportMissingTypeStubs]
-from comtypes.persist import IPersistFile  # pyright: ignore[reportMissingTypeStubs]
-from comtypes.shelllink import IShellLinkW  # pyright: ignore[reportMissingTypeStubs]
+import comtypes
+from comtypes import COMMETHOD, GUID, STDMETHOD
+from comtypes.persist import IPersistFile
+from comtypes.shelllink import IShellLinkW
 
 from core.utils.win32.bindings.ole32 import CoTaskMemFree, PropVariantClear, create_com_object
 from core.utils.win32.constants import (

@@ -438,7 +438,7 @@ async def list_le_devices() -> list[DeviceInfo] | None:
                 le = await BluetoothLEDevice.from_id_async(device_id)
             except Exception:
                 continue
-            if le is None:  # pyright: ignore[reportUnnecessaryComparison]
+            if le is None:
                 continue
             address_int = int(le.bluetooth_address)
             if not address_int:

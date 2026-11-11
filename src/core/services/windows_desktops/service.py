@@ -3,12 +3,11 @@ import logging
 import os
 from collections.abc import Callable
 from concurrent.futures import Future
-from ctypes import wintypes
+from ctypes import COMError, wintypes
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, override
 
-from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
 from PyQt6 import sip
 from PyQt6.QtCore import (
     QAbstractNativeEventFilter,
@@ -195,7 +194,7 @@ class WindowsDesktopService(QObject):
         self.moveToThread(self._thread)
         self._thread.start()
         if app is not None:
-            app.aboutToQuit.connect(self._stop_thread, Qt.ConnectionType.DirectConnection)  # pyright: ignore[reportCallIssue]
+            app.aboutToQuit.connect(self._stop_thread, Qt.ConnectionType.DirectConnection)
 
         try:
             self._call_in_thread(self._load_initial_state, INITIAL_LOAD_TIMEOUT_S)

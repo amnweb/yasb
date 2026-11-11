@@ -374,6 +374,9 @@ class Process(QObject):
 
         def on_done(outcome: Outcome) -> None:
             _running.discard(signals)
+            # Deleted on this thread once the run's end is handled; left to the garbage collector, it would be deleted
+            # on whichever thread the collector runs, which Qt does not allow
+            signals.deleteLater()
             if not sip.isdeleted(self):
                 self._on_done(number, outcome)
 
@@ -398,6 +401,7 @@ class Process(QObject):
         except RuntimeError:
             # Python takes no new threads while YASB exits
             _running.discard(signals)
+            signals.deleteLater()
             self._handle = None
             return
         self._started = time.monotonic()

@@ -11,7 +11,7 @@ authors = [
 ]
 license = "MIT"
 readme = "README.md"
-requires-python = ">= 3.14"
+requires-python = ">= 3.15"
 dependencies = [
     "pyqt6==6.12.0",
     "pydantic==2.14.1",
@@ -21,7 +21,7 @@ dependencies = [
     "watchdog==6.0.0",
     "pycaw==20260927",
     "pillow==13.0.0",
-    "comtypes==1.4.17",
+    "comtypes==1.5.0",
     "python-dotenv==1.2.4",
     "tzdata==2026.5",
     "winrt.windows.foundation==4!10.0.28000.2705",
@@ -45,6 +45,7 @@ dependencies = [
     "winrt.windows.devices.enumeration==4!10.0.28000.2705",
     "winrt.windows.devices.radios==4!10.0.28000.2705",
     "winrt.windows.devices.wifi==4!10.0.28000.2705",
+    "winrt.windows.security.authorization.appcapabilityaccess==4!10.0.28000.2705",
     "winrt.windows.security.credentials==4!10.0.28000.2705",
     "winrt.windows.ui.viewmanagement==4!10.0.28000.2705",
     "winrt.windows.ui.composition==4!10.0.28000.2705.1",
@@ -72,10 +73,10 @@ dev = [
     "types-pillow==10.2.0.20240822",
 ]
 test = [
-    "pytest==9.1.1",
+    "pytest==9.2.0",
 ]
 packaging = [
-    "cx-freeze==8.6.4"
+    "cx-freeze==8.7.4"
 ]
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -100,7 +101,7 @@ markers = [
 
 [tool.ruff]
 line-length = 120
-target-version = "py314"
+target-version = "py315"
 extend-exclude = [
     "__pycache__",
     ".github",
@@ -130,7 +131,7 @@ line-ending               = "cr-lf"
 include = ["."]
 exclude = ["**/__pycache__", "src/build", "src/dist"]
 extraPaths = ["src"]
-pythonVersion = "3.14"
+pythonVersion = "3.15"
 pythonPlatform = "Windows"
 typeCheckingMode = "strict"
 reportMissingImports = true

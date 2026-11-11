@@ -306,9 +306,16 @@ Window {
         previewAnimation.restart()
     }
 
-    onWindowsChanged: {
+    // Hides the previews once their app has no windows left, unless one came back meanwhile
+    function dismissIfEmpty() {
         if (visible && windows.length === 0)
-            Qt.callLater(() => { if (visible && windows.length === 0) previewWindow.dismiss() })
+            dismiss()
+    }
+
+    onWindowsChanged: {
+        // Qt drops the call if the preview is destroyed first, as when the bar closes
+        if (visible && windows.length === 0)
+            Qt.callLater(previewWindow.dismissIfEmpty)
     }
 
     transientParent: null

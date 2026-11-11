@@ -24,6 +24,8 @@ from core.services.language.keyboard import KeyboardLanguage
 from core.services.media.now_playing import NowPlaying
 from core.services.memory.monitor import MemoryMonitor
 from core.services.microphone.input import AudioInput
+from core.services.network.connections import NetworkConnections
+from core.services.network.wifi import WifiNetworkList, WifiNetworks
 from core.services.network_traffic.monitor import NetworkTrafficMonitor
 from core.services.notifications.center import NotificationCenter
 from core.services.obs.studio import ObsStudio
@@ -43,7 +45,6 @@ from core.services.volume.output import AudioOutput
 from core.services.wallpapers.library import WallpaperLibrary
 from core.services.wallpapers.thumbnails import WallpaperThumbnail
 from core.services.weather.forecast import WeatherForecast
-from core.services.wifi.monitor import NetworkList, WifiMonitor
 from core.services.windows_desktops.desktops import VirtualDesktops
 from core.utils.environment import Environment
 from core.utils.hotkey import Hotkey
@@ -78,7 +79,8 @@ QML_TYPES: tuple[type[QObject], ...] = (
     BatteryMonitor,
     BluetoothMonitor,
     DisplayBrightness,
-    WifiMonitor,
+    NetworkConnections,
+    WifiNetworks,
     WeatherForecast,
     AvailableUpdates,
     TaskbarApps,
@@ -100,7 +102,7 @@ QML_UNCREATABLE_TYPES: tuple[type[QObject], ...] = (
     DeviceList,
     DisplayList,
     IconList,
-    NetworkList,
+    WifiNetworkList,
     ResultModel,
 )
 

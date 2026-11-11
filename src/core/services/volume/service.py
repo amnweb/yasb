@@ -1,9 +1,10 @@
 import logging
 import threading
 from collections.abc import Callable
+from ctypes import COMError
 from typing import Any, Protocol, TypedDict
 
-from comtypes import CLSCTX_ALL, GUID, COMError  # pyright: ignore[reportMissingTypeStubs]
+from comtypes import CLSCTX_ALL, GUID
 from pycaw.api.audioclient import ISimpleAudioVolume
 from pycaw.api.audiopolicy import IAudioSessionControl2, IAudioSessionManager2
 from pycaw.api.endpointvolume import IAudioEndpointVolume

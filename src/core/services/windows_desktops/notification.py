@@ -19,7 +19,7 @@ from ctypes import c_void_p, cast
 from enum import Enum, auto
 from typing import Any
 
-import comtypes  # pyright: ignore[reportMissingTypeStubs]
+import comtypes
 
 from core.services.windows_desktops.com import VirtualDesktopApi, get_api
 from core.services.windows_desktops.interfaces import (

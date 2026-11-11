@@ -1,10 +1,9 @@
 import ctypes
 import logging
 import threading
-from ctypes import Array, byref, c_byte, c_char, wintypes
+from ctypes import Array, COMError, byref, c_byte, c_char, wintypes
 from typing import NamedTuple, NotRequired, TypedDict
 
-from comtypes import COMError  # pyright: ignore[reportMissingTypeStubs]
 from PyQt6.QtCore import QCoreApplication, QObject, QThread, pyqtSignal
 
 from core.utils.win32.bindings.adl import (

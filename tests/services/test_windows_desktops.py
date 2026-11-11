@@ -1,10 +1,11 @@
 # pyright: reportPrivateUsage=false
 
+from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
 from PyQt6 import sip
-from PyQt6.QtCore import Q_ARG, QMetaObject, QObject, QPointF, QUrl, pyqtSignal
+from PyQt6.QtCore import Q_ARG, QCoreApplication, QEvent, QMetaObject, QObject, QPointF, QUrl, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtQml import QQmlComponent, QQmlEngine, QQmlError
 from PyQt6.QtQuick import QQuickItem, QQuickWindow
@@ -85,12 +86,29 @@ def service(qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch) -> FakeDeskt
     return service
 
 
+@pytest.fixture
+def make_desktops(service: FakeDesktopService) -> Iterator[Callable[[], VirtualDesktops]]:
+    """Creates a VirtualDesktops when called, after a test has set up the service, and deletes it when the test ends:
+    a Qt object without a parent is deleted by whoever created it, on its own thread. Left to Python, the garbage
+    collector can delete it from whichever thread it runs on."""
+    made: list[VirtualDesktops] = []
+
+    def create() -> VirtualDesktops:
+        desktops = VirtualDesktops()
+        made.append(desktops)
+        return desktops
+
+    yield create
+    for desktops in made:
+        sip.delete(desktops)
+
+
 def actions(service: FakeDesktopService) -> list[tuple[Any, ...]]:
     return [call for call in service.calls if call[0] != "refresh"]
 
 
-def test_desktops_current_and_populated_come_from_the_service(service: FakeDesktopService):
-    desktops = VirtualDesktops()
+def test_desktops_current_and_populated_come_from_the_service(make_desktops: Callable[[], VirtualDesktops]):
+    desktops = make_desktops()
     assert desktops.property("current") == 1
     assert [(d["number"], d["name"], d["populated"]) for d in desktops.property("desktops")] == [
         (1, "", False),
@@ -99,8 +117,10 @@ def test_desktops_current_and_populated_come_from_the_service(service: FakeDeskt
     ]
 
 
-def test_a_change_is_announced_only_when_something_changed(service: FakeDesktopService):
-    desktops = VirtualDesktops()
+def test_a_change_is_announced_only_when_something_changed(
+    service: FakeDesktopService, make_desktops: Callable[[], VirtualDesktops]
+):
+    desktops = make_desktops()
     announced: list[bool] = []
     desktops.desktopsChanged.connect(lambda: announced.append(True))
     service.changed()
@@ -112,16 +132,20 @@ def test_a_change_is_announced_only_when_something_changed(service: FakeDesktopS
     assert len(announced) == 2 and desktops.property("current") == 3
 
 
-def test_switching_steps_and_wraps_and_skips_missing_desktops(service: FakeDesktopService):
-    desktops = VirtualDesktops()
+def test_switching_steps_and_wraps_and_skips_missing_desktops(
+    service: FakeDesktopService, make_desktops: Callable[[], VirtualDesktops]
+):
+    desktops = make_desktops()
     desktops.step(-1)
     desktops.step(1)
     desktops.switchTo(9)
     assert actions(service) == [("switch_desktop", 3), ("switch_desktop", 2)]
 
 
-def test_edits_reach_the_service_and_refresh_it(service: FakeDesktopService):
-    desktops = VirtualDesktops()
+def test_edits_reach_the_service_and_refresh_it(
+    service: FakeDesktopService, make_desktops: Callable[[], VirtualDesktops]
+):
+    desktops = make_desktops()
     desktops.rename(2, "  Games ")
     desktops.remove(0)
     desktops.create()
@@ -135,16 +159,20 @@ def test_edits_reach_the_service_and_refresh_it(service: FakeDesktopService):
     ]
 
 
-def test_a_failing_shell_call_is_logged_not_raised(service: FakeDesktopService, monkeypatch: pytest.MonkeyPatch):
+def test_a_failing_shell_call_is_logged_not_raised(
+    service: FakeDesktopService, make_desktops: Callable[[], VirtualDesktops], monkeypatch: pytest.MonkeyPatch
+):
     def fail(*_: object) -> None:
         raise VirtualDesktopError("no desktop")
 
     monkeypatch.setattr(service, "switch_desktop", fail, raising=False)
-    VirtualDesktops().switchTo(2)
+    make_desktops().switchTo(2)
 
 
-def test_menus_act_on_the_window_in_front_when_they_opened(service: FakeDesktopService):
-    desktops = VirtualDesktops()
+def test_menus_act_on_the_window_in_front_when_they_opened(
+    service: FakeDesktopService, make_desktops: Callable[[], VirtualDesktops]
+):
+    desktops = make_desktops()
     desktops.moveWindowTo(2)
     assert actions(service) == []
     desktops.readForeground()
@@ -161,8 +189,10 @@ def test_menus_act_on_the_window_in_front_when_they_opened(service: FakeDesktopS
     assert actions(service) == [("move_window", 11, 3), ("toggle_pin_window", 11), ("move_window", 22, 1)]
 
 
-def test_a_window_is_not_moved_to_a_missing_desktop(service: FakeDesktopService):
-    VirtualDesktops().moveFrontWindowTo(9)
+def test_a_window_is_not_moved_to_a_missing_desktop(
+    service: FakeDesktopService, make_desktops: Callable[[], VirtualDesktops]
+):
+    make_desktops().moveFrontWindowTo(9)
     assert actions(service) == []
 
 
@@ -183,10 +213,13 @@ def test_renaming_by_number_opens_the_dialog_for_that_desktop(service: FakeDeskt
     QMetaObject.invokeMethod(rename, "close")
     assert actions(service) == []
     sip.delete(widget)
+    # QML deletes the widget's own objects with deleteLater: run those deletions now, while their engine exists
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    sip.delete(engine)
 
 
-def test_wallpapers_take_a_file_url(service: FakeDesktopService):
-    desktops = VirtualDesktops()
+def test_wallpapers_take_a_file_url(service: FakeDesktopService, make_desktops: Callable[[], VirtualDesktops]):
+    desktops = make_desktops()
     desktops.setWallpaper(2, QUrl.fromLocalFile("C:/images/sky.png"))
     desktops.setWallpaperAll(QUrl.fromLocalFile("C:/images/sea.png"))
     assert actions(service) == [("set_wallpaper", 2, "C:/images/sky.png"), ("set_wallpaper_all", "C:/images/sea.png")]
@@ -242,6 +275,9 @@ def test_the_widget_labels_desktops_and_runs_actions_and_hotkeys(service: FakeDe
     assert not warnings
     sip.delete(widget)
     sip.delete(window)
+    # QML deletes the widget's own objects with deleteLater: run those deletions now, while their engine exists
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    sip.delete(engine)
 
 
 @pytest.mark.parametrize("window_in_front", [True, False], ids=["window", "no-window"])
@@ -288,6 +324,9 @@ def test_the_menu_opens_and_closes_without_errors(service: FakeDesktopService, w
     assert not warnings
     sip.delete(widget)
     sip.delete(host)
+    # QML deletes the widget's own objects with deleteLater: run those deletions now, while their engine exists
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    sip.delete(engine)
 
 
 def test_the_garbage_collector_leaves_the_open_menu_alone(service: FakeDesktopService):
@@ -310,3 +349,6 @@ def test_the_garbage_collector_leaves_the_open_menu_alone(service: FakeDesktopSe
     menu.close()
     sip.delete(widget)
     sip.delete(host)
+    # QML deletes the widget's own objects with deleteLater: run those deletions now, while their engine exists
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    sip.delete(engine)

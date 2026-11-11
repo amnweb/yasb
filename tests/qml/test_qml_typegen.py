@@ -23,7 +23,7 @@ class Fixture(HiddenBase):
 
     changed = pyqtSignal(int, arguments=["value"])  # pyright: ignore[reportCallIssue]
 
-    def __init__(self, _parent: QObject | None = None) -> None:  # pyright: ignore[reportMissingSuperCall]
+    def __init__(self, _parent: QObject | None = None) -> None:
         raise AssertionError("Generation must not instantiate exported types")
 
     @pyqtProperty(int, notify=changed)

@@ -18,7 +18,7 @@ _IGNORE_NEW = 2
 
 
 def _scheduler() -> Any:
-    import comtypes.client  # pyright: ignore[reportMissingTypeStubs]
+    import comtypes.client
 
     scheduler: Any = comtypes.client.CreateObject("Schedule.Service", dynamic=True)
     scheduler.Connect()

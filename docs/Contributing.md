@@ -6,7 +6,7 @@ Thank you for your interest in contributing to YASB! This guide will help you ge
 
 ### Prerequisites
 
-- Python 3.14 or higher
+- Python 3.15 or higher
 - Git
 - A Windows development environment (YASB is Windows-only)
 

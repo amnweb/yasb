@@ -1,12 +1,11 @@
 """Core Audio COM interfaces (audioclient.h, devicetopology.h, ks.h)"""
 
-from ctypes import POINTER, c_ubyte, c_uint32, c_uint64, c_ulong, c_void_p, c_wchar_p
+from ctypes import HRESULT, POINTER, c_ubyte, c_uint32, c_uint64, c_ulong, c_void_p, c_wchar_p
 from typing import TYPE_CHECKING, Any
 
-from comtypes import (  # pyright: ignore[reportMissingTypeStubs]
-    COMMETHOD,  # pyright: ignore[reportUnknownVariableType]
+from comtypes import (
+    COMMETHOD,
     GUID,
-    HRESULT,
     IUnknown,
 )
 

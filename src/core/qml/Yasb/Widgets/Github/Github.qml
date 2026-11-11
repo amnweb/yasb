@@ -394,11 +394,17 @@ Item {
                 delegate: Item {
                     id: row
                     required property var modelData
+                    // Closes the popup first: opening an unread notification marks it read, which replaces the list
+                    // and destroys this row
+                    function open() {
+                        popup.close()
+                        monitor.openNotification(modelData.id)
+                    }
                     width: list.width
                     height: detailsText.y + detailsText.height + 10
                     Accessible.role: Accessible.Button
                     Accessible.name: `${modelData.statusLabel}: ${modelData.title}`
-                    Accessible.onPressAction: { monitor.openNotification(modelData.id); popup.close() }
+                    Accessible.onPressAction: open()
                     Rectangle {
                         anchors.fill: parent
                         radius: 6
@@ -451,7 +457,7 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: { monitor.openNotification(row.modelData.id); popup.close() }
+                        onClicked: row.open()
                     }
                 }
             }

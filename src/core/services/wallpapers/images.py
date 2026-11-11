@@ -2,7 +2,7 @@ import logging
 import os
 from functools import cmp_to_key
 
-import comtypes.client  # pyright: ignore[reportMissingTypeStubs]
+import comtypes.client
 from PyQt6.QtCore import QObject, QRunnable, pyqtSignal
 
 from core.services.wallpapers import thumbnails

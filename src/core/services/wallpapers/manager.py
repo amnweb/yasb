@@ -3,7 +3,7 @@ import os
 from functools import partial
 from typing import Any
 
-import comtypes.client  # pyright: ignore[reportMissingTypeStubs]
+import comtypes.client
 
 from core.services.wallpapers.engine import WallpaperEngine
 from core.utils.win32.bindings.ole32 import CoInitialize

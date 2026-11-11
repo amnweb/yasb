@@ -49,7 +49,7 @@ choco install yasb
 ***
 
 ## Using Python
-- Install Python >= 3.14
+- Install Python >= 3.15
 - Install the application and its dependencies:
   - `pip install .` (for regular installation)
   - `pip install -e .[dev]` (for development installation)
@@ -104,4 +104,4 @@ Here is what the wizard handles for you:
 Once you finish, the wizard creates a default `config.yaml` and `styles.css` in your configuration folder and starts the bar.
 
 > [!TIP]
-> If you ever want to run the Setup Wizard again to build a fresh configuration, you can delete `config.yaml` and `styles.css` from your configuration folder, or open your terminal and run `yasbc reset`.
+> If you ever want to run the Setup Wizard again to build a fresh configuration, you can delete `config.yaml` and `styles.css` from your configuration folder, or open your terminal and run `yasbc reset`.

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
+from PyQt6 import sip
 from PyQt6.QtGui import QColor, QGuiApplication
 from PyQt6.QtQml import QQmlEngine
 from watchdog.events import FileModifiedEvent, FileMovedEvent
@@ -62,6 +63,8 @@ def make_manager(qapp: QGuiApplication, fake_app_bar: None) -> Iterator[MakeMana
     yield make
     for manager in managers:
         manager.close_bars()
+    # Deleted here, after the bars' items it created; left to Python, the garbage collector can delete it on any thread
+    sip.delete(engine)
 
 
 def _widget(folder: Path, name: str, text: str) -> Path:
