@@ -69,6 +69,8 @@ class Win32AppBar:
     ):
         self.app_bar_data: APPBARDATA | None = None
         self.callback_message = APPBAR_CALLBACK_MESSAGE
+        # The space last asked for as (left, top, right, bottom), None while the bar reserves none
+        self._wanted: tuple[int, int, int, int] | None = None
 
     def create_appbar(
         self,
@@ -81,6 +83,7 @@ class Win32AppBar:
         reserve_space: bool = True,
         always_on_top: bool = False,
     ):
+        self._wanted = None
         self.app_bar_data = APPBARDATA()
         self.app_bar_data.cbSize = sizeof(self.app_bar_data)
         self.app_bar_data.uEdge = edge
@@ -148,7 +151,22 @@ class Win32AppBar:
         self._send(AppBarMessage.QueryPos)
 
     def set_position(self):
+        data = self.app_bar_data
+        if data is None:
+            return
+        self._wanted = (data.rc.left, data.rc.top, data.rc.right, data.rc.bottom)
+        # Shell writes allocated rect into `rc`, subtracting overlapping appbars on the same edge (can be empty).
         self._send(AppBarMessage.SetPos)
 
+    def reclaim(self) -> bool:
+        """Request released appbar screen space from the shell, returning True if the query was sent."""
+        data, wanted = self.app_bar_data, self._wanted
+        if data is None or wanted is None or (data.rc.left, data.rc.top, data.rc.right, data.rc.bottom) == wanted:
+            return False
+        data.rc.left, data.rc.top, data.rc.right, data.rc.bottom = wanted
+        self._send(AppBarMessage.SetPos)
+        return True
+
     def remove_appbar(self):
+        self._wanted = None
         self._send(AppBarMessage.Remove)

@@ -2,7 +2,7 @@ import logging
 from contextlib import suppress
 from pathlib import Path
 
-from PyQt6.QtCore import QCoreApplication, QEvent, QObject, QTimer, QUrl, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QCoreApplication, QEvent, QObject, QRect, QTimer, QUrl, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QGuiApplication, QScreen
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 
@@ -13,9 +13,12 @@ from core.bar.hotkeys import WidgetHotkeys
 from core.bar.revisions import Revisions, path_key
 from core.bar.window import BAR_QML, BarWindow
 from core.config import get_config
+from core.utils.win32.utils import display_monitors
 from core.validation.config import YasbConfig
 
 QML_RELOAD_DELAY_MS = 200
+# Lets the screens settle after they wake up
+MONITOR_CHECK_DELAY_MS = 500
 
 
 class BarManager(QObject):
@@ -46,7 +49,23 @@ class BarManager(QObject):
         self._app.screenRemoved.connect(self.on_screens_update)
         self.config_modified.connect(self.on_config_modified)
 
+        # Qt keeps a QScreen per display device, so when Windows hands the devices to other monitors,
+        # QScreens only change geometry and keep the old monitor name
+        self._monitors = display_monitors()
+        self._monitor_timer = QTimer(self)
+        self._monitor_timer.setSingleShot(True)
+        self._monitor_timer.setInterval(MONITOR_CHECK_DELAY_MS)
+        self._monitor_timer.timeout.connect(self._check_monitors)
+        self._screens = self._app.screens()
+        for screen in self._screens:
+            screen.geometryChanged.connect(self._on_screen_geometry_changed)
+
     def _disconnect_reload_signals(self) -> None:
+        self._monitor_timer.stop()
+        for screen in self._screens:
+            with suppress(TypeError, RuntimeError):
+                screen.geometryChanged.disconnect(self._on_screen_geometry_changed)
+        self._screens = []
         with suppress(TypeError):
             self._app.screenAdded.disconnect(self.on_screens_update)
             self._app.screenRemoved.disconnect(self.on_screens_update)
@@ -74,6 +93,24 @@ class BarManager(QObject):
         logging.info("Screens updated. Re-initialising all bars.")
         self._disconnect_reload_signals()
         reload_application("Reloading Application because of screen update.")
+
+    @pyqtSlot(QRect)
+    def _on_screen_geometry_changed(self, _geometry: QRect) -> None:
+        self._monitor_timer.start()
+
+    @staticmethod
+    def _moved_monitors(before: dict[str, str], after: dict[str, str]) -> set[str]:
+        """Track active display devices, omitting any newly connected or disconnected monitors."""
+        devices = {monitor: device for device, monitor in after.items()}
+        return {monitor for device, monitor in before.items() if devices.get(monitor, device) != device}
+
+    def _check_monitors(self) -> None:
+        moved = self._moved_monitors(self._monitors, display_monitors())
+        if not moved:
+            return
+        logging.info("Monitors changed display devices, re-initialising all bars: %s", ", ".join(sorted(moved)))
+        self._disconnect_reload_signals()
+        reload_application("Reloading Application because monitors changed display devices.")
 
     @pyqtSlot(str)
     def _on_qml_changed(self, path: str) -> None:

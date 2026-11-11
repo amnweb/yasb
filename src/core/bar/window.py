@@ -415,6 +415,12 @@ class BarWindow(QQuickWindow):
     def remove_app_bar(self) -> None:
         self._app_bar.remove_appbar()
 
+    def reclaim_app_bar(self) -> None:
+        if self._app_bar.reclaim():
+            logging.info(
+                "Bar %s on %s reserved less space than it needs, asking again", self.name, self.target_screen.name()
+            )
+
     def show_bar(self) -> None:
         self._animation.show_bar()
 
