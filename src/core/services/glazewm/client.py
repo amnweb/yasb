@@ -10,6 +10,11 @@ from PyQt6.QtWebSockets import QWebSocket
 
 logger = logging.getLogger("glazewm_client")
 
+# QWebSocket has no handshake timeout, so an attempt GlazeWM never answers would stay connecting forever
+CONNECT_TIMEOUT_MS = 10_000
+# GlazeWM sends several events for one change, and each would ask for the whole state again
+QUERY_DELAY_MS = 16
+
 
 @dataclass
 class Window:
@@ -76,8 +81,15 @@ class GlazewmClient(QObject):
     ):
         super().__init__(parent)
         self.initial_messages = initial_messages if initial_messages else []
+        # GlazeWM's latest answers, None until it answers and again once the connection drops
+        self.monitors: list[Monitor] | None = None
+        self.tiling_direction: TilingDirection | None = None
+        self.binding_mode: BindingMode | None = None
 
         self._uri = QUrl(uri)
+        # GlazeWM listens on 127.0.0.1 only, and Windows takes 2 s to refuse ::1, which localhost tries first
+        if self._uri.host() == "localhost":
+            self._uri.setHost("127.0.0.1")
         self._closed = False
         self._websocket = QWebSocket(parent=self)
         self._websocket.connected.connect(self._on_connected)
@@ -88,6 +100,20 @@ class GlazewmClient(QObject):
         self._reconnect_timer = QTimer(self)
         self._reconnect_timer.setInterval(reconnect_interval)
         self._reconnect_timer.timeout.connect(self.connect)
+
+        self._connect_timer = QTimer(self)
+        self._connect_timer.setSingleShot(True)
+        self._connect_timer.setInterval(CONNECT_TIMEOUT_MS)
+        self._connect_timer.timeout.connect(self._on_connect_timeout)
+
+        self._query_timer = QTimer(self)
+        self._query_timer.setSingleShot(True)
+        self._query_timer.setInterval(QUERY_DELAY_MS)
+        self._query_timer.timeout.connect(self._query)
+
+    @property
+    def connected(self) -> bool:
+        return self._websocket.state() == QAbstractSocket.SocketState.ConnectedState
 
     def activate_workspace(self, workspace_name: str):
         self._websocket.sendTextMessage(f"command focus --workspace {workspace_name}")
@@ -118,12 +144,25 @@ class GlazewmClient(QObject):
             return
         self._closed = False
         logger.debug("Connecting to %s", self._uri.toString())
+        # Started first, so an open() that fails at once stops it again
+        self._connect_timer.start()
         self._websocket.open(self._uri)
 
     def close(self) -> None:
         self._closed = True
         self._reconnect_timer.stop()
+        self._connect_timer.stop()
+        self._query_timer.stop()
         self._websocket.abort()
+
+    def _on_connect_timeout(self) -> None:
+        logger.debug("No answer from %s, connecting again", self._uri.toString())
+        self._websocket.abort()
+
+    def _query(self) -> None:
+        for message in self.initial_messages:
+            if message in QueryType:
+                self._websocket.sendTextMessage(message)
 
     def _on_connected(self) -> None:
         logger.debug("Connected to %s", self._uri.toString())
@@ -136,7 +175,15 @@ class GlazewmClient(QObject):
 
     def _on_state_changed(self, state: QAbstractSocket.SocketState):
         logger.debug("WebSocket state changed: %s", state)
-        self.glazewm_connection_status.emit(state == QAbstractSocket.SocketState.ConnectedState)
+        connected = state == QAbstractSocket.SocketState.ConnectedState
+        if connected or state == QAbstractSocket.SocketState.UnconnectedState:
+            self._connect_timer.stop()
+        if not connected:
+            self._query_timer.stop()
+            self.monitors = None
+            self.tiling_direction = None
+            self.binding_mode = None
+        self.glazewm_connection_status.emit(connected)
         if state == QAbstractSocket.SocketState.UnconnectedState and not self._closed:
             self._reconnect_timer.start()
 
@@ -158,9 +205,8 @@ class GlazewmClient(QObject):
         response = cast(dict[str, Any], response)
 
         if response.get("messageType") == MessageType.EVENT_SUBSCRIPTION:
-            for message in self.initial_messages:
-                if message in QueryType:
-                    self._websocket.sendTextMessage(message)
+            if not self._query_timer.isActive():
+                self._query_timer.start()
         elif response.get("messageType") == MessageType.CLIENT_RESPONSE:
             if response.get("success") is False:
                 logger.warning("GlazeWM request failed: %s", response.get("error"))
@@ -175,20 +221,23 @@ class GlazewmClient(QObject):
                 if not isinstance(monitors, list):
                     logger.warning("Expected 'monitors' to be a list")
                     return
-                self.workspaces_data_processed.emit(self._process_workspaces(cast(list[dict[str, Any]], monitors)))
+                self.monitors = self._process_workspaces(cast(list[dict[str, Any]], monitors))
+                self.workspaces_data_processed.emit(self.monitors)
             elif response.get("clientMessage") == QueryType.TILING_DIRECTION:
                 try:
                     tiling_direction = TilingDirection(data.get("tilingDirection", TilingDirection.HORIZONTAL))
                 except ValueError:
                     logger.warning("Unknown tiling direction: %s", data.get("tilingDirection"))
                     return
+                self.tiling_direction = tiling_direction
                 self.tiling_direction_processed.emit(tiling_direction)
             elif response.get("clientMessage") == QueryType.BINDING_MODES:
                 binding_modes = data.get("bindingModes", [])
                 if not isinstance(binding_modes, list):
                     logger.warning("Expected 'bindingModes' to be a list, got %s", type(binding_modes).__name__)
                     return
-                self.binding_mode_changed.emit(self._process_binding_modes(cast(list[dict[str, Any]], binding_modes)))
+                self.binding_mode = self._process_binding_modes(cast(list[dict[str, Any]], binding_modes))
+                self.binding_mode_changed.emit(self.binding_mode)
 
     def _process_workspaces(self, data: list[dict[str, Any]]) -> list[Monitor]:
         monitors: list[Monitor] = []

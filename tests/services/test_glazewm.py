@@ -5,11 +5,12 @@ from typing import Any
 import pytest
 from PyQt6.QtCore import QByteArray, QObject, QUrl
 from PyQt6.QtGui import QGuiApplication
-from PyQt6.QtNetwork import QHostAddress
+from PyQt6.QtNetwork import QAbstractSocket, QHostAddress, QTcpServer, QTcpSocket
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 from PyQt6.QtWebSockets import QWebSocket, QWebSocketServer
 
 from core.qml_types import register_qml_types
+from core.services.glazewm import client as glazewm_client
 from core.services.glazewm.binding_mode import GlazewmBindingModes
 from core.services.glazewm.client import GlazewmClient
 from core.services.glazewm.connection import GlazewmConnection
@@ -39,6 +40,7 @@ class FakeGlazewm(QObject):
         self.server.newConnection.connect(self._accept)
         self.clients: list[QWebSocket] = []
         self.commands: list[str] = []
+        self.queries: list[str] = []
         self.answers: dict[str, Any] = {}
 
     def _accept(self) -> None:
@@ -58,6 +60,7 @@ class FakeGlazewm(QObject):
         elif text.startswith("sub "):
             data = {"subscriptionId": "subscription"}
         else:
+            self.queries.append(text)
             data = self.answers.get(text, {})
         response = {"messageType": "client_response", "clientMessage": text, "data": data, "success": True}
         client.sendTextMessage(json.dumps(response))
@@ -84,6 +87,93 @@ def connected[T: GlazewmConnection](model: T, server: FakeGlazewm) -> T:
     model.setProperty("serverUri", server.uri)
     until(lambda: model.property("connected"))
     return model
+
+
+ONE_WORKSPACE: dict[str, Any] = {
+    "monitors": [
+        {
+            "hardwareId": "screen",
+            "handle": 1,
+            "children": [{"type": "workspace", "name": "1", "hasFocus": True, "children": []}],
+        }
+    ]
+}
+
+
+def workspace_list() -> GlazewmWorkspaceList:
+    model = GlazewmWorkspaceList()
+    model.setProperty("monitorExclusive", False)
+    return model
+
+
+def test_models_of_a_kind_share_one_connection(glazewm: FakeGlazewm):
+    first = connected(GlazewmTiling(), glazewm)
+    second = connected(GlazewmTiling(), glazewm)
+    assert first.property("connected") and second.property("connected")
+    assert len(glazewm.clients) == 1
+
+
+def test_a_reloaded_widget_starts_with_the_connection_and_data(glazewm: FakeGlazewm):
+    # A bar reload makes the new widget before it deletes the old one
+    glazewm.answers["query monitors"] = ONE_WORKSPACE
+    old = connected(workspace_list(), glazewm)
+    until(lambda: old.property("workspaces"))
+
+    asked = len(glazewm.queries)
+    new = workspace_list()
+    new.setProperty("serverUri", glazewm.uri)
+    until(lambda: new.property("connected"))
+    assert [workspace["name"] for workspace in new.property("workspaces")] == ["1"]
+    assert len(glazewm.queries) == asked
+
+    old.deleteLater()
+    wait(50)
+    assert new.property("connected")
+    assert len(glazewm.clients) == 1
+    assert glazewm.clients[0].state() == QAbstractSocket.SocketState.ConnectedState
+
+
+def test_the_connection_closes_with_its_last_model(glazewm: FakeGlazewm):
+    model = connected(GlazewmTiling(), glazewm)
+    model.deleteLater()
+    until(lambda: glazewm.clients[0].state() == QAbstractSocket.SocketState.UnconnectedState)
+
+
+def test_localhost_connects_over_ipv4(glazewm: FakeGlazewm):
+    # Through ::1 first, Windows takes 2 s to refuse before trying 127.0.0.1, where GlazeWM listens
+    model = GlazewmTiling()
+    model.setProperty("serverUri", glazewm.uri.replace("127.0.0.1", "localhost"))
+    until(lambda: model.property("connected"), timeout_ms=1000)
+
+
+def test_an_unanswered_handshake_is_tried_again(qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch):
+    server = QTcpServer()
+    assert server.listen(QHostAddress(QHostAddress.SpecialAddress.LocalHost), 0)
+    accepted: list[QTcpSocket] = []
+
+    def accept() -> None:
+        while (socket := server.nextPendingConnection()) is not None:
+            accepted.append(socket)
+
+    server.newConnection.connect(accept)
+    monkeypatch.setattr(glazewm_client, "CONNECT_TIMEOUT_MS", 100)
+    client = GlazewmClient(f"ws://127.0.0.1:{server.serverPort()}", reconnect_interval=50)
+    client.connect()
+    until(lambda: len(accepted) >= 2)
+    assert not client.connected
+    client.close()
+    server.close()
+
+
+def test_a_burst_of_events_asks_once(glazewm: FakeGlazewm):
+    glazewm.answers["query monitors"] = ONE_WORKSPACE
+    model = connected(workspace_list(), glazewm)
+    until(lambda: model.property("workspaces"))
+    asked = len(glazewm.queries)
+    for event in ("workspace_deactivated", "workspace_activated", "focus_changed"):
+        glazewm.send_event(event)
+    wait(200)
+    assert glazewm.queries[asked:] == ["query monitors"]
 
 
 def test_tiling_direction_follows_glazewm(glazewm: FakeGlazewm):

@@ -54,7 +54,7 @@ class GlazewmWorkspaceList(GlazewmConnection):
         }
         self._monitors: list[Monitor] = []
         self._workspaces: list[dict[str, Any]] = []
-        IconService.instance().icons_changed.connect(self._publish)
+        IconService.instance().icons_changed.connect(self._on_icons_changed)
 
     def setting(self, name: str) -> Any:
         return self._settings[name]
@@ -72,6 +72,8 @@ class GlazewmWorkspaceList(GlazewmConnection):
 
     def _bind(self, client: GlazewmClient) -> None:
         client.workspaces_data_processed.connect(self._on_data)
+        if client.monitors is not None:
+            self._on_data(client.monitors)
 
     def _unbind(self, client: GlazewmClient) -> None:
         client.workspaces_data_processed.disconnect(self._on_data)
@@ -83,6 +85,11 @@ class GlazewmWorkspaceList(GlazewmConnection):
     @pyqtSlot(list)
     def _on_data(self, monitors: list[Monitor]) -> None:
         self._monitors = monitors
+        self._publish()
+
+    # A slot, so the connection to IconService goes away with the model
+    @pyqtSlot()
+    def _on_icons_changed(self) -> None:
         self._publish()
 
     def _publish(self) -> None:

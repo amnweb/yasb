@@ -24,6 +24,8 @@ class GlazewmTiling(GlazewmConnection):
 
     def _bind(self, client: GlazewmClient) -> None:
         client.tiling_direction_processed.connect(self._on_direction)
+        if client.tiling_direction is not None:
+            self._on_direction(client.tiling_direction)
 
     def _unbind(self, client: GlazewmClient) -> None:
         client.tiling_direction_processed.disconnect(self._on_direction)
