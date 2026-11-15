@@ -1,44 +1,73 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
     id: volume
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // Percentage points per wheel step
     property int scrollStep: 2
     property bool invertWheel: false
     // Windows' default sound when a slider is let go, to hear the new level
     property bool beepOnRelease: true
-    property int popupWidth: 340
+    property int popupWidth: 324
     // The speaker on the bar, drawn in iconFont and the text colour
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
     // Volumes of the apps playing, under the master slider; appsExpanded opens them with the popup
     property bool showApps: true
     property bool appsExpanded: false
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
-    property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property color foreground: dark ? "#ebebeb" : "#1f1f1f"
-    readonly property string edge: bar?.edge ?? "top"
-    readonly property color accent: dark ? "#60cdff" : "#005fb8"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // Each device's glyph, the mark on the device in use, and the arrow of the settings link
+    property int deviceIconSize: 14
+    property int checkIconSize: 12
+    property int footerIconSize: 10
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property color popupTextColor: theme.colors.text
+    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+    property color popupDividerColor: theme.colors.divider
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    property color popupTertiaryTextColor: theme.colors.textTertiary
+    property color popupHoverColor: theme.colors.hover
+    property color popupSelectedColor: theme.colors.selected
+    property color popupCardColor: theme.colors.card
+    property color popupCardBorderColor: theme.colors.cardBorder
+    // Text and accent in the popup
+    property color accentColor: theme.colors.accent
+    readonly property string edge: bar.edge
 
     function icon(level: int, muted: bool): string {
         return muted ? "\ue74f" : level === 0 ? "\ue992" : level < 34 ? "\ue993" : level < 67 ? "\ue994" : "\ue995"
@@ -46,10 +75,11 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + 6
-            : edge === "right" ? start.x - popup.width - 6 : start.x + (width - popup.width) / 2
-        let py = edge === "top" ? start.y + height + 6
-            : edge === "bottom" ? start.y - popup.height - 6 : start.y + (height - popup.height) / 2
+        const gap = popupGap
+        let px = edge === "left" ? start.x + width + gap
+            : edge === "right" ? start.x - popup.width - gap : start.x + (width - popup.width) / 2
+        let py = edge === "top" ? start.y + height + gap
+            : edge === "bottom" ? start.y - popup.height - gap : start.y + (height - popup.height) / 2
         const screen = volume.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - popup.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - popup.height - 8))
@@ -103,6 +133,7 @@ Item {
             color: volume.textColor
             font.family: volume.iconFont.family
             font.weight: volume.iconFont.weight
+            font.variableAxes: volume.iconFont.variableAxes
             font.pixelSize: volume.iconSize
         }
         // Text {
@@ -152,16 +183,17 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 4
-            color: Qt.alpha(volume.foreground, area.containsMouse ? 0.08 : button.checked ? 0.06 : 0)
+            color: area.containsMouse ? volume.popupHoverColor : button.checked ? volume.popupSelectedColor : "transparent"
         }
 
         Text {
             anchors.centerIn: parent
             text: button.glyph
-            color: volume.foreground
+            color: volume.popupTextColor
             opacity: button.checked || area.containsMouse ? 1 : 0.6
             font.family: volume.iconFont.family
             font.weight: volume.iconFont.weight
+            font.variableAxes: volume.iconFont.variableAxes
             font.pixelSize: button.iconSize
         }
 
@@ -180,27 +212,32 @@ Item {
         property bool appsOpen: false
         title: "Volume"
         width: volume.popupWidth
-        height: content.implicitHeight + 16
+        height: popupContent.implicitHeight
         anchor: volume
+        font: volume.popupFont
+        theme: volume.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: volume.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: volume.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: { if (!visible) reveal = 0 }
 
         Rectangle {
             id: surface
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: volume.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: volume.popupRadius
+            color: volume.popupColor
             border.width: 1
-            border.color: volume.dark ? Qt.alpha("#3A3A3A", 1) : Qt.alpha("#D9D9D9", 1)
+            border.color: volume.popupBorderColor
+            // The sliders draw with the palette's accent
+            // Active and inactive only, so disabled controls keep the style's dimmed colours
+            palette.active.accent: volume.accentColor
+            palette.inactive.accent: volume.accentColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: volume.edge === "bottom" ? Item.Bottom : Item.Top
 
             ColumnLayout {
-                id: content
+                id: popupContent
                 width: parent.width
                 spacing: 0
 
@@ -209,7 +246,7 @@ Item {
                     Layout.leftMargin: 16
                     Layout.rightMargin: 10
                     Layout.topMargin: 12
-                    Layout.bottomMargin: 4
+                    Layout.bottomMargin: 10
                     spacing: 2
 
                     Text {
@@ -217,9 +254,8 @@ Item {
                         text: audio.deviceName || "No output device"
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
-                        color: volume.foreground
-                        font.pixelSize: 16
-                        font.weight: Font.Bold
+                        color: volume.popupTextColor
+                        font: volume.popupTitleFont
                     }
                     IconButton {
                         visible: audio.devices.length > 1
@@ -230,6 +266,13 @@ Item {
                         onClicked: popup.devicesOpen = !popup.devicesOpen
                         Accessible.name: popup.devicesOpen ? "Hide output devices" : "Choose output device"
                     }
+                }
+                // The header's bottom line
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 8
+                    implicitHeight: 1
+                    color: volume.popupDividerColor
                 }
 
                 Column {
@@ -250,7 +293,7 @@ Item {
                             width: parent.width
                             height: 34
                             radius: 4
-                            color: Qt.alpha(volume.foreground, modelData.current ? 0.06 : deviceArea.containsMouse ? 0.04 : 0)
+                            color: modelData.current ? volume.popupSelectedColor : deviceArea.containsMouse ? volume.popupHoverColor : "transparent"
                             Accessible.role: Accessible.RadioButton
                             Accessible.name: modelData.name
                             Accessible.checked: modelData.current
@@ -263,11 +306,12 @@ Item {
                                 x: 10
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "\ue7f5"
-                                color: volume.foreground
+                                color: volume.popupTextColor
                                 opacity: device.modelData.current ? 1 : 0.75
                                 font.family: volume.iconFont.family
                                 font.weight: volume.iconFont.weight
-                                font.pixelSize: 14
+                                font.variableAxes: volume.iconFont.variableAxes
+                                font.pixelSize: volume.deviceIconSize
                             }
 
                             Text {
@@ -277,8 +321,8 @@ Item {
                                 text: device.modelData.name
                                 textFormat: Text.PlainText
                                 elide: Text.ElideRight
-                                color: Qt.alpha(volume.foreground, device.modelData.current ? 1 : 0.85)
-                                font.pixelSize: 13
+                                color: device.modelData.current ? volume.popupTextColor : volume.popupSecondaryTextColor
+                                font: volume.popupFont
                             }
 
                             Text {
@@ -287,10 +331,11 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: device.modelData.current
                                 text: "\ue73e"
-                                color: volume.accent
+                                color: volume.accentColor
                                 font.family: volume.iconFont.family
                                 font.weight: volume.iconFont.weight
-                                font.pixelSize: 12
+                                font.variableAxes: volume.iconFont.variableAxes
+                                font.pixelSize: volume.checkIconSize
                             }
 
                             MouseArea {
@@ -340,8 +385,8 @@ Item {
                         Layout.preferredWidth: 28
                         horizontalAlignment: Text.AlignRight
                         text: audio.volume
-                        color: volume.foreground
-                        font.pixelSize: 13
+                        color: volume.popupTextColor
+                        font: volume.popupFont
                     }
                     IconButton {
                         visible: volume.showApps && audio.apps.length > 0
@@ -362,9 +407,9 @@ Item {
                     visible: popup.appsOpen && volume.showApps && audio.apps.length > 0
                     implicitHeight: apps.implicitHeight + 12
                     radius: 8
-                    color: Qt.alpha(volume.foreground, 0.03)
+                    color: volume.popupCardColor
                     border.width: 1
-                    border.color: Qt.alpha(volume.foreground, 0.04)
+                    border.color: volume.popupCardBorderColor
 
                     Column {
                         id: apps
@@ -386,7 +431,7 @@ Item {
                                     Layout.preferredWidth: 36
                                     Layout.preferredHeight: 36
                                     radius: 6
-                                    color: Qt.alpha(volume.foreground, iconArea.containsMouse ? 0.08 : 0)
+                                    color: iconArea.containsMouse ? volume.popupHoverColor : "transparent"
                                     Accessible.role: Accessible.Button
                                     Accessible.name: app.modelData.muted ? `Unmute ${app.modelData.name}` : `Mute ${app.modelData.name}`
                                     Accessible.onPressAction: audio.setAppMuted(app.modelData.key, !app.modelData.muted)
@@ -429,13 +474,13 @@ Item {
                                             text: app.modelData.name
                                             textFormat: Text.PlainText
                                             elide: Text.ElideRight
-                                            color: Qt.alpha(volume.foreground, app.modelData.muted ? 0.5 : 0.85)
-                                            font.pixelSize: 12
+                                            color: app.modelData.muted ? volume.popupTertiaryTextColor : volume.popupSecondaryTextColor
+                                            font: volume.popupSmallFont
                                         }
                                         Text {
                                             text: app.modelData.muted ? "Muted" : Math.round(appSlider.value)
-                                            color: Qt.alpha(volume.foreground, 0.5)
-                                            font.pixelSize: 12
+                                            color: volume.popupTertiaryTextColor
+                                            font: volume.popupSmallFont
                                         }
                                     }
                                     Slider {
@@ -466,9 +511,9 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: 7
-                    bottomRightRadius: 7
-                    color: Qt.alpha("#000000", (volume.dark ? 0.15 : 0.03) + (footerArea.containsMouse ? 0.05 : 0))
+                    bottomLeftRadius: volume.popupRadius - 1
+                    bottomRightRadius: volume.popupRadius - 1
+                    color: footerArea.containsMouse ? Qt.tint(volume.popupSecondaryBackgroundColor, volume.popupHoverColor) : volume.popupSecondaryBackgroundColor
                     Accessible.role: Accessible.Link
                     Accessible.name: "Sound settings"
                     Accessible.onPressAction: {
@@ -479,7 +524,7 @@ Item {
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: Qt.alpha(volume.foreground, 0.08)
+                        color: volume.popupDividerColor
                     }
 
                     Text {
@@ -487,8 +532,8 @@ Item {
                         anchors.leftMargin: 15
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Sound settings"
-                        color: footerArea.containsMouse ? volume.foreground : Qt.alpha(volume.foreground, 0.75)
-                        font.pixelSize: 12
+                        color: footerArea.containsMouse ? volume.popupTextColor : volume.popupSecondaryTextColor
+                        font: volume.popupSmallFont
                     }
 
                     Text {
@@ -496,11 +541,12 @@ Item {
                         anchors.rightMargin: 14
                         anchors.verticalCenter: parent.verticalCenter
                         text: "\ue76c"
-                        color: volume.foreground
+                        color: volume.popupTextColor
                         opacity: footerArea.containsMouse ? 1 : 0.75
                         font.family: volume.iconFont.family
                         font.weight: volume.iconFont.weight
-                        font.pixelSize: 10
+                        font.variableAxes: volume.iconFont.variableAxes
+                        font.pixelSize: volume.footerIconSize
                     }
 
                     MouseArea {

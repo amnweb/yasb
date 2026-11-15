@@ -1,11 +1,12 @@
 import logging
+import sys
 from typing import Any
 
 from PyQt6.QtCore import QObject, QUrl, pyqtSignal, pyqtSlot
 
+from core.services.windows_desktops.interfaces import TIER_21313
 from core.services.windows_desktops.service import SHELL_UNAVAILABLE, ForegroundView, WindowsDesktopService
 from core.utils.qml import qml_property
-from core.utils.system import is_windows_10
 
 
 class VirtualDesktops(QObject):
@@ -56,7 +57,8 @@ class VirtualDesktops(QObject):
 
     @qml_property(bool, constant=True)
     def wallpaperSupported(self) -> bool:
-        return not is_windows_10()
+        # Per-desktop wallpapers came with the desktop interfaces of build 21313, which Windows 11 has
+        return sys.getwindowsversion().build >= TIER_21313
 
     # Whether a window was in front when readForeground() last ran, and whether it or its app is on every desktop
     @qml_property(bool, notify=foregroundChanged)

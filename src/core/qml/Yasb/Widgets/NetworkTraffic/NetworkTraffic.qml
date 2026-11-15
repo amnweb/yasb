@@ -4,12 +4,15 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
-    id: widget
+    id: networkTraffic
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // "auto" follows the adapter Windows uses for internet; an adapter name, such as "Ethernet" or "Wi-Fi", watches that
     // adapter alone, even when another one carries the internet
 
@@ -25,13 +28,13 @@ Item {
     property bool showInternetInfo: true
     property bool tooltip: true
     property string icon: "\ueda3"
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
     property string keys: ""
     property string alternateKeys: ""
     property string resetKeys: ""
     property real labelWidth: 0
     property int labelAlignment: Text.AlignLeft
-    property int popupWidth: 420
+    property int popupWidth: 404
     property string popupAlignment: "center"
     property bool showAlternate: false
     //property string label: `↓ ${speed(monitor.data.downloadRate, minimumDownloadRate)}  ↑ ${speed(monitor.data.uploadRate, minimumUploadRate)}`
@@ -42,20 +45,69 @@ Item {
     readonly property bool loading: monitor.loading
     readonly property string error: monitor.error
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property string edge: bar?.edge ?? "top"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The download and upload graphs, and the internet status while there is internet
+    property color downColor: dark ? "#62a8ff" : "#1269d8"
+    property color upColor: dark ? "#b39aff" : "#8457ce"
+    property color internetColor: dark ? "#8fd5a4" : "#237b45"
+    // The chosen period's tab, and the card with the numbers of the pointed sample
+    property color tabColor: dark ? "#414141" : "#ffffff"
+    property color tabBorderColor: "#e0e0e0"
+    property color detailColor: dark ? "#303030" : "#ffffff"
+    property color detailBorderColor: dark ? "#555555" : "#d3d3d3"
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property color popupTextColor: theme.colors.text
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+    property color popupDividerColor: theme.colors.divider
+    property color popupTertiaryTextColor: theme.colors.textTertiary
+    property color popupHoverColor: theme.colors.hover
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    // The connection's name and the history's heading, the date of the pointed day, each live rate, and the
+    // total over the period
+    property font popupStrongFont
+    popupStrongFont.family: theme.popup.font.family
+    popupStrongFont.pixelSize: 14
+    popupStrongFont.weight: Font.DemiBold
+    property font detailTitleFont
+    detailTitleFont.family: theme.popup.font.family
+    detailTitleFont.pixelSize: 13
+    detailTitleFont.weight: Font.DemiBold
+    property font rateFont
+    rateFont.family: theme.popup.font.family
+    rateFont.pixelSize: 20
+    rateFont.weight: Font.DemiBold
+    property font totalFont
+    totalFont.family: theme.popup.font.family
+    totalFont.pixelSize: 25
+    totalFont.weight: Font.DemiBold
+    // The glyphs of the history's buttons, and of the connection
+    property int popupIconSize: 14
+    property int connectionIconSize: 19
+    readonly property string edge: bar.edge
     readonly property bool shown: !hideWhenOffline || monitor.data.connected
 
     function speed(bytesPerSecond: real, threshold: real): string {
@@ -96,22 +148,22 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const screen = widget.Screen
+        const screen = networkTraffic.Screen
         let px
         let py
         switch (edge) {
         case "left":
-            px = start.x + width + 6
+            px = start.x + width + popupGap
             py = start.y + (height - popup.height) / 2
             break
         case "right":
-            px = start.x - popup.width - 6
+            px = start.x - popup.width - popupGap
             py = start.y + (height - popup.height) / 2
             break
         default:
             px = popupAlignment === "left" ? start.x
                 : popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
-            py = edge === "bottom" ? start.y - popup.height - 6 : start.y + height + 6
+            py = edge === "bottom" ? start.y - popup.height - popupGap : start.y + height + popupGap
             break
         }
         popup.x = Math.round(Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - popup.width - 8)))
@@ -144,22 +196,22 @@ Item {
     NetworkTrafficMonitor {
         id: monitor
         objectName: "monitor"
-        interfaceName: widget.interfaceName
-        updateInterval: widget.updateInterval
+        interfaceName: networkTraffic.interfaceName
+        updateInterval: networkTraffic.updateInterval
     }
 
-    Hotkey { keys: widget.keys; onActivated: widget.togglePopup() }
-    Hotkey { keys: widget.alternateKeys; onActivated: widget.showAlternate = !widget.showAlternate }
-    Hotkey { keys: widget.resetKeys; onActivated: monitor.reset() }
+    Hotkey { keys: networkTraffic.keys; onActivated: networkTraffic.togglePopup() }
+    Hotkey { keys: networkTraffic.alternateKeys; onActivated: networkTraffic.showAlternate = !networkTraffic.showAlternate }
+    Hotkey { keys: networkTraffic.resetKeys; onActivated: monitor.reset() }
 
     Connections {
-        target: widget.Window.window
+        target: networkTraffic.Window.window
         function onVisibleChanged() {
-            if (!widget.Window.window?.visible)
+            if (!networkTraffic.Window.window?.visible)
                 popup.hide()
         }
-        function onXChanged() { if (popup.visible && !popup.pinned) widget.placePopup() }
-        function onYChanged() { if (popup.visible && !popup.pinned) widget.placePopup() }
+        function onXChanged() { if (popup.visible && !popup.pinned) networkTraffic.placePopup() }
+        function onYChanged() { if (popup.visible && !popup.pinned) networkTraffic.placePopup() }
     }
 
     Row {
@@ -169,23 +221,24 @@ Item {
 
         Text {
             anchors.verticalCenter: parent.verticalCenter
-            visible: widget.icon !== ""
-            text: widget.icon
-            color: widget.textColor
-            font.family: widget.iconFont.family
-            font.weight: widget.iconFont.weight
-            font.pixelSize: widget.iconSize
+            visible: networkTraffic.icon !== ""
+            text: networkTraffic.icon
+            color: networkTraffic.textColor
+            font.family: networkTraffic.iconFont.family
+            font.weight: networkTraffic.iconFont.weight
+            font.variableAxes: networkTraffic.iconFont.variableAxes
+            font.pixelSize: networkTraffic.iconSize
         }
-        Text {
+        Label {
             id: labelText
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
-            width: widget.labelWidth > 0 ? widget.labelWidth : implicitWidth
-            text: widget.showAlternate ? widget.alternateLabel : widget.label
-            horizontalAlignment: widget.labelAlignment
+            width: networkTraffic.labelWidth > 0 ? networkTraffic.labelWidth : implicitWidth
+            text: networkTraffic.showAlternate ? networkTraffic.alternateLabel : networkTraffic.label
+            horizontalAlignment: networkTraffic.labelAlignment
             elide: Text.ElideRight
-            color: widget.textColor
-            font: widget.font
+            color: networkTraffic.textColor
+            font: networkTraffic.font
         }
     }
 
@@ -197,20 +250,20 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onClicked: event => {
             if (event.button === Qt.LeftButton)
-                widget.togglePopup()
+                networkTraffic.togglePopup()
             else
-                widget.showAlternate = !widget.showAlternate
+                networkTraffic.showAlternate = !networkTraffic.showAlternate
         }
     }
 
     ToolTip {
         objectName: "tooltip"
         popupType: Popup.Window
-        visible: widget.tooltip && mouse.containsMouse && !popup.visible
+        visible: networkTraffic.tooltip && mouse.containsMouse && !popup.visible
         delay: 400
         text: monitor.error || qsTr("Download: %1\nUpload: %2")
-            .arg(widget.speed(monitor.data.downloadRate, 0)).arg(widget.speed(monitor.data.uploadRate, 0))
-        y: widget.edge === "bottom" ? -implicitHeight - 6 : widget.height + 6
+            .arg(networkTraffic.speed(monitor.data.downloadRate, 0)).arg(networkTraffic.speed(monitor.data.uploadRate, 0))
+        y: networkTraffic.edge === "bottom" ? -implicitHeight - 6 : networkTraffic.height + 6
     }
 
     BackdropPopup {
@@ -218,12 +271,14 @@ Item {
         objectName: "menu"
         property real reveal: 0
         title: qsTr("Network Traffic")
-        width: Math.max(340, widget.popupWidth)
-        height: panel.implicitHeight + 16
-        anchor: widget
+        width: Math.max(324, networkTraffic.popupWidth)
+        height: panel.implicitHeight
+        anchor: networkTraffic
+        font: networkTraffic.popupFont
+        theme: networkTraffic.theme
         backdropItem: panel
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: networkTraffic.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: networkTraffic.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible) {
                 reveal = 0
@@ -236,23 +291,16 @@ Item {
             objectName: "trafficContent"
 
             anchors.fill: parent
-            anchors.margins: 8
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
-            transformOrigin: widget.edge === "bottom" ? Item.Bottom : widget.edge === "left" ? Item.Left
-                : widget.edge === "right" ? Item.Right : Item.Top
+            transformOrigin: networkTraffic.edge === "bottom" ? Item.Bottom : networkTraffic.edge === "left" ? Item.Left
+                : networkTraffic.edge === "right" ? Item.Right : Item.Top
 
             property int period: 1
             property int hoveredIndex: -1
-            readonly property string downloadText: widget.speed(monitor.data.downloadRate, 0)
-            readonly property string uploadText: widget.speed(monitor.data.uploadRate, 0)
+            readonly property string downloadText: networkTraffic.speed(monitor.data.downloadRate, 0)
+            readonly property string uploadText: networkTraffic.speed(monitor.data.uploadRate, 0)
 
-            readonly property color ink: widget.dark ? "#ffffff" : "#171717"
-            readonly property color secondary: Qt.alpha(ink, 0.786)
-            readonly property color muted: Qt.alpha(ink, 0.544)
-            readonly property color line: Qt.alpha(ink, 0.08)
-            readonly property color downColor: widget.dark ? "#62a8ff" : "#1269d8"
-            readonly property color upColor: widget.dark ? "#b39aff" : "#8457ce"
             readonly property bool hasHistory: monitor.data.connected && !monitor.history.loading && points.length > 0
             readonly property var points: {
                 if (period === 0)
@@ -271,10 +319,10 @@ Item {
             }
 
             implicitHeight: body.y + body.implicitHeight + 12 + footer.height + 1
-            color: widget.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#f3f3f3", 0.85)
-            radius: 8
+            color: networkTraffic.popupColor
+            radius: networkTraffic.popupRadius
             border.width: 1
-            border.color: widget.dark ? "#3a3a3a" : "#d9d9d9"
+            border.color: networkTraffic.popupBorderColor
 
             function size(bytes: real): string {
                 const units = ["B", "KiB", "MiB", "GiB", "TiB"]
@@ -302,16 +350,17 @@ Item {
                 ToolTip.delay: 400
                 contentItem: Text {
                     text: action.glyph
-                    color: panel.ink
+                    color: networkTraffic.popupTextColor
                     opacity: action.checked ? 1 : 0.6
-                    font.family: widget.iconFont.family
-                    font.weight: widget.iconFont.weight
-                    font.pixelSize: 14
+                    font.family: networkTraffic.iconFont.family
+                    font.weight: networkTraffic.iconFont.weight
+                    font.variableAxes: networkTraffic.iconFont.variableAxes
+                    font.pixelSize: networkTraffic.popupIconSize
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
-                    color: action.hovered ? Qt.alpha(panel.ink, 0.07) : "transparent"
+                    color: action.hovered ? networkTraffic.popupHoverColor : "transparent"
                     radius: 4
                 }
             }
@@ -327,16 +376,14 @@ Item {
                     spacing: 4
                     Text {
                         Layout.fillWidth: true
-                        text: "<b>Network</b> Traffic"
-                        textFormat: Text.StyledText
-                        color: panel.ink
-                        font.family: widget.font.family
-                        font.pixelSize: 16
+                        text: "Network traffic"
+                        font: networkTraffic.popupTitleFont
+                        color: networkTraffic.popupTextColor
                         MouseArea {
                             property point grab
                             anchors.fill: parent
                             enabled: popup.pinned
-                            cursorShape: Qt.SizeAllCursor
+                            cursorShape: popup.pinned ? Qt.SizeAllCursor : Qt.ArrowCursor
                             onPressed: event => {
                                 const point = mapToGlobal(event.x, event.y)
                                 grab = Qt.point(popup.x - point.x, popup.y - point.y)
@@ -361,24 +408,34 @@ Item {
                         onClicked: popup.pinned = !popup.pinned
                     }
                 }
+                // The header's bottom line, across the whole popup
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: -16
+                    Layout.rightMargin: -16
+                    Layout.topMargin: 10
+                    implicitHeight: 1
+                    color: networkTraffic.popupDividerColor
+                }
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.topMargin: 14
-                    visible: widget.showInterfaceName || widget.showInternetInfo
+                    Layout.topMargin: 8
+                    visible: networkTraffic.showInterfaceName || networkTraffic.showInternetInfo
                     spacing: 10
                     Rectangle {
                         implicitWidth: 36; implicitHeight: 36
                         radius: 7
-                        color: Qt.alpha(panel.ink, 0.045)
+                        color: Qt.alpha(networkTraffic.popupTextColor, 0.045)
                         Text {
                             anchors.centerIn: parent
                             text: monitor.data.isWifi ? "\ue701" : "\ue839"
-                            color: panel.ink
+                            color: networkTraffic.popupTextColor
                             opacity: monitor.data.connected ? 0.85 : 0.4
-                            font.family: widget.iconFont.family
-                            font.weight: widget.iconFont.weight
-                            font.pixelSize: 19
+                            font.family: networkTraffic.iconFont.family
+                            font.weight: networkTraffic.iconFont.weight
+                            font.variableAxes: networkTraffic.iconFont.variableAxes
+                            font.pixelSize: networkTraffic.connectionIconSize
                         }
                     }
                     ColumnLayout {
@@ -386,17 +443,15 @@ Item {
                         spacing: 4
                         Text {
                             Layout.fillWidth: true
-                            visible: widget.showInterfaceName
+                            visible: networkTraffic.showInterfaceName
                             text: monitor.data.connected ? monitor.data.profileName : monitor.loading ? qsTr("Connecting...") : qsTr("Not connected")
-                            color: panel.ink
+                            color: networkTraffic.popupTextColor
                             elide: Text.ElideRight
-                            font.family: widget.font.family
-                            font.pixelSize: 14
-                            font.weight: Font.DemiBold
+                            font: networkTraffic.popupStrongFont
                         }
                         RowLayout {
                             Layout.fillWidth: true
-                            visible: widget.showInternetInfo
+                            visible: networkTraffic.showInternetInfo
                             spacing: 4
 
                             Text {
@@ -408,9 +463,8 @@ Item {
                                 text: monitor.error || (monitor.data.connected
                                     ? [monitor.data.adapterName, monitor.data.ipAddress].filter(Boolean).join(" · ") + " ·"
                                     : monitor.loading ? qsTr("Reading network status...") : qsTr("No active network profile"))
-                                color: panel.secondary
-                                font.family: widget.font.family
-                                font.pixelSize: 13
+                                color: networkTraffic.popupSecondaryTextColor
+                                font: networkTraffic.popupFont
                             }
 
                             Text {
@@ -418,9 +472,8 @@ Item {
                                 visible: monitor.data.connected && !monitor.error
                                 text: monitor.data.internetAvailable === true
                                     ? qsTr("Internet") : monitor.data.internetAvailable === false ? qsTr("No internet") : qsTr("Unknown")
-                                color: monitor.data.internetAvailable === true ? (widget.dark ? "#8fd5a4" : "#237b45") : panel.secondary
-                                font.family: widget.font.family
-                                font.pixelSize: 13
+                                color: monitor.data.internetAvailable === true ? networkTraffic.internetColor : networkTraffic.popupSecondaryTextColor
+                                font: networkTraffic.popupFont
                             }
 
                             Item { Layout.fillWidth: true }
@@ -443,24 +496,21 @@ Item {
                             Layout.fillWidth: true
                             implicitHeight: 70
                             radius: 6
-                            color: Qt.alpha(panel.ink, 0.035)
+                            color: Qt.alpha(networkTraffic.popupTextColor, 0.035)
                             Column {
                                 anchors.fill: parent; anchors.margins: 12
                                 spacing: 7
                                 Text {
                                     text: rate.modelData.title
-                                    color: panel.muted
-                                    font.family: widget.font.family
-                                    font.pixelSize: 13
+                                    color: networkTraffic.popupTertiaryTextColor
+                                    font: networkTraffic.popupFont
                                 }
                                 Text {
                                     width: parent.width
                                     elide: Text.ElideRight
                                     text: monitor.data.connected ? rate.modelData.value : "—"
-                                    color: panel.ink
-                                    font.family: widget.font.family
-                                    font.pixelSize: 20
-                                    font.weight: Font.DemiBold
+                                    color: networkTraffic.popupTextColor
+                                    font: networkTraffic.rateFont
                                 }
                             }
                         }
@@ -474,32 +524,28 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: "This session"
-                        color: panel.secondary
-                        font.family: widget.font.family
-                        font.pixelSize: 13
+                        color: networkTraffic.popupSecondaryTextColor
+                        font: networkTraffic.popupFont
                         ToolTip.visible: sessionHover.hovered
                         ToolTip.text: "Traffic measured while YASB is running"
                         HoverHandler { id: sessionHover }
                     }
                     Text {
                         text: monitor.data.connected ? `↓ ${panel.size(monitor.data.sessionDownloaded)}` : "—"
-                        color: panel.ink
-                        font.family: widget.font.family
-                        font.pixelSize: 13
+                        color: networkTraffic.popupTextColor
+                        font: networkTraffic.popupFont
                     }
                     Text {
                         Layout.leftMargin: 4
                         text: monitor.data.connected ? `↑ ${panel.size(monitor.data.sessionUploaded)}` : "—"
-                        color: panel.ink
-                        font.family: widget.font.family
-                        font.pixelSize: 13
+                        color: networkTraffic.popupTextColor
+                        font: networkTraffic.popupFont
                     }
                     Text {
                         Layout.leftMargin: 4
-                        text: monitor.data.connected ? widget.duration(monitor.data.sessionSeconds) : "—"
-                        color: panel.secondary
-                        font.family: widget.font.family
-                        font.pixelSize: 12
+                        text: monitor.data.connected ? networkTraffic.duration(monitor.data.sessionSeconds) : "—"
+                        color: networkTraffic.popupSecondaryTextColor
+                        font: networkTraffic.popupSmallFont
                     }
                 }
 
@@ -508,7 +554,7 @@ Item {
                     Layout.topMargin: 17
                     Layout.bottomMargin: 15
                     implicitHeight: 1
-                    color: panel.line
+                    color: networkTraffic.popupDividerColor
                 }
 
                 RowLayout {
@@ -517,16 +563,14 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: "Usage history"
-                        color: panel.ink
-                        font.family: widget.font.family
-                        font.pixelSize: 14
-                        font.weight: Font.DemiBold
+                        color: networkTraffic.popupTextColor
+                        font: networkTraffic.popupStrongFont
                     }
                     Rectangle {
                         implicitWidth: tabs.implicitWidth + 4
                         implicitHeight: 28
                         radius: 5
-                        color: Qt.alpha(panel.ink, 0.04)
+                        color: Qt.alpha(networkTraffic.popupTextColor, 0.04)
                         Row {
                             id: tabs
                             x: 2; y: 2
@@ -545,16 +589,15 @@ Item {
                                     onClicked: panel.period = index
                                     background: Rectangle {
                                         radius: 4
-                                        color: tab.checked ? (widget.dark ? "#414141" : "#ffffff")
-                                            : tab.hovered ? Qt.alpha(panel.ink, 0.055) : "transparent"
-                                        border.width: tab.checked && !widget.dark ? 1 : 0
-                                        border.color: "#e0e0e0"
+                                        color: tab.checked ? networkTraffic.tabColor
+                                            : tab.hovered ? networkTraffic.popupHoverColor : "transparent"
+                                        border.width: tab.checked && !networkTraffic.dark ? 1 : 0
+                                        border.color: networkTraffic.tabBorderColor
                                     }
                                     contentItem: Text {
                                         text: tab.modelData
-                                        color: tab.checked ? panel.ink : panel.secondary
-                                        font.family: widget.font.family
-                                        font.pixelSize: 12
+                                        color: tab.checked ? networkTraffic.popupTextColor : networkTraffic.popupSecondaryTextColor
+                                        font: networkTraffic.popupSmallFont
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
                                     }
@@ -573,24 +616,21 @@ Item {
                         spacing: 4
                         Text {
                             text: panel.hasHistory ? panel.size(panel.totalDown + panel.totalUp) : "—"
-                            color: panel.ink
-                            font.family: widget.font.family
-                            font.pixelSize: 25
-                            font.weight: Font.DemiBold
+                            color: networkTraffic.popupTextColor
+                            font: networkTraffic.totalFont
                         }
                         Text {
                             text: panel.period === 0 ? "Total today" : `Total over ${panel.period === 1 ? 7 : 30} days`
-                            color: panel.secondary
-                            font.family: widget.font.family
-                            font.pixelSize: 12
+                            color: networkTraffic.popupSecondaryTextColor
+                            font: networkTraffic.popupSmallFont
                         }
                     }
                     Column {
                         spacing: 6
                         Repeater {
                             model: [
-                                {label:"Download", value:panel.totalDown, color:panel.downColor},
-                                {label:"Upload", value:panel.totalUp, color:panel.upColor}
+                                {label:"Download", value:panel.totalDown, color:networkTraffic.downColor},
+                                {label:"Upload", value:panel.totalUp, color:networkTraffic.upColor}
                             ]
                             delegate: Row {
                                 id: legend
@@ -604,17 +644,15 @@ Item {
                                 Text {
                                     width: 61
                                     text: legend.modelData.label
-                                    color: panel.secondary
-                                    font.family: widget.font.family
-                                    font.pixelSize: 12
+                                    color: networkTraffic.popupSecondaryTextColor
+                                    font: networkTraffic.popupSmallFont
                                 }
                                 Text {
                                     width: 72
                                     horizontalAlignment: Text.AlignRight
                                     text: panel.hasHistory ? panel.size(legend.modelData.value) : "—"
-                                    color: panel.ink
-                                    font.family: widget.font.family
-                                    font.pixelSize: 13
+                                    color: networkTraffic.popupTextColor
+                                    font: networkTraffic.popupFont
                                 }
                             }
                         }
@@ -636,24 +674,21 @@ Item {
                         Text {
                             id: topTick
                             text: panel.size(panel.maximum)
-                            color: panel.secondary
-                            font.family: widget.font.family
-                            font.pixelSize: 12
+                            color: networkTraffic.popupSecondaryTextColor
+                            font: networkTraffic.popupSmallFont
                             y: -height / 2
                         }
                         Text {
                             id: middleTick
                             text: panel.size(panel.maximum / 2)
-                            color: panel.secondary
-                            font.family: widget.font.family
-                            font.pixelSize: 12
+                            color: networkTraffic.popupSecondaryTextColor
+                            font: networkTraffic.popupSmallFont
                             y: (parent.height - height) / 2
                         }
                         Text {
                             text: "0"
-                            color: panel.secondary
-                            font.family: widget.font.family
-                            font.pixelSize: 12
+                            color: networkTraffic.popupSecondaryTextColor
+                            font: networkTraffic.popupSmallFont
                             y: parent.height - height / 2
                         }
                     }
@@ -670,7 +705,7 @@ Item {
                                 width: plot.width
                                 height: 1
                                 y: index * (plot.height - 1) / 2
-                                color: Qt.alpha(panel.ink, 0.075)
+                                color: Qt.alpha(networkTraffic.popupTextColor, 0.075)
                             }
                         }
                         Row {
@@ -693,7 +728,7 @@ Item {
                                         anchors.leftMargin: 1
                                         anchors.rightMargin: 1
                                         radius: 3
-                                        color: Qt.alpha(panel.ink, 0.045)
+                                        color: Qt.alpha(networkTraffic.popupTextColor, 0.045)
                                         visible: panel.hoveredIndex === bar.index
                                     }
                                     Rectangle {
@@ -702,7 +737,7 @@ Item {
                                         x: Math.round((parent.width - width) / 2)
                                         y: parent.height - height
                                         radius: 2
-                                        color: panel.downColor
+                                        color: networkTraffic.downColor
                                         opacity: panel.hoveredIndex < 0 || panel.hoveredIndex === bar.index ? 0.92 : 0.5
                                     }
                                     Rectangle {
@@ -711,7 +746,7 @@ Item {
                                         x: Math.round((parent.width - width) / 2)
                                         y: parent.height - height - bar.downHeight - 1
                                         radius: 2
-                                        color: panel.upColor
+                                        color: networkTraffic.upColor
                                         opacity: panel.hoveredIndex < 0 || panel.hoveredIndex === bar.index ? 0.92 : 0.5
                                     }
                                     Text {
@@ -722,9 +757,8 @@ Item {
                                             : Qt.formatDate(new Date(bar.modelData.stamp), "d MMM")
                                         visible: panel.period === 1 || (panel.period === 0 ? bar.index % 6 === 0
                                             : bar.index === 0 || bar.index === 14 || bar.index === panel.points.length - 1)
-                                        color: panel.secondary
-                                        font.family: widget.font.family
-                                        font.pixelSize: 12
+                                        color: networkTraffic.popupSecondaryTextColor
+                                        font: networkTraffic.popupSmallFont
                                     }
                                     HoverHandler {
                                         onHoveredChanged: {
@@ -747,24 +781,21 @@ Item {
                             x: Math.max(0, Math.min(plot.width - width, (panel.hoveredIndex + 0.5) * plot.width / panel.points.length - width / 2))
                             y: 3
                             radius: 5
-                            color: widget.dark ? "#303030" : "#ffffff"
+                            color: networkTraffic.detailColor
                             border.width: 1
-                            border.color: widget.dark ? "#555555" : "#d3d3d3"
+                            border.color: networkTraffic.detailBorderColor
                             Column {
                                 anchors.fill: parent; anchors.margins: 9
                                 spacing: 4
                                 Text {
                                     text: detail.point ? Qt.formatDateTime(new Date(detail.point.stamp), panel.period === 0 ? "ddd, d MMM · hh:mm" : "ddd, d MMM") : ""
-                                    color: panel.ink
-                                    font.family: widget.font.family
-                                    font.pixelSize: 13
-                                    font.weight: Font.DemiBold
+                                    color: networkTraffic.popupTextColor
+                                    font: networkTraffic.detailTitleFont
                                 }
                                 Text {
                                     text: detail.point ? `↓ ${panel.size(detail.point.downloaded)}   ↑ ${panel.size(detail.point.uploaded)}` : ""
-                                    color: panel.secondary
-                                    font.family: widget.font.family
-                                    font.pixelSize: 12
+                                    color: networkTraffic.popupSecondaryTextColor
+                                    font: networkTraffic.popupSmallFont
                                 }
                             }
                         }
@@ -780,25 +811,23 @@ Item {
                             width: 24; height: 24
                             visible: monitor.data.connected && monitor.history.loading
                             running: visible
-                            palette.dark: panel.secondary
+                            palette.dark: networkTraffic.popupSecondaryTextColor
                         }
                         Text {
                             width: parent.width
                             text: !monitor.data.connected ? "Connect to a network to view usage"
                                 : monitor.history.loading ? "Loading usage history..." : "Usage history is unavailable"
-                            color: panel.secondary
+                            color: networkTraffic.popupSecondaryTextColor
                             horizontalAlignment: Text.AlignHCenter
-                            font.family: widget.font.family
-                            font.pixelSize: 13
+                            font: networkTraffic.popupFont
                         }
                         Text {
                             width: parent.width
                             visible: monitor.data.connected && !monitor.history.loading
                             text: "Live speeds and session usage are still available."
-                            color: panel.secondary
+                            color: networkTraffic.popupSecondaryTextColor
                             horizontalAlignment: Text.AlignHCenter
-                            font.family: widget.font.family
-                            font.pixelSize: 12
+                            font: networkTraffic.popupSmallFont
                         }
                     }
                 }
@@ -812,23 +841,22 @@ Item {
                 anchors.bottom: parent.bottom
                 anchors.margins: 1
                 height: 40
-                bottomLeftRadius: 7
-                bottomRightRadius: 7
-                color: Qt.alpha("#000000", widget.dark ? 0.15 : 0.03)
+                bottomLeftRadius: networkTraffic.popupRadius - 1
+                bottomRightRadius: networkTraffic.popupRadius - 1
+                color: networkTraffic.popupSecondaryBackgroundColor
 
                 Rectangle {
                     width: parent.width
                     height: 1
-                    color: panel.line
+                    color: networkTraffic.popupDividerColor
                 }
 
                 Text {
                     x: 16
                     anchors.verticalCenter: parent.verticalCenter
                     text: qsTr("Windows usage estimates")
-                    color: panel.secondary
-                    font.family: widget.font.family
-                    font.pixelSize: 12
+                    color: networkTraffic.popupSecondaryTextColor
+                    font: networkTraffic.popupSmallFont
                     HoverHandler { id: infoHover }
                     ToolTip.visible: infoHover.hovered
                     ToolTip.delay: 500
@@ -843,9 +871,8 @@ Item {
                     visible: panel.hasHistory && text !== ""
                     text: monitor.history.updatedAt > 0
                         ? qsTr("Updated %1").arg(Qt.formatTime(new Date(monitor.history.updatedAt), "hh:mm")) : ""
-                    color: panel.muted
-                    font.family: widget.font.family
-                    font.pixelSize: 12
+                    color: networkTraffic.popupTertiaryTextColor
+                    font: networkTraffic.popupSmallFont
                 }
             }
         }

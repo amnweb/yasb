@@ -17,6 +17,7 @@ from core.utils.icons.service import IconService
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
 from tests.support.audio import FakeAudioService
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 
@@ -138,7 +139,7 @@ def test_the_widget_shows_the_level(service: FakeAudioService):
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Volume" / "Volume.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
     icon = find_item(widget, "icon")

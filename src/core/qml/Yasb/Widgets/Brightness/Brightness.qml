@@ -4,12 +4,16 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
-    id: root
+    // Not brightness: the id would hide DisplayBrightness's brightness property
+    id: brightnessWidget
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // Label placeholder: {percent}; empty shows only the icon. A right click shows the alternate label
     property string label: ""
     property string alternateLabel: "{percent}%"
@@ -20,8 +24,8 @@ Item {
     property int pollInterval: 60
     // The brightness when the pointer rests on the widget
     property bool tooltip: true
-    property int popupWidth: 340
-    property int iconSize: 16
+    property int popupWidth: 324
+    property int iconSize: theme.bar.iconFont.pixelSize
     // One icon for every level, or several from dimmest to brightest that split 0 to 100% evenly:
     // ["\uec8a", "\ue706"] shows the first up to 50% and the second above, four icons change at 25, 50 and 75%
     property list<string> icons: ["\ue706"]
@@ -34,23 +38,42 @@ Item {
 
     property bool showAlternate: false
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property color foreground: dark ? "#ebebeb" : "#1f1f1f"
-    readonly property string edge: bar?.edge ?? "top"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property color popupTextColor: theme.colors.text
+    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+    property color popupDividerColor: theme.colors.divider
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    property color popupHoverColor: theme.colors.hover
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // The glyph beside each display's level, and the arrow of the settings link
+    property int popupIconSize: 14
+    property int footerIconSize: 10
+    readonly property string edge: bar.edge
 
     // The display under the bar, -1 until it is read; the widget hides where it can't be controlled
     readonly property int percent: control.brightness
@@ -78,11 +101,11 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + 6
-            : edge === "right" ? start.x - popup.width - 6 : start.x + (width - popup.width) / 2
-        let py = edge === "top" ? start.y + height + 6
-            : edge === "bottom" ? start.y - popup.height - 6 : start.y + (height - popup.height) / 2
-        const screen = root.Screen
+        let px = edge === "left" ? start.x + width + popupGap
+            : edge === "right" ? start.x - popup.width - popupGap : start.x + (width - popup.width) / 2
+        let py = edge === "top" ? start.y + height + popupGap
+            : edge === "bottom" ? start.y - popup.height - popupGap : start.y + (height - popup.height) / 2
+        const screen = brightnessWidget.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - popup.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - popup.height - 8))
         popup.x = Math.round(px)
@@ -114,31 +137,31 @@ Item {
     DisplayBrightness {
         id: control
 
-        window: root.Window.window
-        pollInterval: root.pollInterval
+        window: brightnessWidget.Window.window
+        pollInterval: brightnessWidget.pollInterval
     }
 
     Timer {
         interval: 60000
         repeat: true
         triggeredOnStart: true
-        running: root.autoLight && control.available
-        onTriggered: root.applyAutoLight()
+        running: brightnessWidget.autoLight && control.available
+        onTriggered: brightnessWidget.applyAutoLight()
     }
 
     Connections {
-        target: root.Window.window
+        target: brightnessWidget.Window.window
         function onVisibleChanged() {
-            if (!root.Window.window?.visible)
+            if (!brightnessWidget.Window.window?.visible)
                 popup.hide()
         }
-        function onXChanged() { if (popup.visible) root.placePopup() }
-        function onYChanged() { if (popup.visible) root.placePopup() }
+        function onXChanged() { if (popup.visible) brightnessWidget.placePopup() }
+        function onYChanged() { if (popup.visible) brightnessWidget.placePopup() }
     }
 
     Connections {
         target: popup
-        function onHeightChanged() { if (popup.visible) root.placePopup() }
+        function onHeightChanged() { if (popup.visible) brightnessWidget.placePopup() }
     }
 
     Row {
@@ -149,21 +172,22 @@ Item {
         Text {
             objectName: "icon"
             anchors.verticalCenter: parent.verticalCenter
-            text: root.icon(root.percent)
-            color: root.textColor
-            font.family: root.iconFont.family
-            font.weight: root.iconFont.weight
-            font.pixelSize: root.iconSize
+            text: brightnessWidget.icon(brightnessWidget.percent)
+            color: brightnessWidget.textColor
+            font.family: brightnessWidget.iconFont.family
+            font.weight: brightnessWidget.iconFont.weight
+            font.variableAxes: brightnessWidget.iconFont.variableAxes
+            font.pixelSize: brightnessWidget.iconSize
         }
 
-        Text {
+        Label {
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
             visible: text !== ""
-            text: root.text
+            text: brightnessWidget.text
             textFormat: Text.PlainText
-            color: root.textColor
-            font: root.font
+            color: brightnessWidget.textColor
+            font: brightnessWidget.font
         }
     }
 
@@ -175,24 +199,24 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: mouse => {
             if (mouse.button === Qt.LeftButton)
-                root.togglePopup()
+                brightnessWidget.togglePopup()
             else
-                root.showAlternate = !root.showAlternate
+                brightnessWidget.showAlternate = !brightnessWidget.showAlternate
         }
         onWheel: wheel => {
             const delta = wheel.angleDelta.y || wheel.angleDelta.x
             if (delta !== 0)
-                control.setBrightness(root.percent + ((delta > 0) !== root.invertWheel ? root.scrollStep : -root.scrollStep))
+                control.setBrightness(brightnessWidget.percent + ((delta > 0) !== brightnessWidget.invertWheel ? brightnessWidget.scrollStep : -brightnessWidget.scrollStep))
         }
     }
 
     ToolTip {
         popupType: Popup.Window
-        visible: root.tooltip && area.containsMouse && !popup.visible
+        visible: brightnessWidget.tooltip && area.containsMouse && !popup.visible
         delay: 400
-        text: qsTr("Brightness %1%").arg(root.percent)
+        text: qsTr("Brightness %1%").arg(brightnessWidget.percent)
         // Away from the bar's edge
-        y: root.edge === "bottom" ? -implicitHeight - 6 : root.height + 6
+        y: brightnessWidget.edge === "bottom" ? -implicitHeight - 6 : brightnessWidget.height + 6
     }
 
     component LevelRow: RowLayout {
@@ -211,11 +235,12 @@ Item {
             Layout.preferredWidth: 20
             horizontalAlignment: Text.AlignHCenter
             text: level.glyph
-            color: root.foreground
+            color: brightnessWidget.popupTextColor
             opacity: 0.75
-            font.family: root.iconFont.family
-            font.weight: root.iconFont.weight
-            font.pixelSize: 14
+            font.family: brightnessWidget.iconFont.family
+            font.weight: brightnessWidget.iconFont.weight
+            font.variableAxes: brightnessWidget.iconFont.variableAxes
+            font.pixelSize: brightnessWidget.popupIconSize
         }
         Slider {
             Layout.fillWidth: true
@@ -230,8 +255,8 @@ Item {
             Layout.preferredWidth: 28
             horizontalAlignment: Text.AlignRight
             text: level.value >= 0 ? level.value : ""
-            color: root.foreground
-            font.pixelSize: 13
+            color: brightnessWidget.popupTextColor
+            font: brightnessWidget.popupFont
         }
     }
 
@@ -240,28 +265,29 @@ Item {
         property real reveal: 0
         objectName: "popup"
         title: "Brightness"
-        width: root.popupWidth
-        height: content.implicitHeight + 16
-        anchor: root
+        width: brightnessWidget.popupWidth
+        height: popupContent.implicitHeight
+        anchor: brightnessWidget
+        font: brightnessWidget.popupFont
+        theme: brightnessWidget.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: brightnessWidget.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: brightnessWidget.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: { if (!visible) reveal = 0 }
 
         Rectangle {
             id: surface
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: root.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: brightnessWidget.popupRadius
+            color: brightnessWidget.popupColor
             border.width: 1
-            border.color: root.dark ? "#3A3A3A" : "#D9D9D9"
+            border.color: brightnessWidget.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
-            transformOrigin: root.edge === "bottom" ? Item.Bottom : Item.Top
+            transformOrigin: brightnessWidget.edge === "bottom" ? Item.Bottom : Item.Top
 
             ColumnLayout {
-                id: content
+                id: popupContent
                 width: parent.width
                 spacing: 0
 
@@ -281,7 +307,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.leftMargin: 16
                         Layout.rightMargin: 12
-                        Layout.topMargin: index === 0 ? 12 : 4
+                        Layout.topMargin: index === 0 ? 12 : 20
                         Layout.bottomMargin: 8
                         spacing: 2
 
@@ -290,9 +316,8 @@ Item {
                             text: display.name
                             textFormat: Text.PlainText
                             elide: Text.ElideRight
-                            color: root.foreground
-                            font.pixelSize: 14
-                            font.weight: Font.Bold
+                            color: brightnessWidget.popupTextColor
+                            font: brightnessWidget.popupTitleFont
                         }
                         Text {
                             Layout.fillWidth: true
@@ -300,8 +325,18 @@ Item {
                             text: display.subtitle
                             textFormat: Text.PlainText
                             elide: Text.ElideRight
-                            color: Qt.alpha(root.foreground, 0.6)
-                            font.pixelSize: 12
+                            color: brightnessWidget.popupSecondaryTextColor
+                            font: brightnessWidget.popupSmallFont
+                        }
+                        // The display's header line, across the whole popup
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: -16
+                            Layout.rightMargin: -12
+                            Layout.topMargin: 6
+                            Layout.bottomMargin: 8
+                            implicitHeight: 1
+                            color: brightnessWidget.popupDividerColor
                         }
                         LevelRow {
                             glyph: "\ue706"
@@ -326,9 +361,9 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: 7
-                    bottomRightRadius: 7
-                    color: Qt.alpha("#000000", (root.dark ? 0.15 : 0.03) + (footerArea.containsMouse ? 0.05 : 0))
+                    bottomLeftRadius: brightnessWidget.popupRadius - 1
+                    bottomRightRadius: brightnessWidget.popupRadius - 1
+                    color: footerArea.containsMouse ? Qt.tint(brightnessWidget.popupSecondaryBackgroundColor, brightnessWidget.popupHoverColor) : brightnessWidget.popupSecondaryBackgroundColor
                     Accessible.role: Accessible.Link
                     Accessible.name: "Display settings"
                     Accessible.onPressAction: {
@@ -339,7 +374,7 @@ Item {
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: Qt.alpha(root.foreground, 0.08)
+                        color: brightnessWidget.popupDividerColor
                     }
 
                     Text {
@@ -347,8 +382,8 @@ Item {
                         anchors.leftMargin: 15
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Display settings"
-                        color: footerArea.containsMouse ? root.foreground : Qt.alpha(root.foreground, 0.75)
-                        font.pixelSize: 12
+                        color: footerArea.containsMouse ? brightnessWidget.popupTextColor : brightnessWidget.popupSecondaryTextColor
+                        font: brightnessWidget.popupSmallFont
                     }
 
                     Text {
@@ -356,11 +391,12 @@ Item {
                         anchors.rightMargin: 14
                         anchors.verticalCenter: parent.verticalCenter
                         text: "\ue76c"
-                        color: root.foreground
+                        color: brightnessWidget.popupTextColor
                         opacity: footerArea.containsMouse ? 1 : 0.75
-                        font.family: root.iconFont.family
-                        font.weight: root.iconFont.weight
-                        font.pixelSize: 10
+                        font.family: brightnessWidget.iconFont.family
+                        font.weight: brightnessWidget.iconFont.weight
+                        font.variableAxes: brightnessWidget.iconFont.variableAxes
+                        font.pixelSize: brightnessWidget.footerIconSize
                     }
 
                     MouseArea {

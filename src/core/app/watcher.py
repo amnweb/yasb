@@ -54,8 +54,8 @@ class FileModifiedEventHandler(PatternMatchingEventHandler):
             if key in self._qml_hashes and self._qml_hashes[key] == new_hash:
                 return
             self._qml_hashes[key] = new_hash
+            # The bar manager tells whether a bar loads it
             self.bar_manager.qml_changed.emit(path)
-            logging.debug("QML file changed: %s", path)
 
     @override
     def on_modified(self, event: DirModifiedEvent | FileModifiedEvent) -> None:

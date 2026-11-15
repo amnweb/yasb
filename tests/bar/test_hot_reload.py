@@ -68,7 +68,9 @@ def make_manager(qapp: QGuiApplication, fake_app_bar: None) -> Iterator[MakeMana
 
 
 def _widget(folder: Path, name: str, text: str) -> Path:
-    source = f'import QtQuick\n\nText {{\n    objectName: "{name}"\n    text: "{text}"\n}}\n'
+    source = (
+        f'import QtQuick\n\nText {{\n    objectName: "{name}"\n    property Item bar: null\n    text: "{text}"\n}}\n'
+    )
     return write_widget(folder / "widgets", name, source)
 
 
@@ -94,9 +96,14 @@ def _color(bar: BarWindow) -> QColor:
     return bar.item.property("color")
 
 
+def _text_color(bar: BarWindow) -> QColor:
+    assert bar.item is not None
+    return bar.item.property("theme").property("colors").property("text")
+
+
 def test_editing_the_bar_file_reloads_it_in_the_same_window(make_manager: MakeManager, folder: Path):
     path = _bar_file(folder, "#ff0000")
-    manager = make_manager(top={"file": str(path)})
+    manager = make_manager(top={"layout": str(path)})
     bar = manager.bars[0]
     window, before = bar.hwnd, bar.item
 
@@ -111,7 +118,7 @@ def test_a_broken_bar_file_keeps_the_current_bar(
     make_manager: MakeManager, folder: Path, alerts: list[str], caplog: pytest.LogCaptureFixture
 ):
     path = _bar_file(folder, "#ff0000")
-    manager = make_manager(top={"file": str(path)})
+    manager = make_manager(top={"layout": str(path)})
     bar = manager.bars[0]
     before = bar.item
 
@@ -132,7 +139,7 @@ def test_a_bar_file_that_is_not_a_bar_keeps_the_current_bar(
     make_manager: MakeManager, folder: Path, alerts: list[str], caplog: pytest.LogCaptureFixture
 ):
     path = _bar_file(folder, "#ff0000")
-    manager = make_manager(top={"file": str(path)})
+    manager = make_manager(top={"layout": str(path)})
     bar = manager.bars[0]
     before = bar.item
 
@@ -141,13 +148,13 @@ def test_a_bar_file_that_is_not_a_bar_keeps_the_current_bar(
         _changed(manager, path)
     assert bar.item is before
     assert "Bar top kept its current content" in caplog.text
-    assert alerts == ["Failed to reload the bar file of bar 'top'"]
+    assert alerts == ["Failed to reload the layout of bar 'top'"]
 
 
 def test_widget_edits_apply_while_the_bar_file_is_broken(make_manager: MakeManager, folder: Path):
     bar_path = _bar_file(folder, "#ff0000")
     widget_path = _widget(folder, "a", "one")
-    manager = make_manager(top={"file": str(bar_path), "widgets": {"left": ["a"]}})
+    manager = make_manager(top={"layout": str(bar_path), "widgets": {"left": ["a"]}})
     bar = manager.bars[0]
 
     bar_path.write_text("import Yasb.Bar\n\nBar {\n")
@@ -162,7 +169,7 @@ def test_widget_edits_apply_to_the_built_in_fallback(make_manager: MakeManager, 
     bar_path = folder / "bars" / "broken.qml"
     bar_path.write_text("import Yasb.Bar\n\nBar {\n")
     widget_path = _widget(folder, "a", "one")
-    manager = make_manager(top={"file": str(bar_path), "widgets": {"left": ["a"]}})
+    manager = make_manager(top={"layout": str(bar_path), "widgets": {"left": ["a"]}})
     bar = manager.bars[0]
     assert bar.shown_file == BAR_QML
 
@@ -170,6 +177,40 @@ def test_widget_edits_apply_to_the_built_in_fallback(make_manager: MakeManager, 
     _changed(manager, widget_path)
     assert _text(bar, "a") == "two"
     assert bar.shown_file == BAR_QML
+
+
+def test_a_layout_is_found_by_name_in_the_layouts_folder(
+    make_manager: MakeManager, folder: Path, monkeypatch: pytest.MonkeyPatch
+):
+    layouts = folder / "layouts"
+    layouts.mkdir()
+    monkeypatch.setattr(window, "USER_LAYOUTS_DIR", layouts)
+    (layouts / "Islands.qml").write_text('import Yasb.Bar\n\nBar {\n    color: "#00ff00"\n}\n')
+    manager = make_manager(named={"layout": "islands"}, builtin={"layout": "DEFAULT"})
+    named, builtin = manager.bars
+    # In the case it has on disk, which QML needs
+    assert str(named.bar_file) == str(layouts / "Islands.qml")
+    assert _color(named) == QColor("#00ff00")
+    assert builtin.bar_file == BAR_QML
+
+
+def test_qml_files_no_bar_loads_are_left_alone(
+    make_manager: MakeManager, folder: Path, alerts: list[str], caplog: pytest.LogCaptureFixture
+):
+    path = _bar_file(folder, "#ff0000")
+    manager = make_manager(top={"layout": str(path)})
+    bar = manager.bars[0]
+    before = bar.item
+
+    # Not a layout, theme or widget of any bar: not even compiled
+    other = folder / "bars" / "other.qml"
+    other.write_text("import Yasb.Bar\n\nBar {\n")
+    with caplog.at_level(logging.ERROR):
+        _changed(manager, other)
+    assert bar.item is before
+    assert alerts == [] and "has errors" not in caplog.text
+    assert not manager.uses_file(str(other))
+    assert manager.uses_file(str(path)) and manager.uses_file(str(folder / "widgets" / "a" / "a.qml"))
 
 
 def test_editing_a_widget_reloads_only_the_bars_using_it(make_manager: MakeManager, folder: Path):
@@ -183,6 +224,36 @@ def test_editing_a_widget_reloads_only_the_bars_using_it(make_manager: MakeManag
     _changed(manager, path)
     assert _text(first, "a") == "two"
     assert second.item is untouched
+
+
+def _theme_source(text: str) -> str:
+    return f'import Yasb.Themes\n\nTheme {{\n    colors.text: "{text}"\n}}\n'
+
+
+def test_editing_a_theme_swaps_it_into_the_bars_using_it(
+    make_manager: MakeManager, folder: Path, alerts: list[str], monkeypatch: pytest.MonkeyPatch
+):
+    theme = folder / "wal.qml"
+    theme.write_text(_theme_source("#ff0000"))
+    manager = make_manager(top={"theme": str(theme)}, other={})
+    bar, other = manager.bars
+    before, untouched = bar.item, other.item
+    restarts: list[list[BarWindow]] = []
+    monkeypatch.setattr(manager.hotkeys, "restart", restarts.append)
+    assert _text_color(bar) == QColor("#ff0000")
+
+    theme.write_text(_theme_source("#00ff00"))
+    _changed(manager, theme)
+    assert _text_color(bar) == QColor("#00ff00")
+    # Not built again, so its widgets keep any window they opened, and their hotkeys
+    assert bar.item is before
+    assert other.item is untouched
+    assert restarts == []
+
+    theme.write_text("import Yasb.Themes\n\nTheme {\n")
+    _changed(manager, theme)
+    assert _text_color(bar) == QColor("#00ff00")
+    assert alerts == ["A QML file has errors"]
 
 
 def test_a_broken_widget_keeps_the_current_version(

@@ -1,6 +1,7 @@
 # pyright: reportPrivateUsage=false
 
 import ctypes
+import logging
 import shutil
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -15,19 +16,25 @@ from core.app.tray import TRAY_MESSAGE, SystemTrayManager
 from core.utils.win32.bindings.user32 import RegisterWindowMessage, user32
 from core.utils.win32.constants import NIM_ADD, NIM_DELETE, NIM_MODIFY, WM_LBUTTONUP, WM_RBUTTONUP
 from core.utils.win32.structs import NOTIFYICONDATAW
-from core.validation.config import YasbConfig
-from tests.support.qt import wait
+from core.validation.config import GlazeWMConfig, KomorebiConfig, YasbConfig
 
 
 class Shell:
-    """Stands in for Shell_NotifyIconW, so the tests never touch the real notification area."""
+    """Stands in for Shell_NotifyIconW, so the tests never touch the real notification area. It refuses everything
+    while the taskbar isn't up, adding the icon while it is there, and changing or removing it while it is not."""
 
     def __init__(self) -> None:
         self.calls: list[tuple[int, str, int]] = []
+        self.ready = True
+        self.has_icon = False
 
     def notify(self, action: int, data: Any) -> bool:
         icon = cast(NOTIFYICONDATAW, data._obj)
         self.calls.append((action, icon.szTip, icon.hIcon or 0))
+        if not self.ready or (action == NIM_ADD) == self.has_icon:
+            return False
+        if action != NIM_MODIFY:
+            self.has_icon = action == NIM_ADD
         return True
 
 
@@ -68,21 +75,70 @@ def test_a_right_click_opens_the_menu_and_a_left_click_does_not(
 ):
     opened: list[bool] = []
     monkeypatch.setattr(tray, "_show_context_menu", lambda: opened.append(True))
-    tray._menu_timer.timeout.disconnect()
-    tray._menu_timer.timeout.connect(tray._show_context_menu)
     tray.show()
     user32.SendMessageW(tray._hwnd, TRAY_MESSAGE, 0, WM_LBUTTONUP)
-    wait(50)
     assert opened == []
     user32.SendMessageW(tray._hwnd, TRAY_MESSAGE, 0, WM_RBUTTONUP)
-    wait(50)
     assert opened == [True]
+
+
+def test_the_menu_offers_an_installed_window_managers_commands_and_runs_the_chosen_one(
+    tray: SystemTrayManager, monkeypatch: pytest.MonkeyPatch
+):
+    config = YasbConfig(
+        komorebi=KomorebiConfig(start_command="komorebic start", stop_command="komorebic stop"),
+        glazewm=GlazeWMConfig(start_command="glazewm start"),
+    )
+    monkeypatch.setattr(tray._bar_manager, "config", config)
+    items: dict[str, int] = {}
+
+    def installed(program: str) -> str | None:
+        # Komorebi is installed, GlazeWM is not
+        return "komorebi.exe" if program == "komorebi" else None
+
+    def append(menu: int, flags: int, item: int, label: str) -> bool:
+        items[label] = item
+        return True
+
+    def choose(menu: int, flags: int, x: int, y: int, hwnd: int) -> int:
+        return items["Stop Komorebi"]
+
+    monkeypatch.setattr(tray_module.shutil, "which", installed)
+    monkeypatch.setattr(tray_module, "AppendMenu", append)
+    monkeypatch.setattr(tray_module, "TrackPopupMenu", choose)
+    ran: list[str] = []
+    monkeypatch.setattr(tray_module, "_run_hidden", ran.append)
+    tray._show_context_menu()
+    assert {"Start Komorebi", "Stop Komorebi", "Komorebi"} <= items.keys() and "Reload Komorebi" not in items
+    assert "GlazeWM" not in items and "Start GlazeWM" not in items
+    assert ran == ["komorebic stop"]
 
 
 def test_the_icon_comes_back_after_explorer_restarts(tray: SystemTrayManager, shell: Shell):
     tray.show()
+    # Explorer starts again without it
+    shell.has_icon = False
     user32.SendMessageW(tray._hwnd, RegisterWindowMessage("TaskbarCreated"), 0, 0)
-    assert [action for action, _, _ in shell.calls] == [NIM_ADD, NIM_ADD]
+    assert [action for action, _, _ in shell.calls] == [NIM_ADD, NIM_ADD] and shell.has_icon
+
+
+def test_the_systray_widgets_broadcast_updates_the_icon_and_leaves_it_to_be_removed(
+    tray: SystemTrayManager, shell: Shell, caplog: pytest.LogCaptureFixture
+):
+    tray.show()
+    # Sent to have every app add its icons, while this one is still there
+    user32.SendMessageW(tray._hwnd, RegisterWindowMessage("TaskbarCreated"), 0, 0)
+    tray.close()
+    assert [action for action, _, _ in shell.calls] == [NIM_ADD, NIM_ADD, NIM_MODIFY, NIM_DELETE]
+    assert not shell.has_icon and not [record for record in caplog.records if record.levelno >= logging.WARNING]
+
+
+def test_an_icon_the_taskbar_was_not_up_for_is_added_once_it_is(tray: SystemTrayManager, shell: Shell):
+    shell.ready = False
+    tray.show()
+    shell.ready = True
+    user32.SendMessageW(tray._hwnd, RegisterWindowMessage("TaskbarCreated"), 0, 0)
+    assert [action for action, _, _ in shell.calls] == [NIM_ADD, NIM_ADD] and shell.has_icon
 
 
 def test_an_update_shows_a_badged_icon(tray: SystemTrayManager, shell: Shell):

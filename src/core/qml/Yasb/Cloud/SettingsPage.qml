@@ -1,11 +1,14 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Yasb
 
 Item {
     id: page
 
-    required property QtObject cloud
+    required property Cloud cloud
 
     ColumnLayout {
         anchors.fill: parent

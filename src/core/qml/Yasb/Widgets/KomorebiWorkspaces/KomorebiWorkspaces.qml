@@ -4,9 +4,10 @@ import QtQuick
 import QtQuick.Controls
 import Yasb
 import Yasb.Bar
+import Yasb.Themes
 
 Item {
-    id: root
+    id: komorebiWorkspaces
 
     property string offlineLabel: "Komorebi Offline"
     property bool hideIfOffline: false
@@ -30,15 +31,16 @@ Item {
     property bool enableScrollSwitching: false
     property bool reverseScrollDirection: false
     // The background of the workspace the monitor shows, and of a hovered one
-    property color activeColor: root.dark ? Qt.alpha("#ffffff", 0.12) : Qt.alpha("#000000", 0.12)
-    property color hoveredColor: root.dark ? Qt.alpha("#ffffff", 0.06) : Qt.alpha("#000000", 0.06)
+    property color activeColor: komorebiWorkspaces.theme.colors.selected
+    property color hoveredColor: komorebiWorkspaces.theme.colors.hover
     // How strongly workspaces without windows are dimmed
     property real emptyOpacity: 0.5
     // Space around each button's label and icons, in pixels
     property int horizontalPadding: 8
     property int verticalPadding: 4
     property int spacing: 4
-    property BarBase bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
 
     component AppIcons: QtObject {
         // Show the icons of the windows in each workspace with windows, and in the one the monitor shows
@@ -58,18 +60,11 @@ Item {
     property AppIcons appIcons: AppIcons {}
 
     readonly property QtObject model: workspaceModel
-    readonly property bool dark: bar ? bar.dark : Application.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    readonly property bool vertical: bar?.vertical ?? false
+    readonly property bool vertical: bar.vertical
     readonly property bool shown: workspaceModel.connected || (!hideIfOffline && offlineLabel !== "")
     // The workspace clicked or scrolled to shows as active at once. komorebi reports the switch a moment later, and
     // until then the old workspace would still look active
@@ -103,8 +98,8 @@ Item {
         target: workspaceModel
 
         function onDataChanged() {
-            if (!workspaceModel.connected || workspaceModel.workspaces[root.switchingTo]?.active)
-                root.switchingTo = -1
+            if (!workspaceModel.connected || workspaceModel.workspaces[komorebiWorkspaces.switchingTo]?.active)
+                komorebiWorkspaces.switchingTo = -1
         }
     }
 
@@ -113,40 +108,40 @@ Item {
 
         // komorebi didn't switch, so the workspace it shows is active again
         interval: 1500
-        onTriggered: root.switchingTo = -1
+        onTriggered: komorebiWorkspaces.switchingTo = -1
     }
 
     KomorebiWorkspacesModel {
         id: workspaceModel
 
-        screenName: root.bar?.screenName ?? ""
+        screenName: komorebiWorkspaces.bar.screenName
         appIcons: ({
-            enabledPopulated: root.appIcons.enabledPopulated,
-            enabledActive: root.appIcons.enabledActive,
-            maxIcons: root.appIcons.maxIcons,
-            hideDuplicates: root.appIcons.hideDuplicates,
-            hideFloating: root.appIcons.hideFloating
+            enabledPopulated: komorebiWorkspaces.appIcons.enabledPopulated,
+            enabledActive: komorebiWorkspaces.appIcons.enabledActive,
+            maxIcons: komorebiWorkspaces.appIcons.maxIcons,
+            hideDuplicates: komorebiWorkspaces.appIcons.hideDuplicates,
+            hideFloating: komorebiWorkspaces.appIcons.hideFloating
         })
     }
 
-    Text {
+    Label {
         id: offline
 
         objectName: "offline"
         anchors.verticalCenter: parent.verticalCenter
-        visible: !workspaceModel.connected && root.shown
-        text: root.offlineLabel
+        visible: !workspaceModel.connected && komorebiWorkspaces.shown
+        text: komorebiWorkspaces.offlineLabel
         textFormat: Text.PlainText
-        color: root.textColor
-        font: root.font
+        color: komorebiWorkspaces.textColor
+        font: komorebiWorkspaces.font
     }
 
     Flow {
         id: buttons
 
         anchors.verticalCenter: parent.verticalCenter
-        flow: root.vertical ? Flow.TopToBottom : Flow.LeftToRight
-        spacing: root.spacing
+        flow: komorebiWorkspaces.vertical ? Flow.TopToBottom : Flow.LeftToRight
+        spacing: komorebiWorkspaces.spacing
         visible: workspaceModel.connected
 
         Repeater {
@@ -156,15 +151,15 @@ Item {
                 id: button
 
                 required property var modelData
-                readonly property bool active: modelData.index === root.activeIndex
+                readonly property bool active: modelData.index === komorebiWorkspaces.activeIndex
 
                 objectName: "workspace-" + modelData.index
-                visible: !root.hideEmptyWorkspaces || active || modelData.populated
-                horizontalPadding: root.horizontalPadding
-                verticalPadding: root.verticalPadding
+                visible: !komorebiWorkspaces.hideEmptyWorkspaces || active || modelData.populated
+                horizontalPadding: komorebiWorkspaces.horizontalPadding
+                verticalPadding: komorebiWorkspaces.verticalPadding
                 hoverEnabled: true
-                Accessible.name: root.label(modelData)
-                onClicked: root.switchTo(modelData.index)
+                Accessible.name: komorebiWorkspaces.label(modelData)
+                onClicked: komorebiWorkspaces.switchTo(modelData.index)
 
                 HoverHandler {
                     cursorShape: Qt.PointingHandCursor
@@ -172,21 +167,21 @@ Item {
 
                 background: Rectangle {
                     radius: 4
-                    color: button.active ? root.activeColor : button.hovered ? root.hoveredColor : "transparent"
+                    color: button.active ? komorebiWorkspaces.activeColor : button.hovered ? komorebiWorkspaces.hoveredColor : "transparent"
                 }
 
                 contentItem: Row {
                     spacing: 4
 
-                    Text {
+                    Label {
                         objectName: "label"
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: !root.appIcons.hideLabel || button.modelData.icons.length === 0
-                        text: root.label(button.modelData)
+                        visible: !komorebiWorkspaces.appIcons.hideLabel || button.modelData.icons.length === 0
+                        text: komorebiWorkspaces.label(button.modelData)
                         textFormat: Text.PlainText
-                        color: root.textColor
-                        font: root.font
-                        opacity: button.active || button.modelData.populated ? 1 : root.emptyOpacity
+                        color: komorebiWorkspaces.textColor
+                        font: komorebiWorkspaces.font
+                        opacity: button.active || button.modelData.populated ? 1 : komorebiWorkspaces.emptyOpacity
                     }
 
                     Repeater {
@@ -198,7 +193,7 @@ Item {
                             objectName: "app-icon"
                             // The Repeater makes each icon before the Row takes it, and lets go of it first
                             anchors.verticalCenter: parent?.verticalCenter
-                            width: Math.max(1, root.appIcons.size)
+                            width: Math.max(1, komorebiWorkspaces.appIcons.size)
                             height: width
                             sourceSize: Qt.size(width, height)
                             source: modelData.source
@@ -209,49 +204,49 @@ Item {
         }
 
         // The same padding as the buttons lines the text up with their labels
-        Text {
+        Label {
             objectName: "float-override"
-            leftPadding: root.horizontalPadding
-            rightPadding: root.horizontalPadding
-            topPadding: root.verticalPadding
-            bottomPadding: root.verticalPadding
-            visible: workspaceModel.floatOverride && root.activeWorkspace !== null && text !== ""
-            text: root.floatOverrideLabel
+            leftPadding: komorebiWorkspaces.horizontalPadding
+            rightPadding: komorebiWorkspaces.horizontalPadding
+            topPadding: komorebiWorkspaces.verticalPadding
+            bottomPadding: komorebiWorkspaces.verticalPadding
+            visible: workspaceModel.floatOverride && komorebiWorkspaces.activeWorkspace !== null && text !== ""
+            text: komorebiWorkspaces.floatOverrideLabel
             textFormat: Text.PlainText
-            color: root.textColor
-            font: root.font
+            color: komorebiWorkspaces.textColor
+            font: komorebiWorkspaces.font
         }
 
-        Text {
+        Label {
             objectName: "layer"
-            leftPadding: root.horizontalPadding
-            rightPadding: root.horizontalPadding
-            topPadding: root.verticalPadding
-            bottomPadding: root.verticalPadding
-            visible: root.showWorkspaceLayer && text !== ""
-            text: root.activeWorkspace?.layer === "Tiling" ? root.tilingLabel
-                : root.activeWorkspace?.layer === "Floating" ? root.floatingLabel : ""
+            leftPadding: komorebiWorkspaces.horizontalPadding
+            rightPadding: komorebiWorkspaces.horizontalPadding
+            topPadding: komorebiWorkspaces.verticalPadding
+            bottomPadding: komorebiWorkspaces.verticalPadding
+            visible: komorebiWorkspaces.showWorkspaceLayer && text !== ""
+            text: komorebiWorkspaces.activeWorkspace?.layer === "Tiling" ? komorebiWorkspaces.tilingLabel
+                : komorebiWorkspaces.activeWorkspace?.layer === "Floating" ? komorebiWorkspaces.floatingLabel : ""
             textFormat: Text.PlainText
-            color: root.textColor
-            font: root.font
+            color: komorebiWorkspaces.textColor
+            font: komorebiWorkspaces.font
         }
     }
 
     WheelHandler {
-        enabled: root.enableScrollSwitching && workspaceModel.connected
+        enabled: komorebiWorkspaces.enableScrollSwitching && workspaceModel.connected
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: event => {
             // A touchpad scrolls in small steps, which add up to one workspace per mouse wheel notch
-            root.scrolled += event.angleDelta.y || event.angleDelta.x
-            if (Math.abs(root.scrolled) < 120)
+            komorebiWorkspaces.scrolled += event.angleDelta.y || event.angleDelta.x
+            if (Math.abs(komorebiWorkspaces.scrolled) < 120)
                 return
-            const delta = root.reverseScrollDirection ? -root.scrolled : root.scrolled
-            root.scrolled = 0
+            const delta = komorebiWorkspaces.reverseScrollDirection ? -komorebiWorkspaces.scrolled : komorebiWorkspaces.scrolled
+            komorebiWorkspaces.scrolled = 0
             // From the workspace shown as active, so each notch moves one on before komorebi has caught up.
             // Up goes to the previous workspace and down to the next, both wrapping around
             const count = workspaceModel.workspaces.length
-            if (root.activeIndex >= 0)
-                root.switchTo((root.activeIndex + (delta > 0 ? count - 1 : 1)) % count)
+            if (komorebiWorkspaces.activeIndex >= 0)
+                komorebiWorkspaces.switchTo((komorebiWorkspaces.activeIndex + (delta > 0 ? count - 1 : 1)) % count)
         }
     }
 }

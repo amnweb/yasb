@@ -10,6 +10,7 @@ from core.services.gpu.gpu_api import GpuData
 from core.services.gpu.monitor import GpuMonitor
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 GIB = 1024**3
@@ -66,7 +67,7 @@ def test_the_widget_shows_usage_and_memory(worker: FakeWorker):
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Gpu" / "Gpu.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
     assert widget.property("implicitWidth") == 0

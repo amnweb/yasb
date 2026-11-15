@@ -26,6 +26,7 @@ from core.services.network_traffic.monitor import EMPTY_DATA, EMPTY_HISTORY, Net
 from core.services.network_traffic.usage import Session
 from core.widget_files import BUILTIN_WIDGETS_DIR, find_widget_file
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.network import FakeWatcher, connection
 from tests.support.qt import find_item, wait
 
@@ -215,7 +216,7 @@ def widget(samplers: dict[str, FakeSampler], sampler: FakeSampler) -> Iterator[C
         component = QQmlComponent(
             engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "NetworkTraffic/NetworkTraffic.qml"))
         )
-        item = component.createWithInitialProperties(cast(dict[str | None, Any], properties))
+        item = create_with_bar(component, cast(dict[str | None, Any], properties))
         assert isinstance(item, QQuickItem), [error.toString() for error in component.errors()]
         created.append(item)
         host = QQuickWindow()

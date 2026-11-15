@@ -15,10 +15,13 @@ from typing import cast
 
 from PyQt6.QtCore import QByteArray, QMetaMethod, QMetaObject, QMetaProperty, QObject
 
+from core.cloud.ui.cloud import Cloud
 from core.qml_types import QML_SINGLETONS, QML_TYPES, QML_UNCREATABLE_TYPES, QML_URI, QML_VERSION
 
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "qmltypes"
-DEPENDENCIES = ("QtQml 2.0",)
+DEPENDENCIES = ("QtQml 2.0", "QtQuick 2.0")
+# With Cloud, which YASB Cloud registers itself
+UNCREATABLE_TYPES: tuple[type[QObject], ...] = (*QML_UNCREATABLE_TYPES, Cloud)
 
 
 class GenerationError(ValueError):
@@ -213,7 +216,7 @@ def _source_file(cls: type[QObject]) -> str | None:
 
 def render_qmltypes(
     types: Iterable[type[QObject]] = QML_TYPES,
-    uncreatable: Iterable[type[QObject]] = QML_UNCREATABLE_TYPES,
+    uncreatable: Iterable[type[QObject]] = UNCREATABLE_TYPES,
     singletons: Iterable[type[QObject]] = QML_SINGLETONS,
 ) -> str:
     """Return a deterministic plugins.qmltypes document for the exported types."""
@@ -283,7 +286,7 @@ def render_qmltypes(
 def module_files(
     output_dir: Path,
     types: Iterable[type[QObject]] = QML_TYPES,
-    uncreatable: Iterable[type[QObject]] = QML_UNCREATABLE_TYPES,
+    uncreatable: Iterable[type[QObject]] = UNCREATABLE_TYPES,
     singletons: Iterable[type[QObject]] = QML_SINGLETONS,
 ) -> dict[Path, str]:
     directory = output_dir.joinpath(*QML_URI.split("."))

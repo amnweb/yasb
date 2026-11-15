@@ -4,12 +4,15 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
-    id: widget
+    id: serverMonitor
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // Accepts URL strings or entries such as { name: "Router", url: "http://192.168.1.1" }.
     property var servers: []
     // Seconds between checks and timeout per network operation.
@@ -25,31 +28,55 @@ Item {
     property string alternateLabel: "{online}/{offline} of {total}"
     property bool showAlternate: false
     property string icon: "\uf760"
-    property int iconSize: font.pixelSize + 1
+    property int iconSize: theme.bar.iconFont.pixelSize
     property bool tooltip: true
     property string keys: ""
     property string alternateKeys: ""
-    property int popupWidth: 420
+    property int popupWidth: 404
     property string popupAlignment: "center"
     property int maxListHeight: 360
-    property color onlineColor: dark ? "#6CCB5F" : "#0F7B0F"
-    property color offlineColor: dark ? "#FF99A4" : "#C42B1C"
-    property color warningColor: dark ? "#FCE100" : "#9D5D00"
+    property color onlineColor: serverMonitor.theme.colors.success
+    property color offlineColor: serverMonitor.theme.colors.critical
+    property color warningColor: serverMonitor.theme.colors.warning
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    readonly property string edge: bar?.edge ?? "top"
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    readonly property string edge: bar.edge
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property color popupTextColor: theme.colors.text
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+    property color popupDividerColor: theme.colors.divider
+    property color popupTertiaryTextColor: theme.colors.textTertiary
+    property color popupHoverColor: theme.colors.hover
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // Each server's name
+    property font popupStrongFont
+    popupStrongFont.family: theme.popup.font.family
+    popupStrongFont.pixelSize: 13
+    popupStrongFont.weight: Font.DemiBold
 
     readonly property var results: monitor.results
     readonly property int offlineCount: results.filter(server => server.status === "Offline").length
@@ -74,8 +101,8 @@ Item {
         monitor.configure(...checkSettings)
     }
 
-    onCheckSettingsChanged: Qt.callLater(widget.configureMonitor)
-    Component.onCompleted: Qt.callLater(widget.configureMonitor)
+    onCheckSettingsChanged: Qt.callLater(serverMonitor.configureMonitor)
+    Component.onCompleted: Qt.callLater(serverMonitor.configureMonitor)
     Component.onDestruction: popup.hide()
 
     function warning(server: var): bool {
@@ -100,8 +127,8 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const screen = widget.Screen
-        const gap = 6
+        const screen = serverMonitor.Screen
+        const gap = popupGap
         const margin = 8
         let px
         let py
@@ -151,19 +178,19 @@ Item {
         objectName: "monitor"
     }
 
-    Hotkey { keys: widget.keys; onActivated: widget.togglePopup() }
-    Hotkey { keys: widget.alternateKeys; onActivated: widget.showAlternate = !widget.showAlternate }
+    Hotkey { keys: serverMonitor.keys; onActivated: serverMonitor.togglePopup() }
+    Hotkey { keys: serverMonitor.alternateKeys; onActivated: serverMonitor.showAlternate = !serverMonitor.showAlternate }
 
     Connections {
-        target: widget.Window.window
-        function onVisibleChanged() { if (!widget.Window.window?.visible) popup.hide() }
-        function onXChanged() { if (popup.visible) widget.placePopup() }
-        function onYChanged() { if (popup.visible) widget.placePopup() }
+        target: serverMonitor.Window.window
+        function onVisibleChanged() { if (!serverMonitor.Window.window?.visible) popup.hide() }
+        function onXChanged() { if (popup.visible) serverMonitor.placePopup() }
+        function onYChanged() { if (popup.visible) serverMonitor.placePopup() }
     }
 
     component StatusMark: Rectangle {
         property bool ring: false
-        property color ink: widget.textColor
+        property color ink: serverMonitor.textColor
         implicitWidth: 12
         implicitHeight: 12
         radius: width / 2
@@ -180,23 +207,24 @@ Item {
         Text {
             objectName: "icon"
             anchors.verticalCenter: parent.verticalCenter
-            visible: widget.icon !== ""
-            text: widget.icon
+            visible: serverMonitor.icon !== ""
+            text: serverMonitor.icon
             textFormat: Text.PlainText
-            color: widget.offlineCount > 0 ? widget.offlineColor : widget.hasWarning ? widget.warningColor
-                : widget.results.length ? widget.onlineColor : widget.textColor
-            font.family: widget.iconFont.family
-            font.weight: widget.iconFont.weight
-            font.pixelSize: widget.iconSize
+            color: serverMonitor.offlineCount > 0 ? serverMonitor.offlineColor : serverMonitor.hasWarning ? serverMonitor.warningColor
+                : serverMonitor.results.length ? serverMonitor.onlineColor : serverMonitor.textColor
+            font.family: serverMonitor.iconFont.family
+            font.weight: serverMonitor.iconFont.weight
+            font.variableAxes: serverMonitor.iconFont.variableAxes
+            font.pixelSize: serverMonitor.iconSize
         }
-        Text {
+        Label {
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
-            text: widget.labelText(widget.showAlternate ? widget.alternateLabel : widget.label)
+            text: serverMonitor.labelText(serverMonitor.showAlternate ? serverMonitor.alternateLabel : serverMonitor.label)
             visible: text !== ""
             textFormat: Text.PlainText
-            color: widget.textColor
-            font: widget.font
+            color: serverMonitor.textColor
+            font: serverMonitor.font
         }
     }
 
@@ -208,67 +236,64 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onClicked: event => {
             if (event.button === Qt.LeftButton)
-                widget.togglePopup()
+                serverMonitor.togglePopup()
             else
-                widget.showAlternate = !widget.showAlternate
+                serverMonitor.showAlternate = !serverMonitor.showAlternate
         }
     }
 
     ToolTip {
         objectName: "tooltip"
         popupType: Popup.Window
-        visible: widget.tooltip && mouse.containsMouse && !popup.visible
+        visible: serverMonitor.tooltip && mouse.containsMouse && !popup.visible
         delay: 400
-        text: widget.summary || widget.placeholder
-        y: widget.edge === "bottom" ? -implicitHeight - 6 : widget.height + 6
+        text: serverMonitor.summary || serverMonitor.placeholder
+        y: serverMonitor.edge === "bottom" ? -implicitHeight - 6 : serverMonitor.height + 6
     }
 
     BackdropPopup {
         id: popup
 
         property real reveal: 0
-        readonly property color ink: widget.dark ? "#ffffff" : "#000000"
-        readonly property color secondary: Qt.alpha(ink, 0.786)
-        readonly property color muted: Qt.alpha(ink, 0.544)
-        readonly property color line: Qt.alpha(ink, 0.08)
 
         objectName: "menu"
         title: qsTr("Server Monitor")
-        anchor: widget
+        anchor: serverMonitor
+        font: serverMonitor.popupFont
+        theme: serverMonitor.theme
         backdropItem: panel
-        width: Math.min(Math.max(260, widget.popupWidth), widget.Screen.width - 16)
-        height: Math.min(content.implicitHeight + 16, widget.Screen.desktopAvailableHeight - 24)
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        width: Math.min(Math.max(244, serverMonitor.popupWidth), serverMonitor.Screen.width - 32)
+        height: Math.min(popupContent.implicitHeight, serverMonitor.Screen.desktopAvailableHeight - 40)
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: serverMonitor.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: serverMonitor.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
         }
-        onHeightChanged: { if (visible) widget.placePopup() }
-        onWidthChanged: { if (visible) widget.placePopup() }
+        onHeightChanged: { if (visible) serverMonitor.placePopup() }
+        onWidthChanged: { if (visible) serverMonitor.placePopup() }
 
         Rectangle {
             id: panel
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: widget.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: serverMonitor.popupRadius
+            color: serverMonitor.popupColor
             border.width: 1
-            border.color: widget.dark ? "#3A3A3A" : "#D9D9D9"
+            border.color: serverMonitor.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
-            transformOrigin: widget.edge === "bottom" ? Item.Bottom : widget.edge === "left" ? Item.Left
-                : widget.edge === "right" ? Item.Right : Item.Top
+            transformOrigin: serverMonitor.edge === "bottom" ? Item.Bottom : serverMonitor.edge === "left" ? Item.Left
+                : serverMonitor.edge === "right" ? Item.Right : Item.Top
             clip: true
 
             component PopupText: Text {
-                color: popup.ink
-                font.pixelSize: 13
+                color: serverMonitor.popupTextColor
+                font: serverMonitor.popupFont
                 textFormat: Text.PlainText
             }
 
             ColumnLayout {
-                id: content
+                id: popupContent
                 anchors.fill: parent
                 spacing: 0
 
@@ -283,39 +308,38 @@ Item {
                     PopupText {
                         Layout.fillWidth: true
                         text: qsTr("Server Monitor")
-                        font.pixelSize: 14
-                        font.weight: Font.DemiBold
+                        font: serverMonitor.popupTitleFont
                     }
                     PopupText {
                         objectName: "summary"
-                        text: widget.summary
-                        font.pixelSize: 12
-                        color: popup.muted
+                        text: serverMonitor.summary
+                        font: serverMonitor.popupSmallFont
+                        color: serverMonitor.popupTertiaryTextColor
                     }
                 }
 
                 LoadingLine {
                     Layout.fillWidth: true
                     running: monitor.loading
-                    trackColor: popup.line
+                    trackColor: serverMonitor.popupDividerColor
                 }
 
                 PopupText {
                     Layout.fillWidth: true
                     Layout.margins: 16
-                    visible: !widget.results.length || !!monitor.error
-                    text: widget.placeholder
+                    visible: !serverMonitor.results.length || !!monitor.error
+                    text: serverMonitor.placeholder
                     wrapMode: Text.Wrap
-                    font.pixelSize: 12
-                    color: monitor.error ? widget.offlineColor : popup.secondary
+                    font: serverMonitor.popupSmallFont
+                    color: monitor.error ? serverMonitor.offlineColor : serverMonitor.popupSecondaryTextColor
                 }
 
                 Flickable {
                     id: list
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(contentHeight, widget.maxListHeight,
-                        Math.max(80, widget.Screen.desktopAvailableHeight - 124))
-                    visible: widget.results.length > 0
+                    Layout.preferredHeight: Math.min(contentHeight, serverMonitor.maxListHeight,
+                        Math.max(80, serverMonitor.Screen.desktopAvailableHeight - 124))
+                    visible: serverMonitor.results.length > 0
                     clip: true
                     contentHeight: rows.implicitHeight
                     boundsBehavior: Flickable.StopAtBounds
@@ -328,14 +352,14 @@ Item {
                         bottomPadding: 4
 
                         Repeater {
-                            model: widget.results
+                            model: serverMonitor.results
 
                             delegate: ItemDelegate {
                                 id: serverRow
                                 required property var modelData
                                 required property int index
                                 readonly property bool offline: modelData.status === "Offline"
-                                readonly property bool hasWarning: widget.warning(modelData)
+                                readonly property bool hasWarning: serverMonitor.warning(modelData)
                                 readonly property string status: offline ? qsTr("Offline")
                                     : hasWarning ? qsTr("Online with certificate warning") : qsTr("Online")
 
@@ -347,7 +371,7 @@ Item {
                                 hoverEnabled: true
                                 enabled: /^https?:\/\//i.test(modelData.url)
                                 Accessible.name: qsTr("%1, %2").arg(modelData.name).arg(status)
-                                Accessible.description: widget.details(modelData)
+                                Accessible.description: serverMonitor.details(modelData)
                                 onClicked: Qt.openUrlExternally(modelData.url)
 
                                 HoverHandler {
@@ -357,7 +381,7 @@ Item {
 
                                 background: Rectangle {
                                     color: serverRow.hovered || serverRow.visualFocus
-                                        ? Qt.alpha(popup.ink, 0.06) : "transparent"
+                                        ? serverMonitor.popupHoverColor : "transparent"
                                 }
 
                                 Rectangle {
@@ -367,7 +391,7 @@ Item {
                                     anchors.rightMargin: 16
                                     height: 1
                                     visible: serverRow.index > 0
-                                    color: popup.line
+                                    color: serverMonitor.popupDividerColor
                                 }
 
                                 contentItem: ColumnLayout {
@@ -377,20 +401,20 @@ Item {
                                         PopupText {
                                             Layout.fillWidth: true
                                             text: serverRow.modelData.name
-                                            font.weight: Font.DemiBold
+                                            font: serverMonitor.popupStrongFont
                                             elide: Text.ElideRight
                                         }
                                         StatusMark {
                                             ring: serverRow.offline || serverRow.hasWarning
-                                            ink: serverRow.offline ? widget.offlineColor
-                                                : serverRow.hasWarning ? widget.warningColor : widget.onlineColor
+                                            ink: serverRow.offline ? serverMonitor.offlineColor
+                                                : serverRow.hasWarning ? serverMonitor.warningColor : serverMonitor.onlineColor
                                         }
                                     }
                                     PopupText {
                                         Layout.fillWidth: true
-                                        text: widget.details(serverRow.modelData)
-                                        font.pixelSize: 12
-                                        color: popup.secondary
+                                        text: serverMonitor.details(serverRow.modelData)
+                                        font: serverMonitor.popupSmallFont
+                                        color: serverMonitor.popupSecondaryTextColor
                                         wrapMode: Text.Wrap
                                     }
                                 }
@@ -405,14 +429,14 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: 7
-                    bottomRightRadius: 7
-                    color: Qt.alpha("#000000", widget.dark ? 0.15 : 0.03)
+                    bottomLeftRadius: serverMonitor.popupRadius - 1
+                    bottomRightRadius: serverMonitor.popupRadius - 1
+                    color: serverMonitor.popupSecondaryBackgroundColor
 
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: popup.line
+                        color: serverMonitor.popupDividerColor
                     }
 
                     RowLayout {
@@ -429,21 +453,21 @@ Item {
                             hoverEnabled: true
                             leftPadding: 8
                             rightPadding: 8
-                            onClicked: widget.refresh()
+                            onClicked: serverMonitor.refresh()
                             HoverHandler {
                                 enabled: refreshButton.enabled
                                 cursorShape: Qt.PointingHandCursor
                             }
                             contentItem: PopupText {
                                 text: refreshButton.text
-                                color: !refreshButton.enabled ? popup.muted
-                                    : refreshButton.hovered || refreshButton.visualFocus ? popup.ink : popup.secondary
-                                font.pixelSize: 12
+                                color: !refreshButton.enabled ? serverMonitor.popupTertiaryTextColor
+                                    : refreshButton.hovered || refreshButton.visualFocus ? serverMonitor.popupTextColor : serverMonitor.popupSecondaryTextColor
+                                font: serverMonitor.popupSmallFont
                             }
                             background: Rectangle {
                                 radius: 4
                                 color: refreshButton.hovered || refreshButton.visualFocus
-                                    ? Qt.alpha(popup.ink, 0.08) : "transparent"
+                                    ? serverMonitor.popupHoverColor : "transparent"
                             }
                         }
 
@@ -451,9 +475,9 @@ Item {
                             objectName: "checked"
                             Layout.fillWidth: true
                             horizontalAlignment: Text.AlignRight
-                            text: widget.checked ? qsTr("Checked at %1").arg(widget.checked) : ""
-                            color: popup.muted
-                            font.pixelSize: 12
+                            text: serverMonitor.checked ? qsTr("Checked at %1").arg(serverMonitor.checked) : ""
+                            color: serverMonitor.popupTertiaryTextColor
+                            font: serverMonitor.popupSmallFont
                         }
                     }
                 }

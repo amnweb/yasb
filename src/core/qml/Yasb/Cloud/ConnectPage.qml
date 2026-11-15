@@ -1,12 +1,13 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Yasb
 
 // The app never asks for a password: signing in opens the browser and the app waits
 Item {
     id: page
 
-    required property QtObject cloud
+    required property Cloud cloud
 
     readonly property bool waiting: cloud.signInState === "waiting"
 

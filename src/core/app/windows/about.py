@@ -31,7 +31,8 @@ def release_notes_url() -> str:
 
 class About(QObject):
     stateChanged = pyqtSignal()
-    updateRequested = pyqtSignal(object)
+    # The ReleaseInfo found, for the tray to open the update window with
+    updateRequested = pyqtSignal("QVariant")
     _checked = pyqtSignal(object, bool)
 
     def __init__(self, parent: QObject | None = None) -> None:

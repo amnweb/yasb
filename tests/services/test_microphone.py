@@ -15,6 +15,7 @@ from core.services.microphone.input import AudioInput
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
 from tests.support.audio import FakeVolume
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 
@@ -145,7 +146,7 @@ def test_the_bar_icon_shows_muted_and_a_missing_microphone(service: FakeInputSer
 
     engine.warnings.connect(collect_warnings)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Microphone" / "Microphone.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
     icon = find_item(widget, "icon")

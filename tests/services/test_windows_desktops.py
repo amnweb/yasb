@@ -18,6 +18,7 @@ from core.services.windows_desktops.service import ForegroundView
 from core.utils.hotkey import Hotkey
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 
@@ -203,7 +204,7 @@ def test_renaming_by_number_opens_the_dialog_for_that_desktop(service: FakeDeskt
     component = QQmlComponent(
         engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "WindowsDesktops" / "WindowsDesktops.qml"))
     )
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     rename = widget.findChild(QObject, "rename")
     assert rename is not None
@@ -245,13 +246,14 @@ def test_the_widget_labels_desktops_and_runs_actions_and_hotkeys(service: FakeDe
     component = QQmlComponent(
         engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "WindowsDesktops" / "WindowsDesktops.qml"))
     )
-    widget = component.createWithInitialProperties(
+    widget = create_with_bar(
+        component,
         {
             "label": "{index}",
             "activeLabel": "[{name}]",
             "populatedLabel": "{name}*",
             "keybindings": [{"keys": "alt+2", "action": "switch_desktop 2"}],
-        }
+        },
     )
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     window = QQuickWindow()
@@ -296,7 +298,7 @@ def test_the_menu_opens_and_closes_without_errors(service: FakeDesktopService, w
     component = QQmlComponent(
         engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "WindowsDesktops" / "WindowsDesktops.qml"))
     )
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     host = QQuickWindow()
     host.setPosition(100, 40)
@@ -336,7 +338,7 @@ def test_the_garbage_collector_leaves_the_open_menu_alone(service: FakeDesktopSe
     component = QQmlComponent(
         engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "WindowsDesktops" / "WindowsDesktops.qml"))
     )
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     host = QQuickWindow()
     widget.setParentItem(host.contentItem())

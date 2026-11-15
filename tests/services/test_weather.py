@@ -29,6 +29,7 @@ from core.services.weather.location import (
 from core.utils.system import app_data_path
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 BERLIN = {
@@ -420,7 +421,7 @@ def widget(api: WeatherApi) -> Iterator[tuple[QQuickItem, list[str]]]:
 
     engine.warnings.connect(collect_warnings)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Weather" / "Weather.qml")))
-    item = component.create()
+    item = create_with_bar(component)
     assert isinstance(item, QQuickItem), [error.toString() for error in component.errors()]
     host = QQuickWindow()
     host.resize(200, 36)

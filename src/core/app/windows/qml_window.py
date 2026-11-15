@@ -48,7 +48,7 @@ def show_window(engine: QQmlEngine, type_name: str, properties: dict[str | None,
 
     _windows[type_name] = window
     window.visibleChanged.connect(closed)
-    enable_mica(int(window.winId()))
+    window.setProperty("mica", enable_mica(int(window.winId())))
     window.show()
     window.requestActivate()
     return window

@@ -10,6 +10,7 @@ from core.services.cpu.cpu_api import CpuData, CpuFreq
 from core.services.cpu.monitor import CpuMonitor
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 SAMPLE = CpuData(CpuFreq(3000.0, 0.0, 4000.0), 42.5, [40.0, 45.0], 1, 2)
@@ -63,7 +64,7 @@ def test_the_widget_shows_the_usage_and_the_alternate_label(worker: FakeWorker):
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Cpu" / "Cpu.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
 

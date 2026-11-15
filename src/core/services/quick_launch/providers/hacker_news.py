@@ -172,7 +172,7 @@ class HackerNewsProvider(BaseProvider):
                     description=info["description"],
                     icon_path=ICON_HACKER_NEWS,
                     provider=self.name,
-                    action_data={"_home": True, "prefix": self.prefix, "initial_text": key},
+                    query=f"{key} ",
                 )
             )
         return results
@@ -188,7 +188,7 @@ class HackerNewsProvider(BaseProvider):
                         description=info["description"],
                         icon_path=ICON_HACKER_NEWS,
                         provider=self.name,
-                        action_data={"_home": True, "prefix": self.prefix, "initial_text": key},
+                        query=f"{key} ",
                     )
                 )
         return results

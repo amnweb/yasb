@@ -28,6 +28,7 @@ from core.qml_types import register_qml_types
 from core.services.clock.time_zones import TimeZones
 from core.widget_files import BUILTIN_WIDGETS_DIR, find_widget_file
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.widgets import write_widget
 
 CLOCK = BUILTIN_WIDGETS_DIR / "Clock" / "Clock.qml"
@@ -48,13 +49,13 @@ def make_clock(engine: QQmlEngine) -> Iterator[MakeClock]:
     windows: list[QQuickWindow] = []
     clocks: list[QQuickItem] = []
 
-    def make(path: Path = CLOCK, window_y: int = 0, **properties: Any) -> QQuickItem:
+    def make(path: Path = CLOCK, window_y: int = 0, edge: str = "top", **properties: Any) -> QQuickItem:
         window = QQuickWindow()
         window.setGeometry(0, window_y, 400, 32)
         windows.append(window)
         component = QQmlComponent(engine, QUrl.fromLocalFile(str(path)))
         initial: dict[str | None, Any] = {name: value for name, value in properties.items()}
-        clock = component.createWithInitialProperties(initial)
+        clock = create_with_bar(component, initial, edge)
         assert isinstance(clock, QQuickItem), [error.toString() for error in component.errors()]
         clock.setParentItem(window.contentItem())
         clock.setHeight(32)
@@ -191,24 +192,9 @@ def test_the_calendar_steps_across_the_new_year(make_clock: MakeClock):
     assert (calendar.property("month"), calendar.property("year")) == (0, 2027)
 
 
-@pytest.fixture
-def fake_bar(engine: QQmlEngine) -> QObject:
-    component = QQmlComponent(engine)
-    component.setData(
-        b'import QtQuick\n\nItem {\n    property color textColor: "#123456"\n'
-        b'    property font font: Qt.font({ family: "Arial", pixelSize: 20 })\n    property string edge: "top"\n}\n',
-        QUrl("fake_bar.qml"),
-    )
-    bar = component.create()
-    assert bar is not None
-    return bar
-
-
 @pytest.mark.parametrize("edge", ["top", "bottom", "left", "right"])
-def test_the_calendar_opens_away_from_the_bar_edge(make_clock: MakeClock, fake_bar: QObject, edge: str):
-    fake_bar.setProperty("edge", edge)
-    clock = make_clock()
-    clock.setProperty("bar", fake_bar)
+def test_the_calendar_opens_away_from_the_bar_edge(make_clock: MakeClock, edge: str):
+    clock = make_clock(edge=edge)
     window = clock.window()
     assert window is not None
     on = window.screen()
@@ -237,15 +223,13 @@ def test_the_calendar_opens_away_from_the_bar_edge(make_clock: MakeClock, fake_b
     assert away[edge]
 
 
-def test_the_clock_takes_its_colour_and_font_from_its_bar(make_clock: MakeClock, fake_bar: QObject):
+def test_the_clock_takes_the_text_colour_of_its_theme(make_clock: MakeClock):
     clock = make_clock()
-    clock.setProperty("bar", fake_bar)
-    assert clock.property("color") == QColor("#123456")
-    assert (clock.property("font").family(), clock.property("font").pixelSize()) == ("Arial", 20)
+    text = clock.property("bar").property("theme").property("colors").property("text")
+    assert clock.property("color").rgba() == text.rgba()
 
 
-def test_a_colour_in_the_clock_file_beats_the_bar(make_clock: MakeClock, fake_bar: QObject, tmp_path: Path):
+def test_a_colour_in_the_clock_file_beats_the_theme(make_clock: MakeClock, tmp_path: Path):
     (tmp_path / "clock.qml").write_text('import Yasb.Widgets\n\nClock {\n    color: "#ff0000"\n}\n')
     clock = make_clock(tmp_path / "clock.qml")
-    clock.setProperty("bar", fake_bar)
     assert clock.property("color") == QColor("#ff0000")

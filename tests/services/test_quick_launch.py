@@ -19,6 +19,7 @@ from core.utils.icons.image_provider import _source, icon_url
 from core.utils.icons.sources import AppIcon, FileIcon, ProcessIcon, WindowIcon
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import wait
 
 PROVIDERS = {"calculator": {"enabled": True, "prefix": "="}, "web_search": {"enabled": True, "prefix": "?"}}
@@ -97,15 +98,27 @@ def test_a_prefixed_query_returns_its_provider_results(search: QuickLaunchSearch
     assert row["title"] == "42" and row["icon"].endswith("icons/calculator.svg") and row["provider"] == "calculator"
 
 
-def test_the_home_page_lists_prefixes_and_picking_one_requests_it(search: QuickLaunchSearch):
+def test_the_home_page_lists_prefixes_and_picking_one_types_it(search: QuickLaunchSearch):
     requested: list[str] = []
-    search.prefixRequested.connect(requested.append)
+    search.queryRequested.connect(requested.append)
     search.setProperty("homePage", True)
     search.search("")
     titles = [row["title"] for row in rows(search)]
     assert "=" in titles
     search.execute(titles.index("="))
-    assert requested == ["="]
+    assert requested == ["= "]
+
+
+def test_picking_a_providers_tool_types_its_name_after_the_prefix(search: QuickLaunchSearch):
+    queries: list[str] = []
+    search.queryRequested.connect(queries.append)
+    search.setProperty("providers", {**PROVIDERS, "dev_tools": {"enabled": True, "prefix": "dev"}})
+    until(lambda: any(p["prefix"] == "dev" for p in search.property("prefixes")))
+    search.search("dev ")
+    until(lambda: rows(search) and not search.property("loading"))
+    titles = [row["title"] for row in rows(search)]
+    search.execute(titles.index("UUID Generator"))
+    assert queries == ["dev uuid "]
 
 
 def test_colour_rows_ask_the_launcher_for_text_or_the_picker(search: QuickLaunchSearch):
@@ -115,7 +128,7 @@ def test_colour_rows_ask_the_launcher_for_text_or_the_picker(search: QuickLaunch
     search.colorPickRequested.connect(picks.append)
     search.property("results").set_results(
         [
-            ProviderResult(title="Random", provider="calculator", action_data={"_replace_input": "random"}),
+            ProviderResult(title="Random", provider="calculator", query="random"),
             ProviderResult(title="Pick", provider="calculator", action_data={"_pick_color": True}),
         ]
     )
@@ -170,7 +183,7 @@ def test_the_widget_searches_without_qml_warnings(qapp: QGuiApplication):
         b"import Yasb.Widgets\nQuickLaunch { homePage: true; calculator.enabled: true; webSearch.enabled: true; webSearch.prefix: '??' }",
         QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "QuickLaunch" / "User.qml")),
     )
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     host = QQuickWindow()
     try:

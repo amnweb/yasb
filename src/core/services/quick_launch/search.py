@@ -106,8 +106,6 @@ class QuickLaunchSearch(QObject):
     prefixesChanged = pyqtSignal()
     # The popup should close
     closeRequested = pyqtSignal()
-    # A home page entry was picked: show this provider's prefix
-    prefixRequested = pyqtSignal(str)
     # A result asked for this text in the search box, the prefix included
     queryRequested = pyqtSignal(str)
     # A result asked to pick a colour from the screen, for this provider prefix
@@ -220,7 +218,7 @@ class QuickLaunchSearch(QObject):
                 description=f"Activate {p.display_name or p.name}",
                 icon_path=p.icon,
                 provider=p.name,
-                action_data={"_home": True, "prefix": p.prefix},
+                query="",
             )
             for p in self._service.providers
             if p.prefix
@@ -255,15 +253,12 @@ class QuickLaunchSearch(QObject):
         result = self._results.result(row)
         if result is None or result.is_separator:
             return
-        if result.action_data.get("_home"):
-            self.prefixRequested.emit(result.action_data["prefix"])
-            return
         provider = self._provider(result)
         if provider is None:
             return
         prefix = f"{provider.prefix} " if provider.prefix else ""
-        if text := result.action_data.get("_replace_input"):
-            self.queryRequested.emit(prefix + text)
+        if result.query is not None:
+            self.queryRequested.emit(prefix + result.query)
             return
         if result.action_data.get("_pick_color"):
             self.colorPickRequested.emit(prefix)

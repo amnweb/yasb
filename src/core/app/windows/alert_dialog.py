@@ -55,7 +55,7 @@ def _show(app: QCoreApplication, title: str, message: str, details: str, on_clos
 
     _alerts[dialog] = engine
     dialog.visibleChanged.connect(closed)
-    enable_mica(int(dialog.winId()))
+    dialog.setProperty("mica", enable_mica(int(dialog.winId())))
     dialog.show()
     dialog.requestActivate()
     user32.MessageBeep(MB_ICONERROR)

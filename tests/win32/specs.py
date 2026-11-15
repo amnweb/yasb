@@ -52,8 +52,6 @@ STRUCTS: dict[str, Sdk | Vendored] = {
     "core.utils.win32.structs.IP_ADAPTER_ADDRESSES": Sdk("IP_ADAPTER_ADDRESSES_LH", prefix=True),
     "core.utils.win32.structs.IP_ADAPTER_UNICAST_ADDRESS": Sdk("IP_ADAPTER_UNICAST_ADDRESS_LH"),
     "core.utils.win32.structs.WLAN_PROFILE_INFO_LIST": Sdk(prefix=True),
-    "core.utils.win32.structs.ACCENTPOLICY": Vendored("ACCENTPOLICY"),
-    "core.utils.win32.structs.WINDOWCOMPOSITIONATTRIBDATA": Vendored("WINDOWCOMPOSITIONATTRIBDATA"),
     "core.utils.win32.structs.SYSTEM_MEMORY_LIST_INFORMATION": Vendored("SYSTEM_MEMORY_LIST_INFORMATION"),
     "core.utils.win32.structs.NOTIFYICONDATA": Vendored("NOTIFYICONDATA32"),
     "core.utils.win32.structs.NOFITYICONDATA_0": Vendored("NOTIFYICONDATA32_0"),
@@ -77,10 +75,6 @@ STRUCTS: dict[str, Sdk | Vendored] = {
 # defines them where one exists, so the test compares the ctypes code against the vendor and not
 # against a second hand-written guess.
 VENDORED_DECLARATIONS = r"""
-// Undocumented user32 SetWindowCompositionAttribute payload.
-struct ACCENTPOLICY { DWORD AccentState; DWORD AccentFlags; DWORD GradientColor; DWORD AnimationId; };
-struct WINDOWCOMPOSITIONATTRIBDATA { int Attribute; PVOID Data; SIZE_T SizeOfData; };
-
 // ntexapi.h from phnt (System Informer), SystemMemoryListInformation.
 struct SYSTEM_MEMORY_LIST_INFORMATION {
     ULONG_PTR ZeroPageCount;
@@ -162,7 +156,6 @@ NOT_IN_SDK: dict[str, str] = {
     "Everything_*": "voidtools Everything SDK",
     "nvml*": "NVIDIA Management Library",
     "ADL2_*": "AMD Display Library",
-    "SetWindowCompositionAttribute": "undocumented user32 export",
     "SetTaskmanWindow": "undocumented user32 export",
     "Power?etUserConfigured?CPowerMode": "undocumented powrprof export",
     "Rtl*WnfStateChangeNotification": "undocumented ntdll export",
@@ -201,6 +194,10 @@ UNDOCUMENTED_INTERFACES: dict[str, str] = {
     "core.services.windows_desktops.interfaces.IVirtualDesktop2": "undocumented shell interface",
     "core.services.windows_desktops.interfaces.IVirtualDesktopNotificationService": "undocumented shell interface",
     "core.services.windows_desktops.interfaces.IVirtualDesktopPinnedApps": "undocumented shell interface",
+    # windows.ui.composition.interop.h declares these for C++ only, with no C vtable to check against
+    "core.utils.win32.bindings.d3d11.ICompositorInterop": "composition interop, C++ only",
+    "core.utils.win32.bindings.d3d11.ICompositionGraphicsDeviceInterop": "composition interop, C++ only",
+    "core.utils.win32.bindings.d3d11.ICompositionDrawingSurfaceInterop": "composition interop, C++ only",
 }
 
 # Python constant -> SDK name, for constants the code names differently from the headers.

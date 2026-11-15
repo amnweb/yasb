@@ -1,11 +1,12 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Yasb
 
 Window {
     id: window
 
-    required property QtObject updater
+    required property Updater updater
 
     readonly property string changelogStyle: `
         body, p, li { font-family: 'Segoe UI'; font-size: 10pt; font-weight: 600; }
@@ -17,9 +18,12 @@ Window {
         pre { background-color: #000000; color: #ffffff; font-family: 'Consolas', monospace; }
     `
 
+    // Set when Windows draws Mica behind the window, from Windows 11 22H2 on; until then it has the style's colour
+    property bool mica: false
+
     title: qsTr("Update Available")
     flags: Qt.Dialog | Qt.WindowTitleHint | Qt.WindowCloseButtonHint | Qt.WindowStaysOnTopHint
-    color: "transparent"
+    color: mica ? "transparent" : palette.window
     width: 900
     height: 640
     minimumWidth: 900

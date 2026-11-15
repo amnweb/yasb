@@ -13,6 +13,7 @@ from core.services.language.keyboard import KeyboardLanguage, layout_klid
 from core.utils.win32.constants import WM_INPUTLANGCHANGEREQUEST
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item
 
 ENGLISH = 0x04090409
@@ -153,7 +154,7 @@ def test_the_label_formats_placeholders_and_toggles(windows: Windows):
 
     engine.warnings.connect(collect_warnings)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Language" / "Language.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     label = find_item(widget, "label")
     assert label is not None

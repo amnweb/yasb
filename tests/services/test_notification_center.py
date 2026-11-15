@@ -18,6 +18,7 @@ from core.services.notifications.windows_notification import NotificationItem
 from core.utils.icons.service import IconService
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import wait
 
 SENT = datetime(2026, 10, 31, 9, 30, tzinfo=UTC)
@@ -169,7 +170,7 @@ def test_the_widget_shows_waiting_notifications_and_groups_by_app(events: Events
     engine.addImportPath(QML_IMPORT_PATH)
     path = BUILTIN_WIDGETS_DIR / "Notifications" / "Notifications.qml"
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(path)))
-    widget = component.createWithInitialProperties({"hideEmpty": True})
+    widget = create_with_bar(component, {"hideEmpty": True})
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     # In a window like on a bar, where Qt keeps the items' visibility up to date
     window = QQuickWindow()

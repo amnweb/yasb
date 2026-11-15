@@ -1,10 +1,13 @@
 import ctypes
 import logging
+import sys
+import uuid
 import weakref
-from ctypes import wintypes
+from ctypes import COMError, wintypes
 from functools import cache
 from typing import Any, cast, override
 
+import comtypes
 from PyQt6 import sip
 from PyQt6.QtCore import (
     QAbstractNativeEventFilter,
@@ -18,13 +21,29 @@ from PyQt6.QtCore import (
     QThread,
     QTimer,
 )
-from PyQt6.QtGui import QWindow
-from winrt.windows.foundation import AsyncStatus, IAsyncAction
+from PyQt6.QtGui import QImage, QWindow
+from winrt.runtime.interop import InterfaceCapsule, as_interface, wrap_interface
+from winrt.system import Object
+from winrt.windows.foundation import AsyncStatus, IAsyncAction, Size
 from winrt.windows.system import DispatcherQueue, DispatcherQueueController
 from winrt.windows.system.interop import create_dispatcher_queue_controller
-from winrt.windows.ui.composition import CompositionRoundedRectangleGeometry, Compositor, SpriteVisual
+from winrt.windows.ui.composition import (
+    CompositionDrawingSurface,
+    CompositionGraphicsDevice,
+    CompositionRoundedRectangleGeometry,
+    Compositor,
+    SpriteVisual,
+)
 from winrt.windows.ui.composition.interop import create_desktop_window_target
 
+from core.utils.win32.bindings.d3d11 import (
+    D3D11CreateDevice,
+    ICompositionDrawingSurfaceInterop,
+    ICompositionGraphicsDeviceInterop,
+    ICompositorInterop,
+    IID_ID3D11Texture2D,
+    UpdateSubresource,
+)
 from core.utils.win32.bindings.dwmapi import DwmSetWindowAttribute
 from core.utils.win32.bindings.gdi32 import DeleteObject
 from core.utils.win32.bindings.kernel32 import GetLastError, GetModuleHandle
@@ -60,12 +79,27 @@ from core.utils.win32.constants import (
     WS_EX_TRANSPARENT,
     WS_POPUP,
 )
-from core.utils.win32.structs import MSG, WNDCLASS, WNDPROC
+from core.utils.win32.structs import D3D11_BOX, MSG, WNDCLASS, WNDPROC
 
 BACKDROP_WINDOW_CLASS = "YasbBackdrop"
+# DXGI_FORMAT_B8G8R8A8_UNORM and DXGI_ALPHA_MODE_IGNORE; PyWinRT takes them as numbers, without its
+# Windows.Graphics.DirectX projection
+_BGRA_PIXELS = 87
+_ALPHA_IGNORED = 3
+# PyWinRT passes COM interfaces in and out as capsules of this name (winrt.runtime.interop.InterfaceCapsule)
+_CAPSULE_NAME = b"winrt.interface"
+_capsule_pointer = ctypes.PYFUNCTYPE(ctypes.c_void_p, ctypes.py_object, ctypes.c_char_p)(
+    ("PyCapsule_GetPointer", ctypes.pythonapi)
+)
+_new_capsule = ctypes.PYFUNCTYPE(ctypes.py_object, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p)(
+    ("PyCapsule_New", ctypes.pythonapi)
+)
 
 _dispatcher_queue: DispatcherQueueController | None = None
 _compositor: Compositor | None = None
+# The graphics device drawing surfaces are made on, and the Direct3D device it draws with, with its immediate context
+_graphics: CompositionGraphicsDevice | None = None
+_direct3d: tuple[comtypes.IUnknown, comtypes.IUnknown] | None = None
 _shutting_down = False
 _backdrops: weakref.WeakSet[BackdropWindow] = weakref.WeakSet()
 
@@ -87,9 +121,69 @@ def compositor() -> Compositor:
     return _compositor
 
 
+def drawing_surface(image: QImage) -> CompositionDrawingSurface:
+    """A surface of the shared compositor holding image, which has 32 bits per pixel with blue first in memory,
+    such as Format_RGB32, for a surface brush."""
+    width, height = image.width(), image.height()
+    # Typed with the DirectX enums of a projection YASB does not install
+    surface = _graphics_device().create_drawing_surface(  # pyright: ignore[reportUnknownMemberType]
+        Size(width, height),
+        _BGRA_PIXELS,
+        _ALPHA_IGNORED,
+    )
+    interop = _com_interface(surface, ICompositionDrawingSurfaceInterop)
+    try:
+        texture, offset = interop.BeginDraw(None, IID_ID3D11Texture2D)
+    except COMError:
+        # The Direct3D device is lost, as after a GPU reset or a driver update: Microsoft's composition interop
+        # docs have the app give the graphics device a new one and draw again
+        logging.warning("Composition lost its Direct3D device, drawing with a new one", exc_info=True)
+        _com_interface(_graphics_device(), ICompositionGraphicsDeviceInterop).SetRenderingDevice(_new_direct3d())
+        texture, offset = interop.BeginDraw(None, IID_ID3D11Texture2D)
+    try:
+        bits = image.constBits()
+        assert bits is not None and _direct3d is not None
+        box = D3D11_BOX(offset.x, offset.y, 0, offset.x + width, offset.y + height, 1)
+        UpdateSubresource(_direct3d[1], texture, box, int(bits), image.bytesPerLine())
+    finally:
+        interop.EndDraw()
+    return surface
+
+
+def _graphics_device() -> CompositionGraphicsDevice:
+    global _graphics
+    if _graphics is None:
+        interop = _com_interface(compositor(), ICompositorInterop)
+        _graphics = _winrt_object(interop.CreateGraphicsDevice(_new_direct3d()), CompositionGraphicsDevice)
+    return _graphics
+
+
+def _new_direct3d() -> comtypes.IUnknown:
+    """A new Direct3D device for the graphics device, whose immediate context uploads the pixels."""
+    global _direct3d
+    _direct3d = D3D11CreateDevice()
+    return _direct3d[0]
+
+
+def _com_interface[T: comtypes.IUnknown](obj: Object, interface: type[T]) -> T:
+    """The COM interface *interface* of the PyWinRT object *obj*."""
+    capsule = as_interface(obj, uuid.UUID(str(interface._iid_)))  # pyright: ignore[reportPrivateUsage]
+    pointer = cast(T, ctypes.cast(_capsule_pointer(capsule, _CAPSULE_NAME), ctypes.POINTER(interface)))
+    # A reference of its own, which comtypes releases, as the capsule releases the one it holds
+    pointer.AddRef()
+    return pointer
+
+
+def _winrt_object[T: Object](interface: comtypes.IUnknown, kind: type[T]) -> T:
+    """The PyWinRT object for a COM interface, handed over in a capsule that holds no reference: wrap_interface
+    takes one of its own."""
+    pointer = ctypes.cast(interface, ctypes.c_void_p).value
+    return wrap_interface(cast(InterfaceCapsule, _new_capsule(pointer, _CAPSULE_NAME, None)), kind)
+
+
 def shutdown_composition() -> None:
     """After all bars close, finish the shared runtime; safe when never initialized."""
-    global _compositor, _dispatcher_queue, _shutting_down
+    global _compositor, _dispatcher_queue, _graphics, _direct3d, _shutting_down
     if _shutting_down or (_compositor is None and _dispatcher_queue is None):
         return
     app = QCoreApplication.instance()
@@ -99,6 +193,13 @@ def shutdown_composition() -> None:
     for backdrop in list(_backdrops):
         backdrop.close()
     _shutting_down = True
+    if _graphics is not None:
+        try:
+            _graphics.close()
+        except OSError:
+            logging.exception("Could not close the composition graphics device")
+        finally:
+            _graphics = _direct3d = None
     if _compositor is not None:
         try:
             _compositor.close()
@@ -125,6 +226,15 @@ def shutdown_composition() -> None:
             _dispatcher_queue = None
     except OSError:
         logging.exception("Could not shut down the bar dispatcher queue")
+
+
+# DWMWA_USE_HOSTBACKDROPBRUSH, which the blur behind bars and popups needs, is there from Windows 11 (build 22000) on
+HOST_BACKDROP_BUILD = 22000
+
+
+def host_backdrop_supported() -> bool:
+    """Whether this Windows gives windows the host backdrop brushes the blur behind bars and popups is drawn with."""
+    return sys.getwindowsversion().build >= HOST_BACKDROP_BUILD
 
 
 class _BackdropEvents(QAbstractNativeEventFilter):

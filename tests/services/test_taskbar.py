@@ -26,6 +26,7 @@ from core.utils.win32.constants import HSHELL_FLASH, HSHELL_WINDOWCREATED
 from core.utils.win32.shell_hook import shell_event
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 
@@ -367,7 +368,7 @@ def widget(manager: Manager) -> Iterator[tuple[QQuickItem, list[str]]]:
 
     engine.warnings.connect(collect_warnings)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Taskbar" / "Taskbar.qml")))
-    item = component.create()
+    item = create_with_bar(component)
     assert isinstance(item, QQuickItem), [error.toString() for error in component.errors()]
     # An item counts as visible only in a window, as on a bar
     host = QQuickWindow()

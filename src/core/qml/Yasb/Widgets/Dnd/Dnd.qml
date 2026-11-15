@@ -1,13 +1,16 @@
 import QtQuick
 import QtQuick.Controls
 import Yasb
+import Yasb.Bar
+import Yasb.Themes
 
 Item {
     id: dnd
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // The bar icon for each mode, drawn in iconFont and iconColor
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
     property string offIcon: "\uf4bd"
     property string priorityIcon: "\uf4bd"
     property string alarmsIcon: "\ue7ed"
@@ -16,15 +19,16 @@ Item {
     // The mode when the pointer rests on the widget
     property bool tooltip: true
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    property color textColor: theme.colors.text
     // The accent colour while do not disturb is on; by mode for example: status === "alarms" ? "#ff99a4" : textColor
-    property color iconColor: status === "priority" || status === "alarms" ? palette.active.accent : textColor
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    property color iconColor: status === "priority" || status === "alarms" ? theme.colors.accent : textColor
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property string edge: bar?.edge ?? "top"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    readonly property string edge: bar.edge
     // disabled, priority, alarms, or unknown where Windows has no do not disturb
     readonly property string status: service.status
     readonly property string description: {
@@ -57,6 +61,7 @@ Item {
         opacity: service.available ? 1 : 0.4
         font.family: dnd.iconFont.family
         font.weight: dnd.iconFont.weight
+        font.variableAxes: dnd.iconFont.variableAxes
         font.pixelSize: dnd.iconSize
     }
 

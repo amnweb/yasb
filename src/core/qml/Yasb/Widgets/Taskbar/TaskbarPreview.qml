@@ -21,14 +21,26 @@ Window {
     required property int animationDuration
     required property string edge
     required property bool vertical
-    required property bool dark
+    // Whether the apps of the hovered button and of the one waiting to show have windows open, and that one's key
+    required property bool hoveredRunning
+    required property bool pendingRunning
+    required property string pendingKey
+    // The look, from the taskbar's properties
     required property color tint
+    required property color textColor
+    required property color secondaryTextColor
+    required property color hoverColor
+    required property color pressedColor
+    required property real radius
+    required property font titleFont
+    required property font iconFont
+    required property color closeColor
+    required property color closeTextColor
     required property color attentionColor
-    required property string fontFamily
-    required property string iconFontFamily
+    required property int openDuration
+    required property int closeDuration
 
     readonly property QtObject barWindow: host.Window.window
-    readonly property color ink: dark ? "#ffffff" : "#000000"
 
     // The button whose previews show, by key, and the button the pointer is on
     property string previewKey: ""
@@ -61,7 +73,7 @@ Window {
         }
         if (!allowed)
             return
-        if (entered && button.running && clicked !== button) {
+        if (entered && hoveredRunning && clicked !== button) {
             previewHide.stop()
             previewPending = button
             // Moving between buttons while previews show switches without the hover delay.
@@ -69,7 +81,7 @@ Window {
                 showPreview()
             else
                 previewShow.restart()
-        } else if (hovered === null || !hovered.running) {
+        } else if (hovered === null || !hoveredRunning) {
             previewShow.stop()
             if (previewWindow.visible)
                 previewHide.restart()
@@ -78,14 +90,14 @@ Window {
 
     function showPreview() {
         const button = previewPending
-        if (!button || !button.running || button !== hovered)
+        if (!button || !pendingRunning || button !== hovered)
             return
         const start = button.mapToGlobal(0, 0)
         const screen = host.Screen
         previewAnchor = Qt.rect(start.x, start.y, button.width, button.height)
         // This screen; desktopAvailableHeight would be the height of all screens together
         previewArea = Qt.rect(screen.virtualX, screen.virtualY, screen.width, screen.height)
-        previewWindow.setCards(button.key)
+        previewWindow.setCards(pendingKey)
         previewWindow.revealCards()
     }
 
@@ -186,7 +198,7 @@ Window {
         interval: 300
         onTriggered: {
             if (previewWindow.visible && previewAnimation.to === 1 && !previewHover.hovered
-                    && !(previewWindow.hovered?.running && previewWindow.hovered !== previewWindow.clicked)) {
+                    && !(previewWindow.hoveredRunning && previewWindow.hovered !== previewWindow.clicked)) {
                 previewWindow.stopPeek()
                 previewAnimation.to = 0
                 previewAnimation.restart()
@@ -227,7 +239,7 @@ Window {
         target: previewWindow.barWindow
 
         function onVisibleChanged() {
-            if (!previewWindow.barWindow?.visible)
+            if (!previewWindow.host.Window.window?.visible)
                 previewWindow.dismiss()
         }
     }
@@ -350,7 +362,7 @@ Window {
         target: previewWindow
         property: "reveal"
         to: 1
-        duration: previewWindow.animation ? Math.min(to === 1 ? 180 : 140, previewWindow.animationDuration) : 0
+        duration: previewWindow.animation ? Math.min(to === 1 ? previewWindow.openDuration : previewWindow.closeDuration, previewWindow.animationDuration) : 0
         easing.type: to === 1 ? Easing.OutCubic : Easing.InCubic
         onFinished: { if (to === 0) previewWindow.dismiss() }
     }
@@ -382,7 +394,7 @@ Window {
         x: previewWindow.leftFor(width) - previewWindow.x
         y: previewWindow.topFor(height) - previewWindow.y
         clip: true
-        radius: 8
+        radius: previewWindow.radius
         color: previewWindow.tint
         opacity: previewWindow.reveal
         scale: 0.85 + previewWindow.reveal * 0.15
@@ -462,7 +474,7 @@ Window {
                         anchors.fill: parent
                         radius: 6
                         color: card.info?.flashing ? Qt.alpha(previewWindow.attentionColor, 0.28)
-                            : Qt.alpha(previewWindow.ink, cardTap.pressed ? 0.04 : cardHover.hovered ? 0.0605 : 0)
+                            : cardTap.pressed ? previewWindow.pressedColor : cardHover.hovered ? previewWindow.hoverColor : "transparent"
                     }
 
                     Image {
@@ -482,9 +494,8 @@ Window {
                         text: card.info?.title ?? ""
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
-                        color: Qt.alpha(previewWindow.ink, 0.9)
-                        font.family: previewWindow.fontFamily
-                        font.pixelSize: 12
+                        color: Qt.alpha(previewWindow.textColor, 0.9)
+                        font: previewWindow.titleFont
                     }
 
                     Rectangle {
@@ -499,14 +510,13 @@ Window {
                         height: 22
                         radius: 4
                         visible: cardHover.hovered
-                        color: hovered ? "#C42B1C" : "transparent"
+                        color: hovered ? previewWindow.closeColor : "transparent"
 
                         Text {
                             anchors.centerIn: parent
                             text: "\ue8bb"
-                            color: closeButton.hovered ? "#ffffff" : Qt.alpha(previewWindow.ink, 0.786)
-                            font.family: previewWindow.iconFontFamily
-                            font.pixelSize: 10
+                            color: closeButton.hovered ? previewWindow.closeTextColor : previewWindow.secondaryTextColor
+                            font: previewWindow.iconFont
                         }
                     }
 

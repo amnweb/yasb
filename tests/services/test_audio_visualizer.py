@@ -16,6 +16,7 @@ from core.services.audio_visualizer.levels import AudioLevels
 from core.services.audio_visualizer.spectrum import FFT_SIZE, SpectrumSource
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import wait
 
 # A loud mix of a low and a high tone
@@ -172,7 +173,7 @@ def load_widget(**options: Any) -> tuple[QQuickItem, QQuickWindow, list[str], QQ
         "waveWidth": 80,
         **options,
     }
-    widget = component.createWithInitialProperties(initial)
+    widget = create_with_bar(component, initial)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     window = QQuickWindow()
     widget.setParentItem(window.contentItem())

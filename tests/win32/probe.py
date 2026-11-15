@@ -48,6 +48,7 @@ HEADERS = (
     "endpointvolume.h",
     "audiopolicy.h",
     "dxgi.h",
+    "d3d11.h",
     "wincrypt.h",
     "dpapi.h",
     "bcrypt.h",
@@ -287,6 +288,8 @@ def _render(items: dict[str, _Item], vendored: str) -> tuple[str, dict[int, str]
     lines.append("#define WINNT 1")
     # security.h declares GetUserNameEx only for user-mode callers that define SECURITY_WIN32.
     lines.append("#define SECURITY_WIN32")
+    # d3d11.h's C++ helper classes call methods the C-style declarations leave out.
+    lines.append("#define D3D11_NO_HELPERS")
     lines += [f"#include <{header}>" for header in HEADERS]
     lines += ["namespace vendored {", *vendored.splitlines(), "}  // namespace vendored"]
     line_map: dict[int, str] = {}

@@ -19,6 +19,7 @@ from core.services.github.api import GitHubDataManager
 from core.services.github.notifications import GitHubNotifications, notification_details, notification_status
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import wait
 
 # The token the widget is set to in most tests
@@ -332,7 +333,7 @@ def test_qml_widget_shows_every_state_without_warnings(github: GitHub, monkeypat
 
     engine.warnings.connect(collect_warnings)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Github" / "Github.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     QQmlProperty.write(widget, "token", TOKEN)
     host = QQuickWindow()

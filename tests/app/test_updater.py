@@ -16,6 +16,7 @@ from core.app.update.installer import Updater, changelog_html, download_installe
 from core.app.update.service import ReleaseInfo
 from core.app.windows import about as about_module
 from core.app.windows.about import About
+from core.qml_types import register_qml_types
 from settings import QML_IMPORT_PATH
 from tests.support.qt import wait
 
@@ -159,6 +160,7 @@ def test_an_available_update_opens_on_the_second_click(qapp: QGuiApplication, mo
 
 @pytest.mark.parametrize("name", ["AboutWindow", "UpdateWindow"])
 def test_the_windows_load(qapp: QGuiApplication, name: str):
+    register_qml_types()
     engine = QQmlEngine()
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(Path(QML_IMPORT_PATH, "Yasb", "Common", f"{name}.qml"))))
     controller = About() if name == "AboutWindow" else Updater(release())

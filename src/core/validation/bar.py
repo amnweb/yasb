@@ -24,7 +24,8 @@ class BarAnimation(CustomBaseModel):
 
 class BarConfig(CustomBaseModel):
     enabled: bool = True
-    file: str | None = Field(default=None, min_length=1)
+    layout: str | None = Field(default=None, min_length=1)
+    theme: str | None = Field(default=None, min_length=1)
     screens: list[str] = ["*"]
     edge: Literal["top", "bottom", "left", "right"] = "top"
     align: Literal["left", "center", "right", "top", "bottom"] = "center"

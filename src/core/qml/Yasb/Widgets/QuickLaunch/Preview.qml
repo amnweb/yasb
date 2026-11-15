@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -8,8 +10,13 @@ Item {
 
     property var content: ({})
     property bool forced: false
-    property bool dark: false
-    property color secondary: "#808080"
+    // The look of its labels, from the quick launch's properties: font for the subtitle and details, strongFont for
+    // the title and the form's labels
+    required property color textColor
+    required property font font
+    required property font strongFont
+    // The quick launch's right-click menu for text fields
+    required property Menu editMenu
 
     readonly property string kind: content.kind ?? ""
     readonly property bool editing: kind === "edit" && (content.fields?.length ?? 0) > 0
@@ -69,7 +76,7 @@ Item {
             text: preview.content.title ?? ""
             textFormat: Text.PlainText
             wrapMode: Text.WrapAnywhere
-            font.weight: Font.DemiBold
+            font: preview.strongFont
         }
 
         Label {
@@ -78,8 +85,8 @@ Item {
             text: preview.content.subtitle ?? ""
             textFormat: Text.PlainText
             wrapMode: Text.WrapAnywhere
-            color: preview.secondary
-            font.pixelSize: 12
+            color: preview.textColor
+            font: preview.font
         }
 
         GridLayout {
@@ -101,8 +108,8 @@ Item {
                     text: modelData
                     textFormat: Text.PlainText
                     elide: Text.ElideLeft
-                    color: preview.secondary
-                    font.pixelSize: 12
+                    color: preview.textColor
+                    font: preview.font
                 }
             }
         }
@@ -121,7 +128,7 @@ Item {
 
             model: preview.editing ? preview.content.fields : []
 
-            delegate: ColumnLayout {
+            component FormField: ColumnLayout {
                 id: field
 
                 required property var modelData
@@ -135,11 +142,23 @@ Item {
                 Label {
                     visible: text !== ""
                     text: field.modelData.label ?? ""
-                    font.weight: Font.DemiBold
+                    font: preview.strongFont
                 }
 
                 TextField {
                     id: line
+
+                    // Qt's own text menu is replaced by fieldMenu, which the right button opens
+                    ContextMenu.menu: null
+
+                    // A right-click opens the menu at the mouse cursor, on press or release as Windows sets it
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onPressedChanged: {
+                            if (pressed === (Application.styleHints.contextMenuTrigger === Qt.ContextMenuTrigger.Press))
+                                preview.editMenu.popup(line)
+                        }
+                    }
 
                     Layout.fillWidth: true
                     visible: !field.multiline
@@ -155,12 +174,26 @@ Item {
                     TextArea {
                         id: area
 
+                        // Qt's own text menu is replaced by fieldMenu, which the right button opens
+                        ContextMenu.menu: null
+
+                        // A right-click opens the menu at the mouse cursor, on press or release as Windows sets it
+                        TapHandler {
+                            acceptedButtons: Qt.RightButton
+                            onPressedChanged: {
+                                if (pressed === (Application.styleHints.contextMenuTrigger === Qt.ContextMenuTrigger.Press))
+                                    preview.editMenu.popup(area)
+                            }
+                        }
+
                         text: field.modelData.value ?? ""
                         placeholderText: field.modelData.placeholder ?? ""
                         wrapMode: TextEdit.Wrap
                     }
                 }
             }
+
+            delegate: FormField {}
         }
 
         DialogButtonBox {
@@ -172,7 +205,7 @@ Item {
             onAccepted: {
                 const values = {}
                 for (let i = 0; i < fields.count; i++) {
-                    const item = fields.itemAt(i)
+                    const item = fields.itemAt(i) as FormField
                     values[item.modelData.id] = item.value
                 }
                 preview.action(preview.content.action ?? "save", values)

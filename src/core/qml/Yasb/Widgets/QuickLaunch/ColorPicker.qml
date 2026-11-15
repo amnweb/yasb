@@ -1,12 +1,21 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Effects
+import Yasb
 
 // Picks a colour from any screen: a magnifying loupe follows the mouse and shows the live pixels under it.
 // Left click picks, right click or Escape cancels.
 QtObject {
     id: picker
 
-    required property QtObject quickLaunch
+    // The quick launch's search, which reads the screen's colours
+    required property QuickLaunchSearch launcherSearch
+    // The look of the lens and its label, from the quick launch's properties
+    required property color frameColor
+    required property color labelColor
+    required property color textColor
+    required property font font
     readonly property int size: 11
     readonly property int cell: 12
     property bool active: false
@@ -22,7 +31,7 @@ QtObject {
     }
 
     property Instantiator windows: Instantiator {
-        model: picker.active ? Qt.application.screens : []
+        model: picker.active ? Application.screens : []
 
         delegate: Window {
             id: window
@@ -40,7 +49,7 @@ QtObject {
             color: "transparent"
 
             Component.onCompleted: {
-                picker.quickLaunch.excludeFromCapture(window)
+                picker.launcherSearch.excludeFromCapture(window)
                 show()
             }
 
@@ -54,7 +63,7 @@ QtObject {
                 onExited: window.pixels = []
                 onPositionChanged: mouse => {
                     window.cursor = Qt.point(mouse.x, mouse.y)
-                    window.pixels = picker.quickLaunch.colorsAround(window.x + mouse.x, window.y + mouse.y, picker.size)
+                    window.pixels = picker.launcherSearch.colorsAround(window.x + mouse.x, window.y + mouse.y, picker.size)
                 }
                 onPressed: mouse => {
                     const color = window.pixels[(picker.size * picker.size - 1) / 2]
@@ -97,7 +106,7 @@ QtObject {
                     // Solid, so the lines between the cells don't show the screen under the lens
                     Rectangle {
                         anchors.fill: parent
-                        color: "#292929"
+                        color: Qt.alpha(picker.frameColor, 1)
                     }
 
                     Grid {
@@ -136,7 +145,7 @@ QtObject {
                     radius: width / 2
                     color: "transparent"
                     border.width: 2.5
-                    border.color: Qt.alpha("#292929", 0.86)
+                    border.color: picker.frameColor
                 }
 
                 Rectangle {
@@ -158,7 +167,7 @@ QtObject {
                     width: row.implicitWidth + 16
                     height: row.implicitHeight + 8
                     radius: height / 2
-                    color: Qt.alpha("#141414", 0.82)
+                    color: picker.labelColor
 
                     Row {
                         id: row
@@ -173,14 +182,13 @@ QtObject {
                             radius: 7
                             color: loupe.center
                             border.width: 1
-                            border.color: Qt.alpha("#ffffff", 0.4)
+                            border.color: picker.frameColor
                         }
 
                         Text {
                             text: String(loupe.center).toUpperCase()
-                            color: "#ffffff"
-                            font.pointSize: 9
-                            font.bold: true
+                            color: picker.textColor
+                            font: picker.font
                         }
                     }
                 }

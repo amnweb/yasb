@@ -4,12 +4,15 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
-    id: widget
+    id: obs
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // obs-websocket's server, in OBS under Tools > WebSocket Server Settings
     property string host: "localhost"
     property int port: 4455
@@ -34,32 +37,59 @@ Item {
     property string streamKeys: ""
     property string virtualCamKeys: ""
     property string studioModeKeys: ""
-    property int popupWidth: 300
+    property int popupWidth: 284
     // Popup alignment relative to the widget on a horizontal bar: left, right or center
     property string popupAlignment: "center"
     property color liveColor: "#E81123"
     property color pausedColor: "#FFB900"
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
+    property int iconSize: theme.bar.iconFont.pixelSize
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property string edge: bar?.edge ?? "top"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The text of a button that starts or stops something
+    property color strongTextColor: "#ffffff"
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property color popupTextColor: theme.colors.text
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+    property color popupCardColor: theme.colors.card
+    property color popupCardBorderColor: theme.colors.cardBorder
+    property color popupDividerColor: theme.colors.divider
+    property color popupTertiaryTextColor: theme.colors.textTertiary
+    property color popupControlColor: theme.colors.control
+    property color popupControlHoverColor: theme.colors.controlHover
+    property color popupControlPressedColor: theme.colors.controlPressed
+    property color popupControlBorderColor: theme.colors.controlBorder
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // The glyphs beside the recording, streaming and other rows
+    property int popupIconSize: 15
+    readonly property string edge: bar.edge
 
-    readonly property bool recording: obs.recording.active
-    readonly property bool paused: obs.recording.paused
-    readonly property bool streaming: obs.streaming.active
+    readonly property bool recording: studio.recording.active
+    readonly property bool paused: studio.recording.paused
+    readonly property bool streaming: studio.streaming.active
 
     // A duration in milliseconds as 12:48, or 1:04:10 from an hour
     function clock(ms: real): string {
@@ -72,9 +102,9 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const gap = 6
+        const gap = popupGap
         const margin = 8
-        const screen = widget.Screen
+        const screen = obs.Screen
         let px
         let py
         switch (edge) {
@@ -108,7 +138,7 @@ Item {
     }
 
     // A hidden widget takes no room on the bar, as its slot keeps the size it asks for
-    readonly property bool shown: !(hideWhenDisconnected && !obs.connected) && !(hideWhenIdle && !recording && !streaming)
+    readonly property bool shown: !(hideWhenDisconnected && !studio.connected) && !(hideWhenIdle && !recording && !streaming)
 
     implicitWidth: shown ? row.implicitWidth : 0
     implicitHeight: shown ? row.implicitHeight : 0
@@ -123,59 +153,59 @@ Item {
     Component.onDestruction: popup.hide()
 
     ObsStudio {
-        id: obs
+        id: studio
 
-        host: widget.host
-        port: widget.port
-        password: widget.password
+        host: obs.host
+        port: obs.port
+        password: obs.password
     }
 
     Hotkey {
-        keys: widget.keys
-        onActivated: widget.togglePopup()
+        keys: obs.keys
+        onActivated: obs.togglePopup()
     }
 
     Hotkey {
-        keys: widget.recordKeys
-        onActivated: obs.toggleRecord()
+        keys: obs.recordKeys
+        onActivated: studio.toggleRecord()
     }
 
     Hotkey {
-        keys: widget.pauseKeys
-        onActivated: obs.toggleRecordPause()
+        keys: obs.pauseKeys
+        onActivated: studio.toggleRecordPause()
     }
 
     Hotkey {
-        keys: widget.streamKeys
-        onActivated: obs.toggleStream()
+        keys: obs.streamKeys
+        onActivated: studio.toggleStream()
     }
 
     Hotkey {
-        keys: widget.virtualCamKeys
-        onActivated: obs.toggleVirtualCam()
+        keys: obs.virtualCamKeys
+        onActivated: studio.toggleVirtualCam()
     }
 
     Hotkey {
-        keys: widget.studioModeKeys
-        onActivated: obs.toggleStudioMode()
+        keys: obs.studioModeKeys
+        onActivated: studio.toggleStudioMode()
     }
 
     Connections {
-        target: widget.Window.window
+        target: obs.Window.window
 
         function onVisibleChanged() {
-            if (!widget.Window.window?.visible)
+            if (!obs.Window.window?.visible)
                 popup.hide()
         }
 
         function onXChanged() {
             if (popup.visible)
-                widget.placePopup()
+                obs.placePopup()
         }
 
         function onYChanged() {
             if (popup.visible)
-                widget.placePopup()
+                obs.placePopup()
         }
     }
 
@@ -185,7 +215,7 @@ Item {
 
         function onHeightChanged() {
             if (popup.visible)
-                widget.placePopup()
+                obs.placePopup()
         }
     }
 
@@ -193,8 +223,9 @@ Item {
         textFormat: Text.PlainText
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        font.family: widget.iconFont.family
-        font.weight: widget.iconFont.weight
+        font.family: obs.iconFont.family
+        font.weight: obs.iconFont.weight
+        font.variableAxes: obs.iconFont.variableAxes
     }
 
     // The red dot of a recording; it blinks while it records, unless blinkingIcon is off
@@ -206,7 +237,7 @@ Item {
         implicitWidth: 9
         implicitHeight: 9
         radius: 4.5
-        color: widget.liveColor
+        color: obs.liveColor
 
         SequentialAnimation on opacity {
             running: dot.blinking
@@ -221,14 +252,14 @@ Item {
     }
 
     // Text in the popup, in its ink or muted colour
-    component Label: Text {
+    component PopupText: Text {
         property bool muted: false
 
         Layout.minimumWidth: 0
         textFormat: Text.PlainText
         elide: Text.ElideRight
-        color: muted ? popup.muted : popup.ink
-        font.pixelSize: 13
+        color: muted ? obs.popupTertiaryTextColor : obs.popupTextColor
+        font: obs.popupFont
     }
 
     component Card: Rectangle {
@@ -236,19 +267,19 @@ Item {
         Layout.leftMargin: 12
         Layout.rightMargin: 12
         radius: 8
-        color: widget.dark ? Qt.alpha("#ffffff", 0.0512) : Qt.alpha("#ffffff", 0.7)
+        color: obs.popupCardColor
         border.width: 1
-        border.color: Qt.alpha("#000000", widget.dark ? 0.1 : 0.0578)
+        border.color: obs.popupCardBorderColor
     }
 
     // The line above a row in a card, after its first
     component RowSeparator: Rectangle {
         Layout.fillWidth: true
         implicitHeight: 1
-        color: Qt.alpha(popup.ink, 0.06)
+        color: obs.popupDividerColor
     }
 
-    // A small framed button, as WinUI's standard buttons are; a strong one is filled in the live colour
+    // A small framed button; a strong one is filled in the live colour
     component SmallButton: Rectangle {
         id: button
 
@@ -259,10 +290,10 @@ Item {
         implicitWidth: buttonText.implicitWidth + 20
         implicitHeight: 26
         radius: 4
-        color: strong ? Qt.darker(widget.liveColor, buttonArea.pressed ? 1.2 : buttonArea.containsMouse ? 1.1 : 1)
-            : Qt.alpha(popup.ink, buttonArea.pressed ? 0.04 : buttonArea.containsMouse ? 0.09 : 0.06)
+        color: strong ? Qt.darker(obs.liveColor, buttonArea.pressed ? 1.2 : buttonArea.containsMouse ? 1.1 : 1)
+            : buttonArea.pressed ? obs.popupControlPressedColor : buttonArea.containsMouse ? obs.popupControlHoverColor : obs.popupControlColor
         border.width: 1
-        border.color: strong ? "transparent" : Qt.alpha(popup.ink, 0.08)
+        border.color: strong ? "transparent" : obs.popupControlBorderColor
         Accessible.role: Accessible.Button
         Accessible.name: text
         Accessible.onPressAction: button.clicked()
@@ -273,8 +304,8 @@ Item {
             anchors.centerIn: parent
             text: button.text
             textFormat: Text.PlainText
-            color: button.strong ? "#ffffff" : popup.ink
-            font.pixelSize: 12
+            color: button.strong ? obs.strongTextColor : obs.popupTextColor
+            font: obs.popupSmallFont
         }
 
         MouseArea {
@@ -297,92 +328,94 @@ Item {
         Glyph {
             objectName: "idle"
             anchors.verticalCenter: parent.verticalCenter
-            visible: !widget.recording && !widget.streaming
+            visible: !obs.recording && !obs.streaming
             text: "\ue7c8"
-            color: widget.textColor
-            opacity: obs.connected ? 1 : 0.4
-            font.pixelSize: widget.font.pixelSize + 1
+            color: obs.textColor
+            opacity: studio.connected ? 1 : 0.4
+            font.pixelSize: obs.iconSize
         }
 
         Row {
             objectName: "recording"
             anchors.verticalCenter: parent.verticalCenter
-            visible: widget.recording
+            visible: obs.recording
             spacing: 6
 
             RecordDot {
                 anchors.verticalCenter: parent.verticalCenter
-                visible: !widget.paused
-                blinking: widget.blinkingIcon && widget.recording && !widget.paused
+                visible: !obs.paused
+                blinking: obs.blinkingIcon && obs.recording && !obs.paused
             }
 
             Glyph {
                 anchors.verticalCenter: parent.verticalCenter
-                visible: widget.paused
+                visible: obs.paused
                 text: "\ue769"
-                color: widget.pausedColor
-                font.pixelSize: widget.font.pixelSize
+                color: obs.pausedColor
+                font.pixelSize: sceneLabel.font.pixelSize
             }
 
-            Text {
+            Label {
                 anchors.verticalCenter: parent.verticalCenter
-                visible: widget.showRecordTime
-                text: widget.clock(obs.recording.duration)
+                visible: obs.showRecordTime
+                text: obs.clock(studio.recording.duration)
                 textFormat: Text.PlainText
-                color: widget.textColor
-                opacity: widget.paused ? 0.7 : 1
-                font: widget.font
+                color: obs.textColor
+                font: obs.font
+                opacity: obs.paused ? 0.7 : 1
             }
         }
 
         Row {
             objectName: "streaming"
             anchors.verticalCenter: parent.verticalCenter
-            visible: widget.streaming
+            visible: obs.streaming
             spacing: 6
 
             Glyph {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "\ue93e"
-                color: widget.liveColor
-                font.pixelSize: widget.font.pixelSize + 1
+                color: obs.liveColor
+                font.pixelSize: obs.iconSize
             }
 
-            Text {
+            Label {
                 anchors.verticalCenter: parent.verticalCenter
-                visible: widget.showStreamTime
-                text: widget.clock(obs.streaming.duration)
+                visible: obs.showStreamTime
+                text: obs.clock(studio.streaming.duration)
                 textFormat: Text.PlainText
-                color: widget.textColor
-                font: widget.font
+                color: obs.textColor
+                font: obs.font
             }
         }
 
         Glyph {
             anchors.verticalCenter: parent.verticalCenter
-            visible: widget.showVirtualCam && obs.virtualCam
+            visible: obs.showVirtualCam && studio.virtualCam
             text: "\ue714"
-            color: widget.textColor
-            font.pixelSize: widget.font.pixelSize + 1
+            color: obs.textColor
+            font.pixelSize: obs.iconSize
         }
 
         Glyph {
             anchors.verticalCenter: parent.verticalCenter
-            visible: widget.showStudioMode && obs.studioMode
+            visible: obs.showStudioMode && studio.studioMode
             text: "\ue7f4"
-            color: widget.textColor
-            font.pixelSize: widget.font.pixelSize + 1
+            color: obs.textColor
+            font.pixelSize: obs.iconSize
         }
 
-        Text {
+        Label {
+            id: sceneLabel
+
             objectName: "scene"
             anchors.verticalCenter: parent.verticalCenter
-            visible: widget.showSceneName && obs.scene !== ""
-            text: obs.scene
+            visible: obs.showSceneName && studio.scene !== ""
+            text: studio.scene
             textFormat: Text.PlainText
-            color: widget.textColor
+            color: obs.textColor
+            font: obs.font
             opacity: 0.7
-            font: widget.font
         }
     }
 
@@ -392,37 +425,36 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: widget.togglePopup()
+        onClicked: obs.togglePopup()
     }
 
     ToolTip {
         popupType: Popup.Window
-        visible: widget.tooltip && area.containsMouse && !popup.visible
+        visible: obs.tooltip && area.containsMouse && !popup.visible
         delay: 400
-        text: !obs.connected ? qsTr("OBS is not connected")
-            : [widget.recording ? (widget.paused ? qsTr("Recording paused") : qsTr("Recording")) : qsTr("Not recording"),
-                widget.streaming ? qsTr("Streaming") : "",
-                obs.scene !== "" ? qsTr("Scene: %1").arg(obs.scene) : ""].filter(line => line).join("\n")
+        text: !studio.connected ? qsTr("OBS is not connected")
+            : [obs.recording ? (obs.paused ? qsTr("Recording paused") : qsTr("Recording")) : qsTr("Not recording"),
+                obs.streaming ? qsTr("Streaming") : "",
+                studio.scene !== "" ? qsTr("Scene: %1").arg(studio.scene) : ""].filter(line => line).join("\n")
         // Away from the bar's edge
-        y: widget.edge === "bottom" ? -implicitHeight - 6 : widget.height + 6
+        y: obs.edge === "bottom" ? -implicitHeight - 6 : obs.height + 6
     }
 
     BackdropPopup {
         id: popup
 
         property real reveal: 0
-        readonly property color ink: widget.dark ? "#ffffff" : "#000000"
-        readonly property color muted: Qt.alpha(ink, 0.544)
-        readonly property color line: Qt.alpha(ink, 0.08)
 
         objectName: "popup"
         title: qsTr("OBS Studio")
-        width: widget.popupWidth
-        height: popupContent.implicitHeight + 16
-        anchor: widget
+        width: obs.popupWidth
+        height: popupContent.implicitHeight
+        anchor: obs
+        font: obs.popupFont
+        theme: obs.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: obs.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: obs.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -432,14 +464,13 @@ Item {
             id: surface
 
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: widget.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: obs.popupRadius
+            color: obs.popupColor
             border.width: 1
-            border.color: widget.dark ? "#3A3A3A" : "#D9D9D9"
+            border.color: obs.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
-            transformOrigin: widget.edge === "bottom" ? Item.Bottom : Item.Top
+            transformOrigin: obs.edge === "bottom" ? Item.Bottom : Item.Top
             clip: true
 
             ColumnLayout {
@@ -457,48 +488,47 @@ Item {
                     Layout.bottomMargin: 10
                     spacing: 2
 
-                    Label {
+                    PopupText {
                         Layout.fillWidth: true
                         text: qsTr("OBS Studio")
-                        font.pixelSize: 14
-                        font.weight: Font.DemiBold
+                        font: obs.popupTitleFont
                     }
 
-                    Label {
+                    PopupText {
                         Layout.fillWidth: true
                         visible: text !== ""
-                        text: obs.connected ? (obs.scene !== "" ? qsTr("Scene: %1").arg(obs.scene) : "")
+                        text: studio.connected ? (studio.scene !== "" ? qsTr("Scene: %1").arg(studio.scene) : "")
                             : qsTr("Not connected")
                         muted: true
-                        font.pixelSize: 12
+                        font: obs.popupSmallFont
                     }
                 }
 
                 Rectangle {
                     Layout.fillWidth: true
                     implicitHeight: 1
-                    color: popup.line
+                    color: obs.popupDividerColor
                 }
 
                 // OBS is not running, its server is off, or the password is wrong
-                Label {
+                PopupText {
                     objectName: "disconnected"
                     Layout.fillWidth: true
                     Layout.margins: 16
-                    visible: !obs.connected
-                    text: obs.error !== "" ? obs.error
+                    visible: !studio.connected
+                    text: studio.error !== "" ? studio.error
                         : qsTr("Start OBS and turn on its WebSocket server under Tools > WebSocket Server Settings.")
                     wrapMode: Text.WordWrap
                     elide: Text.ElideNone
-                    muted: obs.error === ""
-                    color: obs.error !== "" ? widget.liveColor : popup.muted
-                    font.pixelSize: 12
+                    muted: studio.error === ""
+                    color: studio.error !== "" ? obs.liveColor : obs.popupTertiaryTextColor
+                    font: obs.popupSmallFont
                 }
 
                 // Recording and streaming
                 Card {
                     Layout.topMargin: 12
-                    visible: obs.connected
+                    visible: studio.connected
                     implicitHeight: outputs.implicitHeight
 
                     ColumnLayout {
@@ -519,16 +549,16 @@ Item {
 
                                 RecordDot {
                                     anchors.centerIn: parent
-                                    visible: widget.recording && !widget.paused
+                                    visible: obs.recording && !obs.paused
                                     blinking: false
                                 }
 
                                 Glyph {
                                     anchors.centerIn: parent
-                                    visible: !widget.recording || widget.paused
-                                    text: widget.paused ? "\ue769" : "\ue7c8"
-                                    color: widget.paused ? widget.pausedColor : popup.muted
-                                    font.pixelSize: 15
+                                    visible: !obs.recording || obs.paused
+                                    text: obs.paused ? "\ue769" : "\ue7c8"
+                                    color: obs.paused ? obs.pausedColor : obs.popupTertiaryTextColor
+                                    font.pixelSize: obs.popupIconSize
                                 }
                             }
 
@@ -537,31 +567,31 @@ Item {
                                 Layout.minimumWidth: 0
                                 spacing: 0
 
-                                Label {
+                                PopupText {
                                     Layout.fillWidth: true
-                                    text: !widget.recording ? qsTr("Not recording")
-                                        : widget.paused ? qsTr("Recording paused") : qsTr("Recording")
+                                    text: !obs.recording ? qsTr("Not recording")
+                                        : obs.paused ? qsTr("Recording paused") : qsTr("Recording")
                                 }
 
-                                Label {
+                                PopupText {
                                     Layout.fillWidth: true
-                                    visible: widget.recording
-                                    text: widget.clock(obs.recording.duration)
+                                    visible: obs.recording
+                                    text: obs.clock(studio.recording.duration)
                                     muted: true
-                                    font.pixelSize: 12
+                                    font: obs.popupSmallFont
                                 }
                             }
 
                             SmallButton {
-                                visible: widget.recording
-                                text: widget.paused ? qsTr("Resume") : qsTr("Pause")
-                                onClicked: obs.toggleRecordPause()
+                                visible: obs.recording
+                                text: obs.paused ? qsTr("Resume") : qsTr("Pause")
+                                onClicked: studio.toggleRecordPause()
                             }
 
                             SmallButton {
-                                text: widget.recording ? qsTr("Stop") : qsTr("Start")
-                                strong: widget.recording
-                                onClicked: obs.toggleRecord()
+                                text: obs.recording ? qsTr("Stop") : qsTr("Start")
+                                strong: obs.recording
+                                onClicked: studio.toggleRecord()
                             }
                         }
 
@@ -576,8 +606,8 @@ Item {
                             Glyph {
                                 Layout.preferredWidth: 16
                                 text: "\ue93e"
-                                color: widget.streaming ? widget.liveColor : popup.muted
-                                font.pixelSize: 15
+                                color: obs.streaming ? obs.liveColor : obs.popupTertiaryTextColor
+                                font.pixelSize: obs.popupIconSize
                             }
 
                             ColumnLayout {
@@ -585,29 +615,29 @@ Item {
                                 Layout.minimumWidth: 0
                                 spacing: 0
 
-                                Label {
+                                PopupText {
                                     Layout.fillWidth: true
-                                    text: !widget.streaming ? qsTr("Not streaming")
-                                        : obs.streaming.reconnecting ? qsTr("Reconnecting...") : qsTr("Streaming")
+                                    text: !obs.streaming ? qsTr("Not streaming")
+                                        : studio.streaming.reconnecting ? qsTr("Reconnecting...") : qsTr("Streaming")
                                 }
 
-                                Label {
+                                PopupText {
                                     Layout.fillWidth: true
-                                    visible: widget.streaming
-                                    text: [widget.clock(obs.streaming.duration),
-                                        obs.streaming.skippedFrames === 1 ? qsTr("1 dropped frame")
-                                            : obs.streaming.skippedFrames > 1
-                                            ? qsTr("%1 dropped frames").arg(obs.streaming.skippedFrames) : ""]
+                                    visible: obs.streaming
+                                    text: [obs.clock(studio.streaming.duration),
+                                        studio.streaming.skippedFrames === 1 ? qsTr("1 dropped frame")
+                                            : studio.streaming.skippedFrames > 1
+                                            ? qsTr("%1 dropped frames").arg(studio.streaming.skippedFrames) : ""]
                                         .filter(part => part).join(" · ")
                                     muted: true
-                                    font.pixelSize: 12
+                                    font: obs.popupSmallFont
                                 }
                             }
 
                             SmallButton {
-                                text: widget.streaming ? qsTr("Stop") : qsTr("Start")
-                                strong: widget.streaming
-                                onClicked: obs.toggleStream()
+                                text: obs.streaming ? qsTr("Stop") : qsTr("Start")
+                                strong: obs.streaming
+                                onClicked: studio.toggleStream()
                             }
                         }
                     }
@@ -616,7 +646,7 @@ Item {
                 // The virtual camera and studio mode
                 Card {
                     Layout.topMargin: 8
-                    visible: obs.connected
+                    visible: studio.connected
                     implicitHeight: switches.implicitHeight
 
                     ColumnLayout {
@@ -636,22 +666,22 @@ Item {
                             Glyph {
                                 Layout.preferredWidth: 16
                                 text: "\ue714"
-                                color: popup.muted
-                                font.pixelSize: 15
+                                color: obs.popupTertiaryTextColor
+                                font.pixelSize: obs.popupIconSize
                             }
 
-                            Label {
+                            PopupText {
                                 Layout.fillWidth: true
                                 text: qsTr("Virtual camera")
                             }
 
                             Switch {
                                 objectName: "virtualCam"
-                                checked: obs.virtualCam
+                                checked: studio.virtualCam
                                 Accessible.name: qsTr("Virtual camera")
                                 onToggled: {
-                                    obs.toggleVirtualCam()
-                                    checked = Qt.binding(() => obs.virtualCam)
+                                    studio.toggleVirtualCam()
+                                    checked = Qt.binding(() => studio.virtualCam)
                                 }
                             }
                         }
@@ -669,22 +699,22 @@ Item {
                             Glyph {
                                 Layout.preferredWidth: 16
                                 text: "\ue7f4"
-                                color: popup.muted
-                                font.pixelSize: 15
+                                color: obs.popupTertiaryTextColor
+                                font.pixelSize: obs.popupIconSize
                             }
 
-                            Label {
+                            PopupText {
                                 Layout.fillWidth: true
                                 text: qsTr("Studio mode")
                             }
 
                             Switch {
                                 objectName: "studioMode"
-                                checked: obs.studioMode
+                                checked: studio.studioMode
                                 Accessible.name: qsTr("Studio mode")
                                 onToggled: {
-                                    obs.toggleStudioMode()
-                                    checked = Qt.binding(() => obs.studioMode)
+                                    studio.toggleStudioMode()
+                                    checked = Qt.binding(() => studio.studioMode)
                                 }
                             }
                         }
@@ -699,31 +729,31 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: 7
-                    bottomRightRadius: 7
-                    color: Qt.alpha("#000000", widget.dark ? 0.15 : 0.03)
+                    bottomLeftRadius: obs.popupRadius - 1
+                    bottomRightRadius: obs.popupRadius - 1
+                    color: obs.popupSecondaryBackgroundColor
 
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: popup.line
+                        color: obs.popupDividerColor
                     }
 
-                    Label {
+                    PopupText {
                         x: 16
                         anchors.verticalCenter: parent.verticalCenter
-                        text: `${widget.host}:${widget.port}`
+                        text: `${obs.host}:${obs.port}`
                         muted: true
-                        font.pixelSize: 12
+                        font: obs.popupSmallFont
                     }
 
-                    Label {
+                    PopupText {
                         anchors.right: parent.right
                         anchors.rightMargin: 16
                         anchors.verticalCenter: parent.verticalCenter
-                        text: obs.connected ? qsTr("Connected") : qsTr("Not connected")
+                        text: studio.connected ? qsTr("Connected") : qsTr("Not connected")
                         muted: true
-                        font.pixelSize: 12
+                        font: obs.popupSmallFont
                     }
                 }
             }

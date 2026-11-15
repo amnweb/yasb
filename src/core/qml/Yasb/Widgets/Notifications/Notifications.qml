@@ -1,39 +1,81 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
     id: notifications
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     property bool hideEmpty: false
-    property int popupWidth: 380
+    property int popupWidth: 364
     // The popup grows with its notifications up to this height
-    property int popupHeight: 560
+    property int popupHeight: 544
     // The bell on the bar, drawn in iconFont and the text colour
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
-    property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property color foreground: dark ? "#ebebeb" : "#1f1f1f"
-    readonly property color secondary: dark ? "#9d9d9d" : "#616161"
-    readonly property string edge: bar?.edge ?? "top"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The dot on the bar while there are notifications
+    property color badgeColor: "#ff4545"
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // The glyph when there are no notifications, and the arrow of the settings link
+    property int emptyIconSize: 28
+    property int footerIconSize: 10
+    // Each app's name over its notifications; each notification's title, age and attribution
+    property font appNameFont
+    appNameFont.family: theme.popup.font.family
+    appNameFont.pixelSize: 12
+    appNameFont.weight: Font.DemiBold
+    property font notificationTitleFont
+    notificationTitleFont.family: theme.popup.font.family
+    notificationTitleFont.pixelSize: 13
+    notificationTitleFont.weight: Font.DemiBold
+    property font timeFont
+    timeFont.family: theme.popup.font.family
+    timeFont.pixelSize: 11
+    property font attributionFont
+    attributionFont.family: theme.popup.font.family
+    attributionFont.pixelSize: 11
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    property color popupTextColor: theme.colors.text
+    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+    property color popupDividerColor: theme.colors.divider
+    property color popupHoverColor: theme.colors.hover
+    property color popupSelectedColor: theme.colors.selected
+    property color popupCardColor: theme.colors.card
+    property color popupCardBorderColor: theme.colors.cardBorder
+    readonly property string edge: bar.edge
     property real now: Date.now()
     readonly property var groups: {
         const groups = []
@@ -61,10 +103,10 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + 6
-            : edge === "right" ? start.x - popup.width - 6 : start.x + (width - popup.width) / 2
-        let py = edge === "top" ? start.y + height + 6
-            : edge === "bottom" ? start.y - popup.height - 6 : start.y + (height - popup.height) / 2
+        let px = edge === "left" ? start.x + width + popupGap
+            : edge === "right" ? start.x - popup.width - popupGap : start.x + (width - popup.width) / 2
+        let py = edge === "top" ? start.y + height + popupGap
+            : edge === "bottom" ? start.y - popup.height - popupGap : start.y + (height - popup.height) / 2
         const screen = notifications.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - popup.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - popup.height - 8))
@@ -128,6 +170,7 @@ Item {
             color: notifications.textColor
             font.family: notifications.iconFont.family
             font.weight: notifications.iconFont.weight
+            font.variableAxes: notifications.iconFont.variableAxes
             font.pixelSize: notifications.iconSize
         }
 
@@ -139,7 +182,7 @@ Item {
             height: 6
             radius: 3
             visible: center.notifications.length > 0
-            color: "#ff4545"
+            color: notifications.badgeColor
         }
     }
 
@@ -177,16 +220,17 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 4
-            color: Qt.alpha(notifications.foreground, area.containsMouse ? 0.08 : button.checked ? 0.06 : 0)
+            color: area.containsMouse ? notifications.popupHoverColor : button.checked ? notifications.popupSelectedColor : "transparent"
         }
 
         Text {
             anchors.centerIn: parent
             text: button.glyph
-            color: notifications.foreground
+            color: notifications.popupTextColor
             opacity: button.checked || area.containsMouse ? 1 : 0.6
             font.family: notifications.iconFont.family
             font.weight: notifications.iconFont.weight
+            font.variableAxes: notifications.iconFont.variableAxes
             font.pixelSize: button.iconSize
         }
 
@@ -202,30 +246,31 @@ Item {
         id: popup
         property real reveal: 0
         readonly property real listHeight: notifications.groups.length > 0
-            ? Math.min(column.implicitHeight, notifications.popupHeight - header.implicitHeight - footer.implicitHeight - 44) : 120
+            ? Math.min(column.implicitHeight, notifications.popupHeight - header.implicitHeight - footer.implicitHeight - 28) : 120
         title: "Notifications"
         width: notifications.popupWidth
-        height: content.implicitHeight + 16
+        height: popupContent.implicitHeight
         anchor: notifications
+        font: notifications.popupFont
+        theme: notifications.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: notifications.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: notifications.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: { if (!visible) reveal = 0 }
 
         Rectangle {
             id: surface
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: notifications.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: notifications.popupRadius
+            color: notifications.popupColor
             border.width: 1
-            border.color: notifications.dark ? Qt.alpha("#3A3A3A", 1) : Qt.alpha("#D9D9D9", 1)
+            border.color: notifications.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: notifications.edge === "bottom" ? Item.Bottom : Item.Top
 
             ColumnLayout {
-                id: content
+                id: popupContent
                 width: parent.width
                 spacing: 0
 
@@ -235,15 +280,14 @@ Item {
                     Layout.leftMargin: 16
                     Layout.rightMargin: 10
                     Layout.topMargin: 12
-                    Layout.bottomMargin: 8
+                    Layout.bottomMargin: 10
                     spacing: 2
 
                     Text {
                         Layout.fillWidth: true
                         text: "Notifications"
-                        color: notifications.foreground
-                        font.pixelSize: 16
-                        font.weight: Font.Bold
+                        color: notifications.popupTextColor
+                        font: notifications.popupTitleFont
                     }
                     IconButton {
                         visible: center.doNotDisturbAvailable
@@ -261,6 +305,13 @@ Item {
                         Accessible.name: "Clear all"
                     }
                 }
+                // The header's bottom line
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 8
+                    implicitHeight: 1
+                    color: notifications.popupDividerColor
+                }
 
                 Item {
                     Layout.fillWidth: true
@@ -276,10 +327,11 @@ Item {
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: "\uea8f"
-                            color: notifications.secondary
+                            color: notifications.popupSecondaryTextColor
                             font.family: notifications.iconFont.family
                             font.weight: notifications.iconFont.weight
-                            font.pixelSize: 28
+                            font.variableAxes: notifications.iconFont.variableAxes
+                            font.pixelSize: notifications.emptyIconSize
                         }
                         Text {
                             width: parent.width
@@ -287,8 +339,8 @@ Item {
                             wrapMode: Text.WordWrap
                             text: center.allowed ? "No new notifications"
                                 : "Notification access is turned off in Windows privacy settings"
-                            color: notifications.secondary
-                            font.pixelSize: 13
+                            color: notifications.popupSecondaryTextColor
+                            font: notifications.popupFont
                         }
                     }
 
@@ -329,9 +381,8 @@ Item {
                                             Layout.fillWidth: true
                                             text: group.modelData.appName
                                             textFormat: Text.PlainText
-                                            color: notifications.secondary
-                                            font.pixelSize: 12
-                                            font.weight: Font.DemiBold
+                                            color: notifications.popupSecondaryTextColor
+                                            font: notifications.appNameFont
                                             elide: Text.ElideRight
                                         }
                                         IconButton {
@@ -352,9 +403,9 @@ Item {
                                             width: group.width
                                             height: body.implicitHeight + 20
                                             radius: 8
-                                            color: Qt.alpha(notifications.foreground, hover.hovered ? 0.06 : 0.03)
+                                            color: hover.hovered ? Qt.tint(notifications.popupCardColor, notifications.popupHoverColor) : notifications.popupCardColor
                                             border.width: 1
-                                            border.color: Qt.alpha(notifications.foreground, 0.04)
+                                            border.color: notifications.popupCardBorderColor
                                             Accessible.role: Accessible.Button
                                             Accessible.name: `${modelData.title}. ${modelData.body}`
                                             Accessible.onPressAction: {
@@ -436,9 +487,8 @@ Item {
                                                                 Layout.fillWidth: true
                                                                 text: card.modelData.title
                                                                 textFormat: Text.PlainText
-                                                                color: notifications.foreground
-                                                                font.pixelSize: 13
-                                                                font.weight: Font.DemiBold
+                                                                color: notifications.popupTextColor
+                                                                font: notifications.notificationTitleFont
                                                                 elide: Text.ElideRight
                                                             }
                                                             Item {
@@ -449,8 +499,8 @@ Item {
                                                                     anchors.verticalCenter: parent.verticalCenter
                                                                     visible: !hover.hovered
                                                                     text: notifications.age(card.modelData.time)
-                                                                    color: notifications.secondary
-                                                                    font.pixelSize: 11
+                                                                    color: notifications.popupSecondaryTextColor
+                                                                    font: notifications.timeFont
                                                                 }
                                                                 IconButton {
                                                                     anchors.centerIn: parent
@@ -469,8 +519,8 @@ Item {
                                                             visible: text !== ""
                                                             text: card.modelData.body
                                                             textFormat: Text.PlainText
-                                                            color: Qt.alpha(notifications.foreground, 0.85)
-                                                            font.pixelSize: 12
+                                                            color: notifications.popupSecondaryTextColor
+                                                            font: notifications.popupSmallFont
                                                             wrapMode: Text.Wrap
                                                             maximumLineCount: 4
                                                             elide: Text.ElideRight
@@ -480,8 +530,8 @@ Item {
                                                             visible: text !== ""
                                                             text: card.modelData.attribution
                                                             textFormat: Text.PlainText
-                                                            color: notifications.secondary
-                                                            font.pixelSize: 11
+                                                            color: notifications.popupSecondaryTextColor
+                                                            font: notifications.attributionFont
                                                             elide: Text.ElideRight
                                                         }
                                                     }
@@ -514,9 +564,9 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: 7
-                    bottomRightRadius: 7
-                    color: Qt.alpha("#000000", (notifications.dark ? 0.15 : 0.03) + (footerArea.containsMouse ? 0.05 : 0))
+                    bottomLeftRadius: notifications.popupRadius - 1
+                    bottomRightRadius: notifications.popupRadius - 1
+                    color: footerArea.containsMouse ? Qt.tint(notifications.popupSecondaryBackgroundColor, notifications.popupHoverColor) : notifications.popupSecondaryBackgroundColor
                     Accessible.role: Accessible.Button
                     Accessible.name: "Open Notification Center"
                     Accessible.onPressAction: {
@@ -527,7 +577,7 @@ Item {
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: Qt.alpha(notifications.foreground, 0.08)
+                        color: notifications.popupDividerColor
                     }
 
                     Text {
@@ -535,8 +585,8 @@ Item {
                         anchors.leftMargin: 15
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Open Notification Center"
-                        color: footerArea.containsMouse ? notifications.foreground : Qt.alpha(notifications.foreground, 0.75)
-                        font.pixelSize: 12
+                        color: footerArea.containsMouse ? notifications.popupTextColor : notifications.popupSecondaryTextColor
+                        font: notifications.popupSmallFont
                     }
 
                     Text {
@@ -544,11 +594,12 @@ Item {
                         anchors.rightMargin: 14
                         anchors.verticalCenter: parent.verticalCenter
                         text: "\ue76c"
-                        color: notifications.foreground
+                        color: notifications.popupTextColor
                         opacity: footerArea.containsMouse ? 1 : 0.75
                         font.family: notifications.iconFont.family
                         font.weight: notifications.iconFont.weight
-                        font.pixelSize: 10
+                        font.variableAxes: notifications.iconFont.variableAxes
+                        font.pixelSize: notifications.footerIconSize
                     }
 
                     MouseArea {

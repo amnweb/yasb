@@ -15,6 +15,7 @@ from core.services.obs import studio as studio_module
 from core.services.obs.studio import WRONG_PASSWORD, ObsConnection, ObsStudio, authentication
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 SALT, CHALLENGE = "salt", "challenge"
@@ -189,7 +190,7 @@ def test_the_widget_shows_a_recording(obs: FakeObs):
 
     engine.warnings.connect(collect)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Obs" / "Obs.qml")))
-    item = component.create()
+    item = create_with_bar(component)
     assert isinstance(item, QQuickItem), [error.toString() for error in component.errors()]
     QQmlProperty.write(item, "host", "127.0.0.1")
     QQmlProperty.write(item, "port", obs.port)

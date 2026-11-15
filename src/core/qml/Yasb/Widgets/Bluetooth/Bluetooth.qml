@@ -4,12 +4,15 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
     id: bluetooth
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // Label placeholders: {device_name} and {device_count}; empty shows only the icon
     property string label: ""
     property string alternateLabel: "{device_name}"
@@ -21,7 +24,7 @@ Item {
     property var deviceAliases: ({})
     // The connected devices when the pointer rests on the widget
     property bool tooltip: true
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
     property string offIcon: "\ue702"
     property string onIcon: "\ue702"
     property string connectedIcon: "\ue702"
@@ -43,33 +46,58 @@ Item {
     })
     // Battery glyphs for up to 10, 30, 60, 90 and 100 percent
     property list<string> batteryIcons: ["\ueba0", "\ueba2", "\ueba5", "\ueba8", "\uebaa"]
-    property int popupWidth: 360
+    property int popupWidth: 344
     // Popup alignment relative to the widget on a horizontal bar: left, right or center
     property string popupAlignment: "center"
     // Scroll the device list when it exceeds this height
     property int maxListHeight: 320
-    property color errorColor: dark ? "#ff99a4" : "#c42b1c"
+    property color errorColor: bluetooth.theme.colors.critical
 
     property bool showAlternate: false
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
-    // The bar icon, by state for example: !radioOn ? "#808080" : names.length > 0 ? palette.active.accent : textColor
-    property color iconColor: !radioOn ? textColor : names.length > 0 ? palette.active.accent : textColor
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    // The bar icon, by state for example: !radioOn ? "#808080" : names.length > 0 ? accentColor : textColor
+    property color iconColor: !radioOn ? textColor : names.length > 0 ? theme.colors.accent : textColor
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property string edge: bar?.edge ?? "top"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    property color accentColor: theme.colors.accent
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property color popupTextColor: theme.colors.text
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+    property color popupDividerColor: theme.colors.divider
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    property color popupTertiaryTextColor: theme.colors.textTertiary
+    property color popupHoverColor: theme.colors.hover
+    property color popupCardColor: theme.colors.card
+    property color popupCardBorderColor: theme.colors.cardBorder
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // Each device's icon, its battery glyph, and the glyph that looks for devices
+    property int deviceIconSize: 20
+    property int batteryIconSize: 16
+    property int popupIconSize: 14
+    readonly property string edge: bar.edge
 
     // Whether Bluetooth is on, and the names of the connected devices
     readonly property bool radioOn: monitor.radioOn
@@ -95,7 +123,7 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const gap = 6
+        const gap = popupGap
         const margin = 8
         let px
         let py
@@ -189,6 +217,7 @@ Item {
         verticalAlignment: Text.AlignVCenter
         font.family: bluetooth.iconFont.family
         font.weight: bluetooth.iconFont.weight
+        font.variableAxes: bluetooth.iconFont.variableAxes
     }
 
     component SectionTitle: Text {
@@ -196,8 +225,8 @@ Item {
         topPadding: 6
         bottomPadding: 4
         textFormat: Text.PlainText
-        color: Qt.alpha(popup.ink, 0.65)
-        font.pixelSize: 12
+        color: bluetooth.popupSecondaryTextColor
+        font: bluetooth.popupSmallFont
     }
 
     component DeviceRow: Item {
@@ -245,9 +274,9 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 8
-            color: Qt.alpha(popup.ink, device.expanded ? 0.03 : headerArea.containsMouse ? 0.06 : 0)
+            color: device.expanded ? bluetooth.popupCardColor : headerArea.containsMouse ? bluetooth.popupHoverColor : "transparent"
             border.width: device.expanded ? 1 : 0
-            border.color: Qt.alpha(popup.ink, 0.04)
+            border.color: bluetooth.popupCardBorderColor
         }
 
         ColumnLayout {
@@ -270,8 +299,8 @@ Item {
                         Layout.preferredWidth: 20
                         Layout.preferredHeight: 20
                         text: bluetooth.deviceIcons[device.kind] ?? bluetooth.deviceIcons.generic ?? ""
-                        color: popup.ink
-                        font.pixelSize: 20
+                        color: bluetooth.popupTextColor
+                        font.pixelSize: bluetooth.deviceIconSize
                     }
 
                     Column {
@@ -282,8 +311,8 @@ Item {
                             text: device.name
                             textFormat: Text.PlainText
                             elide: Text.ElideRight
-                            color: popup.ink
-                            font.pixelSize: 13
+                            color: bluetooth.popupTextColor
+                            font: bluetooth.popupFont
                         }
 
                         Text {
@@ -291,8 +320,8 @@ Item {
                             text: device.statusText
                             textFormat: Text.PlainText
                             elide: Text.ElideRight
-                            color: Qt.alpha(popup.ink, 0.65)
-                            font.pixelSize: 12
+                            color: bluetooth.popupSecondaryTextColor
+                            font: bluetooth.popupSmallFont
                         }
                     }
 
@@ -300,15 +329,15 @@ Item {
                         objectName: "battery"
                         visible: device.battery >= 0
                         text: `${device.battery}%`
-                        color: Qt.alpha(popup.ink, 0.65)
-                        font.pixelSize: 12
+                        color: bluetooth.popupSecondaryTextColor
+                        font: bluetooth.popupSmallFont
                     }
 
                     Glyph {
                         visible: device.battery >= 0
                         text: bluetooth.batteryIcon(device.battery)
-                        color: popup.ink
-                        font.pixelSize: 16
+                        color: bluetooth.popupTextColor
+                        font.pixelSize: bluetooth.batteryIconSize
                     }
                 }
 
@@ -356,7 +385,7 @@ Item {
             font.pixelSize: bluetooth.iconSize
         }
 
-        Text {
+        Label {
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
             visible: text !== ""
@@ -400,16 +429,17 @@ Item {
         property real reveal: 0
         // Address of the device whose button shows
         property string expanded: ""
-        readonly property color ink: bluetooth.dark ? "#ffffff" : "#000000"
 
         objectName: "popup"
         title: "Bluetooth"
         width: bluetooth.popupWidth
-        height: popupContent.implicitHeight + 16
+        height: popupContent.implicitHeight
         anchor: bluetooth
+        font: bluetooth.popupFont
+        theme: bluetooth.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: bluetooth.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: bluetooth.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -419,11 +449,10 @@ Item {
             id: surface
 
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: bluetooth.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: bluetooth.popupRadius
+            color: bluetooth.popupColor
             border.width: 1
-            border.color: bluetooth.dark ? "#3A3A3A" : "#D9D9D9"
+            border.color: bluetooth.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: bluetooth.edge === "bottom" ? Item.Bottom : Item.Top
@@ -438,15 +467,14 @@ Item {
                     Layout.fillWidth: true
                     Layout.leftMargin: 16
                     Layout.rightMargin: 10
-                    Layout.topMargin: 6
-                    Layout.bottomMargin: 6
+                    Layout.topMargin: 12
+                    Layout.bottomMargin: 10
 
                     Text {
                         Layout.fillWidth: true
                         text: qsTr("Bluetooth")
-                        font.bold: true
-                        color: popup.ink
-                        font.pixelSize: 16
+                        font: bluetooth.popupTitleFont
+                        color: bluetooth.popupTextColor
                     }
 
                     Switch {
@@ -465,7 +493,7 @@ Item {
                 LoadingLine {
                     Layout.fillWidth: true
                     running: monitor.busy || monitor.pending !== ""
-                    trackColor: Qt.alpha(popup.ink, 0.1)
+                    trackColor: bluetooth.popupDividerColor
                 }
 
                 Text {
@@ -480,7 +508,7 @@ Item {
                     wrapMode: Text.WordWrap
                     horizontalAlignment: Text.AlignHCenter
                     color: bluetooth.errorColor
-                    font.pixelSize: 12
+                    font: bluetooth.popupSmallFont
                 }
 
                 Text {
@@ -492,8 +520,8 @@ Item {
                     text: !monitor.radioOn ? qsTr("Bluetooth is turned off")
                         : monitor.busy ? qsTr("Looking for devices...") : qsTr("No devices found")
                     horizontalAlignment: Text.AlignHCenter
-                    color: Qt.alpha(popup.ink, 0.5)
-                    font.pixelSize: 13
+                    color: bluetooth.popupTertiaryTextColor
+                    font: bluetooth.popupFont
                 }
 
                 Flickable {
@@ -545,14 +573,14 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 44
-                    bottomLeftRadius: 7
-                    bottomRightRadius: 7
-                    color: Qt.alpha("#000000", bluetooth.dark ? 0.15 : 0.03)
+                    bottomLeftRadius: bluetooth.popupRadius - 1
+                    bottomRightRadius: bluetooth.popupRadius - 1
+                    color: bluetooth.popupSecondaryBackgroundColor
 
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: Qt.alpha(popup.ink, 0.1)
+                        color: bluetooth.popupDividerColor
                     }
 
                     Text {
@@ -560,8 +588,8 @@ Item {
                         anchors.leftMargin: 15
                         anchors.verticalCenter: parent.verticalCenter
                         text: qsTr("More Bluetooth settings")
-                        color: settingsArea.containsMouse ? popup.ink : Qt.alpha(popup.ink, 0.65)
-                        font.pixelSize: 12
+                        color: settingsArea.containsMouse ? bluetooth.popupTextColor : bluetooth.popupSecondaryTextColor
+                        font: bluetooth.popupSmallFont
                         Accessible.role: Accessible.Link
                         Accessible.name: text
                         Accessible.onPressAction: bluetooth.openSettings()
@@ -596,14 +624,14 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             radius: 4
-                            color: Qt.alpha(popup.ink, scanArea.containsMouse ? 0.1 : 0)
+                            color: scanArea.containsMouse ? bluetooth.popupHoverColor : "transparent"
                         }
 
                         Glyph {
                             anchors.fill: parent
                             text: "\ue72c"
-                            color: popup.ink
-                            font.pixelSize: 14
+                            color: bluetooth.popupTextColor
+                            font.pixelSize: bluetooth.popupIconSize
                         }
 
                         MouseArea {

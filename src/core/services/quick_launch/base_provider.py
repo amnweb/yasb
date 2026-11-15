@@ -17,6 +17,7 @@ class ProviderResult:
     icon_source: IconSource | None = None
     provider: str = ""
     id: str = ""
+    query: str | None = None
     action_data: dict[str, Any] = field(default_factory=dict[str, Any])
     preview: dict[str, Any] = field(default_factory=dict[str, Any])
     css_class: str = ""

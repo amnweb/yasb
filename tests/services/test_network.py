@@ -28,6 +28,7 @@ from core.utils.win32.constants import E_ACCESSDENIED, E_INVALIDARG, WlanNotific
 from core.utils.win32.structs import GUID
 from core.widget_files import BUILTIN_WIDGETS_DIR, find_widget_file
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.network import FakeWatcher, connection
 from tests.support.qt import find_item, wait
 
@@ -606,7 +607,7 @@ def make_widget(fake_watcher: FakeWatcher, client: FakeWlan) -> Iterator[Callabl
         engine = QQmlEngine()
         engine.addImportPath(QML_IMPORT_PATH)
         component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Network" / "Network.qml")))
-        widget = component.create()
+        widget = create_with_bar(component)
         assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
         wait(10)
         # Qt counts an item as visible only when its parent is visible.

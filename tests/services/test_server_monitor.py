@@ -21,6 +21,7 @@ from core.services.server_monitor import service
 from core.services.server_monitor.worker import _build_url, _cert_not_after, check_server
 from core.widget_files import find_widget_file
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 CERT_UTC_TIME = """-----BEGIN CERTIFICATE-----
@@ -260,8 +261,8 @@ def test_qml_widgets_share_checks_and_offline_toasts(
         "notifyOffline": True,
         "timeout": 1,
     }
-    first = component.createWithInitialProperties(options)
-    second = component.createWithInitialProperties(options)
+    first = create_with_bar(component, options)
+    second = create_with_bar(component, options)
     assert isinstance(first, QQuickItem) and isinstance(second, QQuickItem), [
         error.toString() for error in component.errors()
     ]

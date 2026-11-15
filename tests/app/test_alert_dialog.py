@@ -13,10 +13,14 @@ def ignore(_: object) -> None:
     pass
 
 
+def no_mica(_: int) -> bool:
+    return False
+
+
 @pytest.fixture(autouse=True)
 def quiet(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(alert_dialog, "user32", SimpleNamespace(MessageBeep=ignore))
-    monkeypatch.setattr(alert_dialog, "enable_mica", ignore)
+    monkeypatch.setattr(alert_dialog, "enable_mica", no_mica)
 
 
 def test_an_alert_raised_during_work_shows_once_the_work_is_done(qapp: QGuiApplication):

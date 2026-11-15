@@ -13,6 +13,7 @@ from core.services.dnd.dnd_api import DndService
 from core.services.dnd.status import DoNotDisturb
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 
@@ -122,7 +123,7 @@ def test_the_bar_icon_follows_the_mode(events: Events):
 
     engine.warnings.connect(collect_warnings)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Dnd" / "Dnd.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
     icon = find_item(widget, "icon")

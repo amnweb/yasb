@@ -4,15 +4,6 @@ from uuid import UUID
 
 from core.utils.win32.structs import DEVPROPKEY, GUID
 
-# SetWindowCompositionAttribute
-WCA_ACCENT_POLICY = 19
-ACCENT_DISABLED = 0
-ACCENT_ENABLE_BLURBEHIND = 3
-ACCENT_ENABLE_ACRYLICBLURBEHIND = 4
-
-# DwmSetWindowAttribute, before DWMWA_SYSTEMBACKDROP_TYPE existed
-DWMWA_MICA_EFFECT = 1029
-
 # DwmpActivateLivePreview trigger (LivePreviewTrigger): 1 ShowDesktop, 2 WinSpace, 3 Superbar (taskbar
 # thumbnail hover), 4 AltTab, 5 SuperbarTouch, 6 ShowDesktopTouch
 LPT_SUPERBAR = 3

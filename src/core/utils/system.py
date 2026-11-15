@@ -20,11 +20,6 @@ def app_data_path(filename: str | None = None) -> Path:
     return folder
 
 
-def is_windows_10() -> bool:
-    v = sys.getwindowsversion()
-    return v.major == 10 and v.build < 22000
-
-
 def get_build_and_ubr() -> tuple[int, int]:
     """Get the build number and ubr (aka Update Build Revision; aka the decimal value in the OS Build).
 

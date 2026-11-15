@@ -4,6 +4,8 @@ from functools import cache
 from PyQt6.QtCore import QObject
 from PyQt6.QtQml import QJSEngine, QQmlEngine, qmlRegisterSingletonType, qmlRegisterType, qmlRegisterUncreatableType
 
+from core.app.update.installer import Updater
+from core.app.windows.about import About
 from core.bar.backdrop import Backdrop
 from core.bar.window import BarContext
 from core.services.active_window.tracker import ActiveWindowTracker
@@ -98,6 +100,8 @@ QML_TYPES: tuple[type[QObject], ...] = (
 QML_SINGLETONS: tuple[type[QObject], ...] = (Environment, PowerPlans, PowerModes)
 
 QML_UNCREATABLE_TYPES: tuple[type[QObject], ...] = (
+    About,
+    Updater,
     BarContext,
     DeviceList,
     DisplayList,
