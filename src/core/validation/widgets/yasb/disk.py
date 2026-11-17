@@ -26,6 +26,10 @@ class GroupLabelConfig(CustomBaseModel):
     direction: str = "down"
     offset_top: int = 6
     offset_left: int = 0
+    title: str = ""
+    pinnable: bool = False
+    show_activity: bool = False
+    show_used_space: bool = False
 
 
 class DiskProgressBarConfig(CustomBaseModel):

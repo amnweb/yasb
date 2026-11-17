@@ -1,5 +1,7 @@
 from typing import Literal
 
+from pydantic import Field
+
 from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
@@ -23,6 +25,9 @@ class TrafficMenuConfig(CustomBaseModel):
     offset_left: int = 0
     show_interface_name: bool = True
     show_internet_info: bool = True
+    show_network_info: bool = False
+    info_cache_seconds: int = Field(default=300, ge=30, le=86400)
+    pinnable: bool = False
 
 
 class TrafficCallbacksConfig(CallbacksConfig):

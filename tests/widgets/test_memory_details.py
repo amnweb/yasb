@@ -251,6 +251,7 @@ def test_original_popup_grid_displays_and_refreshes_extra_data(qapp: QApplicatio
                     "show_hardware_details": True,
                     "show_swap_total": True,
                     "highlight_usage": True,
+                    "show_usage_bar": True,
                     "graph_colors": {"enabled": True},
                 }
             }
@@ -280,8 +281,9 @@ def test_original_popup_grid_displays_and_refreshes_extra_data(qapp: QApplicatio
         assert stats_frame is not None
         grid = stats_frame.layout()
         assert isinstance(grid, QGridLayout)
-        assert grid.getItemPosition(grid.indexOf(used_card))[:2] == (0, 0)
-        assert grid.getItemPosition(grid.indexOf(util_card))[:2] == (0, 1)
+        assert grid.getItemPosition(grid.indexOf(util_card))[:2] == (0, 0)
+        assert grid.getItemPosition(grid.indexOf(used_card))[:2] == (0, 1)
+        assert widget._usage_bar is not None and widget._usage_bar.value() == 530
         assert "primary" in str(used_card.property("class"))
         assert "primary" in str(popup.stat_labels["util"].property("class"))
         assert popup.graph is not None and len(popup.graph._color_bands) == 3

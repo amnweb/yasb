@@ -4,11 +4,13 @@ import re
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+from core.utils.stat_popup import PinnablePopup
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.yasb.traffic import TrafficCallbacksConfig, TrafficWidgetConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.traffic.connection_monitor import InternetChecker
+from core.widgets.services.traffic.network_info import INFO_FIELDS, NetworkInfoService
 from core.widgets.services.traffic.traffic_manager import NetworkData, TrafficDataManager
 
 type MenuData = tuple[str, str, str, str, str, str, str, str, str]
@@ -29,6 +31,15 @@ class TrafficWidget(BaseWidget):
         self._show_alt_label = False
         self._menu_widget: PopupWidget | None = None
         self.menu_labels: dict[str, QLabel] = {}
+        self._info_labels: dict[str, QLabel] = {}
+        self._info_status: QLabel | None = None
+        self._traffic_page: QWidget | None = None
+        self._info_page: QWidget | None = None
+        self._info_service: NetworkInfoService | None = None
+        if self.config.menu.show_network_info:
+            self._info_service = NetworkInfoService(self.config.interface, self.config.menu.info_cache_seconds, self)
+            self._info_service.changed.connect(self._update_network_info)
+            QTimer.singleShot(0, self._info_service.refresh)
 
         TrafficDataManager.setup_global_data_storage()
 
@@ -308,7 +319,8 @@ class TrafficWidget(BaseWidget):
 
     def _toggle_menu(self):
         """Show traffic statistics popup menu"""
-        menu_widget = PopupWidget(
+        popup_type = PinnablePopup if self.config.menu.pinnable else PopupWidget
+        menu_widget = popup_type(
             self,
             self.config.menu.blur,
             self.config.menu.round_corners,
@@ -316,6 +328,10 @@ class TrafficWidget(BaseWidget):
             self.config.menu.border_color,
         )
         self._menu_widget = menu_widget
+        self._traffic_page = None
+        self._info_page = None
+        self._info_status = None
+        self._info_labels = {}
         menu_widget.setProperty("class", "traffic-menu")
 
         layout = QVBoxLayout()
@@ -377,11 +393,20 @@ class TrafficWidget(BaseWidget):
 
         header_layout.addStretch()
 
+        if self.config.menu.show_network_info:
+            information_button = QPushButton("\ue946")
+            information_button.setProperty("class", "info-button")
+            set_tooltip(information_button, "Network information")
+            information_button.clicked.connect(lambda: self._show_network_info(True))
+            header_layout.addWidget(information_button)
+
         reset_button = QPushButton("Reset All")
         reset_button.setProperty("class", "reset-button")
         set_tooltip(reset_button, "Reset all traffic data")
         reset_button.clicked.connect(self._reset_traffic_data)
         header_layout.addWidget(reset_button)
+        if isinstance(menu_widget, PinnablePopup):
+            header_layout.addWidget(menu_widget.create_pin_button())
 
         layout.addWidget(header_container)
 
@@ -476,7 +501,19 @@ class TrafficWidget(BaseWidget):
 
             self.menu_labels["internet-info"] = internet_info
 
-        menu_widget.setLayout(layout)
+        if self.config.menu.show_network_info:
+            traffic_page = QWidget()
+            traffic_page.setLayout(layout)
+            self._traffic_page = traffic_page
+            self._info_page = self._build_network_info_page()
+            self._info_page.hide()
+            outer = QVBoxLayout(menu_widget)
+            outer.setContentsMargins(0, 0, 0, 0)
+            outer.setSpacing(0)
+            outer.addWidget(traffic_page)
+            outer.addWidget(self._info_page)
+        else:
+            menu_widget.setLayout(layout)
         menu_widget.adjustSize()
         menu_widget.setPosition(
             self.config.menu.alignment,
@@ -485,6 +522,81 @@ class TrafficWidget(BaseWidget):
             self.config.menu.offset_top,
         )
         menu_widget.show()
+
+    def _build_network_info_page(self) -> QWidget:
+        page = QWidget()
+        page.setProperty("class", "network-info-page")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        header = QFrame()
+        header.setProperty("class", "header")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        back = QPushButton("\u2190")
+        back.setProperty("class", "back-button")
+        set_tooltip(back, "Back to network traffic")
+        back.clicked.connect(lambda: self._show_network_info(False))
+        header_layout.addWidget(back)
+        title = QLabel("Network Information")
+        title.setProperty("class", "title")
+        header_layout.addWidget(title)
+        header_layout.addStretch()
+        if isinstance(self._menu_widget, PinnablePopup):
+            header_layout.addWidget(self._menu_widget.create_pin_button())
+        layout.addWidget(header)
+        self._info_labels = {}
+        section_layout: QVBoxLayout | None = None
+        for key in INFO_FIELDS:
+            if key in ("IP address", "Continent", "ISP", "Timezone"):
+                section = QFrame()
+                section.setProperty("class", "section info-section")
+                section_layout = QVBoxLayout(section)
+                section_layout.setContentsMargins(12, 10, 12, 10)
+                section_layout.setSpacing(8)
+                layout.addWidget(section)
+            row = QHBoxLayout()
+            name = QLabel("Local IP:" if key == "IP local" else key + ":")
+            name.setProperty("class", "info-key")
+            field = QLabel("\u2014")
+            field.setProperty("class", "info-value")
+            field.setTextFormat(Qt.TextFormat.PlainText)
+            field.setWordWrap(True)
+            field.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            row.addWidget(name)
+            row.addWidget(field, 1)
+            self._info_labels[key] = field
+            if section_layout is not None:
+                section_layout.addLayout(row)
+        self._info_status = QLabel()
+        self._info_status.setProperty("class", "info-status")
+        self._info_status.setWordWrap(True)
+        layout.addWidget(self._info_status)
+        if self._info_service is not None:
+            self._update_network_info(self._info_service.snapshot(), self._info_service.status)
+        return page
+
+    def _show_network_info(self, visible: bool) -> None:
+        if self._menu_widget is None or self._traffic_page is None or self._info_page is None:
+            return
+        self._traffic_page.setVisible(not visible)
+        self._info_page.setVisible(visible)
+        if visible and self._info_service is not None:
+            self._info_service.refresh()
+        self._menu_widget.adjustSize()
+
+    def _update_network_info(self, data: dict[str, str], status: str) -> None:
+        try:
+            for key, label in self._info_labels.items():
+                label.setText(data.get(key) or "\u2014")
+            if self._info_status is not None:
+                self._info_status.setText(status)
+                self._info_status.setVisible(bool(status))
+            if self._menu_widget is not None and self._info_page is not None and self._info_page.isVisible():
+                self._menu_widget.adjustSize()
+        except RuntimeError:
+            self._info_labels = {}
+            self._info_status = None
         self._update_menu_content()
 
     def _update_menu_content(self, data: MenuData | None = None):

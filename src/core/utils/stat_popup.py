@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Sequence
 from typing import Protocol, override
 
-from PyQt6.QtCore import QEvent, QObject, QPoint, QPointF, QRectF, Qt
+from PyQt6.QtCore import QEvent, QObject, QPoint, QPointF, QRectF, QSignalBlocker, Qt
 from PyQt6.QtGui import (
     QBrush,
     QCloseEvent,
@@ -42,12 +42,33 @@ class PinnablePopup(PopupWidget):
         self._drag_pos: QPoint | None = None
         self.graph: GraphWidget | None = None
         self.stat_labels: dict[str, QLabel] = {}
+        self._pin_buttons: list[tuple[QPushButton, str, str]] = []
         self.setWindowFlags(
             Qt.WindowType.Tool
             | Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.NoDropShadowWindowHint
         )
+
+    def create_pin_button(self, pin_icon: str = "\ue718", unpin_icon: str = "\ue77a") -> QPushButton:
+        button = QPushButton(pin_icon)
+        button.setCheckable(True)
+        button.setProperty("class", "pin-btn")
+        self._pin_buttons.append((button, pin_icon, unpin_icon))
+        button.toggled.connect(self.set_pinned)
+        self.set_pinned(self.is_pinned)
+        return button
+
+    def set_pinned(self, pinned: bool) -> None:
+        self.is_pinned = pinned
+        for button, pin_icon, unpin_icon in self._pin_buttons:
+            blocker = QSignalBlocker(button)
+            button.setChecked(pinned)
+            del blocker
+            button.setText(unpin_icon if pinned else pin_icon)
+            button.setProperty("class", "pin-btn pinned" if pinned else "pin-btn")
+            set_tooltip(button, "Unpin this window" if pinned else "Pin this window")
+            refresh_widget_style(button)
 
     @override
     def event(self, a0: QEvent | None) -> bool:
@@ -353,19 +374,7 @@ def build_stat_popup(
 
     pin_icon = menu_config.pin_icon
     unpin_icon = menu_config.unpin_icon
-    pin_btn = QPushButton(pin_icon)
-    pin_btn.setCheckable(True)
-    pin_btn.setProperty("class", "pin-btn")
-    set_tooltip(pin_btn, "Pin this window")
-
-    def on_pin_toggled(checked: bool):
-        pin_btn.setText(unpin_icon if checked else pin_icon)
-        pin_btn.setProperty("class", "pin-btn pinned" if checked else "pin-btn")
-        set_tooltip(pin_btn, "Pin this window" if not checked else "Unpin this window")
-        refresh_widget_style(pin_btn)
-        popup.is_pinned = checked
-
-    pin_btn.toggled.connect(on_pin_toggled)
+    pin_btn = popup.create_pin_button(pin_icon, unpin_icon)
     header_layout.addWidget(pin_btn)
     layout.addWidget(header)
 

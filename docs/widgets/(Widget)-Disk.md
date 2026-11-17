@@ -51,7 +51,19 @@ group_label:
   direction: "down"
   offset_top: 6
   offset_left: 0
+  title: ""
+  pinnable: false
+  show_activity: false
+  show_used_space: false
 ```
+
+Set `title: "Disk"` and `pinnable: true` to add the native header and pin button.
+`show_activity: true` adds live Usage, Read and Write values for each configured logical volume,
+sampled every second using Windows performance counters. Usage is busy time (0–100%),
+independent of storage capacity. Unavailable counters display an em dash; idle counters display zero.
+`show_used_space: true` displays used capacity / total capacity above the storage bar instead of free / total.
+Style `.header .text`, `.header .pin-btn`, `.activity-label` and `.activity-value`
+under `.disk-group`; `.pin-btn.pinned` and `.pin-btn:hover` control pin colors.
 
 ## Progress Bar Options
 

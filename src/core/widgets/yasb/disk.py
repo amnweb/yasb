@@ -5,8 +5,9 @@ from typing import override
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
+from core.utils.stat_popup import PinnablePopup
 from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
@@ -15,9 +16,10 @@ from core.utils.utilities import (
 from core.utils.win32.bindings.kernel32 import GetDiskFreeSpaceEx, get_volume_label
 from core.validation.widgets.yasb.disk import DiskConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.disk.activity import DiskActivity, DiskActivityWorker
 
 
-class ClickableDiskWidget(QWidget):
+class ClickableDiskWidget(QFrame):
     clicked = pyqtSignal()
 
     def __init__(self, label: str, parent: QWidget | None = None):
@@ -38,6 +40,14 @@ class DiskWidget(BaseWidget):
         super().__init__(int(config.update_interval * 1000), class_name=f"disk-widget {config.class_name}")
         self.config = config
         self._show_alt_label = False
+        self._latest_activity: dict[str, DiskActivity] = {}
+        self._activity_labels: dict[str, tuple[QLabel, QLabel, QLabel]] = {}
+        if config.group_label.show_activity:
+            worker = DiskActivityWorker.get_instance()
+            worker.add_volumes(config.group_label.volume_labels)
+            worker.data_ready.connect(self._update_activity)
+            if not worker.isRunning():
+                worker.start()
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
@@ -111,7 +121,8 @@ class DiskWidget(BaseWidget):
         return get_volume_label(f"{drive_letter}:\\")
 
     def show_group_label(self):
-        self.dialog = PopupWidget(
+        popup_type = PinnablePopup if self.config.group_label.pinnable else PopupWidget
+        self.dialog = popup_type(
             self,
             self.config.group_label.blur,
             self.config.group_label.round_corners,
@@ -121,20 +132,36 @@ class DiskWidget(BaseWidget):
         self.dialog.setProperty("class", "disk-group")
 
         layout = QVBoxLayout()
+        if self.config.group_label.title or self.config.group_label.pinnable:
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(0)
+        self._activity_labels = {}
+        if self.config.group_label.title or self.config.group_label.pinnable:
+            header = QFrame()
+            header.setProperty("class", "header")
+            header_layout = QHBoxLayout(header)
+            header_layout.setContentsMargins(0, 0, 0, 0)
+            title = QLabel(self.config.group_label.title or "Disk")
+            title.setProperty("class", "text")
+            header_layout.addWidget(title)
+            header_layout.addStretch()
+            if isinstance(self.dialog, PinnablePopup):
+                header_layout.addWidget(self.dialog.create_pin_button())
+            layout.addWidget(header)
         for label in self.config.group_label.volume_labels:
             disk_space = self._get_space(label)
             if disk_space is None:
                 continue
-            row_widget = QWidget()
-            row_widget.setProperty("class", "disk-group-row")
-
             volume_label = self._get_volume_label(label)
             display_label = f"{volume_label} ({label}):" if volume_label else f"{label}:"
 
             clicable_row = ClickableDiskWidget(label)
+            clicable_row.setProperty("class", "disk-group-row")
             clicable_row.clicked.connect(partial(self.open_explorer, label))
 
             v_layout = QVBoxLayout(clicable_row)
+            v_layout.setContentsMargins(0, 0, 0, 0)
+            v_layout.setSpacing(8)
             h_layout = QHBoxLayout()
 
             label_widget = QLabel(display_label)
@@ -157,6 +184,9 @@ class DiskWidget(BaseWidget):
             else:
                 free_size = disk_space["free"]["gb"]
             label_size.setText(f"{free_size} / {total_size}")
+            if self.config.group_label.show_used_space:
+                used_size = disk_space["used"]["tb"] if total_gb > 1000 else disk_space["used"]["gb"]
+                label_size.setText(f"{used_size} / {total_size}")
             h_layout.addStretch()
             h_layout.addWidget(label_size)
 
@@ -168,13 +198,23 @@ class DiskWidget(BaseWidget):
             if disk_space:
                 progress_bar.setValue(int(float(disk_space["used"]["percent"].strip("%"))))
             v_layout.addWidget(progress_bar)
+            if self.config.group_label.show_activity:
+                metrics = QHBoxLayout()
+                values: list[QLabel] = []
+                for name in ("Usage", "Read", "Write"):
+                    column = QVBoxLayout()
+                    caption = QLabel(name)
+                    caption.setProperty("class", "activity-label")
+                    value = QLabel("\u2014")
+                    value.setProperty("class", "activity-value usage" if name == "Usage" else "activity-value")
+                    column.addWidget(caption)
+                    column.addWidget(value)
+                    metrics.addLayout(column)
+                    values.append(value)
+                v_layout.addLayout(metrics)
+                self._activity_labels[label.upper().rstrip(":\\")] = (values[0], values[1], values[2])
 
-            row_widget_layout = QVBoxLayout(row_widget)
-            row_widget_layout.setContentsMargins(0, 0, 0, 0)
-            row_widget_layout.setSpacing(0)
-            row_widget_layout.addWidget(clicable_row)
-
-            layout.addWidget(row_widget)
+            layout.addWidget(clicable_row)
 
         self.dialog.setLayout(layout)
 
@@ -187,6 +227,27 @@ class DiskWidget(BaseWidget):
             offset_top=self.config.group_label.offset_top,
         )
         self.dialog.show()
+        self._update_activity(self._latest_activity)
+
+    @staticmethod
+    def _rate_text(value: float | None) -> str:
+        if value is None:
+            return "\u2014"
+        for unit, divisor in (("GB", 1024**3), ("MB", 1024**2), ("KB", 1024)):
+            if value >= divisor:
+                return f"{value / divisor:.1f} {unit}/s"
+        return f"{value:.0f} B/s"
+
+    def _update_activity(self, data: dict[str, DiskActivity]) -> None:
+        self._latest_activity = data
+        try:
+            for label, fields in self._activity_labels.items():
+                activity = data.get(label, DiskActivity())
+                fields[0].setText(f"{activity.usage:.0f}%" if activity.usage is not None else "\u2014")
+                fields[1].setText(self._rate_text(activity.read_bps))
+                fields[2].setText(self._rate_text(activity.write_bps))
+        except RuntimeError:
+            self._activity_labels = {}
 
     def open_explorer(self, label: str) -> None:
         os.startfile(f"{label}:\\")

@@ -1,5 +1,19 @@
 # Traffic Widget Options
 
+The optional `menu.pinnable: true` adds a native pin button. When network information
+is enabled, both pages share the same pinned state. Style `.traffic-menu .header .pin-btn`
+and its `:hover` / `.pinned` states to match other native panels.
+
+## Integrated network information
+
+Set `menu.show_network_info: true` to add an information button next to Reset All in the original traffic header. It opens a second page inside the same popup; the back button returns to traffic statistics. No separate bar icon, external process or second window is needed. The option defaults to `false`.
+
+The page includes public/local IP addresses, continent, country, region, city, coordinates, ISP, organization, timezone and currency. Local IP is read from the selected Windows interface (or the default IPv4 route for `auto`). Public data uses the default outbound internet route and requires access to ipwho.is; missing currency is supplemented by ipapi.co when available.
+
+Lookups run on a daemon thread with bounded HTTP timeouts. The primary result appears before the optional currency request completes. Saved data is displayed immediately and refreshed in the background; if offline, the last saved public data remains visible with an explicit status, and local IP stays local. Cache is stored under the user's local YASB application-data directory, outside the source/config repositories. `menu.info_cache_seconds` defaults to `300` (range 30–86400); failed requests are retried no sooner than one minute unless forced.
+
+All values use plain, selectable text. Theme selectors: `.traffic-menu .info-button`, `.back-button`, `.info-section`, `.info-key`, `.info-value`, `.info-status`. The traffic page and existing counters remain unchanged while the information page is open.
+
 Displays your network upload and download speeds in real-time. You can filter by specific network adapters, choose between bits and bytes, align the labels, and set the widget to hide itself when your PC is offline.
 
 | Option          | Type    | Default                                                                 | Description                                                                 |

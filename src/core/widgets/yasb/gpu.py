@@ -304,7 +304,7 @@ class GpuWidget(BaseWidget):
                 "Usage",
                 "usage",
                 f"{data.utilization:.0f}%" if data else "\u2014",
-                "Memory",
+                "In Use",
                 "mem",
                 f"{format_size(data.mem_used)} / {format_size(data.mem_total)}" if data else "\u2014",
             ),

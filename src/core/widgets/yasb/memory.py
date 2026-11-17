@@ -3,7 +3,7 @@ import re
 from collections import Counter
 
 from humanize import naturalsize
-from PyQt6.QtWidgets import QLabel, QVBoxLayout
+from PyQt6.QtWidgets import QLabel, QProgressBar, QVBoxLayout
 
 from core.utils.stat_popup import PinnablePopup, StatRow, build_stat_popup
 from core.utils.utilities import (
@@ -28,6 +28,7 @@ class MemoryWidget(BaseWidget):
         self.config = config
         self._show_alt_label = False
         self._last_data: MemoryData | None = None
+        self._usage_bar: QProgressBar | None = None
         self._history: collections.deque[float] = collections.deque(maxlen=config.menu.graph_history_size)
 
         self.progress_widget = None
@@ -93,6 +94,8 @@ class MemoryWidget(BaseWidget):
             labels["avail"].setText(format_size(data.virtual.available))
             labels["swap"].setText(self._swap_text(data))
             labels["util"].setText(f"{data.virtual.percent:.0f}%")
+            if self._usage_bar is not None:
+                self._usage_bar.setValue(min(1000, max(0, round(data.virtual.percent * 10))))
             if self.config.menu.show_hardware_details:
                 labels["installed"].setText(self._optional_size(data.hardware.installed_bytes))
                 labels["reserved"].setText(self._optional_size(data.reserved_bytes))
@@ -111,7 +114,7 @@ class MemoryWidget(BaseWidget):
 
         stat_rows: list[StatRow] = [
             (
-                "In use",
+                "In Use",
                 "used",
                 format_size(data.virtual.used) if data else "\u2014",
                 "All memory",
@@ -130,7 +133,7 @@ class MemoryWidget(BaseWidget):
                 "Swap used",
                 "swap",
                 self._swap_text(data) if data else "\u2014",
-                "Utilization",
+                "Usage",
                 "util",
                 f"{data.virtual.percent:.0f}%" if data else "\u2014",
             ),
@@ -139,7 +142,7 @@ class MemoryWidget(BaseWidget):
             # Keep the existing two-column grid, with the two primary metrics together.
             used_total, cached_available, swap_util = stat_rows
             stat_rows = [
-                (*used_total[:3], *swap_util[3:]),
+                (*swap_util[3:], *used_total[:3]),
                 cached_available,
                 (*swap_util[:3], *used_total[3:]),
             ]
@@ -177,6 +180,17 @@ class MemoryWidget(BaseWidget):
             primary_stats=("used", "util") if menu.highlight_usage else (),
         )
 
+        self._usage_bar = None
+        if menu.show_usage_bar:
+            card = popup.stat_labels["used"].parentWidget()
+            card_layout = card.layout() if card is not None else None
+            if isinstance(card_layout, QVBoxLayout):
+                self._usage_bar = QProgressBar()
+                self._usage_bar.setProperty("class", "memory-bar")
+                self._usage_bar.setRange(0, 1000)
+                self._usage_bar.setTextVisible(False)
+                card_layout.addWidget(self._usage_bar)
+
         if menu.show_graph and popup.graph is not None:
             popup.graph.set_fill_enabled(menu.show_graph_fill)
             colors = menu.graph_colors
@@ -197,6 +211,8 @@ class MemoryWidget(BaseWidget):
                 main_layout.insertWidget(graph_idx, util_label)
 
         popup.show()
+        if data is not None:
+            self._update_popup(data)
 
     def _swap_text(self, data: MemoryData) -> str:
         used = self._format_popup_size(data.swap.used)
