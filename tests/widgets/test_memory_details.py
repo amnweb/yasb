@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 from PyQt6.QtGui import QColor, QImage, QPainter
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QGridLayout
 
 from core.utils.stat_popup import GraphWidget, PinnablePopup
 from core.utils.utilities import PopupWidget
@@ -156,6 +156,7 @@ def test_new_options_are_opt_in():
     menu = MemoryConfig().menu
     assert not menu.show_hardware_details
     assert not menu.show_swap_total
+    assert not menu.highlight_usage
     assert not menu.graph_colors.enabled
 
 
@@ -189,6 +190,31 @@ def test_graph_without_bands_preserves_css_color(qapp: QApplication):
     graph.close()
 
 
+def test_colored_fill_uses_band_colors_and_smooth_boundary_stops(qapp: QApplication):
+    graph = GraphWidget()
+    graph.resize(240, 120)
+    graph.set_color_bands([(0, 70, "#00ff00"), (70, 90, "#ffff00"), (90, 100, "#ff0000")])
+    gradient = graph._fill_gradient(QColor("#4cc2ff"))
+    stops = gradient.stops()
+    assert {color.name() for _, color in stops} == {"#00ff00", "#ffff00", "#ff0000"}
+    assert len(stops) == 6
+    assert 0 < stops[1][0] < stops[2][0] < stops[3][0] < stops[4][0] < 1
+    assert stops[0][1].alpha() == graph.FILL_TOP_OPACITY
+    assert stops[-1][1].alpha() == graph.FILL_BOTTOM_OPACITY
+    # Sample the fill between the yellow and green stops, away from the stroke.
+    graph.set_data([99, 99])
+    image = QImage(graph.size(), QImage.Format.Format_ARGB32)
+    image.fill(QColor("black"))
+    painter = QPainter(image)
+    graph.render(painter)
+    painter.end()
+    boundary_y = round((stops[3][0] + stops[4][0]) / 2 * graph.height())
+    mixed = image.pixelColor(graph.width() // 2, boundary_y)
+    assert 0 < mixed.red() < mixed.green()
+    assert mixed.blue() == 0
+    graph.close()
+
+
 def test_original_popup_grid_displays_and_refreshes_extra_data(qapp: QApplication, monkeypatch: pytest.MonkeyPatch):
     worker = MemoryWorker(1000)
 
@@ -208,6 +234,7 @@ def test_original_popup_grid_displays_and_refreshes_extra_data(qapp: QApplicatio
                     "blur": False,
                     "show_hardware_details": True,
                     "show_swap_total": True,
+                    "highlight_usage": True,
                     "graph_colors": {"enabled": True},
                 }
             }
@@ -230,6 +257,17 @@ def test_original_popup_grid_displays_and_refreshes_extra_data(qapp: QApplicatio
         assert popup.stat_labels["speed"].text() == "5600 MT/s"
         assert popup.stat_labels["modules"].text() == "1 \u00d7 16.0 GB"
         assert popup.stat_labels["swap"].text() == "1.0 GB / 4.0 GB"
+        used_card = popup.stat_labels["used"].parentWidget()
+        util_card = popup.stat_labels["util"].parentWidget()
+        assert used_card is not None and util_card is not None
+        stats_frame = used_card.parentWidget()
+        assert stats_frame is not None
+        grid = stats_frame.layout()
+        assert isinstance(grid, QGridLayout)
+        assert grid.getItemPosition(grid.indexOf(used_card))[:2] == (0, 0)
+        assert grid.getItemPosition(grid.indexOf(util_card))[:2] == (0, 1)
+        assert "primary" in str(used_card.property("class"))
+        assert "primary" in str(popup.stat_labels["util"].property("class"))
         assert popup.graph is not None and len(popup.graph._color_bands) == 3
         widget._update_popup(data._replace(hardware=MemoryHardware()))
         assert popup.stat_labels["speed"].text() == "\u2014"
@@ -260,6 +298,7 @@ def test_original_popup_defaults_keep_six_stats(qapp: QApplication, monkeypatch:
     try:
         assert len(popup.stat_labels) == 6
         assert popup.graph is not None and popup.graph._color_bands == ()
+        assert "primary" not in str(popup.stat_labels["util"].property("class"))
         assert not worker._include_hardware
     finally:
         popup.hide()

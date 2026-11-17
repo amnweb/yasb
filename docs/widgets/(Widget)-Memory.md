@@ -18,6 +18,7 @@ memory:
       graph_history_size: 120
       show_hardware_details: true
       show_swap_total: true
+      highlight_usage: true
       graph_colors:
         enabled: true
         warning_threshold: 70
@@ -31,8 +32,27 @@ memory:
 - Configured speed is the firmware-reported DDR transfer rate in MT/s, not a live physical memory clock. When the configured value is unknown, display an em dash rather than substituting the module's nominal speed. Distinct configured speeds are listed separately.
 - Module information is collected through Windows WMI on a daemon thread. A pending or failed query never delays the usage sampler or blocks the UI. Successful results are cached for five minutes; failed queries are retried after one minute. Missing data is shown as an em dash.
 - `show_swap_total` (default `false`): display used/total pagefile space in the existing "Swap used" card. Actual pagefile sizes are summed with `EnumPageFilesW`; the previous commit-limit estimate remains a fallback when enumeration fails.
-- `graph_colors.enabled` (default `false`): color the existing smooth graph stroke by usage range. Historical portions keep their own color even when the latest sample returns to normal. The graph's area fill keeps its native CSS appearance.
+- `highlight_usage` (default `false`): place "In use" and "Utilization" together in the first statistics row. Those two cards, labels and values receive an additional `primary` CSS class for theme styling. Other statistics keep the native two-column layout.
+- `graph_colors.enabled` (default `false`): color the existing smooth graph stroke by usage range. Historical portions keep their own color even when the latest sample returns to normal. The area fill follows those same colors, blends smoothly across the thresholds, and fades toward the bottom. Graphs without bands retain their native CSS fill color.
 - `warning_threshold` and `critical_threshold` are percentages in `[0, 100]`, with warning strictly below critical. The three colors accept Qt color names or hex values. Other widgets and graphs without this option retain their existing colors.
+
+Example styling for the two primary metrics:
+
+```css
+.memory-popup .stats .stat-item.primary {
+    background-color: #16222a;
+    border: 1px solid #35647b;
+}
+.memory-popup .stats .stat-label.primary {
+    color: #dceaf3;
+    font-weight: 600;
+}
+.memory-popup .stats .stat-value.primary {
+    color: #4cc2ff;
+    font-size: 26px;
+    font-weight: 700;
+}
+```
 
 Displays your system RAM and swap memory usage in real-time. It features custom warning thresholds, real-time usage histograms, and circular progress indicators. Clicking it opens a popup menu with detailed memory allocation stats.
 

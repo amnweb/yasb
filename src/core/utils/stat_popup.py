@@ -233,14 +233,8 @@ class GraphWidget(QFrame):
             if int(x + cell) > 0:
                 painter.drawLine(0, 0, 0, last_y)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        # Fill gradient
-        gradient = QLinearGradient(0, 0, 0, h)
-        fill_top = QColor(line_color)
-        fill_top.setAlpha(self.FILL_TOP_OPACITY)
-        fill_bottom = QColor(line_color)
-        fill_bottom.setAlpha(self.FILL_BOTTOM_OPACITY)
-        gradient.setColorAt(0, fill_top)
-        gradient.setColorAt(1, fill_bottom)
+        # The colored fill follows the same usage bands as the stroke, blending at thresholds.
+        gradient = self._fill_gradient(line_color)
         painter.setBrush(QBrush(gradient))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawPath(self._fill_path)
@@ -264,6 +258,28 @@ class GraphWidget(QFrame):
                 painter.setPen(pen)
                 painter.drawPath(self._line_path)
                 painter.restore()
+
+    def _fill_gradient(self, fallback: QColor) -> QLinearGradient:
+        gradient = QLinearGradient(0, 0, 0, self.height())
+        stops: list[tuple[float, str]]
+        if not self._color_bands:
+            stops = [(0.0, fallback.name(QColor.NameFormat.HexArgb)), (1.0, fallback.name(QColor.NameFormat.HexArgb))]
+        else:
+            stops = [(0.0, self._color_bands[-1][2]), (1.0, self._color_bands[0][2])]
+            pad = self.STROKE_WIDTH / 2
+            height = max(1, self.height())
+            chart_h = height - pad * 2
+            for index in range(1, len(self._color_bands)):
+                lower, upper, color = self._color_bands[index]
+                previous_lower, _, previous_color = self._color_bands[index - 1]
+                boundary = (pad + chart_h * (1 - lower / 100)) / height
+                width = min(2.5, (upper - lower) / 2, (lower - previous_lower) / 2) * chart_h / height / 100
+                stops.extend([(max(0.0, boundary - width), color), (min(1.0, boundary + width), previous_color)])
+        for position, value in sorted(stops):
+            color = QColor(value)
+            color.setAlpha(round(self.FILL_TOP_OPACITY + (self.FILL_BOTTOM_OPACITY - self.FILL_TOP_OPACITY) * position))
+            gradient.setColorAt(position, color)
+        return gradient
 
 
 class StatPopupMenuConfig(Protocol):
@@ -304,6 +320,7 @@ def build_stat_popup(
     history: Iterable[float],
     stat_rows: Sequence[StatRow],
     graph_class: str = "graph",
+    primary_stats: Sequence[str] = (),
 ) -> PinnablePopup:
 
     popup = PinnablePopup(
@@ -381,15 +398,16 @@ def build_stat_popup(
                 continue
             align = Qt.AlignmentFlag.AlignRight if is_right else Qt.AlignmentFlag.AlignLeft
             item = QFrame()
-            item.setProperty("class", "stat-item")
+            primary_class = " primary" if key in primary_stats else ""
+            item.setProperty("class", f"stat-item{primary_class}")
             item_layout = QVBoxLayout(item)
             item_layout.setContentsMargins(0, 0, 0, 0)
             item_layout.setSpacing(0)
             header_label = QLabel(header_text)
-            header_label.setProperty("class", "stat-label")
+            header_label.setProperty("class", f"stat-label{primary_class}")
             header_label.setAlignment(align)
             value_label = QLabel(value)
-            value_label.setProperty("class", "stat-value")
+            value_label.setProperty("class", f"stat-value{primary_class}")
             value_label.setAlignment(align)
             item_layout.addWidget(header_label)
             item_layout.addWidget(value_label)

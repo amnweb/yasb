@@ -65,6 +65,7 @@ class MemoryMenuConfig(CustomBaseModel):
     show_graph_grid: bool = False
     show_hardware_details: bool = False
     show_swap_total: bool = False
+    highlight_usage: bool = False
     graph_colors: MemoryGraphColorsConfig = MemoryGraphColorsConfig()
     pin_icon: str = "\ue718"
     unpin_icon: str = "\ue77a"

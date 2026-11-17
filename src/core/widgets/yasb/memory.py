@@ -135,6 +135,14 @@ class MemoryWidget(BaseWidget):
                 f"{data.virtual.percent:.0f}%" if data else "\u2014",
             ),
         ]
+        if menu.highlight_usage:
+            # Keep the existing two-column grid, with the two primary metrics together.
+            used_total, cached_available, swap_util = stat_rows
+            stat_rows = [
+                (*used_total[:3], *swap_util[3:]),
+                cached_available,
+                (*swap_util[:3], *used_total[3:]),
+            ]
         if menu.show_hardware_details:
             hardware = data.hardware if data else MemoryHardware()
             stat_rows.extend(
@@ -166,6 +174,7 @@ class MemoryWidget(BaseWidget):
             history=self._history,
             stat_rows=stat_rows,
             graph_class="memory-graph",
+            primary_stats=("used", "util") if menu.highlight_usage else (),
         )
 
         if menu.show_graph and popup.graph is not None:
