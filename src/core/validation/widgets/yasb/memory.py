@@ -1,6 +1,7 @@
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
+from PyQt6.QtGui import QColor
 
 from core.validation.widgets.base_model import (
     CallbacksConfig,
@@ -32,6 +33,23 @@ class CallbacksMemoryConfig(CallbacksConfig):
     on_right: str = "do_nothing"
 
 
+class MemoryGraphColorsConfig(CustomBaseModel):
+    enabled: bool = False
+    warning_threshold: float = Field(default=70, ge=0, le=100)
+    critical_threshold: float = Field(default=90, ge=0, le=100)
+    normal: str = "#53ce87"
+    warning: str = "#e6bc50"
+    critical: str = "#f06464"
+
+    @model_validator(mode="after")
+    def check_bands(self) -> MemoryGraphColorsConfig:
+        if self.warning_threshold >= self.critical_threshold:
+            raise ValueError("warning_threshold must be lower than critical_threshold")
+        if any(not QColor(color).isValid() for color in (self.normal, self.warning, self.critical)):
+            raise ValueError("Graph colors must be valid Qt color names or hex colors")
+        return self
+
+
 class MemoryMenuConfig(CustomBaseModel):
     enabled: bool = False
     blur: bool = True
@@ -45,6 +63,9 @@ class MemoryMenuConfig(CustomBaseModel):
     graph_history_size: int = Field(default=60, ge=10, le=180)
     show_graph: bool = True
     show_graph_grid: bool = False
+    show_hardware_details: bool = False
+    show_swap_total: bool = False
+    graph_colors: MemoryGraphColorsConfig = MemoryGraphColorsConfig()
     pin_icon: str = "\ue718"
     unpin_icon: str = "\ue77a"
 

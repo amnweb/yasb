@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Sequence
 from typing import Protocol, override
 
-from PyQt6.QtCore import QEvent, QObject, QPoint, QPointF, Qt
+from PyQt6.QtCore import QEvent, QObject, QPoint, QPointF, QRectF, Qt
 from PyQt6.QtGui import (
     QBrush,
     QCloseEvent,
@@ -117,6 +117,7 @@ class GraphWidget(QFrame):
         self._line_path: QPainterPath | None = None
         self._fill_path: QPainterPath | None = None
         self._show_grid = show_grid
+        self._color_bands: tuple[tuple[float, float, str], ...] = ()
         self.setMinimumHeight(20)
         self.setProperty("class", css_class)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -124,6 +125,11 @@ class GraphWidget(QFrame):
         self._grid_proxy = QFrame(self)
         self._grid_proxy.setProperty("class", f"{css_class}-grid")
         self._grid_proxy.setFixedSize(0, 0)
+
+    def set_color_bands(self, bands: Sequence[tuple[float, float, str]]) -> None:
+        """Color the existing smooth stroke by height; other charts retain their CSS color."""
+        self._color_bands = tuple(bands)
+        self.update()
 
     def set_data(self, data: list[float]) -> None:
         self._data = data
@@ -242,9 +248,22 @@ class GraphWidget(QFrame):
         pen = QPen(line_color, self.STROKE_WIDTH)
         pen.setCapStyle(Qt.PenCapStyle.FlatCap)
         pen.setJoinStyle(Qt.PenJoinStyle.BevelJoin)
-        painter.setPen(pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawPath(self._line_path)
+        if not self._color_bands:
+            painter.setPen(pen)
+            painter.drawPath(self._line_path)
+        else:
+            pad = self.STROKE_WIDTH / 2
+            chart_h = h - pad * 2
+            for lower, upper, color in self._color_bands:
+                top = 0.0 if upper >= 100 else pad + chart_h * (1 - upper / 100)
+                bottom = float(h) if lower <= 0 else pad + chart_h * (1 - lower / 100)
+                painter.save()
+                painter.setClipRect(QRectF(0, top, float(w), max(0.0, bottom - top)))
+                pen.setColor(QColor(color))
+                painter.setPen(pen)
+                painter.drawPath(self._line_path)
+                painter.restore()
 
 
 class StatPopupMenuConfig(Protocol):

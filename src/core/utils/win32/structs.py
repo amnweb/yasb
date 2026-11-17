@@ -111,6 +111,19 @@ class MEMORYSTATUSEX(ct.Structure):
     ]
 
 
+class ENUM_PAGE_FILE_INFORMATION(ct.Structure):
+    _fields_ = [
+        ("cb", DWORD),
+        ("Reserved", DWORD),
+        ("TotalSize", c_size_t),
+        ("TotalInUse", c_size_t),
+        ("PeakUsage", c_size_t),
+    ]
+
+
+PENUM_PAGE_FILE_CALLBACKW = WINFUNCTYPE(BOOL, LPVOID, POINTER(ENUM_PAGE_FILE_INFORMATION), LPCWSTR)
+
+
 class PERFORMANCE_INFORMATION(ct.Structure):
     """Windows PERFORMANCE_INFORMATION structure for system performance."""
 

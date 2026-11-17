@@ -1,5 +1,39 @@
 # Memory Widget Configuration
 
+## Optional hardware details and graph colors
+
+The native popup can show installed RAM, hardware-reserved RAM, configured DDR speed, module capacities, and pagefile usage/total. Its original layout and default behavior are preserved; enable the extra rows explicitly:
+
+```yaml
+memory:
+  type: yasb.memory.MemoryWidget
+  options:
+    label: "<span>\uefc5</span>"
+    hide_decimal: true
+    update_interval: 1000
+    callbacks:
+      on_left: toggle_menu
+    menu:
+      enabled: true
+      graph_history_size: 120
+      show_hardware_details: true
+      show_swap_total: true
+      graph_colors:
+        enabled: true
+        warning_threshold: 70
+        critical_threshold: 90
+        normal: "#53ce87"
+        warning: "#e6bc50"
+        critical: "#f06464"
+```
+
+- `show_hardware_details` (default `false`): append installed/reserved and speed/modules rows to the existing two-column statistics grid. "All memory" remains the usable physical RAM reported by Windows; "Installed" includes hardware reservations.
+- Configured speed is the firmware-reported DDR transfer rate in MT/s, not a live physical memory clock. When the configured value is unknown, display an em dash rather than substituting the module's nominal speed. Distinct configured speeds are listed separately.
+- Module information is collected through Windows WMI on a daemon thread. A pending or failed query never delays the usage sampler or blocks the UI. Successful results are cached for five minutes; failed queries are retried after one minute. Missing data is shown as an em dash.
+- `show_swap_total` (default `false`): display used/total pagefile space in the existing "Swap used" card. Actual pagefile sizes are summed with `EnumPageFilesW`; the previous commit-limit estimate remains a fallback when enumeration fails.
+- `graph_colors.enabled` (default `false`): color the existing smooth graph stroke by usage range. Historical portions keep their own color even when the latest sample returns to normal. The graph's area fill keeps its native CSS appearance.
+- `warning_threshold` and `critical_threshold` are percentages in `[0, 100]`, with warning strictly below critical. The three colors accept Qt color names or hex values. Other widgets and graphs without this option retain their existing colors.
+
 Displays your system RAM and swap memory usage in real-time. It features custom warning thresholds, real-time usage histograms, and circular progress indicators. Clicking it opens a popup menu with detailed memory allocation stats.
 
 | Option            | Type    | Default                                                                 | Description                                                                 |

@@ -3,7 +3,7 @@
 from ctypes import POINTER, Array, WinDLL, c_void_p, c_wchar, c_wchar_p
 from ctypes.wintypes import BOOL, DWORD, HANDLE, HMODULE
 
-from core.utils.win32.structs import PROCESS_MEMORY_COUNTERS
+from core.utils.win32.structs import PENUM_PAGE_FILE_CALLBACKW, PROCESS_MEMORY_COUNTERS
 from core.utils.win32.typecheck import CArgObject
 
 psapi = WinDLL("psapi", use_last_error=True)
@@ -11,6 +11,9 @@ psapi = WinDLL("psapi", use_last_error=True)
 # Function signatures
 psapi.GetPerformanceInfo.argtypes = [c_void_p, DWORD]
 psapi.GetPerformanceInfo.restype = BOOL
+
+psapi.EnumPageFilesW.argtypes = [PENUM_PAGE_FILE_CALLBACKW, c_void_p]
+psapi.EnumPageFilesW.restype = BOOL
 
 psapi.GetProcessMemoryInfo.argtypes = [HANDLE, POINTER(PROCESS_MEMORY_COUNTERS), DWORD]
 psapi.GetProcessMemoryInfo.restype = BOOL

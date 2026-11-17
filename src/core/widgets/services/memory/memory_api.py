@@ -15,11 +15,15 @@ from core.utils.win32.bindings.pdh import pdh
 from core.utils.win32.bindings.psapi import psapi
 from core.utils.win32.constants import PDH_FMT_DOUBLE
 from core.utils.win32.structs import (
+    ENUM_PAGE_FILE_INFORMATION,
     MEMORYSTATUSEX,
     PDH_FMT_COUNTERVALUE_DOUBLE,
+    PENUM_PAGE_FILE_CALLBACKW,
     PERFORMANCE_INFORMATION,
     SYSTEM_MEMORY_LIST_INFORMATION,
 )
+from core.utils.win32.typecheck import CPointer
+from core.widgets.services.memory.hardware import HardwareCache, MemoryHardware
 
 
 class VirtualMemory(NamedTuple):
@@ -47,6 +51,12 @@ class MemoryData(NamedTuple):
     virtual: VirtualMemory
     swap: SwapMemory
     cached_bytes: int = 0
+    hardware: MemoryHardware = MemoryHardware()
+
+    @property
+    def reserved_bytes(self) -> int | None:
+        installed = self.hardware.installed_bytes
+        return max(0, installed - self.virtual.total) if installed is not None and self.virtual.total > 0 else None
 
 
 class MemoryAPI:
@@ -56,6 +66,21 @@ class MemoryAPI:
     _swap_query: wintypes.HANDLE | None = None
     _swap_counter: wintypes.HANDLE | None = None
     _swap_init_failed: bool = False
+    _hardware_cache = HardwareCache()
+
+    @staticmethod
+    def _pagefile_totals(page_size: int) -> tuple[int, int] | None:
+        totals = [0, 0]
+
+        @PENUM_PAGE_FILE_CALLBACKW
+        def collect(_context: int | None, info: CPointer[ENUM_PAGE_FILE_INFORMATION], _name: str) -> int:
+            totals[0] += info.contents.TotalSize * page_size
+            totals[1] += info.contents.TotalInUse * page_size
+            return 1
+
+        if not psapi.EnumPageFilesW(collect, None):
+            return None
+        return totals[0], totals[1]
 
     @classmethod
     def _init_swap_query(cls) -> bool:
@@ -176,7 +201,13 @@ class MemoryAPI:
             if page_size == 0:
                 return SwapMemory(total=0, used=0, free=0, percent=0.0)
 
-            total = (perf.CommitLimit - perf.PhysicalTotal) * page_size
+            pagefiles = cls._pagefile_totals(page_size)
+            if pagefiles is not None:
+                total, used = pagefiles
+                used = min(total, used)
+                return SwapMemory(total, used, total - used, round(used / total * 100, 1) if total else 0.0)
+
+            total = max(0, perf.CommitLimit - perf.PhysicalTotal) * page_size
 
             if total > 0:
                 percent_swap = cls._get_swap_percent()
@@ -198,12 +229,13 @@ class MemoryAPI:
             return SwapMemory(total=0, used=0, free=0, percent=0.0)
 
     @classmethod
-    def get_data(cls) -> MemoryData:
+    def get_data(cls, include_hardware: bool = False) -> MemoryData:
         """Collect all memory data in a single call."""
         return MemoryData(
             virtual=cls.virtual_memory(),
             swap=cls.swap_memory(),
             cached_bytes=cls._get_cached_bytes(),
+            hardware=cls._hardware_cache.snapshot() if include_hardware else MemoryHardware(),
         )
 
 
@@ -224,9 +256,13 @@ class MemoryWorker(QThread):
         super().__init__(parent)
         self._update_interval = update_interval
         self._stop_event = threading.Event()
+        self._include_hardware = False
         app_inst = QApplication.instance()
         if app_inst is not None:
             app_inst.aboutToQuit.connect(self.stop)
+
+    def enable_hardware_details(self) -> None:
+        self._include_hardware = True
 
     def stop(self):
         """Signal the worker to stop."""
@@ -239,7 +275,7 @@ class MemoryWorker(QThread):
         self._stop_event.clear()
         while not self._stop_event.is_set():
             try:
-                data = MemoryAPI.get_data()
+                data = MemoryAPI.get_data(include_hardware=self._include_hardware)
                 if not self._stop_event.is_set():
                     self.data_ready.emit(data)
             except Exception as e:

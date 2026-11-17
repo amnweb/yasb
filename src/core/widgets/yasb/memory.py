@@ -1,5 +1,6 @@
 import collections
 import re
+from collections import Counter
 
 from humanize import naturalsize
 from PyQt6.QtWidgets import QLabel, QVBoxLayout
@@ -12,6 +13,7 @@ from core.utils.utilities import (
 )
 from core.validation.widgets.yasb.memory import MemoryConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.memory.hardware import MemoryHardware
 from core.widgets.services.memory.memory_api import MemoryData, MemoryWorker, SwapMemory, VirtualMemory
 
 
@@ -45,11 +47,14 @@ class MemoryWidget(BaseWidget):
             MemoryWidget._instances.append(self)
 
         # Start the shared memory worker thread
-        if self.config.update_interval > 0 and MemoryWidget._worker is None:
+        if self.config.update_interval > 0:
             worker = MemoryWorker.get_instance(self.config.update_interval)
-            worker.data_ready.connect(MemoryWidget._on_data_ready)
-            worker.start()
-            MemoryWidget._worker = worker
+            if self.config.menu.show_hardware_details:
+                worker.enable_hardware_details()
+            if MemoryWidget._worker is None:
+                worker.data_ready.connect(MemoryWidget._on_data_ready)
+                worker.start()
+                MemoryWidget._worker = worker
 
         self._show_placeholder()
 
@@ -86,8 +91,13 @@ class MemoryWidget(BaseWidget):
             labels["total"].setText(format_size(data.virtual.total))
             labels["cached"].setText(format_size(data.cached_bytes))
             labels["avail"].setText(format_size(data.virtual.available))
-            labels["swap"].setText(format_size(data.swap.used))
+            labels["swap"].setText(self._swap_text(data))
             labels["util"].setText(f"{data.virtual.percent:.0f}%")
+            if self.config.menu.show_hardware_details:
+                labels["installed"].setText(self._optional_size(data.hardware.installed_bytes))
+                labels["reserved"].setText(self._optional_size(data.reserved_bytes))
+                labels["speed"].setText(self._speed_text(data.hardware))
+                labels["modules"].setText(self._modules_text(data.hardware))
         except Exception:
             pass
 
@@ -119,12 +129,34 @@ class MemoryWidget(BaseWidget):
             (
                 "Swap used",
                 "swap",
-                format_size(data.swap.used) if data else "\u2014",
+                self._swap_text(data) if data else "\u2014",
                 "Utilization",
                 "util",
                 f"{data.virtual.percent:.0f}%" if data else "\u2014",
             ),
         ]
+        if menu.show_hardware_details:
+            hardware = data.hardware if data else MemoryHardware()
+            stat_rows.extend(
+                [
+                    (
+                        "Installed",
+                        "installed",
+                        self._optional_size(hardware.installed_bytes),
+                        "Hardware reserved",
+                        "reserved",
+                        self._optional_size(data.reserved_bytes if data else None),
+                    ),
+                    (
+                        "Configured speed",
+                        "speed",
+                        self._speed_text(hardware),
+                        "Modules",
+                        "modules",
+                        self._modules_text(hardware),
+                    ),
+                ]
+            )
 
         popup = build_stat_popup(
             parent=self,
@@ -137,6 +169,15 @@ class MemoryWidget(BaseWidget):
         )
 
         if menu.show_graph and popup.graph is not None:
+            colors = menu.graph_colors
+            if colors.enabled:
+                popup.graph.set_color_bands(
+                    [
+                        (0, colors.warning_threshold, colors.normal),
+                        (colors.warning_threshold, colors.critical_threshold, colors.warning),
+                        (colors.critical_threshold, 100, colors.critical),
+                    ]
+                )
             main_layout = popup.layout()
             graph_container = popup.graph.parentWidget()
             if isinstance(main_layout, QVBoxLayout) and graph_container is not None:
@@ -146,6 +187,32 @@ class MemoryWidget(BaseWidget):
                 main_layout.insertWidget(graph_idx, util_label)
 
         popup.show()
+
+    def _swap_text(self, data: MemoryData) -> str:
+        used = self._format_popup_size(data.swap.used)
+        return f"{used} / {self._format_popup_size(data.swap.total)}" if self.config.menu.show_swap_total else used
+
+    @classmethod
+    def _optional_size(cls, value: int | None) -> str:
+        return cls._format_popup_size(value) if value is not None else "\u2014"
+
+    @staticmethod
+    def _speed_text(hardware: MemoryHardware) -> str:
+        if not hardware.modules:
+            return "\u2014"
+        speeds = {module.configured_speed for module in hardware.modules}
+        if None in speeds:
+            return "\u2014"
+        return " / ".join(str(speed) for speed in sorted(speed for speed in speeds if speed is not None)) + " MT/s"
+
+    @classmethod
+    def _modules_text(cls, hardware: MemoryHardware) -> str:
+        if not hardware.modules:
+            return "\u2014"
+        counts = Counter(module.capacity for module in hardware.modules)
+        return " + ".join(
+            f"{count} \u00d7 {cls._format_popup_size(capacity)}" for capacity, count in sorted(counts.items())
+        )
 
     @staticmethod
     def _format_popup_size(value: float) -> str:
