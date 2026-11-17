@@ -45,6 +45,7 @@ class CpuMenuConfig(CustomBaseModel):
     graph_history_size: int = Field(default=60, ge=10, le=180)
     show_graph: bool = True
     show_graph_grid: bool = False
+    highlight_usage: bool = False
     pin_icon: str = "\ue718"
     unpin_icon: str = "\ue77a"
 

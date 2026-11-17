@@ -1,5 +1,7 @@
 # CPU Widget Configuration
 
+The optional `menu.highlight_usage: true` adds a `primary` class to the native usage card and its label/value. It defaults to `false`, preserving the existing grid and theme. Style `.cpu-popup .stat-item.primary` and `.cpu-popup .stat-value.primary` to emphasize utilization without changing the remaining metrics.
+
 Keeps track of your processor's speed and usage in real-time. It supports per-core usage histograms, custom warning colors, and circular progress meters. You can click it to open a popup menu that shows detailed stats and performance graphs over time.
 
 | Option                | Type    | Default                                                                 | Description                                                                 |

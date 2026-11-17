@@ -128,6 +128,7 @@ class CpuWidget(BaseWidget):
             history=self._history,
             stat_rows=stat_rows,
             graph_class="cpu-graph",
+            primary_stats=("usage",) if menu.highlight_usage else (),
         )
 
         if menu.show_graph and popup.graph is not None:

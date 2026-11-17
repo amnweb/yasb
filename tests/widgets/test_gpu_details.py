@@ -60,6 +60,7 @@ def widget(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> Iterator[GpuW
                     "show_power": False,
                     "show_fan_speed": False,
                     "show_graph_fill": False,
+                "highlight_usage": True,
                 }
             }
         )
@@ -97,6 +98,7 @@ def test_inline_selector_switches_without_closing_or_resizing_popup(widget: GpuW
     widget._show_popup()
     popup = PopupWidget.open_popup_for(widget)
     assert isinstance(popup, PinnablePopup)
+    assert "primary" in str(popup.stat_labels["usage"].property("class"))
     before = popup.size()
     assert widget._selector_buttons["dgpu"].text() == "GPU 0"
     assert widget._selector_buttons["igpu"].text() == "GPU 1"
@@ -183,3 +185,4 @@ def test_gpu_defaults_preserve_original_behavior():
     assert not config.menu.show_clocks
     assert not config.menu.show_combined_memory
     assert config.menu.show_graph_fill
+    assert not config.menu.highlight_usage

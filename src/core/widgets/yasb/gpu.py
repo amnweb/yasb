@@ -369,6 +369,7 @@ class GpuWidget(BaseWidget):
             history=self._history,
             stat_rows=stat_rows,
             graph_class="gpu-graph",
+            primary_stats=("usage",) if menu.highlight_usage else (),
         )
 
         # Add title label above the utilization graph container

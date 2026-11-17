@@ -33,6 +33,7 @@ gpu:
 - `show_combined_memory` adds used/total dedicated-plus-shared amounts. Shared capacity is the system RAM sharing limit, not extra physical VRAM. `show_memory_bars` adds horizontal utilization bars to the dedicated, shared and combined native cards. Capacities of zero are handled without division errors.
 - `show_temperature`, `show_power`, and `show_fan_speed` default to `true`; disable them to keep the GPU popup focused on utilization/clocks/memory while a separate temperature widget is used.
 - `show_graph_fill` defaults to `true`; set it to `false` for a line-only chart with no shading or gradients.
+- `highlight_usage` defaults to `false`. Enabling it adds the `primary` CSS class to the usage card and its label/value, matching the RAM highlight mechanism while preserving the native grid.
 
 Keeps track of your graphics card's usage, memory, and temperature. You can display usage graphs, toggle between metric and imperial temperature units, set warning thresholds, and click it to open a detailed status popup.
 

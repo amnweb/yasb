@@ -41,6 +41,7 @@ class GpuMenuConfig(CustomBaseModel):
     show_graph: bool = True
     show_graph_grid: bool = False
     show_graph_fill: bool = True
+    highlight_usage: bool = False
     adapter_selector: bool = False
     adapter_order: Literal["system", "dedicated_first"] = "system"
     show_clocks: bool = False
