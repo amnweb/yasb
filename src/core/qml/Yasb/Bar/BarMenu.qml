@@ -72,9 +72,7 @@ Window {
         id: menu
 
         font: barMenu.bar.theme.menu.font
-        // Active and inactive only, so disabled controls keep the style's dimmed colours
-        palette.active.text: barMenu.bar.theme.colors.text
-        palette.inactive.text: barMenu.bar.theme.colors.text
+        palette.text: barMenu.bar.theme.colors.text
         topInset: 0
         leftInset: 0
         rightInset: 0
@@ -95,13 +93,6 @@ Window {
         x: -leftInset
         y: -topInset
         onClosed: barMenu.close()
-
-        MenuItem {
-            text: `Bar: ${barMenu.bar.name}`
-            enabled: false
-        }
-
-        MenuSeparator {}
 
         ActionItem {
             glyph: "\uf120"

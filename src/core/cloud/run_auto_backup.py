@@ -51,13 +51,11 @@ def _account(client: ApiClient, app: QCoreApplication) -> Account | None:
 def _notify() -> None:
     """Tell the user automatic backup has stopped, and where to fix it."""
     try:
-        import os
-
         from core.app.windows.toast import ToastNotifier
-        from settings import SCRIPT_PATH
+        from settings import APP_ICON_TRANSPARENT
 
         ToastNotifier().show(
-            os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png"),
+            APP_ICON_TRANSPARENT,
             "Automatic backup turned off",
             "Your subscription is not active, so YASB Cloud has stopped backing up automatically.",
             launch_url=f"{BASE_URL}/account",

@@ -8,6 +8,7 @@ NAME_PATTERN = r"^[A-Za-z][A-Za-z0-9_-]*$"
 
 type WidgetName = Annotated[str, StringConstraints(pattern=NAME_PATTERN)]
 type SlotName = Annotated[str, StringConstraints(pattern=NAME_PATTERN)]
+type AutoHide = Literal["never", "always", "maximized"]
 
 
 class BarMargin(CustomBaseModel):
@@ -19,7 +20,7 @@ class BarMargin(CustomBaseModel):
 
 class BarAnimation(CustomBaseModel):
     type: Literal["none", "slide", "fade"] = "slide"
-    duration: int = Field(default=500, ge=0)
+    duration: int = Field(default=300, ge=0)
 
 
 class BarConfig(CustomBaseModel):
@@ -30,12 +31,12 @@ class BarConfig(CustomBaseModel):
     edge: Literal["top", "bottom", "left", "right"] = "top"
     align: Literal["left", "center", "right", "top", "bottom"] = "center"
     length: str | int = "100%"
-    thickness: int = Field(default=30, ge=0)
+    thickness: int = Field(default=40, ge=0)
     margin: BarMargin = BarMargin()
     reserve_space: bool = False
     always_on_top: bool = False
     hide_on_fullscreen: bool = False
-    auto_hide: Literal["never", "always", "maximized"] = "never"
+    auto_hide: AutoHide = "never"
     backdrop: bool = False
     animation: BarAnimation = BarAnimation()
     widgets: dict[SlotName, list[WidgetName]] = {}

@@ -336,9 +336,9 @@ def open_popup(item: QQuickItem) -> QQuickItem:
 
 def test_the_popup_lists_each_source_with_its_updates(widget: tuple[QQuickItem, list[str]]):
     item, warnings = widget
-    label = find_item(item, "label")
-    assert label is not None
-    until(lambda: label.property("text") == "4")
+    updates = item.findChild(AvailableUpdates)
+    assert updates is not None
+    until(lambda: updates.property("count") == 4)
     assert item.isVisible()
     content = open_popup(item)
     sections = find_item(content, "sources")

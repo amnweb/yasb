@@ -22,7 +22,13 @@ from typing import Any
 
 from core.cli.pipe import CLI_SERVER_PIPE_NAME, LOG_SERVER_PIPE_NAME, read_message, write_message
 from core.utils.process import is_process_running
-from core.utils.win32.autostart import disable_autostart, enable_autostart, is_autostart_enabled
+from core.utils.win32.autostart import (
+    AUTOSTART_FILE,
+    EXE_PATH,
+    disable_autostart,
+    enable_autostart,
+    is_autostart_enabled,
+)
 from core.utils.win32.bindings.advapi32 import get_current_user_sid
 from core.utils.win32.bindings.kernel32 import CloseHandle, CreateFile, GetLastError, ReadFile, WriteFile
 from core.utils.win32.bindings.ole32 import create_dispatch
@@ -48,9 +54,6 @@ from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECT
 YASB_VERSION = BUILD_VERSION
 YASB_CLI_VERSION = CLI_VERSION
 YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
-
-EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
-AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
 
 
 class Format:
@@ -537,15 +540,14 @@ class CLIHandler:
                 if is_process_running(proc):
                     subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
 
-            # Delete styles.css and config.yaml if they exist
-            for fname in ["styles.css", "config.yaml"]:
-                fpath = config_path / fname
-                if fpath.exists():
-                    try:
-                        fpath.unlink()
-                        print(f"Deleted {fpath}")
-                    except Exception as e:
-                        print(f"Failed to delete {fpath}: {e}")
+            # Delete config.yaml if it exists, so YASB opens the setup on its next start
+            fpath = config_path / "config.yaml"
+            if fpath.exists():
+                try:
+                    fpath.unlink()
+                    print(f"Deleted {fpath}")
+                except Exception as e:
+                    print(f"Failed to delete {fpath}: {e}")
 
             # Clear all files in app_data_folder if it exists
 

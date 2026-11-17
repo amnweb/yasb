@@ -39,7 +39,8 @@ def make_bar(qapp: QGuiApplication, fake_app_bar: None) -> Iterator[MakeBar]:
     def make(**config: Any) -> BarWindow:
         screen = QGuiApplication.primaryScreen()
         assert screen is not None
-        bar = BarWindow(engine, "test-bar", screen, BarConfig.model_validate(config))
+        # The pixel checks are measured on a 30 px bar
+        bar = BarWindow(engine, "test-bar", screen, BarConfig.model_validate({"thickness": 30, **config}))
         bars.append(bar)
         return bar
 

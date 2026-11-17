@@ -76,3 +76,8 @@ def test_the_widget_shows_the_memory_use_and_the_alternate_label(worker: FakeWor
 
     widget.setProperty("showAlternate", True)
     assert label.property("text") == "8.0G/16.0G"
+
+    widget.setProperty(
+        "alternateLabel", "{virtual_mem_outof} {swap_mem_percent} {virtual_mem_total:.0f} {virtual_mem_cached} {x}"
+    )
+    assert label.property("text") == "8.0G / 16.0G 12.5 16G 1.0G {x}"

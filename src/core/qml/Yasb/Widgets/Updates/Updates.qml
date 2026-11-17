@@ -25,7 +25,7 @@ Item {
     // Updates to leave out, by a name or id they contain, in any case, such as ["Microsoft.Edge", "Defender"]
     property list<string> exclude: []
     // Label placeholders: {count}, {windows}, {winget} and {scoop}
-    property string label: "{count}"
+    property string label: ""
     // The glyph in front of the label, in the icon font
     property string icon: "\ue896"
     // Hides the widget while there is nothing to update and no restart waiting

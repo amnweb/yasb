@@ -12,6 +12,12 @@ import Yasb.Themes
 Item {
     id: memory
 
+    // Label placeholders: {virtual_mem_percent} and {swap_mem_percent} in %; sizes such as 8.0G: {virtual_mem_used}
+    // {virtual_mem_free} (the same as {virtual_mem_avail}) {virtual_mem_total} {virtual_mem_cached} {swap_mem_used}
+    // {swap_mem_free} {swap_mem_total}, and {virtual_mem_outof} for used / total. :.0f after a name sets the decimals,
+    // as {virtual_mem_percent:.0f}. Right-click shows the alternate label.
+    property string label: "{virtual_mem_percent:.0f}%"
+    property string alternateLabel: "{virtual_mem_free}/{virtual_mem_total}"
     property int updateInterval: 5000
     property color graphColor: theme.colors.accent
     // Square grid lines behind the graph
@@ -24,6 +30,7 @@ Item {
     readonly property Theme theme: bar.theme
 
     property bool showAlternate: false
+    readonly property string text: format(showAlternate ? alternateLabel : label)
     property list<real> history: []
 
     readonly property bool dark: theme.dark
@@ -101,7 +108,7 @@ Item {
         return `${(bytes / unit).toFixed(1)} ${units[index]}`
     }
 
-    function size(bytes: real, suffix: string): string {
+    function size(bytes: real, decimals: int): string {
         if (Math.abs(bytes) < 1024)
             return `${Math.trunc(bytes)}B`
         const units = "KMGTPEZY"
@@ -111,7 +118,32 @@ Item {
             unit *= 1024
             ++index
         }
-        return `${(bytes / unit).toFixed(1)}${units[index]}${suffix}`
+        return `${(bytes / unit).toFixed(decimals)}${units[index]}`
+    }
+
+    function format(template: string): string {
+        const data = monitor.data
+        const sizes = {
+            virtual_mem_used: data.virtual.used,
+            virtual_mem_free: data.virtual.free,
+            virtual_mem_avail: data.virtual.available,
+            virtual_mem_total: data.virtual.total,
+            virtual_mem_cached: data.cached_bytes,
+            swap_mem_used: data.swap.used,
+            swap_mem_free: data.swap.free,
+            swap_mem_total: data.swap.total
+        }
+        const percents = { virtual_mem_percent: data.virtual.percent, swap_mem_percent: data.swap.percent }
+        return template.replace(/\{((?:virtual|swap)_mem_\w+)(?::\.(\d+)f)?\}/g, (match, name, decimals) => {
+            const places = decimals === undefined ? 1 : Number(decimals)
+            if (sizes[name] !== undefined)
+                return size(sizes[name], places)
+            if (percents[name] !== undefined)
+                return decimals === undefined ? String(percents[name]) : percents[name].toFixed(places)
+            if (name === "virtual_mem_outof")
+                return `${size(data.virtual.used, places)} / ${size(data.virtual.total, places)}`
+            return match
+        })
     }
 
     function placePopup() {
@@ -176,13 +208,11 @@ Item {
         }
 
         Label {
-            id: label
-
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
-            text: memory.showAlternate
-                ? `${memory.size(monitor.data.virtual.free, "")}/${memory.size(monitor.data.virtual.total, "")}`
-                : `${monitor.data.virtual.percent.toFixed(0)}%`
+            visible: text !== ""
+            text: memory.text
+            textFormat: Text.PlainText
             color: memory.textColor
             font: memory.font
         }

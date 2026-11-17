@@ -39,7 +39,7 @@ from core.cloud.ui.backups import BackupModel
 from core.cloud.ui.sign_in import SignInFlow
 from core.utils.qml import qml_property
 from core.utils.shell_utils import shell_open
-from settings import DEFAULT_CONFIG_DIRECTORY, SCRIPT_PATH, WEBSITE_DOCS_URL
+from settings import APP_ICON, DEFAULT_CONFIG_DIRECTORY, WEBSITE_DOCS_URL
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ class Cloud(QObject):
 
     @qml_property(str, constant=True)
     def iconUrl(self) -> str:
-        return QUrl.fromLocalFile(f"{SCRIPT_PATH}/assets/images/app_icon.png").toString()
+        return QUrl.fromLocalFile(APP_ICON).toString()
 
     @qml_property(str, constant=True)
     def termsUrl(self) -> str:

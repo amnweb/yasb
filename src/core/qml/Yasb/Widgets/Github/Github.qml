@@ -12,6 +12,8 @@ import Yasb.Themes
 Item {
     id: github
 
+    // Label placeholder: {count}, the number of unread notifications. Empty shows only the logo
+    property string label: ""
     required property BarBase bar
     readonly property Theme theme: bar.theme
     // A personal access token; empty signs in from the popup instead. Environment.value("NAME") reads one from an
@@ -34,6 +36,7 @@ Item {
     property int iconSize: theme.bar.iconFont.pixelSize
     // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
     property color textColor: theme.colors.text
+    property font font
     // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
     iconFont.family: theme.bar.iconFont.family
@@ -89,9 +92,10 @@ Item {
     property real now: Date.now()
 
     readonly property bool shown: !hideEmpty || monitor.needsSignIn || monitor.unreadCount > 0 || monitor.error !== ""
+    readonly property string text: format(label)
 
-    implicitWidth: shown ? label.implicitWidth : 0
-    implicitHeight: shown ? label.implicitHeight : 0
+    implicitWidth: shown ? content.implicitWidth : 0
+    implicitHeight: shown ? content.implicitHeight : 0
     visible: shown
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
@@ -111,6 +115,10 @@ Item {
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - popup.height - 8))
         popup.x = Math.round(px)
         popup.y = Math.round(py)
+    }
+
+    function format(template: string): string {
+        return template.replace(/\{count\}/g, () => String(monitor.unreadCount))
     }
 
     function togglePopup() {
@@ -166,27 +174,42 @@ Item {
         sourceSize: Qt.size(width, height)
     }
 
-    Item {
-        id: label
-        y: Math.round((parent.height - height) / 2)
-        implicitWidth: github.iconSize
-        implicitHeight: github.iconSize
+    Row {
+        id: content
+        height: parent.height
+        spacing: 6
 
-        SvgIcon {
-            anchors.fill: parent
-            source: github.icon
-            color: github.textColor
-            opacity: monitor.needsSignIn ? 0.55 : 1
+        Item {
+            y: Math.round((parent.height - height) / 2)
+            implicitWidth: github.iconSize
+            implicitHeight: github.iconSize
+
+            SvgIcon {
+                anchors.fill: parent
+                source: github.icon
+                color: github.textColor
+                opacity: monitor.needsSignIn ? 0.55 : 1
+            }
+
+            Rectangle {
+                x: parent.width - 5
+                y: -1
+                width: 6
+                height: 6
+                radius: 3
+                visible: monitor.unreadCount > 0
+                color: github.badgeColor
+            }
         }
 
-        Rectangle {
-            x: parent.width - 5
-            y: -1
-            width: 6
-            height: 6
-            radius: 3
-            visible: monitor.unreadCount > 0
-            color: github.badgeColor
+        Label {
+            objectName: "label"
+            anchors.verticalCenter: parent.verticalCenter
+            visible: text !== ""
+            text: github.text
+            textFormat: Text.PlainText
+            color: github.textColor
+            font: github.font
         }
     }
 

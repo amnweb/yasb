@@ -15,7 +15,7 @@ from pathlib import Path
 from core.cloud.constants import UNLIMITED
 from core.cloud.errors import Cancelled, QuotaExceededError, SnapshotError
 from core.cloud.models import format_size
-from settings import DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME
+from settings import DEFAULT_CONFIG_FILENAME
 
 EXCLUDE_GLOBS: tuple[str, ...] = (
     "*.log",
@@ -32,7 +32,7 @@ EXCLUDE_DIRS: frozenset[str] = frozenset(
 )
 """`dumps` is where the CLI writes crash dumps. YASB protected."""
 
-ALWAYS_INCLUDE: frozenset[str] = frozenset({DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME})
+ALWAYS_INCLUDE: frozenset[str] = frozenset({DEFAULT_CONFIG_FILENAME})
 """Paths no rule can exclude. Matched on the whole relative path, so a theme's own
 config.yaml further down the tree is still the user's to exclude."""
 

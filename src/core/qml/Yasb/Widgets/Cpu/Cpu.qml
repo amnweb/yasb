@@ -12,6 +12,11 @@ import Yasb.Themes
 Item {
     id: cpu
 
+    // Label placeholders: {info[percent][total]} and {info[percent][core]} (every core, space-separated) in %,
+    // {info[freq][current]} and {info[freq][max]} (base) in MHz, {info[cores][physical]} {info[cores][total]}.
+    // :.2f after a name gives two decimals, as {info[freq][current]:.2f}. Right-click shows the alternate label.
+    property string label: "{info[percent][total]:.0f}%"
+    property string alternateLabel: "CPU: {info[percent][total]}% | freq: {info[freq][current]:.2f} MHz"
     property int updateInterval: 2000
     property color graphColor: theme.colors.accent
     // Square grid lines behind the graph
@@ -26,6 +31,7 @@ Item {
     readonly property Theme theme: bar.theme
 
     property bool showAlternate: false
+    readonly property string text: format(showAlternate ? alternateLabel : label)
     property list<real> history: []
 
     readonly property bool dark: theme.dark
@@ -68,6 +74,17 @@ Item {
     valueFont.pixelSize: 20
     valueFont.weight: Font.Bold
     readonly property string edge: bar.edge
+
+    function format(template: string): string {
+        return template.replace(/\{info\[(percent|freq|cores)\]\[(\w+)\](?::\.(\d+)f)?\}/g, (match, group, key, decimals) => {
+            const values = monitor.data[group]
+            if (!Object.prototype.hasOwnProperty.call(values, key))
+                return match
+            const value = values[key]
+            const show = number => decimals === undefined ? String(number) : number.toFixed(Number(decimals))
+            return typeof value === "number" ? show(value) : Array.from(value, show).join(" ")
+        })
+    }
 
     function spline(points: var): string {
         if (points.length < 2)
@@ -150,13 +167,11 @@ Item {
         }
 
         Label {
-            id: label
-
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
-            text: cpu.showAlternate
-                ? `CPU: ${monitor.data.percent.total}% | freq: ${monitor.data.freq.current.toFixed(2)} Mhz`
-                : `${monitor.data.percent.total.toFixed(0)}%`
+            visible: text !== ""
+            text: cpu.text
+            textFormat: Text.PlainText
             color: cpu.textColor
             font: cpu.font
         }

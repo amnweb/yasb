@@ -20,7 +20,7 @@ from core.services.github.notifications import GitHubNotifications, notification
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
 from tests.support.bar import create_with_bar
-from tests.support.qt import wait
+from tests.support.qt import find_item, wait
 
 # The token the widget is set to in most tests
 TOKEN = "configured-token"
@@ -343,11 +343,16 @@ def test_qml_widget_shows_every_state_without_warnings(github: GitHub, monkeypat
         service = widget.findChild(GitHubNotifications)
         assert service is not None
         until(settled(service))
+        label = find_item(widget, "label")
+        assert label is not None and label.property("text") == ""
+        widget.setProperty("label", "{count} unread {x}")
+        assert label.property("text") == "2 unread {x}"
         QMetaObject.invokeMethod(widget, "togglePopup")
         wait(50)
         github.fetch = empty
         service.refresh()
         until(settled(service))
+        assert label.property("text") == "0 unread {x}"
         github.fetch = rejected
         service.refresh()
         until(settled(service))

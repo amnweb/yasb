@@ -47,7 +47,6 @@ dependencies = [
     "winrt.windows.devices.wifi==4!10.0.28000.2705",
     "winrt.windows.security.authorization.appcapabilityaccess==4!10.0.28000.2705",
     "winrt.windows.security.credentials==4!10.0.28000.2705",
-    "winrt.windows.ui.viewmanagement==4!10.0.28000.2705",
     "winrt.windows.ui.composition==4!10.0.28000.2705.1",
     "winrt.windows.ui.composition.interop==4.0.0",
     "winrt.windows.foundation.numerics==4!10.0.28000.2705",

@@ -90,7 +90,7 @@ You can add your own rules under **Excluded files** in settings. There is room f
 
 Rules are not case sensitive, so `*.ENV` and `*.env` do the same thing.
 
-`config.yaml` and `styles.css` are always included and no rule can remove them. YASB cannot start without them, and a backup missing them looks fine until the day you need it.
+`config.yaml` is always included and no rule can remove it. YASB cannot start without it, and a backup missing it looks fine until the day you need it.
 
 Click **Preview** to see how many files your rules would leave out before you rely on them.
 

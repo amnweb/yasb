@@ -11,6 +11,13 @@ import Yasb.Themes
 Item {
     id: networkTraffic
 
+    // Label placeholders: {download_speed} {upload_speed}, 0 below minimumDownloadRate and minimumUploadRate;
+    // {session_downloaded} {session_uploaded} {session_time} while YASB runs; {today_downloaded} {today_uploaded},
+    // {week_downloaded} {week_uploaded} and {month_downloaded} {month_uploaded} for the last 7 and 30 days, from
+    // Windows' usage estimates; {network} {adapter} {ip}. Such as "↓ {download_speed}  ↑ {upload_speed}".
+    // Right-click shows the alternate label.
+    property string label: ""
+    property string alternateLabel: "↓ {session_downloaded}  ↑ {session_uploaded}"
     required property BarBase bar
     readonly property Theme theme: bar.theme
     // "auto" follows the adapter Windows uses for internet; an adapter name, such as "Ethernet" or "Wi-Fi", watches that
@@ -37,9 +44,7 @@ Item {
     property int popupWidth: 404
     property string popupAlignment: "center"
     property bool showAlternate: false
-    //property string label: `↓ ${speed(monitor.data.downloadRate, minimumDownloadRate)}  ↑ ${speed(monitor.data.uploadRate, minimumUploadRate)}`
-    property string label: ""
-    property string alternateLabel: `↓ ${dataSize(monitor.data.sessionDownloaded)}  ↑ ${dataSize(monitor.data.sessionUploaded)}`
+    readonly property string text: format(showAlternate ? alternateLabel : label)
     readonly property var stats: monitor.data
     readonly property var history: monitor.history
     readonly property bool loading: monitor.loading
@@ -132,6 +137,37 @@ Item {
             ++unit
         }
         return `${unit === 0 ? Math.floor(value) : value.toFixed(1)} ${units[unit]}`
+    }
+
+    // Today included, as the popup's 7 and 30 days tabs count them
+    function usage(days: int, key: string): real {
+        const start = new Date()
+        start.setHours(0, 0, 0, 0)
+        start.setDate(start.getDate() - (days - 1))
+        return monitor.history.daily.filter(point => point.stamp >= start.getTime()).reduce((sum, point) => sum + point[key], 0)
+    }
+
+    function format(template: string): string {
+        const data = monitor.data
+        const today = monitor.history.hourly
+        const values = {
+            download_speed: speed(data.downloadRate, minimumDownloadRate),
+            upload_speed: speed(data.uploadRate, minimumUploadRate),
+            session_downloaded: dataSize(data.sessionDownloaded),
+            session_uploaded: dataSize(data.sessionUploaded),
+            session_time: duration(data.sessionSeconds),
+            today_downloaded: dataSize(today.reduce((sum, point) => sum + point.downloaded, 0)),
+            today_uploaded: dataSize(today.reduce((sum, point) => sum + point.uploaded, 0)),
+            week_downloaded: dataSize(usage(7, "downloaded")),
+            week_uploaded: dataSize(usage(7, "uploaded")),
+            month_downloaded: dataSize(usage(30, "downloaded")),
+            month_uploaded: dataSize(usage(30, "uploaded")),
+            network: data.profileName,
+            adapter: data.adapterName,
+            ip: data.ipAddress
+        }
+        return template.replace(/\{(\w+)\}/g,
+            (match, name) => Object.prototype.hasOwnProperty.call(values, name) ? values[name] : match)
     }
 
     function duration(seconds: real): string {
@@ -233,8 +269,10 @@ Item {
             id: labelText
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
+            visible: text !== ""
             width: networkTraffic.labelWidth > 0 ? networkTraffic.labelWidth : implicitWidth
-            text: networkTraffic.showAlternate ? networkTraffic.alternateLabel : networkTraffic.label
+            text: networkTraffic.text
+            textFormat: Text.PlainText
             horizontalAlignment: networkTraffic.labelAlignment
             elide: Text.ElideRight
             color: networkTraffic.textColor

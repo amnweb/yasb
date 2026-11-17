@@ -12,6 +12,11 @@ import Yasb.Themes
 Item {
     id: volume
 
+    // Label placeholders: {level}, the volume as 30%, or mutedText while muted and noDeviceText without an output
+    // device; {device}, the output device's name. Empty shows only the icon
+    property string label: ""
+    property string mutedText: "mute"
+    property string noDeviceText: "No Device"
     required property BarBase bar
     readonly property Theme theme: bar.theme
     // Percentage points per wheel step
@@ -29,6 +34,9 @@ Item {
     readonly property bool dark: theme.dark
     // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
     property color textColor: theme.colors.text
+    property font font
+    // The faint full-volume waves behind the speaker's lit ones
+    property color iconTrackColor: theme.colors.textDisabled
     // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
     iconFont.family: theme.bar.iconFont.family
@@ -68,6 +76,12 @@ Item {
     // Text and accent in the popup
     property color accentColor: theme.colors.accent
     readonly property string edge: bar.edge
+    readonly property string text: format(label)
+
+    function format(template: string): string {
+        const level = !audio.available ? noDeviceText : audio.muted ? mutedText : `${audio.volume}%`
+        return template.replace(/\{level\}/g, () => level).replace(/\{device\}/g, () => audio.deviceName)
+    }
 
     function icon(level: int, muted: bool): string {
         return muted ? "\ue74f" : level === 0 ? "\ue992" : level < 34 ? "\ue993" : level < 67 ? "\ue994" : "\ue995"
@@ -99,8 +113,8 @@ Item {
         }
     }
 
-    implicitWidth: label.implicitWidth
-    implicitHeight: label.implicitHeight
+    implicitWidth: row.implicitWidth
+    implicitHeight: row.implicitHeight
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: audio.muted ? "Volume, muted" : `Volume ${audio.volume}%`
@@ -122,19 +136,48 @@ Item {
         function onYChanged() { if (popup.visible) volume.placePopup() }
     }
 
+    // Keep the popup anchored when its height changes
+    Connections {
+        target: popup
+        function onHeightChanged() { if (popup.visible) volume.placePopup() }
+    }
+
     Row {
-        id: label
+        id: row
         height: parent.height
         spacing: 6
-        Text {
-            objectName: "icon"
+        Item {
             anchors.verticalCenter: parent.verticalCenter
-            text: volume.icon(audio.volume, audio.muted)
+            implicitWidth: levelIcon.implicitWidth
+            implicitHeight: levelIcon.implicitHeight
+
+            Text {
+                visible: !audio.muted
+                text: "\ue995"
+                color: volume.iconTrackColor
+                font: levelIcon.font
+            }
+
+            Text {
+                id: levelIcon
+                objectName: "icon"
+                text: volume.icon(audio.volume, audio.muted)
+                color: volume.textColor
+                font.family: volume.iconFont.family
+                font.weight: volume.iconFont.weight
+                font.variableAxes: volume.iconFont.variableAxes
+                font.pixelSize: volume.iconSize
+            }
+        }
+
+        Label {
+            objectName: "label"
+            anchors.verticalCenter: parent.verticalCenter
+            visible: text !== ""
+            text: volume.text
+            textFormat: Text.PlainText
             color: volume.textColor
-            font.family: volume.iconFont.family
-            font.weight: volume.iconFont.weight
-            font.variableAxes: volume.iconFont.variableAxes
-            font.pixelSize: volume.iconSize
+            font: volume.font
         }
         // Text {
         //     anchors.verticalCenter: parent.verticalCenter

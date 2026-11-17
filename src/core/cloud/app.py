@@ -17,7 +17,7 @@ from core.cloud import logs
 from core.cloud.constants import APP_LOG_FILE, TASK_LOG_FILE
 from core.utils.win32.dwm import enable_mica
 from env import set_defaults
-from settings import QML_IMPORT_PATH, SCRIPT_PATH
+from settings import APP_ICON, QML_IMPORT_PATH
 
 MUTEX_NAME = "Global\\YASB.Cloud.SingleInstance"
 ERROR_ALREADY_EXISTS = 183
@@ -69,7 +69,7 @@ def main() -> int:
     set_defaults()
     app = QGuiApplication([*sys.argv, "-style", "FluentWinUI3"])
     app.setApplicationName("YASB Cloud")
-    app.setWindowIcon(QIcon(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")))
+    app.setWindowIcon(QIcon(APP_ICON))
 
     _warm_tls()
 

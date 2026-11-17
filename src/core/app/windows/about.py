@@ -10,11 +10,11 @@ from core.utils.qml import qml_property
 from core.utils.shell_utils import shell_open
 from core.utils.system import get_architecture
 from settings import (
+    APP_ICON,
     BUILD_VERSION,
     DEFAULT_CONFIG_DIRECTORY,
     GITHUB_URL,
     RELEASE_CHANNEL,
-    SCRIPT_PATH,
     WEBSITE_DOCS_URL,
     WEBSITE_URL,
 )
@@ -47,7 +47,7 @@ class About(QObject):
     def show(self, engine: QQmlEngine) -> None:
         window = show_window(engine, "AboutWindow", {"about": self})
         if window is not None:
-            window.setIcon(QIcon(f"{SCRIPT_PATH}/assets/images/app_icon.png"))
+            window.setIcon(QIcon(APP_ICON))
 
     @qml_property(str, constant=True)
     def version(self) -> str:
@@ -76,7 +76,7 @@ class About(QObject):
 
     @qml_property(str, constant=True)
     def iconUrl(self) -> str:
-        return QUrl.fromLocalFile(f"{SCRIPT_PATH}/assets/images/app_icon.png").toString()
+        return QUrl.fromLocalFile(APP_ICON).toString()
 
     @qml_property(str, constant=True)
     def unsupportedReason(self) -> str:

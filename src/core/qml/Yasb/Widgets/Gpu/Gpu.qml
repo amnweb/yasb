@@ -12,6 +12,12 @@ import Yasb.Themes
 Item {
     id: gpu
 
+    // Label placeholders: {info[utilization]} in %, sizes such as 8.0G: {info[mem_used]} {info[mem_free]}
+    // {info[mem_total]} {info[mem_shared_used]} {info[mem_shared_total]}, {info[temp]} in °C, {info[fan_speed]} in %,
+    // {info[power_draw]} in W, {info[name]} and {info[index]}. :.0f after a name sets the decimals, as
+    // {info[utilization]:.0f}. Right-click shows the alternate label.
+    property string label: "{info[utilization]:.0f}%"
+    property string alternateLabel: "{info[mem_used]}/{info[mem_total]}"
     property int updateInterval: 2000
     property int gpuIndex: 0
     property color graphColor: theme.colors.accent
@@ -26,6 +32,7 @@ Item {
     readonly property Theme theme: bar.theme
 
     property bool showAlternate: false
+    readonly property string text: format(showAlternate ? alternateLabel : label)
     property list<real> history: []
     property list<real> temperatures: []
 
@@ -101,7 +108,7 @@ Item {
         return `${(used / unit).toFixed(digits)} / ${(total / unit).toFixed(digits)} ${units[index]}`
     }
 
-    function size(bytes: real, suffix: string): string {
+    function size(bytes: real, decimals: int): string {
         if (Math.abs(bytes) < 1024)
             return `${Math.trunc(bytes)}B`
         const units = "KMGTPEZY"
@@ -111,7 +118,22 @@ Item {
             unit *= 1024
             ++index
         }
-        return `${(bytes / unit).toFixed(1)}${units[index]}${suffix}`
+        return `${(bytes / unit).toFixed(decimals)}${units[index]}`
+    }
+
+    function format(template: string): string {
+        const data = monitor.data
+        const sizes = ["mem_used", "mem_free", "mem_total", "mem_shared_used", "mem_shared_total"]
+        return template.replace(/\{info\[(\w+)\](?::\.(\d+)f)?\}/g, (match, key, decimals) => {
+            if (!Object.prototype.hasOwnProperty.call(data, key))
+                return match
+            const value = data[key]
+            if (sizes.includes(key))
+                return size(value, decimals === undefined ? 1 : Number(decimals))
+            if (typeof value === "number" && decimals !== undefined)
+                return value.toFixed(Number(decimals))
+            return String(value)
+        })
     }
 
     function placePopup() {
@@ -163,6 +185,12 @@ Item {
         function onYChanged() { if (popup.visible && !popup.pinned) gpu.placePopup() }
     }
 
+    // Keep the popup anchored when its height changes
+    Connections {
+        target: popup
+        function onHeightChanged() { if (popup.visible && !popup.pinned) gpu.placePopup() }
+    }
+
     Row {
         id: row
 
@@ -181,13 +209,11 @@ Item {
         }
 
         Label {
-            id: label
-
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
-            text: gpu.showAlternate
-                ? `${gpu.size(monitor.data.mem_used, "")}/${gpu.size(monitor.data.mem_total, "")}`
-                : `${monitor.data.utilization.toFixed(0)}%`
+            visible: text !== ""
+            text: gpu.text
+            textFormat: Text.PlainText
             color: gpu.textColor
             font: gpu.font
         }

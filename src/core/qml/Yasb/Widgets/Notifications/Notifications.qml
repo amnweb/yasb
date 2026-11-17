@@ -151,6 +151,12 @@ Item {
         function onYChanged() { if (popup.visible) notifications.placePopup() }
     }
 
+    // Keep the popup anchored when its height changes
+    Connections {
+        target: popup
+        function onHeightChanged() { if (popup.visible) notifications.placePopup() }
+    }
+
     Timer {
         interval: 30000
         repeat: true

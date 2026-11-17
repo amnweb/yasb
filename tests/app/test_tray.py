@@ -2,9 +2,7 @@
 
 import ctypes
 import logging
-import shutil
 from collections.abc import Callable, Iterator
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
@@ -16,7 +14,6 @@ from core.app.tray import TRAY_MESSAGE, SystemTrayManager
 from core.utils.win32.bindings.user32 import RegisterWindowMessage, user32
 from core.utils.win32.constants import NIM_ADD, NIM_DELETE, NIM_MODIFY, WM_LBUTTONUP, WM_RBUTTONUP
 from core.utils.win32.structs import NOTIFYICONDATAW
-from core.validation.config import GlazeWMConfig, KomorebiConfig, YasbConfig
 
 
 class Shell:
@@ -46,17 +43,12 @@ def shell(monkeypatch: pytest.MonkeyPatch) -> Shell:
 
 
 @pytest.fixture
-def tray(
-    qapp: QGuiApplication, shell: Shell, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> Iterator[SystemTrayManager]:
+def tray(qapp: QGuiApplication, shell: Shell, monkeypatch: pytest.MonkeyPatch) -> Iterator[SystemTrayManager]:
     def no_updates(callback: Callable[[Any], object]) -> None:
         pass
 
-    # Laid out like the build, which ships app_icon.png and no .ico
-    shutil.copy(Path(tray_module.ICON_DIR) / "app_icon.png", tmp_path / "app_icon.png")
-    monkeypatch.setattr(tray_module, "ICON_DIR", str(tmp_path))
     monkeypatch.setattr(tray_module, "register_update_callback", no_updates)
-    tray = SystemTrayManager(cast(Any, SimpleNamespace(config=YasbConfig())))
+    tray = SystemTrayManager(cast(Any, SimpleNamespace()))
     yield tray
     tray.close()
 
@@ -80,38 +72,6 @@ def test_a_right_click_opens_the_menu_and_a_left_click_does_not(
     assert opened == []
     user32.SendMessageW(tray._hwnd, TRAY_MESSAGE, 0, WM_RBUTTONUP)
     assert opened == [True]
-
-
-def test_the_menu_offers_an_installed_window_managers_commands_and_runs_the_chosen_one(
-    tray: SystemTrayManager, monkeypatch: pytest.MonkeyPatch
-):
-    config = YasbConfig(
-        komorebi=KomorebiConfig(start_command="komorebic start", stop_command="komorebic stop"),
-        glazewm=GlazeWMConfig(start_command="glazewm start"),
-    )
-    monkeypatch.setattr(tray._bar_manager, "config", config)
-    items: dict[str, int] = {}
-
-    def installed(program: str) -> str | None:
-        # Komorebi is installed, GlazeWM is not
-        return "komorebi.exe" if program == "komorebi" else None
-
-    def append(menu: int, flags: int, item: int, label: str) -> bool:
-        items[label] = item
-        return True
-
-    def choose(menu: int, flags: int, x: int, y: int, hwnd: int) -> int:
-        return items["Stop Komorebi"]
-
-    monkeypatch.setattr(tray_module.shutil, "which", installed)
-    monkeypatch.setattr(tray_module, "AppendMenu", append)
-    monkeypatch.setattr(tray_module, "TrackPopupMenu", choose)
-    ran: list[str] = []
-    monkeypatch.setattr(tray_module, "_run_hidden", ran.append)
-    tray._show_context_menu()
-    assert {"Start Komorebi", "Stop Komorebi", "Komorebi"} <= items.keys() and "Reload Komorebi" not in items
-    assert "GlazeWM" not in items and "Start GlazeWM" not in items
-    assert ran == ["komorebic stop"]
 
 
 def test_the_icon_comes_back_after_explorer_restarts(tray: SystemTrayManager, shell: Shell):

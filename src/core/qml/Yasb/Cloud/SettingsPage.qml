@@ -91,7 +91,7 @@ Item {
 
                         Caption {
                             Layout.fillWidth: true
-                            text: qsTr("Logs, caches and temporary files are already excluded. %1 are always kept.")
+                            text: qsTr("Logs, caches and temporary files are already excluded. %1 is always kept.")
                                 .arg(page.cloud.alwaysKept)
                         }
 

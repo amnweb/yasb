@@ -45,7 +45,7 @@ def test_a_folder_being_edited_never_says_back_up(monkeypatch: pytest.MonkeyPatc
         decisions: list[bool] = []
         for step in range(4):
             decisions.append(autobackup.decide(autobackup.entries())[0])
-            _write(config, "styles.css", f"edit {step}".encode())
+            _write(config, "themes/yasb.qml", f"edit {step}".encode())
 
         assert decisions == [False, False, False, False], "a backup was called for mid-edit"
 
@@ -58,7 +58,7 @@ def test_one_backup_once_the_folder_goes_quiet(monkeypatch: pytest.MonkeyPatch):
         _point_at(monkeypatch, tmp)
 
         assert autobackup.decide(autobackup.entries())[0] is False, "first sight has nothing to compare against"
-        _write(config, "styles.css", b"edited")
+        _write(config, "themes/yasb.qml", b"edited")
         assert autobackup.decide(autobackup.entries())[0] is False, "changed, so not settled"
 
         should, expected = autobackup.decide(autobackup.entries())

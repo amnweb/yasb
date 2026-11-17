@@ -15,13 +15,14 @@ from typing import cast
 
 from PyQt6.QtCore import QByteArray, QMetaMethod, QMetaObject, QMetaProperty, QObject
 
+from core.app.windows.setup import Setup
 from core.cloud.ui.cloud import Cloud
 from core.qml_types import QML_SINGLETONS, QML_TYPES, QML_UNCREATABLE_TYPES, QML_URI, QML_VERSION
 
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "qmltypes"
 DEPENDENCIES = ("QtQml 2.0", "QtQuick 2.0")
-# With Cloud, which YASB Cloud registers itself
-UNCREATABLE_TYPES: tuple[type[QObject], ...] = (*QML_UNCREATABLE_TYPES, Cloud)
+# With Cloud, which YASB Cloud registers itself, and Setup, which registers itself when the setup opens
+UNCREATABLE_TYPES: tuple[type[QObject], ...] = (*QML_UNCREATABLE_TYPES, Cloud, Setup)
 
 
 class GenerationError(ValueError):

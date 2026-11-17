@@ -1,8 +1,6 @@
 import ctypes
 import logging
 import os
-import shutil
-import subprocess
 from collections.abc import Callable
 from functools import cache, partial
 
@@ -15,7 +13,7 @@ from core.app.update.service import ReleaseInfo, register_update_callback
 from core.app.windows.about import About
 from core.bar.manager import BarManager
 from core.utils.shell_utils import shell_open
-from core.utils.win32.autostart import disable_autostart, enable_autostart, is_autostart_enabled
+from core.utils.win32.autostart import AUTOSTART_FILE, disable_autostart, enable_autostart, is_autostart_enabled
 from core.utils.win32.bindings.kernel32 import GetLastError, GetModuleHandle
 from core.utils.win32.bindings.shell32 import shell32
 from core.utils.win32.bindings.user32 import (
@@ -35,7 +33,6 @@ from core.utils.win32.bindings.user32 import (
 )
 from core.utils.win32.bindings.uxtheme import AllowDarkModeForWindow, FlushMenuThemes, SetPreferredAppMode
 from core.utils.win32.constants import (
-    MF_POPUP,
     MF_SEPARATOR,
     MF_STRING,
     NIF_ICON,
@@ -56,16 +53,14 @@ from core.utils.win32.constants import (
 from core.utils.win32.structs import NOTIFYICONDATAW, WNDCLASS, WNDPROC
 from core.utils.win32.undocumented import PREFERRED_APP_MODE_ALLOW_DARK
 from settings import (
+    APP_ICON,
     APP_NAME,
     DEFAULT_CONFIG_DIRECTORY,
     GITHUB_WIKI_URL,
     SCRIPT_PATH,
 )
 
-EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
 CLOUD_EXE_PATH = os.path.join(SCRIPT_PATH, "yasb_cloud.exe")
-AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
-ICON_DIR = os.path.join(SCRIPT_PATH, "assets", "images")
 TRAY_WINDOW_CLASS = "YasbTray"
 # The message the shell sends the tray window for clicks on the icon
 TRAY_MESSAGE = WM_APP + 1
@@ -95,22 +90,11 @@ def _window_class() -> str:
     return TRAY_WINDOW_CLASS
 
 
-def _run_hidden(command: str) -> None:
-    """Starts a command line through cmd.exe, without a console window, and does not wait for it."""
-    subprocess.Popen(
-        command,
-        shell=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        creationflags=subprocess.CREATE_NO_WINDOW,
-    )
-
-
 def _app_icon(badge: bool = False) -> int:
     """The app icon at the notification area's size, with the update dot when badge is set."""
     size = GetSystemMetrics(SM_CXSMICON)
     # The PNG, because it is what the build ships and preview builds swap in their own
-    image = QImage(os.path.join(ICON_DIR, "app_icon.png")).scaled(
+    image = QImage(APP_ICON).scaled(
         size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
     )
     if badge:
@@ -242,30 +226,6 @@ class SystemTrayManager(QObject):
                 add_item(menu, "YASB Cloud", partial(shell_open, CLOUD_EXE_PATH))
             add_item(menu, "Reload YASB", partial(reload_application, "Reloading Application from tray..."))
             add_separator(menu)
-
-            # A submenu for each window manager that is installed and has commands set
-            config = self._bar_manager.config
-            for name, program, commands in (
-                ("Komorebi", "komorebi", config.komorebi),
-                ("GlazeWM", "glazewm", config.glazewm),
-            ):
-                items = [
-                    (f"{verb} {name}", command)
-                    for verb, command in (
-                        ("Start", commands.start_command),
-                        ("Stop", commands.stop_command),
-                        ("Reload", commands.reload_command),
-                    )
-                    if command
-                ]
-                if not items or shutil.which(program) is None:
-                    continue
-                submenu = CreatePopupMenu()
-                for label, command in items:
-                    add_item(submenu, label, partial(_run_hidden, command))
-                AppendMenu(menu, MF_POPUP, submenu, name)
-                add_separator(menu)
-
             if AUTOSTART_FILE:
                 if is_autostart_enabled(APP_NAME):
                     add_item(menu, "Disable Autostart", partial(disable_autostart, APP_NAME))
@@ -286,7 +246,6 @@ class SystemTrayManager(QObject):
             chosen = TrackPopupMenu(menu, TPM_LEFTALIGN | TPM_RETURNCMD | TPM_NONOTIFY, x, y, self._hwnd)
             PostMessage(self._hwnd, WM_NULL, 0, 0)
         finally:
-            # Its submenus go with it
             DestroyMenu(menu)
         if chosen:
             actions[chosen - 1]()

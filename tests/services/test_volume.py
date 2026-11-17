@@ -146,6 +146,15 @@ def test_the_widget_shows_the_level(service: FakeAudioService):
     assert icon is not None
     # 30% is one wave
     assert icon.property("text") == "\ue993"
+
+    label = find_item(widget, "label")
+    assert label is not None and label.property("text") == ""
+    widget.setProperty("label", "{level} on {device} {x}")
+    assert label.property("text") == "30% on Speakers {x}"
+    service.volume.muted = True
+    for listener in service.listeners:
+        listener.on_output_volume_changed()
+    assert label.property("text") == "mute on Speakers {x}"
     sip.delete(widget)
     # QML deletes the widget's own objects with deleteLater: run those deletions now, while their engine exists
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)

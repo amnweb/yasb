@@ -11,6 +11,11 @@ import Yasb.Themes
 Item {
     id: microphone
 
+    // Label placeholders: {level}, the microphone level as 30%, or mutedText while muted and noDeviceText without a
+    // microphone; {device}, the microphone's name. Empty shows only the icon
+    property string label: ""
+    property string mutedText: "mute"
+    property string noDeviceText: "No Device"
     required property BarBase bar
     readonly property Theme theme: bar.theme
     // Percentage points per wheel step
@@ -24,7 +29,9 @@ Item {
     property string mutedIcon: "\uf781"
 
     readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
     property color textColor: theme.colors.text
+    property font font
     // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
     iconFont.family: theme.bar.iconFont.family
@@ -61,6 +68,12 @@ Item {
     readonly property string edge: bar.edge
     property color accentColor: theme.colors.accent
     readonly property string currentIcon: audio.available && !audio.muted ? icon : mutedIcon
+    readonly property string text: format(label)
+
+    function format(template: string): string {
+        const level = !audio.available ? noDeviceText : audio.muted ? mutedText : `${audio.volume}%`
+        return template.replace(/\{level\}/g, () => level).replace(/\{device\}/g, () => audio.deviceName)
+    }
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
@@ -85,8 +98,8 @@ Item {
         }
     }
 
-    implicitWidth: label.implicitWidth
-    implicitHeight: label.implicitHeight
+    implicitWidth: row.implicitWidth
+    implicitHeight: row.implicitHeight
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: !audio.available ? "No microphone" : audio.muted ? "Microphone, muted" : `Microphone ${audio.volume}%`
@@ -108,9 +121,16 @@ Item {
         function onYChanged() { if (popup.visible) microphone.placePopup() }
     }
 
+    // Keep the popup anchored when its height changes
+    Connections {
+        target: popup
+        function onHeightChanged() { if (popup.visible) microphone.placePopup() }
+    }
+
     Row {
-        id: label
+        id: row
         height: parent.height
+        spacing: 6
         Text {
             objectName: "icon"
             anchors.verticalCenter: parent.verticalCenter
@@ -120,6 +140,16 @@ Item {
             font.weight: microphone.iconFont.weight
             font.variableAxes: microphone.iconFont.variableAxes
             font.pixelSize: microphone.iconSize
+        }
+
+        Label {
+            objectName: "label"
+            anchors.verticalCenter: parent.verticalCenter
+            visible: text !== ""
+            text: microphone.text
+            textFormat: Text.PlainText
+            color: microphone.textColor
+            font: microphone.font
         }
     }
 
