@@ -20,6 +20,7 @@ from core.utils.win32.bindings.nvml import NVML_TEMPERATURE_GPU, NvmlLibrary, nv
 from core.utils.win32.bindings.pdh import pdh
 from core.utils.win32.constants import PDH_FMT_DOUBLE
 from core.utils.win32.structs import PDH_FMT_COUNTERVALUE_ITEM_W
+from core.widgets.services.gpu.libre import LibreGpuClocks, match_clocks
 
 logger = logging.getLogger("gpu_widget")
 
@@ -40,6 +41,9 @@ class GpuData(NamedTuple):
     temp: int
     fan_speed: int
     power_draw: float
+    adapter_id: str = ""
+    core_clock: float | None = None
+    memory_clock: float | None = None
 
 
 class _DxgiGpu(TypedDict):
@@ -246,8 +250,9 @@ class _AdlState:
 
 
 class GpuApi:
-    def __init__(self, gpu_indices: set[int]) -> None:
+    def __init__(self, gpu_indices: set[int], collect_all: bool = False) -> None:
         self._gpu_indices = gpu_indices
+        self._collect_all = collect_all
         self._luid_info: dict[str, _LuidInfo] = {}
         self._dxgi_gpus: list[_DxgiGpu] = []
         self._ready = False
@@ -276,6 +281,8 @@ class GpuApi:
 
         self._dxgi_gpus = _read_dxgi_gpus()
         self._luid_info = self._build_luid_info(all_luids)
+        if self._collect_all:
+            self._gpu_indices.update(self.available_indices())
 
         needed_vendors: set[int] = set()
         for g in self._dxgi_gpus:
@@ -283,14 +290,19 @@ class GpuApi:
             if info and info["index"] in self._gpu_indices:
                 needed_vendors.add(g["vendor_id"])
 
-        if _VENDOR_NVIDIA in needed_vendors:
+        if _VENDOR_NVIDIA in needed_vendors and self._nvml.dll is None:
             self._nvml.load()
             self._bind_nvml()
-        if _VENDOR_AMD in needed_vendors:
+        if _VENDOR_AMD in needed_vendors and self._adl.dll is None:
             self._adl.load()
             self._bind_adl()
 
         self._ready = True
+
+    def enable_all(self) -> None:
+        if not self._collect_all:
+            self._collect_all = True
+            self.prime()
 
     def collect(self) -> list[GpuData]:
         """Collect current GPU data."""
@@ -342,6 +354,7 @@ class GpuApi:
                     temp=temp,
                     fan_speed=fan_speed,
                     power_draw=power_draw,
+                    adapter_id=luid,
                 )
             )
         return result
@@ -383,7 +396,7 @@ class GpuApi:
         Only includes LUIDs that have a matching DXGI adapter."""
         luid_to_dxgi = {g["luid_str"]: g for g in self._dxgi_gpus}
         all_luid_set = set(all_luids)
-        dxgi_ordered = [g["luid_str"] for g in self._dxgi_gpus if g["luid_str"] in all_luid_set]
+        dxgi_ordered = [g["luid_str"] for g in self._dxgi_gpus if self._collect_all or g["luid_str"] in all_luid_set]
 
         result: dict[str, _LuidInfo] = {}
         for i, luid in enumerate(dxgi_ordered):
@@ -432,10 +445,20 @@ class GpuWorker(QThread):
     def add_index(self, index: int) -> None:
         self._gpu_indices.add(index)
 
+    def enable_selector(self) -> None:
+        self._collect_all = True
+
+    def enable_clocks(self, host: str, port: int, sensor_map: dict[int, str]) -> None:
+        self._clocks = LibreGpuClocks(host, port)
+        self._clock_sensor_map = dict(sensor_map)
+
     def __init__(self, update_interval: int, parent: QObject | None = None):
         super().__init__(parent)
         self._update_interval = update_interval
         self._gpu_indices: set[int] = set()
+        self._collect_all = False
+        self._clocks: LibreGpuClocks | None = None
+        self._clock_sensor_map: dict[int, str] = {}
         self._stop_event = threading.Event()
         app = QApplication.instance()
         if app is not None:
@@ -448,7 +471,7 @@ class GpuWorker(QThread):
 
     def run(self) -> None:
         self._stop_event.clear()
-        api = GpuApi(self._gpu_indices)
+        api = GpuApi(self._gpu_indices, collect_all=self._collect_all)
         try:
             api.prime()
             available = api.available_indices()
@@ -459,7 +482,17 @@ class GpuWorker(QThread):
                 return
             while not self._stop_event.is_set():
                 try:
+                    if self._collect_all:
+                        api.enable_all()
                     data = api.collect()
+                    if self._clocks is not None:
+                        readings = self._clocks.read()
+                        data = [
+                            gpu._replace(core_clock=clocks.core, memory_clock=clocks.memory)
+                            if (clocks := match_clocks(readings, gpu.name, self._clock_sensor_map.get(gpu.gpu_index)))
+                            else gpu
+                            for gpu in data
+                        ]
                     if not self._stop_event.is_set():
                         self.data_ready.emit(data)
                 except Exception as e:

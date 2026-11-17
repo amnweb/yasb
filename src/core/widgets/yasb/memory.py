@@ -178,6 +178,7 @@ class MemoryWidget(BaseWidget):
         )
 
         if menu.show_graph and popup.graph is not None:
+            popup.graph.set_fill_enabled(menu.show_graph_fill)
             colors = menu.graph_colors
             if colors.enabled:
                 popup.graph.set_color_bands(

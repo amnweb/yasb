@@ -40,6 +40,15 @@ class GpuMenuConfig(CustomBaseModel):
     graph_history_size: int = Field(default=60, ge=10, le=180)
     show_graph: bool = True
     show_graph_grid: bool = False
+    show_graph_fill: bool = True
+    adapter_selector: bool = False
+    adapter_order: Literal["system", "dedicated_first"] = "system"
+    show_clocks: bool = False
+    show_combined_memory: bool = False
+    show_memory_bars: bool = False
+    show_temperature: bool = True
+    show_power: bool = True
+    show_fan_speed: bool = True
     pin_icon: str = "\ue718"
     unpin_icon: str = "\ue77a"
 
@@ -51,6 +60,9 @@ class CallbacksGpuConfig(CallbacksConfig):
 
 class GpuConfig(CustomBaseModel):
     gpu_index: int = Field(default=0, ge=0)
+    libre_host: str = "127.0.0.1"
+    libre_port: int = Field(default=8085, ge=1, le=65535)
+    libre_sensor_map: dict[int, str] = Field(default_factory=lambda: dict[int, str]())
     label: str = "{info[utilization]}%"
     label_alt: str = "{info[mem_used]}/{info[mem_total]}"
     class_name: str = ""

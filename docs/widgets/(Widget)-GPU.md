@@ -1,5 +1,39 @@
 # GPU Widget Configuration
 
+## Optional adapter selector, clocks and memory bars
+
+The native popup can select adapters without opening another window, show Core/Memory clocks from Libre Hardware Monitor, and add memory bars to its existing statistics cards.
+
+```yaml
+gpu:
+  type: yasb.gpu.GpuWidget
+  options:
+    gpu_index: 0
+    libre_host: "127.0.0.1"
+    libre_port: 8085
+    callbacks:
+      on_left: toggle_menu
+    menu:
+      enabled: true
+      adapter_selector: true
+      adapter_order: dedicated_first
+      show_clocks: true
+      show_combined_memory: true
+      show_memory_bars: true
+      show_graph_fill: false
+      show_temperature: false
+      show_power: false
+      show_fan_speed: false
+```
+
+- All new features are opt-in. Existing GPU configurations keep their system index, native layout and native sensor fields.
+- `adapter_selector` adds checkable GPU buttons inside the original popup header. They change its data in place, without a dropdown window or popup resize. The selector collects all DXGI adapters, including idle adapters.
+- `adapter_order` defaults to `system`; `dedicated_first` orders by dedicated capacity, then name/identity. With the selector enabled, `gpu_index` chooses the default position in that display order on opening. Real Windows indices and adapter LUIDs are retained internally. Each adapter has its own rolling utilization and temperature history while YASB runs.
+- `show_clocks` adds Core/Memory clock cards. Libre must have its web server running. Requests run on the native GPU worker with a bounded timeout. Matching uses an exact normalized adapter name, never the order of Libre sensors. Ambiguous/missing/offline readings show an em dash. For identical adapter names, set `libre_sensor_map: {0: "/gpu-amd/5"}` using the real Windows GPU index and Libre hardware identifier.
+- `show_combined_memory` adds used/total dedicated-plus-shared amounts. Shared capacity is the system RAM sharing limit, not extra physical VRAM. `show_memory_bars` adds horizontal utilization bars to the dedicated, shared and combined native cards. Capacities of zero are handled without division errors.
+- `show_temperature`, `show_power`, and `show_fan_speed` default to `true`; disable them to keep the GPU popup focused on utilization/clocks/memory while a separate temperature widget is used.
+- `show_graph_fill` defaults to `true`; set it to `false` for a line-only chart with no shading or gradients.
+
 Keeps track of your graphics card's usage, memory, and temperature. You can display usage graphs, toggle between metric and imperial temperature units, set warning thresholds, and click it to open a detailed status popup.
 
 | Option                | Type    | Default                                                                 | Description                                                                 |

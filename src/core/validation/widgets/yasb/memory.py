@@ -63,6 +63,7 @@ class MemoryMenuConfig(CustomBaseModel):
     graph_history_size: int = Field(default=60, ge=10, le=180)
     show_graph: bool = True
     show_graph_grid: bool = False
+    show_graph_fill: bool = True
     show_hardware_details: bool = False
     show_swap_total: bool = False
     highlight_usage: bool = False

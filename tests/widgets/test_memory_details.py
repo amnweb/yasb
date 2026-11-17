@@ -215,6 +215,22 @@ def test_colored_fill_uses_band_colors_and_smooth_boundary_stops(qapp: QApplicat
     graph.close()
 
 
+def test_graph_can_render_only_the_line_without_any_fill(qapp: QApplication):
+    graph = GraphWidget()
+    graph.setStyleSheet("background: transparent; color: #4cc2ff;")
+    graph.resize(120, 80)
+    graph.set_data([50, 50])
+    graph.set_fill_enabled(False)
+    image = QImage(graph.size(), QImage.Format.Format_ARGB32)
+    image.fill(QColor("black"))
+    painter = QPainter(image)
+    graph.render(painter)
+    painter.end()
+    assert image.pixelColor(60, 65).name() == "#000000"
+    assert any(image.pixelColor(60, y).name() == "#4cc2ff" for y in range(35, 45))
+    graph.close()
+
+
 def test_original_popup_grid_displays_and_refreshes_extra_data(qapp: QApplication, monkeypatch: pytest.MonkeyPatch):
     worker = MemoryWorker(1000)
 

@@ -19,6 +19,7 @@ memory:
       show_hardware_details: true
       show_swap_total: true
       highlight_usage: true
+      show_graph_fill: false
       graph_colors:
         enabled: true
         warning_threshold: 70
@@ -33,6 +34,7 @@ memory:
 - Module information is collected through Windows WMI on a daemon thread. A pending or failed query never delays the usage sampler or blocks the UI. Successful results are cached for five minutes; failed queries are retried after one minute. Missing data is shown as an em dash.
 - `show_swap_total` (default `false`): display used/total pagefile space in the existing "Swap used" card. Actual pagefile sizes are summed with `EnumPageFilesW`; the previous commit-limit estimate remains a fallback when enumeration fails.
 - `highlight_usage` (default `false`): place "In use" and "Utilization" together in the first statistics row. Those two cards, labels and values receive an additional `primary` CSS class for theme styling. Other statistics keep the native two-column layout.
+- `show_graph_fill` (default `true`): set to `false` for a line-only chart without any shading or gradients.
 - `graph_colors.enabled` (default `false`): color the existing smooth graph stroke by usage range. Historical portions keep their own color even when the latest sample returns to normal. The area fill follows those same colors, blends smoothly across the thresholds, and fades toward the bottom. Graphs without bands retain their native CSS fill color.
 - `warning_threshold` and `critical_threshold` are percentages in `[0, 100]`, with warning strictly below critical. The three colors accept Qt color names or hex values. Other widgets and graphs without this option retain their existing colors.
 

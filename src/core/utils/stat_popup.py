@@ -117,6 +117,7 @@ class GraphWidget(QFrame):
         self._line_path: QPainterPath | None = None
         self._fill_path: QPainterPath | None = None
         self._show_grid = show_grid
+        self._fill_enabled = True
         self._color_bands: tuple[tuple[float, float, str], ...] = ()
         self.setMinimumHeight(20)
         self.setProperty("class", css_class)
@@ -125,6 +126,10 @@ class GraphWidget(QFrame):
         self._grid_proxy = QFrame(self)
         self._grid_proxy.setProperty("class", f"{css_class}-grid")
         self._grid_proxy.setFixedSize(0, 0)
+
+    def set_fill_enabled(self, enabled: bool) -> None:
+        self._fill_enabled = enabled
+        self.update()
 
     def set_color_bands(self, bands: Sequence[tuple[float, float, str]]) -> None:
         """Color the existing smooth stroke by height; other charts retain their CSS color."""
@@ -234,10 +239,11 @@ class GraphWidget(QFrame):
                 painter.drawLine(0, 0, 0, last_y)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         # The colored fill follows the same usage bands as the stroke, blending at thresholds.
-        gradient = self._fill_gradient(line_color)
-        painter.setBrush(QBrush(gradient))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawPath(self._fill_path)
+        if self._fill_enabled:
+            gradient = self._fill_gradient(line_color)
+            painter.setBrush(QBrush(gradient))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawPath(self._fill_path)
         # Stroke line
         pen = QPen(line_color, self.STROKE_WIDTH)
         pen.setCapStyle(Qt.PenCapStyle.FlatCap)
