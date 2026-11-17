@@ -17,9 +17,7 @@ def _desktop_wallpaper() -> Any:
 
 
 class WallpaperManager:
-    """Sets the desktop wallpaper, after the YASB transition when one is asked for. One transition at a time: its window
-    stays on the desktop until Windows destroys it, putting the wallpaper up, and no other wallpaper is set until then.
-    """
+    """Sets the desktop wallpaper, after the YASB transition when one is asked for. One transition at a time."""
 
     # The transition on the desktop, until its window is gone
     _engine: WallpaperEngine | None = None
@@ -36,7 +34,7 @@ class WallpaperManager:
 
     @classmethod
     def transition_playing(cls) -> bool:
-        return cls._engine is not None
+        return cls._engine is not None and cls._engine.playing
 
     @classmethod
     def set_wallpaper(
@@ -49,12 +47,13 @@ class WallpaperManager:
         """Sets *image_path* on *monitor_id*, or on every screen after the transition *animation* when there is one,
         then, once Windows took it, emits *announce* with the path.
 
-        False when a transition is still on the desktop, and nothing is set: Windows would destroy the next transition
-        with the window it is about to destroy.
+        False while a transition still plays, and nothing is set.
         """
         if cls._engine is not None:
-            logging.info("A wallpaper transition is still on the desktop, %s is not set", image_path)
-            return False
+            if cls._engine.playing:
+                logging.debug("A wallpaper transition is still playing, %s is not set", image_path)
+                return False
+            cls._engine.close()
         if animation and monitor_id is None:
             try:
                 engine = WallpaperEngine(image_path, animation, cls._shown_wallpaper())

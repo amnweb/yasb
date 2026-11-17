@@ -71,6 +71,7 @@ from core.utils.win32.constants import (
     WS_CHILD,
     WS_EX_LAYERED,
     WS_EX_NOREDIRECTIONBITMAP,
+    WS_EX_TRANSPARENT,
     WS_POPUP,
 )
 from core.utils.win32.registry_keys import COLORS_KEY, DESKTOP_KEY
@@ -591,7 +592,7 @@ class WallpaperEngine(QObject):
         self._target: DesktopWindowTarget | None = None
         # Without a redirection surface the window shows only its visuals
         self.hwnd = CreateWindowEx(
-            WS_EX_NOREDIRECTIONBITMAP,
+            WS_EX_NOREDIRECTIONBITMAP | WS_EX_TRANSPARENT,
             _window_class(),
             None,
             WS_POPUP,
@@ -607,6 +608,10 @@ class WallpaperEngine(QObject):
         if not self.hwnd:
             raise ctypes.WinError(GetLastError())
         _engines[self.hwnd] = self
+
+    @property
+    def playing(self) -> bool:
+        return not self._committed
 
     def start(self) -> None:
         """Attach to WorkerW, lay the images out on a worker thread, then play the animation."""

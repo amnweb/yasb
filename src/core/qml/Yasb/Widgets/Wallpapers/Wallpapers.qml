@@ -278,7 +278,7 @@ Item {
         }
 
         function apply(path: string, screen: int) {
-            // Not set while the last transition is still on the desktop: the gallery stays for another try
+            // Not set while a transition still plays: the gallery stays for another try
             if (screen < 0 ? library.setWallpaper(path) : library.setWallpaperOn(path, screen))
                 dismiss()
         }

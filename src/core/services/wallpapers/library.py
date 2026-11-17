@@ -103,7 +103,7 @@ class WallpaperLibrary(QObject):
     def screenCount(self) -> int:
         return len(WallpaperManager.monitor_ids())
 
-    # The set methods are false when the wallpaper is not set, as while the last transition is still on the desktop
+    # The set methods are false when the wallpaper is not set, as while a transition still plays
     @pyqtSlot(str, result="bool")
     def setWallpaper(self, path: str) -> bool:
         if not WallpaperManager.set_wallpaper(path, animation=self._animation, announce=self.wallpaperSet):
