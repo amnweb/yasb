@@ -20,6 +20,7 @@ from core.utils.win32.bindings.kernel32 import (
     QueryFullProcessImageName,
 )
 from core.utils.win32.bindings.user32 import (
+    EnumDisplayDevices,
     GetClassName,
     GetForegroundWindow,
     GetMonitorInfo,
@@ -33,6 +34,9 @@ from core.utils.win32.bindings.user32 import (
 )
 from core.utils.win32.bindings.version import get_version_strings
 from core.utils.win32.constants import (
+    DISPLAY_DEVICE_ACTIVE,
+    DISPLAY_DEVICE_ATTACHED_TO_DESKTOP,
+    EDD_GET_DEVICE_INTERFACE_NAME,
     ERROR_INVALID_HANDLE,
     ERROR_INVALID_PARAMETER,
     IMAGE_FILE_MACHINE_AMD64,
@@ -115,6 +119,23 @@ def get_monitor_info(monitor_hwnd: int) -> MonitorInfo:
         "flags": info.dwFlags,
         "device": info.szDevice,
     }
+
+
+def display_monitors() -> dict[str, str]:
+    """Return a dict mapping display names to monitor paths, accounting for post-sleep OS reassignment."""
+    monitors: dict[str, str] = {}
+    index = 0
+    while (adapter := EnumDisplayDevices(None, index)) is not None:
+        index += 1
+        if not adapter.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP:
+            continue
+        child = 0
+        while (monitor := EnumDisplayDevices(adapter.DeviceName, child, EDD_GET_DEVICE_INTERFACE_NAME)) is not None:
+            child += 1
+            if monitor.StateFlags & DISPLAY_DEVICE_ACTIVE and monitor.DeviceID:
+                monitors[adapter.DeviceName] = monitor.DeviceID
+                break
+    return monitors
 
 
 class ProcessInfo(TypedDict):

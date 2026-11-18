@@ -17,6 +17,9 @@ class FakeAppBar:
     def remove_appbar(self) -> None:
         self.calls.append("remove")
 
+    def reclaim(self) -> bool:
+        return False
+
 
 @pytest.fixture
 def registered_bars(monkeypatch: pytest.MonkeyPatch) -> list[int]:

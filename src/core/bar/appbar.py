@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from core.bar.window import BarWindow
 
 WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
+# ABN_POSCHANGED can be sent rapidly; debounce actual reclaim
+RECLAIM_DELAY_MS = 100
 
 EXCLUDED_WINDOW_CLASSES = {
     "Progman",
@@ -42,6 +44,7 @@ class AppBarManager(QAbstractNativeEventFilter):
     _intended_visible: dict[int, bool]
     _installed: bool
     _reregister_pending: bool
+    _reclaim_timer: QTimer
     _suppressed: bool
 
     def __new__(cls):
@@ -51,6 +54,10 @@ class AppBarManager(QAbstractNativeEventFilter):
             instance._intended_visible = {}
             instance._installed = False
             instance._reregister_pending = False
+            instance._reclaim_timer = QTimer()
+            instance._reclaim_timer.setSingleShot(True)
+            instance._reclaim_timer.setInterval(RECLAIM_DELAY_MS)
+            instance._reclaim_timer.timeout.connect(instance._reclaim)
             instance._suppressed = False
             cls._instance = instance
         return cls._instance
@@ -92,9 +99,19 @@ class AppBarManager(QAbstractNativeEventFilter):
                         QTimer.singleShot(0, self._reregister)
                 elif msg.message == APPBAR_CALLBACK_MESSAGE and msg.wParam == AppBarNotify.FullScreenApp:
                     self._handle_fullscreen(msg.hwnd, bool(msg.lParam))
+                elif msg.message == APPBAR_CALLBACK_MESSAGE and msg.wParam == AppBarNotify.PosChanged:
+                    if self._bars:
+                        self._reclaim_timer.start()
         except Exception:
             pass
         return False, sip.voidptr(0)
+
+    def _reclaim(self) -> None:
+        for bar in list(self._bars.values()):
+            try:
+                bar.reclaim_app_bar()
+            except Exception as e:
+                logging.error("Failed to reclaim the space of bar %s: %s", bar.bar_id, e)
 
     def _reregister(self) -> None:
         self._reregister_pending = False
