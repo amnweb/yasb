@@ -18,7 +18,9 @@ Item {
     property int popupWidth: 364
     // The popup grows with its notifications up to this height
     property int popupHeight: 544
-    // The bell on the bar, drawn in iconFont and the text colour
+    // The bell on the bar, drawn in iconFont and the text colour, and the one while Do Not Disturb is on
+    property string icon: "\uea8f"
+    property string doNotDisturbIcon: "\ue7ed"
     property int iconSize: theme.bar.iconFont.pixelSize
 
     readonly property bool dark: theme.dark
@@ -172,7 +174,7 @@ Item {
 
         Text {
             anchors.centerIn: parent
-            text: center.doNotDisturb ? "\ue7ed" : "\uea8f"
+            text: center.doNotDisturb ? notifications.doNotDisturbIcon : notifications.icon
             color: notifications.textColor
             font.family: notifications.iconFont.family
             font.weight: notifications.iconFont.weight
@@ -297,7 +299,7 @@ Item {
                     }
                     IconButton {
                         visible: center.doNotDisturbAvailable
-                        glyph: "\ue7ed"
+                        glyph: notifications.doNotDisturbIcon
                         checked: center.doNotDisturb
                         tip: center.doNotDisturb ? "Do not disturb is on" : "Do not disturb"
                         onClicked: center.setDoNotDisturb(!center.doNotDisturb)
@@ -332,7 +334,7 @@ Item {
                         visible: notifications.groups.length === 0
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
-                            text: "\uea8f"
+                            text: notifications.icon
                             color: notifications.popupSecondaryTextColor
                             font.family: notifications.iconFont.family
                             font.weight: notifications.iconFont.weight

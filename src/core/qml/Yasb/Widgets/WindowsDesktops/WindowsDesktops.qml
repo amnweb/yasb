@@ -33,32 +33,32 @@ Item {
     // The popup that renames a desktop
     property int popupWidth: 304
     // Global hotkeys, with the actions that need no button. Set to [] for none
-    property var keybindings: []
+    property var hotkeys: []
     // Example below, with the default hotkeys for switching and moving windows.
-    // property var keybindings: [
-    //     { keys: "alt+1", action: "switch_desktop 1" },
-    //     { keys: "alt+2", action: "switch_desktop 2" },
-    //     { keys: "alt+3", action: "switch_desktop 3" },
-    //     { keys: "alt+4", action: "switch_desktop 4" },
-    //     { keys: "alt+5", action: "switch_desktop 5" },
-    //     { keys: "alt+6", action: "switch_desktop 6" },
-    //     { keys: "alt+7", action: "switch_desktop 7" },
-    //     { keys: "alt+8", action: "switch_desktop 8" },
-    //     { keys: "alt+9", action: "switch_desktop 9" },
-    //     { keys: "alt+shift+1", action: "move_window_to 1" },
-    //     { keys: "alt+shift+2", action: "move_window_to 2" },
-    //     { keys: "alt+shift+3", action: "move_window_to 3" },
-    //     { keys: "alt+shift+4", action: "move_window_to 4" },
-    //     { keys: "alt+shift+5", action: "move_window_to 5" },
-    //     { keys: "alt+shift+6", action: "move_window_to 6" },
-    //     { keys: "alt+shift+7", action: "move_window_to 7" },
-    //     { keys: "alt+shift+8", action: "move_window_to 8" },
-    //     { keys: "alt+shift+9", action: "move_window_to 9" },
-    //     { keys: "alt+pagedown", action: "next_desktop" },
-    //     { keys: "alt+pageup", action: "prev_desktop" },
-    //     { keys: "alt+shift+n", action: "create_desktop" },
-    //     { keys: "alt+shift+d", action: "delete_desktop" },
-    //     { keys: "alt+shift+r", action: "rename_desktop" }
+    // property var hotkeys: [
+    //     { hotkey: "alt+1", action: "switch_desktop 1" },
+    //     { hotkey: "alt+2", action: "switch_desktop 2" },
+    //     { hotkey: "alt+3", action: "switch_desktop 3" },
+    //     { hotkey: "alt+4", action: "switch_desktop 4" },
+    //     { hotkey: "alt+5", action: "switch_desktop 5" },
+    //     { hotkey: "alt+6", action: "switch_desktop 6" },
+    //     { hotkey: "alt+7", action: "switch_desktop 7" },
+    //     { hotkey: "alt+8", action: "switch_desktop 8" },
+    //     { hotkey: "alt+9", action: "switch_desktop 9" },
+    //     { hotkey: "alt+shift+1", action: "move_window_to 1" },
+    //     { hotkey: "alt+shift+2", action: "move_window_to 2" },
+    //     { hotkey: "alt+shift+3", action: "move_window_to 3" },
+    //     { hotkey: "alt+shift+4", action: "move_window_to 4" },
+    //     { hotkey: "alt+shift+5", action: "move_window_to 5" },
+    //     { hotkey: "alt+shift+6", action: "move_window_to 6" },
+    //     { hotkey: "alt+shift+7", action: "move_window_to 7" },
+    //     { hotkey: "alt+shift+8", action: "move_window_to 8" },
+    //     { hotkey: "alt+shift+9", action: "move_window_to 9" },
+    //     { hotkey: "alt+pagedown", action: "next_desktop" },
+    //     { hotkey: "alt+pageup", action: "prev_desktop" },
+    //     { hotkey: "alt+shift+n", action: "create_desktop" },
+    //     { hotkey: "alt+shift+d", action: "delete_desktop" },
+    //     { hotkey: "alt+shift+r", action: "rename_desktop" }
     // ]
     // active, cursor or primary: which screen's widget runs a hotkey when several bars have one
     property string hotkeyScreen: "active"
@@ -220,12 +220,12 @@ Item {
     }
 
     Instantiator {
-        model: windowsDesktops.keybindings
+        model: windowsDesktops.hotkeys
 
         delegate: Hotkey {
             required property var modelData
 
-            keys: modelData.keys ?? ""
+            keys: modelData.hotkey ?? ""
             screen: windowsDesktops.hotkeyScreen
             onActivated: windowsDesktops.run(modelData.action ?? "", 0)
         }

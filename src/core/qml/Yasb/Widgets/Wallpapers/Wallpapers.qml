@@ -23,7 +23,7 @@ Item {
     property string icon: "\ue7aa"
     property int iconSize: theme.bar.iconFont.pixelSize
     // Hotkey that opens the gallery, such as "alt+w", and its screen: active, cursor or primary
-    property string keys: ""
+    property string hotkey: ""
     property string hotkeyScreen: "active"
 
     property int thumbnailWidth: 200
@@ -198,7 +198,7 @@ Item {
     }
 
     Hotkey {
-        keys: wallpapers.keys
+        keys: wallpapers.hotkey
         screen: wallpapers.hotkeyScreen
         onActivated: wallpapers.toggleGallery()
     }

@@ -252,7 +252,7 @@ def test_the_widget_labels_desktops_and_runs_actions_and_hotkeys(service: FakeDe
             "label": "{index}",
             "activeLabel": "[{name}]",
             "populatedLabel": "{name}*",
-            "keybindings": [{"keys": "alt+2", "action": "switch_desktop 2"}],
+            "hotkeys": [{"hotkey": "alt+2", "action": "switch_desktop 2"}],
         },
     )
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]

@@ -2,8 +2,9 @@
 
 Window: its own icon if it's big enough, else its app's icon, else its class icon.
 Process: its app's icon, else one of its windows' icons.
-App: the icon shell:AppsFolder shows for the AUMID, else the one registered for its toasts. For a window or process
-only Store apps go this way, the rest use their exe.
+App: a Store app's icon from shell:AppsFolder; a desktop app's from the file its shortcut names for its icon, else the
+shortcut's target, read like a File. Else the one registered for its toasts. For a window or process only Store apps go
+this way, the rest use their exe.
 File: the icon inside the file (exe, dll, cpl, ico), or the one a shortcut, .msc or Control Panel item points to;
 anything else gets the shell's icon.
 
@@ -28,7 +29,7 @@ from core.utils.icons.extract import (
     get_stock_icon,
 )
 from core.utils.win32.aumid import get_aumid_for_process, get_aumid_for_window
-from core.utils.win32.bindings.shell32 import get_shell_item_icon_location, read_shortcut
+from core.utils.win32.bindings.shell32 import get_shell_item_icon_location, get_shell_item_link_target, read_shortcut
 from core.utils.win32.utils import get_process_info, get_process_path, get_process_window
 
 
@@ -78,7 +79,7 @@ def load_icon(source: IconSource, size: int) -> LoadedIcon:
         case ProcessIcon(pid):
             return LoadedIcon(_process_icon(pid, size) or get_default_app_icon())
         case AppIcon(aumid):
-            return LoadedIcon(_store_app_icon(aumid, size) or _toast_app_icon(aumid, size) or get_default_app_icon())
+            return LoadedIcon(_listed_app_icon(aumid, size) or _toast_app_icon(aumid, size) or get_default_app_icon())
         case FileIcon(path):
             return LoadedIcon(_file_icon(path, size) or get_default_app_icon())
         case StockIcon(kind):
@@ -115,6 +116,10 @@ def _app_icon(aumid: str | None, exe: str | None, size: int) -> Image.Image | No
 
 def _store_app_icon(aumid: str, size: int) -> Image.Image | None:
     return get_shell_icon(f"shell:AppsFolder\\{aumid}", size)
+
+
+def _listed_app_icon(aumid: str, size: int) -> Image.Image | None:
+    return _store_app_icon(aumid, size) if "!" in aumid else _file_icon(f"shell:AppsFolder\\{aumid}", size)
 
 
 def _toast_app_icon(aumid: str, size: int) -> Image.Image | None:
@@ -160,6 +165,8 @@ def _icon_location(path: str) -> tuple[str, int]:
         return _shortcut_icon_location(path)
     if extension == ".msc":
         return _console_icon_location(path)
+    if path.startswith("shell:AppsFolder\\"):
+        return _apps_folder_icon_location(path)
     if path.startswith(("shell:::", "::")):
         return _shell_item_icon_location(path)
     return path, 0
@@ -195,3 +202,12 @@ def _shell_item_icon_location(path: str) -> tuple[str, int]:
         return path, 0
     icon_file, index = location
     return os.path.expandvars(icon_file), index
+
+
+def _apps_folder_icon_location(path: str) -> tuple[str, int]:
+    """A desktop app's icon: the one its shortcut names, else its target's."""
+    location = get_shell_item_icon_location(path)
+    if location is not None:
+        return os.path.expandvars(location[0]), location[1]
+    target = get_shell_item_link_target(path)
+    return (target, 0) if target else (path, 0)

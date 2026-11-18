@@ -24,6 +24,7 @@ from core.services.glazewm.workspaces import GlazewmWorkspaceList
 from core.services.gpu.monitor import GpuMonitor
 from core.services.komorebi.workspaces import KomorebiWorkspacesModel
 from core.services.language.keyboard import KeyboardLanguage
+from core.services.launchpad.apps import LaunchpadApps, LaunchpadLayout
 from core.services.media.now_playing import NowPlaying
 from core.services.memory.monitor import MemoryMonitor
 from core.services.microphone.input import AudioInput
@@ -48,6 +49,7 @@ from core.services.volume.output import AudioOutput
 from core.services.wallpapers.library import WallpaperLibrary
 from core.services.wallpapers.thumbnails import WallpaperThumbnail
 from core.services.weather.forecast import WeatherForecast
+from core.services.window_switcher.windows import WindowList
 from core.services.windows_desktops.desktops import VirtualDesktops
 from core.utils.environment import Environment
 from core.utils.hotkey import Hotkey
@@ -72,6 +74,7 @@ QML_TYPES: tuple[type[QObject], ...] = (
     GlazewmTiling,
     GlazewmBindingModes,
     QuickLaunchSearch,
+    LaunchpadApps,
     NowPlaying,
     AudioOutput,
     AudioInput,
@@ -91,6 +94,7 @@ QML_TYPES: tuple[type[QObject], ...] = (
     RecycleBin,
     ObsStudio,
     WindowThumbnail,
+    WindowList,
     Process,
     AudioLevels,
     PowerSession,
@@ -110,6 +114,7 @@ QML_UNCREATABLE_TYPES: tuple[type[QObject], ...] = (
     IconList,
     WifiNetworkList,
     ResultModel,
+    LaunchpadLayout,
 )
 
 

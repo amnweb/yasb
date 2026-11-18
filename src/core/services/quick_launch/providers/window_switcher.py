@@ -9,7 +9,7 @@ from core.services.quick_launch.base_provider import BaseProvider, ProviderResul
 from core.services.quick_launch.fuzzy import fuzzy_score
 from core.services.quick_launch.providers.resources.icons import ICON_WINDOWS_SWITCHER
 from core.services.taskbar.application_window import ApplicationWindow
-from core.services.taskbar.window_manager import get_shared_task_manager
+from core.services.taskbar.window_manager import TaskbarWindowManager
 from core.utils.icons.service import WindowIcon
 from core.utils.win32.bindings.user32 import IsIconic, IsWindow, enum_windows
 from core.utils.win32.window_actions import (
@@ -31,7 +31,7 @@ class WindowSwitcherProvider(BaseProvider):
     def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self.max_results = self.config.get("max_results", 50)
-        self._task_manager = get_shared_task_manager()
+        self._task_manager = TaskbarWindowManager.instance()
         self._task_manager.keep_cloaked_tasks = True
         self._last_enum_time: float | None = None
 

@@ -31,6 +31,7 @@ Theme {
         controlHover: dark ? Qt.alpha("#FFFFFF", 0.08) : Qt.alpha("#F9F9F9", 0.5)
         controlPressed: dark ? Qt.alpha("#FFFFFF", 0.03) : Qt.alpha("#F9F9F9", 0.3)
         controlBorder: dark ? Qt.alpha("#FFFFFF", 0.07) : Qt.alpha("#000000", 0.06)
+        smoke: Qt.alpha("#000000", 0.3)
         // The accent color set in Windows; a color such as "#4CC2FF" replaces it
         accent: system.accent
         success: dark ? "#6CCB5F" : "#0F7B0F"

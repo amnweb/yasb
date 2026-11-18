@@ -32,7 +32,7 @@ Item {
     property bool hideWhenNone: true
     property bool tooltip: true
     // Hotkey that opens the popup, such as "alt+shift+u"
-    property string keys: ""
+    property string hotkey: ""
     property int popupWidth: 364
     // Popup alignment relative to the widget on a horizontal bar: left, right or center
     property string popupAlignment: "center"
@@ -192,7 +192,7 @@ Item {
     }
 
     Hotkey {
-        keys: updatesWidget.keys
+        keys: updatesWidget.hotkey
         onActivated: updatesWidget.togglePopup()
     }
 

@@ -22,6 +22,7 @@ PowerPlan 1.0 PowerPlan/PowerPlan.qml
 Github 1.0 Github/Github.qml
 GlazewmWorkspaces 1.0 GlazewmWorkspaces/GlazewmWorkspaces.qml
 KomorebiWorkspaces 1.0 KomorebiWorkspaces/KomorebiWorkspaces.qml
+Launchpad 1.0 Launchpad/Launchpad.qml
 QuickLaunch 1.0 QuickLaunch/QuickLaunch.qml
 ServerMonitor 1.0 ServerMonitor/ServerMonitor.qml
 Systray 1.0 Systray/Systray.qml
@@ -30,4 +31,5 @@ Updates 1.0 Updates/Updates.qml
 Volume 1.0 Volume/Volume.qml
 Wallpapers 1.0 Wallpapers/Wallpapers.qml
 Weather 1.0 Weather/Weather.qml
+WindowSwitcher 1.0 WindowSwitcher/WindowSwitcher.qml
 WindowsDesktops 1.0 WindowsDesktops/WindowsDesktops.qml

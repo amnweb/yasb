@@ -1,6 +1,7 @@
 import logging
 from collections.abc import Callable
 from contextlib import suppress
+from typing import ClassVar
 
 from PyQt6.QtCore import QCoreApplication, QObject, QTimer, pyqtBoundSignal, pyqtSignal
 
@@ -29,33 +30,6 @@ WIN_EVENTS = (
     WinEvent.EventSystemMinimizeStart,
     WinEvent.EventSystemMinimizeEnd,
 )
-# Global shared instance
-_shared_task_manager: TaskbarWindowManager | None = None
-
-
-def get_shared_task_manager() -> TaskbarWindowManager:
-    """Return the singleton TaskbarWindowManager instance, creating it if needed."""
-    global _shared_task_manager
-    if _shared_task_manager is None:
-        _shared_task_manager = TaskbarWindowManager()
-    return _shared_task_manager
-
-
-def start_shared_task_manager() -> TaskbarWindowManager:
-    """Start the shared manager, once.
-
-    Cloaked windows, such as those on other virtual desktops, are kept; each widget leaves them out if it wants.
-    """
-    task_manager = get_shared_task_manager()
-    if task_manager.is_initialized():
-        return task_manager
-    app = QCoreApplication.instance()
-    task_manager.keep_cloaked_tasks = True
-    task_manager.start()
-    if app is not None:
-        # Its shell and event hooks are taken down with YASB, as the taskbar widget did
-        app.aboutToQuit.connect(task_manager.stop)
-    return task_manager
 
 
 class TaskbarWindowManager(QObject):
@@ -70,6 +44,31 @@ class TaskbarWindowManager(QObject):
     window_updated = pyqtSignal(int, dict)
     window_monitor_changed = pyqtSignal(int, dict)
     window_minimize_changed = pyqtSignal(int, bool)
+
+    _instance: ClassVar[TaskbarWindowManager | None] = None
+
+    @classmethod
+    def instance(cls) -> TaskbarWindowManager:
+        """The one manager, made on first use; it follows nothing until started."""
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def started(cls) -> TaskbarWindowManager:
+        """The one manager, started once and stopped as YASB quits.
+
+        Cloaked windows, such as those on other virtual desktops, are kept; each widget leaves them out if it wants.
+        """
+        manager = cls.instance()
+        if manager.is_initialized():
+            return manager
+        manager.keep_cloaked_tasks = True
+        manager.start()
+        app = QCoreApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(manager.stop)
+        return manager
 
     def __init__(self):
         super().__init__()

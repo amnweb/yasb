@@ -53,6 +53,8 @@ QtObject {
         ["ServerMonitor", qsTr("Server monitor"), qsTr("Whether your servers and websites are online"), "\uf760", "right", false],
         ["Obs", qsTr("OBS"), qsTr("Recording and streaming in OBS Studio"), "\uE7C8", "right", false],
         ["Wallpapers", qsTr("Wallpapers"), qsTr("A gallery of your wallpapers"), "\uE91B", "right", false],
+        ["WindowSwitcher", qsTr("Window switcher"), qsTr("Your open windows in a row, to switch between them"), "\uf156", "right", false],
+        ["Launchpad", qsTr("Launchpad"), qsTr("All your apps in one grid, with your own groups"), "\ue8a9", "right", false],
         ["QuickLaunch", qsTr("Quick Launch"), qsTr("A search launcher for your apps, files and more"), "\uE721", "right", false],
         ["Dnd", qsTr("Do not disturb"), qsTr("Windows' do not disturb, off, priority only or alarms only"), "\uE708", "right", false],
         ["Notifications", qsTr("Notifications"), qsTr("Your Windows notifications menu"), "\uE7E7", "right", true],

@@ -40,6 +40,7 @@ from core.utils.win32.constants import (
     SW_SHOWNORMAL,
     VT_CLSID,
     VT_LPWSTR,
+    PKEY_Link_TargetParsingPath,
 )
 from core.utils.win32.structs import (
     APPBARDATA,
@@ -300,6 +301,12 @@ def get_shell_item_icon_location(path: str) -> tuple[str, int] | None:
     finally:
         CoTaskMemFree(pidl)
     return (info.szDisplayName, info.iIcon) if info.szDisplayName else None
+
+
+def get_shell_item_link_target(path: str) -> str | None:
+    """The target of the shortcut behind a shell item, such as a desktop app in shell:AppsFolder."""
+    store = SHGetPropertyStoreFromParsingName(path)
+    return get_string_property(store, PKEY_Link_TargetParsingPath) if store is not None else None
 
 
 class Shortcut(NamedTuple):

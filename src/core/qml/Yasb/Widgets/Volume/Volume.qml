@@ -25,7 +25,10 @@ Item {
     // Windows' default sound when a slider is let go, to hear the new level
     property bool beepOnRelease: true
     property int popupWidth: 324
-    // The speaker on the bar, drawn in iconFont and the text colour
+    // The speaker on the bar: the first of icons at 0%, the rest spread over 1 to 100% from quietest to loudest, the
+    // last also drawn faint behind; mutedIcon while muted
+    property list<string> icons: ["\ue992", "\ue993", "\ue994", "\ue995"]
+    property string mutedIcon: "\ue74f"
     property int iconSize: theme.bar.iconFont.pixelSize
     // Volumes of the apps playing, under the master slider; appsExpanded opens them with the popup
     property bool showApps: true
@@ -84,7 +87,11 @@ Item {
     }
 
     function icon(level: int, muted: bool): string {
-        return muted ? "\ue74f" : level === 0 ? "\ue992" : level < 34 ? "\ue993" : level < 67 ? "\ue994" : "\ue995"
+        if (muted)
+            return mutedIcon
+        if (level === 0 || icons.length < 2)
+            return icons[0] ?? ""
+        return icons[1 + Math.min(icons.length - 2, Math.floor(level * (icons.length - 1) / 100))]
     }
 
     function placePopup() {
@@ -153,7 +160,7 @@ Item {
 
             Text {
                 visible: !audio.muted
-                text: "\ue995"
+                text: volume.icons[volume.icons.length - 1] ?? ""
                 color: volume.iconTrackColor
                 font: levelIcon.font
             }

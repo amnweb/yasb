@@ -60,7 +60,7 @@ Item {
     // such as ({ sunnyDay: "\ue30d", clearNight: "\ue32b", rainyDay: "\ue308", default: "\ue30d" })
     property var glyphs: ({})
     // Hotkey that opens the popup, such as "alt+shift+w"
-    property string keys: ""
+    property string hotkey: ""
     property int popupWidth: 424
     // Popup alignment relative to the widget on a horizontal bar: left, right or center
     property string popupAlignment: "center"
@@ -298,7 +298,7 @@ Item {
     }
 
     Hotkey {
-        keys: weather.keys
+        keys: weather.hotkey
         onActivated: weather.togglePopup()
     }
 

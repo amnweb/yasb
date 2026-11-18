@@ -36,9 +36,9 @@ Item {
     property bool tooltip: true
     property string icon: "\ueda3"
     property int iconSize: theme.bar.iconFont.pixelSize
-    property string keys: ""
-    property string alternateKeys: ""
-    property string resetKeys: ""
+    property string hotkey: ""
+    property string alternateHotkey: ""
+    property string resetHotkey: ""
     property real labelWidth: 0
     property int labelAlignment: Text.AlignLeft
     property int popupWidth: 404
@@ -236,9 +236,9 @@ Item {
         updateInterval: networkTraffic.updateInterval
     }
 
-    Hotkey { keys: networkTraffic.keys; onActivated: networkTraffic.togglePopup() }
-    Hotkey { keys: networkTraffic.alternateKeys; onActivated: networkTraffic.showAlternate = !networkTraffic.showAlternate }
-    Hotkey { keys: networkTraffic.resetKeys; onActivated: monitor.reset() }
+    Hotkey { keys: networkTraffic.hotkey; onActivated: networkTraffic.togglePopup() }
+    Hotkey { keys: networkTraffic.alternateHotkey; onActivated: networkTraffic.showAlternate = !networkTraffic.showAlternate }
+    Hotkey { keys: networkTraffic.resetHotkey; onActivated: monitor.reset() }
 
     Connections {
         target: networkTraffic.Window.window

@@ -20,8 +20,8 @@ Item {
     property string icon: "\ue945"
     property int iconSize: theme.bar.iconFont.pixelSize
     property bool tooltip: true
-    property string keys: ""
-    property string alternateKeys: ""
+    property string hotkey: ""
+    property string alternateHotkey: ""
     property int popupWidth: 284
     property string popupAlignment: "center"
     property int maxListHeight: 320
@@ -112,8 +112,8 @@ Item {
     Keys.onSpacePressed: togglePopup()
     Component.onDestruction: popup.hide()
 
-    Hotkey { keys: powerPlan.keys; onActivated: powerPlan.togglePopup() }
-    Hotkey { keys: powerPlan.alternateKeys; onActivated: powerPlan.showAlternate = !powerPlan.showAlternate }
+    Hotkey { keys: powerPlan.hotkey; onActivated: powerPlan.togglePopup() }
+    Hotkey { keys: powerPlan.alternateHotkey; onActivated: powerPlan.showAlternate = !powerPlan.showAlternate }
 
     Connections {
         target: powerPlan.Window.window

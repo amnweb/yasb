@@ -1,10 +1,10 @@
-import logging
+import re
 from typing import Any
 
-from PyQt6.QtCore import QFileSystemWatcher, QObject, QTimer, pyqtSignal
+from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
-from winrt.windows.applicationmodel import PackageCatalog
 
+from core.services.apps.service import StartApps
 from core.services.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.services.quick_launch.providers import (
     AppsProvider,
@@ -34,9 +34,9 @@ from core.services.quick_launch.providers import (
     WorldClockProvider,
     WslProvider,
 )
-from core.services.quick_launch.workers import QueryWorker, StartMenuWatcherThread
+from core.services.quick_launch.workers import QueryWorker
 from core.utils.icons.service import IconService
-from core.utils.win32.app_loader import AppEntry, AppListLoader, app_icon_source
+from core.utils.win32.app_loader import AppEntry, app_icon_source
 
 PROVIDER_REGISTRY: dict[str, type[BaseProvider]] = {
     "apps": AppsProvider,
@@ -73,7 +73,6 @@ class QuickLaunchService(QObject):
 
     request_refresh = pyqtSignal()
     query_finished = pyqtSignal(str, list)
-    _package_changed = pyqtSignal()
 
     _instance: QuickLaunchService | None = None
 
@@ -92,8 +91,7 @@ class QuickLaunchService(QObject):
         self._providers_config: dict[str, Any] = {}
         self._show_icons: bool = True
 
-        self._app_loader: AppListLoader | None = None
-        self._app_reload_pending = False
+        self._watching_apps = False
         self._query_worker = QueryWorker()
         self._query_worker.finished.connect(self._on_query_finished)
         self._query_worker.start()
@@ -142,9 +140,12 @@ class QuickLaunchService(QObject):
         self._providers.sort(key=lambda p: p.priority)
 
         if apps_enabled:
-            if not self._apps_loaded and not self._app_loader:
-                self._setup_fs_watcher()
-                self._start_app_loading()
+            if not self._watching_apps:
+                self._watching_apps = True
+                start = StartApps.instance()
+                start.changed.connect(self._update_apps)
+                if start.loaded:
+                    self._update_apps()
             elif self._apps_loaded:
                 self._start_description_resolution()
 
@@ -158,24 +159,8 @@ class QuickLaunchService(QObject):
     def _on_query_finished(self, query_id: str, results: list[ProviderResult]):
         self.query_finished.emit(query_id, results)
 
-    def _start_app_loading(self):
-        if self._app_loader is not None:
-            self._app_reload_pending = True
-            return
-        self._app_loader = AppListLoader()
-        self._app_loader.apps_loaded.connect(self._on_apps_loaded)
-        self._app_loader.finished.connect(self._on_app_loading_finished)
-        self._app_loader.start()
-
-    def _on_app_loading_finished(self):
-        loader = self._app_loader
-        self._app_loader = None
-        if loader is not None:
-            loader.deleteLater()
-        if self._app_reload_pending:
-            self._app_reload_pending = False
-            AppListLoader.clear_cache()
-            self._start_app_loading()
+    def _update_apps(self):
+        self._on_apps_loaded(_quick_launch_apps(StartApps.instance()))
 
     def _on_apps_loaded(self, apps: list[AppEntry]):
         if self._apps_loaded and apps == self._apps:
@@ -199,37 +184,36 @@ class QuickLaunchService(QObject):
         dpr = screen.devicePixelRatio() if screen else 1.0
         IconService.instance().preload((app_icon_source(path) for _, path, _ in self._apps), self._icon_size, dpr)
 
-    def _setup_fs_watcher(self):
-        self._fs_watcher = QFileSystemWatcher(self)
-        self._fs_watcher.directoryChanged.connect(self._on_directory_changed)
-        self._fs_debounce = QTimer(self)
-        self._fs_debounce.setSingleShot(True)
-        self._fs_debounce.setInterval(5000)
-        self._fs_debounce.timeout.connect(self._on_fs_change)
-        self._watcher_thread = StartMenuWatcherThread()
-        self._watcher_thread.dirs_ready.connect(self._on_watch_dirs_ready)
-        self._watcher_thread.start()
-        self._package_changed.connect(self._fs_debounce.start)
-        try:
-            self._package_catalog = PackageCatalog.open_for_current_user()
-            self._package_catalog.add_package_installing(self._on_package_event)
-            self._package_catalog.add_package_uninstalling(self._on_package_event)
-            self._package_catalog.add_package_updating(self._on_package_event)
-        except Exception as e:
-            logging.warning("Quick Launch could not watch for app package changes: %s", e)
 
-    def _on_package_event(self, _catalog: PackageCatalog, args: Any) -> None:
-        if args.is_complete:
-            self._package_changed.emit()
+# Names that aren't apps: any containing one of the first, or one of the second as a whole word
+_SKIPPED_NAMES = ("readme", "documentation", "license", "setup", "administrative tools")
+_SKIPPED_WORDS = re.compile(r"\b(uninstall|installer|help)\b")
 
-    def _on_directory_changed(self, path: str) -> None:
-        self._fs_debounce.start()
 
-    def _on_watch_dirs_ready(self, dirs: list[str]) -> None:
-        if dirs:
-            self._fs_watcher.addPaths(dirs)
+def _quick_launch_apps(start: StartApps) -> list[AppEntry]:
+    """The Start menu shortcuts, then the All apps entries and Control Panel items whose names are not among them."""
+    apps: list[AppEntry] = []
+    seen: set[str] = set()
 
-    def _on_fs_change(self):
-        logging.info("Quick Launch rebuilding app list after install/uninstall detected")
-        AppListLoader.clear_cache()
-        self._start_app_loading()
+    def skipped(name: str) -> bool:
+        lower = name.lower()
+        return any(word in lower for word in _SKIPPED_NAMES) or _SKIPPED_WORDS.search(lower) is not None
+
+    def first(name: str) -> bool:
+        # "LiveCaptions" from a shortcut and "Live captions" from All apps are one app
+        lower = name.lower()
+        if lower in seen or lower.replace(" ", "") in seen:
+            return False
+        seen.update((lower, lower.replace(" ", "")))
+        return True
+
+    for shortcut in start.shortcuts:
+        if not skipped(shortcut.name) and first(shortcut.name):
+            apps.append((shortcut.name, shortcut.path, None))
+    for app in start.apps:
+        if app.name and app.id and not skipped(app.name) and first(app.name):
+            apps.append((app.name, f"UWP::{app.id}", None))
+    for item in start.control_panel:
+        if first(item.name):
+            apps.append((item.name, f"CPL::{item.clsid}::{item.canonical}", item.description))
+    return apps

@@ -126,7 +126,7 @@ def manager(qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch) -> Manager:
     fake = Manager()
     fake.windows[11] = window_data(11, "Inbox - Outlook", "outlook")
     pins = Pins({"terminal": "Terminal", "outlook": "Outlook"})
-    monkeypatch.setattr(apps_module, "_shared", OpenWindows(fake, pins))
+    monkeypatch.setattr(OpenWindows, "_instance", OpenWindows(fake, pins))
 
     def screen_monitor(name: str) -> int | None:
         return {"DISPLAY1": 1, "DISPLAY2": 2}.get(name)
@@ -136,7 +136,7 @@ def manager(qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch) -> Manager:
 
 
 def pins() -> Pins:
-    pinned = apps_module.open_windows().pins
+    pinned = OpenWindows.instance().pins
     assert isinstance(pinned, Pins)
     return pinned
 
@@ -281,7 +281,7 @@ def test_a_pinned_recycle_bin_shows_whether_it_is_full(
     manager: Manager, monkeypatch: pytest.MonkeyPatch, quiet_bin: None
 ):
     bin_id = "explorer:::{645FF040-5081-101B-9F08-00AA002F954E}"
-    monkeypatch.setattr(apps_module, "_shared", OpenWindows(manager, Pins({bin_id: "Recycle Bin"})))
+    monkeypatch.setattr(OpenWindows, "_instance", OpenWindows(manager, Pins({bin_id: "Recycle Bin"})))
     apps = taskbar()
 
     def icon() -> str:
@@ -502,7 +502,7 @@ def test_the_recycle_bin_menu_runs_its_action_after_the_trigger_handler(
     monkeypatch.setattr(apps_module, "empty_recycle_bin", lambda: emptied.append(True))
     bin_id = "explorer:::{645FF040-5081-101B-9F08-00AA002F954E}"
     manager.open(12, "Recycle Bin", bin_id)
-    apps_module.open_windows().pin(bin_id)
+    OpenWindows.instance().pin(bin_id)
     monitor = watched_bin()
     assert monitor is not None
     monitor.info = {"size_bytes": 10, "num_items": 1}
@@ -593,8 +593,8 @@ def test_two_taskbars_share_one_window_manager(qapp: QGuiApplication, monkeypatc
 
     monkeypatch.setattr(event_listener, "ensure_system_event_listener", lambda: None)
     monkeypatch.setattr(TaskbarWindowManager, "_enumerate_existing_windows", nothing)
-    monkeypatch.setattr(window_manager, "_shared_task_manager", None)
-    first, second = window_manager.start_shared_task_manager(), window_manager.start_shared_task_manager()
+    monkeypatch.setattr(TaskbarWindowManager, "_instance", None)
+    first, second = TaskbarWindowManager.started(), TaskbarWindowManager.started()
     try:
         assert first is second
         # Connected once: ten shell messages and six WinEvents

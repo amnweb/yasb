@@ -38,6 +38,8 @@ QtObject {
         property color controlHover
         property color controlPressed
         property color controlBorder
+        // Laid over a popup's content to set it back behind something opened on top, such as a group
+        property color smoke
         property color accent
         property color success
         property color warning
@@ -95,6 +97,7 @@ QtObject {
         controlHover: theme.dark ? Qt.alpha("#FFFFFF", 0.08) : Qt.alpha("#F9F9F9", 0.5)
         controlPressed: theme.dark ? Qt.alpha("#FFFFFF", 0.03) : Qt.alpha("#F9F9F9", 0.3)
         controlBorder: theme.dark ? Qt.alpha("#FFFFFF", 0.07) : Qt.alpha("#000000", 0.06)
+        smoke: Qt.alpha("#000000", 0.3)
         // The accent colour set in Windows
         accent: theme.system.accent
         success: theme.dark ? "#6CCB5F" : "#0F7B0F"

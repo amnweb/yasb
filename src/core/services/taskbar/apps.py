@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Protocol
+from typing import Any, ClassVar, Protocol
 
 from PyQt6.QtCore import QCoreApplication, QObject, Qt, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QWindow
@@ -8,7 +8,7 @@ from core.services.recycle_bin.recycle_bin_monitor import RecycleBinMonitor, emp
 from core.services.taskbar.jump_list import is_recycle_bin, jump_list
 from core.services.taskbar.peek import activate_live_preview, exclude_from_peek, is_live_preview_available
 from core.services.taskbar.pin_manager import PinManager
-from core.services.taskbar.window_manager import TaskbarWindowManager, start_shared_task_manager
+from core.services.taskbar.window_manager import TaskbarWindowManager
 from core.utils.icons.image_provider import icon_url, window_icon_url
 from core.utils.icons.service import IconService
 from core.utils.icons.sources import IconSource, StockIcon
@@ -48,6 +48,18 @@ class OpenWindows(QObject):
     """Every window that belongs on a taskbar and every pinned app, shared by all taskbar widgets."""
 
     changed = pyqtSignal()
+
+    _instance: ClassVar[OpenWindows | None] = None
+
+    @classmethod
+    def instance(cls) -> OpenWindows:
+        """The one list every taskbar widget and the window switcher read, stopped as YASB quits."""
+        if cls._instance is None:
+            cls._instance = cls(TaskbarWindowManager.started(), PinManager())
+            app = QCoreApplication.instance()
+            if app is not None:
+                app.aboutToQuit.connect(cls._instance.stop)
+        return cls._instance
 
     def __init__(self, manager: WindowSource, pins: PinManager) -> None:
         super().__init__()
@@ -179,23 +191,6 @@ class OpenWindows(QObject):
             self.changed.emit()
 
 
-_shared: OpenWindows | None = None
-
-
-def open_windows() -> OpenWindows:
-    global _shared
-    if _shared is None:
-        _shared = OpenWindows(_start_manager(), PinManager())
-        app = QCoreApplication.instance()
-        if app is not None:
-            app.aboutToQuit.connect(_shared.stop)
-    return _shared
-
-
-def _start_manager() -> TaskbarWindowManager:
-    return start_shared_task_manager()
-
-
 def _setting(kind: type | str, name: str, notify: pyqtSignal) -> pyqtProperty[Any]:
     def get(apps: TaskbarApps) -> Any:
         return apps.setting(name)
@@ -237,7 +232,7 @@ class TaskbarApps(QObject):
             "ignoreTitles": [],
         }
         self._apps: list[dict[str, Any]] = []
-        self._windows = open_windows()
+        self._windows = OpenWindows.instance()
         self._windows.changed.connect(self._publish)
         self._publish()
 

@@ -26,6 +26,8 @@ Item {
     property string middleClick: "launch"
     property bool animation: true
     property int animationDuration: 300
+    // Icon size
+    property int iconSize: 16
     // Only windows on the bar's own screen
     property bool onlyThisScreen: false
     // Leaves out cloaked windows, such as those on other virtual desktops
@@ -61,7 +63,6 @@ Item {
     property color pressedColor: theme.colors.pressed
     property color selectedColor: theme.colors.selected
     property font font
-    property int iconSize: theme.bar.iconFont.pixelSize
     // The indicator of the window in front, and of a window asking for attention, which also tints its button
     property color indicatorColor: theme.colors.accent
     property color attentionColor: theme.colors.critical

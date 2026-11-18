@@ -25,7 +25,7 @@ Item {
     property string icon: "\ueea1"
     property int iconSize: theme.bar.iconFont.pixelSize
     // Hotkey that opens the popup, such as "alt+shift+c"
-    property string keys: ""
+    property string hotkey: ""
     property int popupWidth: 400
     required property BarBase bar
     readonly property Theme theme: bar.theme
@@ -190,7 +190,7 @@ Item {
     }
 
     Hotkey {
-        keys: cpu.keys
+        keys: cpu.hotkey
         onActivated: cpu.togglePopup()
     }
 

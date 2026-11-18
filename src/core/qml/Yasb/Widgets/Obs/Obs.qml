@@ -30,13 +30,19 @@ Item {
     property bool showVirtualCam: false
     property bool showStudioMode: false
     property bool tooltip: true
+    // Glyphs on the bar and in the popup; icon is OBS's record glyph, shown while idle
+    property string icon: "\ue7c8"
+    property string pausedIcon: "\ue769"
+    property string streamIcon: "\ue93e"
+    property string virtualCamIcon: "\ue714"
+    property string studioModeIcon: "\ue7f4"
     // Hotkeys, such as "alt+shift+r"
-    property string keys: ""
-    property string recordKeys: ""
-    property string pauseKeys: ""
-    property string streamKeys: ""
-    property string virtualCamKeys: ""
-    property string studioModeKeys: ""
+    property string hotkey: ""
+    property string recordHotkey: ""
+    property string pauseHotkey: ""
+    property string streamHotkey: ""
+    property string virtualCamHotkey: ""
+    property string studioModeHotkey: ""
     property int popupWidth: 284
     // Popup alignment relative to the widget on a horizontal bar: left, right or center
     property string popupAlignment: "center"
@@ -161,32 +167,32 @@ Item {
     }
 
     Hotkey {
-        keys: obs.keys
+        keys: obs.hotkey
         onActivated: obs.togglePopup()
     }
 
     Hotkey {
-        keys: obs.recordKeys
+        keys: obs.recordHotkey
         onActivated: studio.toggleRecord()
     }
 
     Hotkey {
-        keys: obs.pauseKeys
+        keys: obs.pauseHotkey
         onActivated: studio.toggleRecordPause()
     }
 
     Hotkey {
-        keys: obs.streamKeys
+        keys: obs.streamHotkey
         onActivated: studio.toggleStream()
     }
 
     Hotkey {
-        keys: obs.virtualCamKeys
+        keys: obs.virtualCamHotkey
         onActivated: studio.toggleVirtualCam()
     }
 
     Hotkey {
-        keys: obs.studioModeKeys
+        keys: obs.studioModeHotkey
         onActivated: studio.toggleStudioMode()
     }
 
@@ -329,7 +335,7 @@ Item {
             objectName: "idle"
             anchors.verticalCenter: parent.verticalCenter
             visible: !obs.recording && !obs.streaming
-            text: "\ue7c8"
+            text: obs.icon
             color: obs.textColor
             opacity: studio.connected ? 1 : 0.4
             font.pixelSize: obs.iconSize
@@ -350,7 +356,7 @@ Item {
             Glyph {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: obs.paused
-                text: "\ue769"
+                text: obs.pausedIcon
                 color: obs.pausedColor
                 font.pixelSize: sceneLabel.font.pixelSize
             }
@@ -374,7 +380,7 @@ Item {
 
             Glyph {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "\ue93e"
+                text: obs.streamIcon
                 color: obs.liveColor
                 font.pixelSize: obs.iconSize
             }
@@ -392,7 +398,7 @@ Item {
         Glyph {
             anchors.verticalCenter: parent.verticalCenter
             visible: obs.showVirtualCam && studio.virtualCam
-            text: "\ue714"
+            text: obs.virtualCamIcon
             color: obs.textColor
             font.pixelSize: obs.iconSize
         }
@@ -400,7 +406,7 @@ Item {
         Glyph {
             anchors.verticalCenter: parent.verticalCenter
             visible: obs.showStudioMode && studio.studioMode
-            text: "\ue7f4"
+            text: obs.studioModeIcon
             color: obs.textColor
             font.pixelSize: obs.iconSize
         }
@@ -556,7 +562,7 @@ Item {
                                 Glyph {
                                     anchors.centerIn: parent
                                     visible: !obs.recording || obs.paused
-                                    text: obs.paused ? "\ue769" : "\ue7c8"
+                                    text: obs.paused ? obs.pausedIcon : obs.icon
                                     color: obs.paused ? obs.pausedColor : obs.popupTertiaryTextColor
                                     font.pixelSize: obs.popupIconSize
                                 }
@@ -605,7 +611,7 @@ Item {
 
                             Glyph {
                                 Layout.preferredWidth: 16
-                                text: "\ue93e"
+                                text: obs.streamIcon
                                 color: obs.streaming ? obs.liveColor : obs.popupTertiaryTextColor
                                 font.pixelSize: obs.popupIconSize
                             }
@@ -665,7 +671,7 @@ Item {
 
                             Glyph {
                                 Layout.preferredWidth: 16
-                                text: "\ue714"
+                                text: obs.virtualCamIcon
                                 color: obs.popupTertiaryTextColor
                                 font.pixelSize: obs.popupIconSize
                             }
@@ -698,7 +704,7 @@ Item {
 
                             Glyph {
                                 Layout.preferredWidth: 16
-                                text: "\ue7f4"
+                                text: obs.studioModeIcon
                                 color: obs.popupTertiaryTextColor
                                 font.pixelSize: obs.popupIconSize
                             }

@@ -30,8 +30,8 @@ Item {
     property string icon: "\uf760"
     property int iconSize: theme.bar.iconFont.pixelSize
     property bool tooltip: true
-    property string keys: ""
-    property string alternateKeys: ""
+    property string hotkey: ""
+    property string alternateHotkey: ""
     property int popupWidth: 404
     property string popupAlignment: "center"
     property int maxListHeight: 360
@@ -178,8 +178,8 @@ Item {
         objectName: "monitor"
     }
 
-    Hotkey { keys: serverMonitor.keys; onActivated: serverMonitor.togglePopup() }
-    Hotkey { keys: serverMonitor.alternateKeys; onActivated: serverMonitor.showAlternate = !serverMonitor.showAlternate }
+    Hotkey { keys: serverMonitor.hotkey; onActivated: serverMonitor.togglePopup() }
+    Hotkey { keys: serverMonitor.alternateHotkey; onActivated: serverMonitor.showAlternate = !serverMonitor.showAlternate }
 
     Connections {
         target: serverMonitor.Window.window
