@@ -33,6 +33,8 @@ class GlazewmBindingModes(GlazewmConnection):
 
     def _bind(self, client: GlazewmClient) -> None:
         client.binding_mode_changed.connect(self._on_binding_mode)
+        if client.binding_mode is not None:
+            self._on_binding_mode(client.binding_mode)
 
     def _unbind(self, client: GlazewmClient) -> None:
         client.binding_mode_changed.disconnect(self._on_binding_mode)
