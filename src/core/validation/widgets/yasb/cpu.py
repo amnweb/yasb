@@ -46,11 +46,15 @@ class CpuMenuConfig(CustomBaseModel):
     show_graph: bool = True
     show_graph_grid: bool = False
     highlight_usage: bool = False
+    show_fan_rpm: bool = False
     pin_icon: str = "\ue718"
     unpin_icon: str = "\ue77a"
 
 
 class CpuConfig(CustomBaseModel):
+    libre_host: str = "127.0.0.1"
+    libre_port: int = Field(default=8085, ge=1, le=65535)
+    libre_fan_sensors: dict[str, str] = Field(default_factory=dict)
     label: str = "\uf200 {info[histograms][cpu_percent]}"
     label_alt: str = "\uf200 CPU: {info[percent][total]}% | freq: {info[freq][current]:.2f} Mhz"
     class_name: str = ""

@@ -1,5 +1,23 @@
 # CPU Widget Configuration
 
+## Optional Libre fan and pump RPM
+
+`menu.show_fan_rpm: true` adds native Cooling cards below the existing CPU statistics.
+The fork reads Libre's `libre_host` / `libre_port` endpoint (defaults `127.0.0.1:8085`)
+through the same background worker used by the temperature widget. No fan control is performed.
+Stopped fans show `0 RPM`; unavailable readings show an em dash.
+
+With `libre_fan_sensors: {}` (the default), all non-GPU fan sensors retain their original
+Libre names, including generic `Fan #1` labels. CPU fan and pump connections cannot be
+identified reliably from RPM alone. After identifying the physical connections, set
+`libre_fan_sensors` to a mapping of display label → exact Libre sensor ID to show only
+the selected sensors with labels such as `CPU Fan` and `Pump`.
+For example, a sensor ID has the form `/lpc/<controller>/0/fan/<index>`; use the actual
+IDs for the local motherboard. Explicit mappings never fall back to another sensor.
+
+The feature defaults to disabled. Cooling uses the existing `.stats .stat-item`,
+`.stat-label` and `.stat-value` styling; `.cooling-title` styles the section title.
+
 The optional `menu.highlight_usage: true` adds a `primary` class to the native usage card and its label/value. It defaults to `false`, preserving the existing grid and theme. Style `.cpu-popup .stat-item.primary` and `.cpu-popup .stat-value.primary` to emphasize utilization without changing the remaining metrics.
 
 Keeps track of your processor's speed and usage in real-time. It supports per-core usage histograms, custom warning colors, and circular progress meters. You can click it to open a popup menu that shows detailed stats and performance graphs over time.

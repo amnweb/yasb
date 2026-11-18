@@ -1,6 +1,7 @@
 import asyncio
 import io
 import logging
+import math
 import threading
 import time
 from collections.abc import Callable
@@ -566,6 +567,35 @@ class WindowsMedia(QObject, metaclass=QSingleton):
         with self._smtc_lock:
             op = starter(state.session)
         await op
+
+    async def control_session(self, session_id: str, action: str, position: float | None = None) -> None:
+        """Control a specific tracked session without changing the bar's selected player."""
+        state = self._trackers.get(session_id)
+        if state is None or state.session is None or not state.playback_ready:
+            return
+        if action == "seek" and (position is None or not math.isfinite(position) or not math.isfinite(state.duration)):
+            return
+        try:
+            with self._smtc_lock:
+                session = state.session
+                if action == "play_pause" and state.controls_play_enabled:
+                    operation = session.try_toggle_play_pause_async()
+                elif action == "prev" and state.controls_prev_enabled:
+                    operation = session.try_skip_previous_async()
+                elif action == "next" and state.controls_next_enabled:
+                    operation = session.try_skip_next_async()
+                elif action == "seek" and position is not None and state.timeline_enabled and state.duration > 0:
+                    position = min(state.duration, max(0.0, position))
+                    operation = session.try_change_playback_position_async(int(position * 10_000_000))
+                else:
+                    return
+            succeeded = await operation
+            if action == "seek" and succeeded and self._trackers.get(session_id) is state:
+                state.last_snapshot_pos = position if position is not None else 0.0
+                state.last_update_time = time.time()
+                self._interpolate_and_emit(self._trackers)
+        except Exception as error:
+            logger.debug("Media session command %s failed: %s", action, error)
 
     @asyncSlot()
     async def play_pause(self):

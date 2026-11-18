@@ -26,6 +26,12 @@ class MediaMenuIconsConfig(CustomBaseModel):
 
 
 class MediaMenuConfig(CustomBaseModel):
+    layout: Literal["default", "compact", "artwork"] = "default"
+    show_all_sessions: bool = False
+    pinnable: bool = False
+    show_visualizer: bool = False
+    width: int = Field(default=500, ge=360, le=1000)
+    max_height: int = Field(default=600, ge=240, le=1200)
     blur: bool = True
     round_corners: bool = True
     round_corners_type: str = "normal"

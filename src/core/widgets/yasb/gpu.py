@@ -12,7 +12,10 @@ from core.utils.utilities import (
 )
 from core.validation.widgets.yasb.gpu import GpuConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.cooling.libre import gpu_fans
+from core.widgets.services.cooling.view import CoolingSection
 from core.widgets.services.gpu.gpu_api import GpuData, GpuWorker
+from core.widgets.services.temperature.libre import TemperatureSnapshot, TemperatureWorker
 
 
 class GpuWidget(BaseWidget):
@@ -25,6 +28,8 @@ class GpuWidget(BaseWidget):
     def __init__(self, config: GpuConfig):
         super().__init__(class_name=f"gpu-widget {config.class_name}")
         self.config = config
+        self._cooling: CoolingSection | None = None
+        self._fan_snapshot: TemperatureSnapshot | None = None
         self._gpu_util_history = deque([0.0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._gpu_mem_history = deque([0.0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._show_alt_label = False
@@ -70,6 +75,29 @@ class GpuWidget(BaseWidget):
                 GpuWidget._worker = worker
 
         self._show_placeholder()
+        if config.menu.show_fan_rpm:
+            fan_worker = TemperatureWorker.get_instance(config.libre_host, config.libre_port, 1000, 120)
+            self._fan_snapshot = fan_worker.latest
+            fan_worker.data_ready.connect(self._receive_cooling)
+            if not fan_worker.isRunning():
+                fan_worker.start()
+
+    def _receive_cooling(self, snapshot: TemperatureSnapshot) -> None:
+        self._fan_snapshot = snapshot
+        popup = PopupWidget.open_popup_for(self)
+        if isinstance(popup, PinnablePopup) and popup.isVisible() and self._cooling is not None:
+            self._update_cooling(self._last_gpu_data)
+            popup.adjustSize()
+
+    def _update_cooling(self, data: GpuData | None) -> None:
+        if self._cooling is not None:
+            readings = self._fan_snapshot.fans if self._fan_snapshot is not None else ()
+            fans = (
+                gpu_fans(readings, data.name, self.config.libre_sensor_map.get(data.gpu_index))
+                if data is not None
+                else ()
+            )
+            self._cooling.update_readings(fans)
 
     def _show_placeholder(self):
         """Display placeholder (zero/default) GPU data."""
@@ -244,6 +272,7 @@ class GpuWidget(BaseWidget):
         if not isinstance(popup, PinnablePopup) or not popup.isVisible():
             return
         try:
+            self._update_cooling(gpu_data)
             if popup.graph is not None:
                 popup.graph.set_data(list(self._history))
             if self._popup_temp_graph is not None:
@@ -442,6 +471,11 @@ class GpuWidget(BaseWidget):
 
             self._popup_temp_graph = temp_graph
 
+        if menu.show_fan_rpm and isinstance(main_layout, QVBoxLayout):
+            self._cooling = CoolingSection()
+            self._update_cooling(data)
+            main_layout.addWidget(self._cooling)
+            popup.adjustSize()
         popup.show()
         if data is not None:
             self._update_popup(data)

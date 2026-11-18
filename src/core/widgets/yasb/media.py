@@ -34,6 +34,7 @@ from core.utils.win32.aumid_process import get_process_name_for_aumid
 from core.validation.widgets.yasb.media import MediaWidgetConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.media.media import MediaSession, SessionState, WindowsMedia
+from core.widgets.services.media.popup import MediaSessionsPopup
 from core.widgets.services.media.source_apps import (
     get_source_app_class_name,
     resolve_source_app_name,
@@ -208,6 +209,21 @@ class MediaWidget(BaseWidget):
         self.show_menu()
 
     def show_menu(self):
+        if self.config.media_menu.layout in ("compact", "artwork"):
+            existing = PopupWidget.open_popup_for(self)
+            if isinstance(existing, MediaSessionsPopup) and existing.isVisible():
+                existing.hide_animated()
+                return
+            popup = MediaSessionsPopup(self, self.media, self.config)
+            self.dialog = popup
+            popup.setPosition(
+                self.config.media_menu.alignment,
+                self.config.media_menu.direction,
+                self.config.media_menu.offset_left,
+                self.config.media_menu.offset_top,
+            )
+            popup.show()
+            return
         self.dialog = PopupWidget(
             self,
             self.config.media_menu.blur,
@@ -581,6 +597,9 @@ class MediaWidget(BaseWidget):
                 self._progress_bar.setValue(new_pos)
             else:
                 self._progress_bar.setHidden(True)
+
+            if self.config.media_menu.layout in ("compact", "artwork"):
+                return
 
             # Skip updates if user is currently seeking or dialog isn't visible
             if not (hasattr(self, "dialog") and self.dialog.isVisible()):

@@ -50,6 +50,7 @@ class GpuMenuConfig(CustomBaseModel):
     show_temperature: bool = True
     show_power: bool = True
     show_fan_speed: bool = True
+    show_fan_rpm: bool = False
     pin_icon: str = "\ue718"
     unpin_icon: str = "\ue77a"
 

@@ -11,7 +11,10 @@ from core.utils.utilities import (
 )
 from core.validation.widgets.yasb.cpu import CpuConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.cooling.libre import motherboard_fans
+from core.widgets.services.cooling.view import CoolingSection
 from core.widgets.services.cpu.cpu_api import CpuData, CpuFreq, CpuWorker
+from core.widgets.services.temperature.libre import TemperatureSnapshot, TemperatureWorker
 
 
 class CpuWidget(BaseWidget):
@@ -23,6 +26,8 @@ class CpuWidget(BaseWidget):
     def __init__(self, config: CpuConfig):
         super().__init__(class_name=f"cpu-widget {config.class_name}")
         self.config = config
+        self._cooling: CoolingSection | None = None
+        self._fan_snapshot: TemperatureSnapshot | None = None
         self._cpu_freq_history = deque([0.0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._cpu_perc_history = deque([0.0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._show_alt_label = False
@@ -53,6 +58,19 @@ class CpuWidget(BaseWidget):
             CpuWidget._worker = worker
 
         self._show_placeholder()
+        if config.menu.show_fan_rpm:
+            fan_worker = TemperatureWorker.get_instance(config.libre_host, config.libre_port, 1000, 120)
+            self._fan_snapshot = fan_worker.latest
+            fan_worker.data_ready.connect(self._receive_cooling)
+            if not fan_worker.isRunning():
+                fan_worker.start()
+
+    def _receive_cooling(self, snapshot: TemperatureSnapshot) -> None:
+        self._fan_snapshot = snapshot
+        popup = PopupWidget.open_popup_for(self)
+        if isinstance(popup, PinnablePopup) and popup.isVisible() and self._cooling is not None:
+            self._cooling.update_readings(motherboard_fans(snapshot.fans))
+            popup.adjustSize()
 
     def _show_placeholder(self):
         """Display placeholder (zero/default) CPU data."""
@@ -140,6 +158,14 @@ class CpuWidget(BaseWidget):
                 util_label.setProperty("class", "graph-title")
                 main_layout.insertWidget(graph_idx, util_label)
 
+        if menu.show_fan_rpm:
+            main_layout = popup.layout()
+            if isinstance(main_layout, QVBoxLayout):
+                self._cooling = CoolingSection(self.config.libre_fan_sensors)
+                readings = self._fan_snapshot.fans if self._fan_snapshot is not None else ()
+                self._cooling.update_readings(motherboard_fans(readings))
+                main_layout.addWidget(self._cooling)
+                popup.adjustSize()
         popup.show()
 
     def _update_label(self, data: CpuData):

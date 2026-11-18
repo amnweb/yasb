@@ -100,6 +100,53 @@ media:
       ease_min: 0.5
 ```
 ## Media Menu Options
+
+The fork adds an optional compact layout with native session cards:
+
+```yaml
+media_menu:
+  layout: compact            # default preserves the original single-player popup
+  show_all_sessions: true    # one card per Windows-reported media session
+  pinnable: true             # native header pin; supports dragging when pinned
+  show_visualizer: true      # existing audio_visualizer engine, 8 mirrored bars
+  show_volume_slider: true   # horizontal application-volume slider
+  width: 500                 # 360–1000 pixels, clamped to the screen
+  max_height: 600            # 240–1200 pixels; additional cards scroll vertically
+```
+
+Cards update in place and direct play/pause, previous, next and seeking to their own session,
+without changing the bar's selected player. Unsupported playback controls are disabled;
+unavailable timelines are hidden. A missing application-volume mapping disables that control
+instead of adjusting system master volume. Volume belongs to the application and may be shared
+by several media sessions; the visualizer represents the system output, not isolated player audio.
+
+Chrome normally exposes its active browser session rather than every ordinary tab separately.
+This mode lists the sessions Windows supplies; it does not require an extension or browser debugging.
+It cannot create missing per-tab sessions. Separate Windows/PWA sessions remain eligible for cards.
+
+All added options default to disabled or `layout: default`. Compact styling is scoped under
+`.native-media-menu`: `.header .text`, `.header .pin-btn` (including `:hover` and `.pinned`),
+`.media-session-card`, `.title`, `.artist`, `.thumbnail`, `.btn`, `.progress-slider`,
+`.volume-slider`, `.volume-value`, and `.audio-visualizer-canvas`.
+
+`layout: artwork` uses the same session controls in a full-cover card: a darkened, cropped
+album background, centered title/artist, a native audio wave above elapsed progress, times
+below the slider, and circular playback buttons. Mute is on the left and the right-hand
+chevron opens an application-volume dropdown inside the existing popup. Clicking elsewhere
+or scrolling closes the dropdown; interacting with it keeps the media popup open.
+Additional classes are `.artwork-session-card`, `.media-artwork-surface`, `.media-source-icon`,
+`.media-progress-wave`, `.volume-dropdown-button`, and `.media-volume-dropdown`.
+
+Artwork waves have three tapered sine-envelope layers with fixed gradients; the native audio
+levels modulate their height. The wave spans only elapsed progress and ends at the slider handle.
+An independent precise 16ms timer advances the animation even with constant audio samples or
+an unchanged playback position. It stops when hidden; audio-level changes are interpolated smoothly.
+A 16×16 cover sample chooses between four fixed palettes (blue, cyan, orange, green), weighting
+saturated, visible pixels by their brightness. Palette selection and gradient construction are
+cached until the artwork or canvas size changes. Missing or neutral artwork uses blue.
+Compact styling should override both minimum and maximum widths on `.media-menu.native-media-menu`
+so older `.media-menu` size limits also stop restricting the popup's background frame.
+
 ```yaml
     media_menu:
       blur: false                  # Whether to apply a blur effect to the popup background.

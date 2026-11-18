@@ -1,5 +1,19 @@
 # GPU Widget Configuration
 
+## Optional Libre fan RPM
+
+`menu.show_fan_rpm: true` adds native Cooling cards for the selected adapter's Libre
+fan sensors. This is separate from the existing `menu.show_fan_speed` percentage card.
+The local Libre endpoint is shared with the temperature widget and is read-only.
+Fans are matched by exact normalized hardware name, or by the existing `libre_sensor_map`
+hardware ID override for the adapter's Windows index. Ambiguous matches remain unavailable.
+Multiple reported GPU fans each get a card; a valid stopped fan displays `0 RPM`.
+An adapter without a reported fan (such as an integrated GPU) displays an em dash.
+Switching adapters updates the cooling cards in place. No fan speed setting is changed.
+
+This option defaults to disabled. Cooling inherits the native stat-card styles;
+`.gpu-popup .cooling-title` styles its section title.
+
 ## Optional adapter selector, clocks and memory bars
 
 The native popup can select adapters without opening another window, show Core/Memory clocks from Libre Hardware Monitor, and add memory bars to its existing statistics cards.
