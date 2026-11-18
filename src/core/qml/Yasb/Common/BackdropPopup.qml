@@ -53,6 +53,10 @@ QtObject {
         item: popup.backdropItem
     }
 
+    readonly property PopupGraphics graphics: PopupGraphics {
+        window: popup.window
+    }
+
     readonly property Window window: Window {
         id: popupWindow
 
@@ -102,10 +106,15 @@ QtObject {
         onAfterAnimating: {
             if (popup.framesUntilHidden === 0)
                 return
-            if (--popup.framesUntilHidden === 0)
-                popupWindow.hide()
-            else
+            if (--popup.framesUntilHidden === 0) {
+                // Hidden after this signal: giving back the graphics inside it hangs the app
+                Qt.callLater(() => {
+                    if (popup.closing)
+                        popupWindow.hide()
+                })
+            } else {
                 popupWindow.update()
+            }
         }
 
         // A press in the room around the popup counts as a press outside it
