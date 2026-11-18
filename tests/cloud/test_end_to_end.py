@@ -18,8 +18,8 @@ from core.cloud.restore import restore_archive
 from core.cloud.snapshot import collect_files, create_archive
 
 CONFIG_TREE = {
-    "config.yaml": b"watch_stylesheet: true\nbars:\n  status-bar:\n    enabled: true\n",
-    "styles.css": b".yasb-bar { background-color: rgba(0,0,0,0.5); }\n",
+    "config.yaml": b"theme: yasb\nbars:\n  yasb-bar:\n    enabled: true\n",
+    "themes/yasb.qml": b'import Yasb.Themes\n\nTheme {\n    colors.background: "#202020"\n}\n',
     "assets/wallpaper.png": os.urandom(64 * 1024),
     "assets/fonts/custom.ttf": os.urandom(32 * 1024),
     "scripts/on-start.ps1": b"Write-Host 'hello'\n",
@@ -67,8 +67,8 @@ def test_full_round_trip_onto_a_fresh_machine():
         # The snapshot is what must be opaque. The note and the device name are ordinary
         # columns on the server now, and deliberately readable there.
         payload = blob.read_bytes()
-        assert b"watch_stylesheet" not in payload
-        assert b"yasb-bar" not in payload
+        assert b"theme: yasb" not in payload
+        assert b"colors.background" not in payload
 
         # --- Device B: nothing but the master key and the blob ---
         incoming = base / "device-b" / "download"

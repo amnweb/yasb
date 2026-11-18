@@ -1,15 +1,20 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Templates as T
 import Yasb
+import Yasb.Bar
+import Yasb.Themes
 
 Item {
-    id: menu
+    id: powerMenu
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // The glyph on the bar, drawn in iconFont and the text colour
     property string icon: "\ue7e8"
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
     // The buttons, in order, each with a glyph from iconFont. Actions: lock, signout, sleep, hibernate, restart, shutdown, force_restart, force_shutdown
     property var buttons: [
         { action: "lock", label: qsTr("Lock"), icon: "\ue72e" },
@@ -27,18 +32,39 @@ Item {
     // Fade in and out, in milliseconds
     property int animationDuration: 200
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // The icon on the bar takes the bar's text colour unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // The icon on the bar takes the theme's text colour unless the widget file sets it
+    property color textColor: theme.colors.text
     // Text and icons on the full-screen menu, which is always over a darkened screen
     property color menuColor: "#ffffff"
-    property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The popup: the theme's, unless set here
+    // The user's name, email and account type, each button's glyph and text, and the uptime, in the theme's
+    // popup font family
+    property font userNameFont
+    userNameFont.family: theme.popup.font.family
+    userNameFont.pixelSize: 32
+    userNameFont.weight: Font.DemiBold
+    property font emailFont
+    emailFont.family: theme.popup.font.family
+    emailFont.pixelSize: 13
+    emailFont.weight: Font.DemiBold
+    property font accountTypeFont
+    accountTypeFont.family: theme.popup.font.family
+    accountTypeFont.pixelSize: 11
+    accountTypeFont.weight: Font.DemiBold
+    property int buttonIconSize: 24
+    property font buttonFont
+    buttonFont.family: theme.popup.font.family
+    buttonFont.pixelSize: 13
+    buttonFont.weight: Font.DemiBold
+    property font uptimeFont
+    uptimeFont.family: theme.popup.font.family
+    uptimeFont.pixelSize: 12
 
     // Held so the garbage collector doesn't destroy the open menu
     property Window opened: null
@@ -52,7 +78,7 @@ Item {
     function open() {
         if (opened)
             return
-        const screen = menu.Screen
+        const screen = powerMenu.Screen
         opened = overlay.createObject(null, {
             area: Qt.rect(screen.virtualX, screen.virtualY, screen.width, screen.height)
         })
@@ -75,17 +101,18 @@ Item {
 
     Text {
         anchors.centerIn: parent
-        text: menu.icon
-        color: menu.textColor
-        font.family: menu.iconFont.family
-        font.weight: menu.iconFont.weight
-        font.pixelSize: menu.iconSize
+        text: powerMenu.icon
+        color: powerMenu.textColor
+        font.family: powerMenu.iconFont.family
+        font.weight: powerMenu.iconFont.weight
+        font.variableAxes: powerMenu.iconFont.variableAxes
+        font.pixelSize: powerMenu.iconSize
     }
 
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: menu.open()
+        onClicked: powerMenu.open()
     }
 
     Component {
@@ -130,7 +157,7 @@ Item {
                 if (visible)
                     return
                 // Cleared now, the window itself is deleted later, so the menu can open again straight away
-                menu.opened = null
+                powerMenu.opened = null
                 destroy()
             }
 
@@ -140,7 +167,7 @@ Item {
                 target: window
                 property: "reveal"
                 to: 1
-                duration: menu.animationDuration
+                duration: powerMenu.animationDuration
                 easing.type: Easing.OutCubic
             }
 
@@ -151,7 +178,7 @@ Item {
                     target: window
                     property: "reveal"
                     to: 0
-                    duration: menu.animationDuration
+                    duration: powerMenu.animationDuration
                     easing.type: Easing.InCubic
                 }
 
@@ -167,7 +194,7 @@ Item {
 
             // Blurred behind when the bar has a backdrop, like the bar's popups, and fading with the menu
             Backdrop {
-                bar: menu.Window.window
+                bar: powerMenu.Window.window
                 item: shade
             }
 
@@ -175,7 +202,7 @@ Item {
                 id: shade
 
                 anchors.fill: parent
-                color: Qt.alpha("#000000", menu.dim)
+                color: Qt.alpha("#000000", powerMenu.dim)
                 opacity: window.reveal
             }
 
@@ -198,30 +225,31 @@ Item {
 
                     Column {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        visible: menu.showUser
+                        visible: powerMenu.showUser
                         spacing: 6
 
                         Item {
                             id: avatar
 
                             anchors.horizontalCenter: parent.horizontalCenter
-                            width: menu.avatarSize
-                            height: menu.avatarSize
+                            width: powerMenu.avatarSize
+                            height: powerMenu.avatarSize
 
                             Rectangle {
                                 anchors.fill: parent
                                 radius: width / 2
-                                color: Qt.alpha(menu.menuColor, 0.1)
-                                border.color: Qt.alpha(menu.menuColor, 0.2)
+                                color: Qt.alpha(powerMenu.menuColor, 0.1)
+                                border.color: Qt.alpha(powerMenu.menuColor, 0.2)
                                 visible: picture.status !== Image.Ready
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: "\ue77b"
-                                    color: menu.menuColor
-                                    font.family: menu.iconFont.family
-                                    font.weight: menu.iconFont.weight
-                                    font.pixelSize: Math.round(menu.avatarSize * 0.4)
+                                    color: powerMenu.menuColor
+                                    font.family: powerMenu.iconFont.family
+                                    font.weight: powerMenu.iconFont.weight
+                                    font.variableAxes: powerMenu.iconFont.variableAxes
+                                    font.pixelSize: Math.round(powerMenu.avatarSize * 0.4)
                                 }
                             }
 
@@ -241,7 +269,7 @@ Item {
 
                                     anchors.fill: parent
                                     source: power.avatar
-                                    sourceSize: Qt.size(menu.avatarSize * 2, menu.avatarSize * 2)
+                                    sourceSize: Qt.size(powerMenu.avatarSize * 2, powerMenu.avatarSize * 2)
                                     fillMode: Image.PreserveAspectCrop
                                     asynchronous: true
                                 }
@@ -265,20 +293,16 @@ Item {
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: power.userName
-                            color: menu.menuColor
-                            font.family: menu.font.family
-                            font.pixelSize: 32
-                            font.weight: Font.DemiBold
+                            color: powerMenu.menuColor
+                            font: powerMenu.userNameFont
                         }
 
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             visible: text !== ""
                             text: power.email
-                            color: Qt.alpha(menu.menuColor, 0.7)
-                            font.weight: Font.DemiBold
-                            font.family: menu.font.family
-                            font.pixelSize: 13
+                            color: Qt.alpha(powerMenu.menuColor, 0.7)
+                            font: powerMenu.emailFont
                         }
 
                         Rectangle {
@@ -286,17 +310,15 @@ Item {
                             width: accountLabel.implicitWidth + 16
                             height: accountLabel.implicitHeight + 6
                             radius: height / 2
-                            color: Qt.alpha(menu.menuColor, 0.12)
+                            color: Qt.alpha(powerMenu.menuColor, 0.12)
 
                             Text {
                                 id: accountLabel
 
                                 anchors.centerIn: parent
                                 text: power.accountType
-                                color: Qt.alpha(menu.menuColor, 0.85)
-                                font.family: menu.font.family
-                                font.weight: Font.DemiBold
-                                font.pixelSize: 11
+                                color: Qt.alpha(powerMenu.menuColor, 0.85)
+                                font: powerMenu.accountTypeFont
                             }
                         }
                     }
@@ -308,7 +330,7 @@ Item {
                         spacing: 16
 
                         Repeater {
-                            model: menu.buttons
+                            model: powerMenu.buttons
 
                             T.AbstractButton {
                                 id: button
@@ -336,18 +358,19 @@ Item {
                                         width: 88
                                         height: 88
                                         radius: 44
-                                        color: Qt.alpha(menu.menuColor, button.pressed ? 0.24
+                                        color: Qt.alpha(powerMenu.menuColor, button.pressed ? 0.24
                                             : button.hovered || button.visualFocus ? 0.18 : 0.08)
                                         border.width: button.visualFocus ? 2 : 1
-                                        border.color: Qt.alpha(menu.menuColor, button.visualFocus ? 0.28 : 0.014)
+                                        border.color: Qt.alpha(powerMenu.menuColor, button.visualFocus ? 0.28 : 0.014)
 
                                         Text {
                                             anchors.centerIn: parent
                                             text: button.modelData.icon ?? ""
-                                            color: menu.menuColor
-                                            font.family: menu.iconFont.family
-                                            font.weight: menu.iconFont.weight
-                                            font.pixelSize: 24
+                                            color: powerMenu.menuColor
+                                            font.family: powerMenu.iconFont.family
+                                            font.weight: powerMenu.iconFont.weight
+                                            font.variableAxes: powerMenu.iconFont.variableAxes
+                                            font.pixelSize: powerMenu.buttonIconSize
                                         }
                                     }
 
@@ -356,10 +379,8 @@ Item {
                                         anchors.top: disc.bottom
                                         anchors.topMargin: 10
                                         text: button.text
-                                        color: menu.menuColor
-                                        font.family: menu.font.family
-                                        font.pixelSize: 13
-                                        font.weight: Font.DemiBold
+                                        color: powerMenu.menuColor
+                                        font: powerMenu.buttonFont
                                     }
                                 }
                             }
@@ -371,12 +392,11 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: 48
-                    visible: menu.showUptime
+                    visible: powerMenu.showUptime
                     opacity: window.reveal
-                    text: menu.uptimeText(power.uptime)
-                    color: Qt.alpha(menu.menuColor, 0.7)
-                    font.family: menu.font.family
-                    font.pixelSize: 12
+                    text: powerMenu.uptimeText(power.uptime)
+                    color: Qt.alpha(powerMenu.menuColor, 0.7)
+                    font: powerMenu.uptimeFont
                 }
             }
         }

@@ -55,15 +55,6 @@ class OVERLAPPED(ct.Structure):
     ]
 
 
-class ACCENTPOLICY(ct.Structure):
-    _fields_ = [
-        ("AccentState", ct.c_uint),
-        ("AccentFlags", ct.c_uint),
-        ("GradientColor", ct.c_uint),
-        ("AnimationId", ct.c_uint),
-    ]
-
-
 class MARGINS(ct.Structure):
     _fields_ = [
         ("cxLeftWidth", ct.c_int),
@@ -71,10 +62,6 @@ class MARGINS(ct.Structure):
         ("cyTopHeight", ct.c_int),
         ("cyBottomHeight", ct.c_int),
     ]
-
-
-class WINDOWCOMPOSITIONATTRIBDATA(ct.Structure):
-    _fields_ = [("Attribute", ct.c_int), ("Data", ct.POINTER(ct.c_int)), ("SizeOfData", ct.c_size_t)]
 
 
 class SYSTEM_INFO(ct.Structure):
@@ -1040,6 +1027,17 @@ class DXGI_ADAPTER_DESC(ct.Structure):
         ("DedicatedSystemMemory", c_size_t),
         ("SharedSystemMemory", c_size_t),
         ("AdapterLuid", LUID),
+    ]
+
+
+class D3D11_BOX(ct.Structure):
+    _fields_ = [
+        ("left", UINT),
+        ("top", UINT),
+        ("front", UINT),
+        ("right", UINT),
+        ("bottom", UINT),
+        ("back", UINT),
     ]
 
 

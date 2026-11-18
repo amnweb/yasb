@@ -17,6 +17,7 @@ from core.services.komorebi.workspaces import KomorebiWorkspacesModel
 from core.utils.icons.service import IconService
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 # The monitor handles komorebi knows the two screens by
@@ -302,7 +303,7 @@ def make_widget(engine: QQmlEngine, properties: dict[str, Any]) -> tuple[QQuickI
     path = BUILTIN_WIDGETS_DIR / "KomorebiWorkspaces" / "KomorebiWorkspaces.qml"
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(path)))
     initial: dict[str | None, Any] = {name: value for name, value in properties.items()}
-    widget = component.createWithInitialProperties(initial)
+    widget = create_with_bar(component, initial)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     return widget, warnings
 

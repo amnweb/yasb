@@ -1,5 +1,8 @@
 import QtQuick
+import QtQuick.Controls
 import Yasb
+import Yasb.Bar
+import Yasb.Themes
 
 Item {
     id: activeWindow
@@ -8,7 +11,7 @@ Item {
     property string alternateLabel: "[class_name='{win[class_name]}' exe='{win[process][name]}' hwnd={win[hwnd]}]"
     property string noWindowLabel: ""
     property bool showIcon: true
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
     property int maxLength: 32
     property string ellipsis: "..."
     property bool monitorExclusive: false
@@ -16,30 +19,24 @@ Item {
     property list<string> ignoreTitles: []
     property list<string> ignoreClasses: []
     property list<string> ignoreProcesses: []
-    property Item bar: null
-    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
 
-    readonly property alias tracker: tracker
-    readonly property bool dark: Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    readonly property bool shown: tracker.hasWindow || noWindowLabel !== ""
+    readonly property alias tracker: windowTracker
+    readonly property bool dark: theme.dark
+    readonly property bool shown: windowTracker.hasWindow || noWindowLabel !== ""
 
     implicitWidth: shown ? row.implicitWidth : 0
     implicitHeight: shown ? row.implicitHeight : 0
     visible: shown
 
     ActiveWindowTracker {
-        id: tracker
+        id: windowTracker
 
-        screenName: activeWindow.bar?.screenName ?? ""
+        screenName: activeWindow.bar.screenName
         monitorExclusive: activeWindow.monitorExclusive
         label: activeWindow.label
         alternateLabel: activeWindow.alternateLabel
@@ -60,17 +57,17 @@ Item {
 
         Image {
             y: Math.round((parent.height - height) / 2)
-            visible: activeWindow.showIcon && tracker.icon !== ""
-            source: tracker.icon
+            visible: activeWindow.showIcon && windowTracker.icon !== ""
+            source: windowTracker.icon
             width: activeWindow.iconSize
             height: activeWindow.iconSize
             sourceSize: Qt.size(activeWindow.iconSize, activeWindow.iconSize)
         }
 
-        Text {
+        Label {
             objectName: "title"
             anchors.verticalCenter: parent.verticalCenter
-            text: tracker.text
+            text: windowTracker.text
             textFormat: Text.PlainText
             color: activeWindow.textColor
             font: activeWindow.font
@@ -79,6 +76,6 @@ Item {
 
     MouseArea {
         anchors.fill: parent
-        onClicked: tracker.toggleLabel()
+        onClicked: windowTracker.toggleLabel()
     }
 }

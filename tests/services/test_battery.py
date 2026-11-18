@@ -10,6 +10,7 @@ from core.services.battery.battery_api import POWER_TIME_UNLIMITED, BatteryData
 from core.services.battery.monitor import BatteryMonitor
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 ON_BATTERY = BatteryData(
@@ -50,7 +51,7 @@ def create_widget() -> tuple[QQmlEngine, QQuickItem, QQuickItem]:
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Battery" / "Battery.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
     # Qt only counts an item visible inside a visible parent

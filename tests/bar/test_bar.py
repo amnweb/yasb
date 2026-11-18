@@ -19,7 +19,7 @@ from core.bar.backdrop import Backdrop
 from core.bar.hotkeys import WidgetHotkeys, widget_items
 from core.bar.window import BarWindow
 from core.qml_types import register_qml_types
-from core.utils.win32 import app_bar
+from core.utils.win32 import app_bar, composition
 from core.utils.win32.structs import APPBARDATA
 from core.validation.bar import BarConfig
 from settings import QML_IMPORT_PATH
@@ -39,7 +39,8 @@ def make_bar(qapp: QGuiApplication, fake_app_bar: None) -> Iterator[MakeBar]:
     def make(**config: Any) -> BarWindow:
         screen = QGuiApplication.primaryScreen()
         assert screen is not None
-        bar = BarWindow(engine, "test-bar", screen, BarConfig.model_validate(config))
+        # The pixel checks are measured on a 30 px bar
+        bar = BarWindow(engine, "test-bar", screen, BarConfig.model_validate({"thickness": 30, **config}))
         bars.append(bar)
         return bar
 
@@ -161,7 +162,7 @@ def test_cli_toggles_the_bar_on_its_own_screen(make_bar: MakeBar):
 
 
 def test_qml_gets_the_resolved_widget_files(make_bar: MakeBar, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    path = write_widget(tmp_path, "clock", "import QtQuick\nItem {}\n")
+    path = write_widget(tmp_path, "clock", "import QtQuick\nItem { property Item bar: null }\n")
     monkeypatch.setattr(widget_files, "USER_WIDGETS_DIR", tmp_path)
     monkeypatch.setattr(widget_files, "BUILTIN_WIDGETS_DIR", tmp_path / "builtin")
 
@@ -179,7 +180,11 @@ def widget_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(widget_files, "USER_WIDGETS_DIR", tmp_path)
     monkeypatch.setattr(widget_files, "BUILTIN_WIDGETS_DIR", tmp_path / "builtin")
     for name, width in WIDGET_WIDTHS.items():
-        write_widget(tmp_path, name, f'import QtQuick\nRectangle {{ objectName: "{name}"; implicitWidth: {width} }}\n')
+        write_widget(
+            tmp_path,
+            name,
+            f'import QtQuick\nRectangle {{ objectName: "{name}"; property Item bar: null; implicitWidth: {width} }}\n',
+        )
     write_widget(tmp_path, "broken", "import QtQuick\nRectangle {\n")
     return tmp_path
 
@@ -231,7 +236,7 @@ def _bar_file(folder: Path, body: str) -> str:
 
 def test_a_bar_file_can_stop_a_slot_from_stretching(make_bar: MakeBar, widget_dir: Path):
     file = _bar_file(widget_dir, "import Yasb.Bar\n\nBar {\n    leftSlot.stretch: false\n}\n")
-    bar = make_bar(length=600, widgets=WIDGETS, file=file)
+    bar = make_bar(length=600, widgets=WIDGETS, layout=file)
     wait(50)
     center_width = (600 - 2 * PADDING - LEFT) / 2
     assert abs(_left(bar, "c") - (PADDING + LEFT + (center_width - 100) / 2)) < 1
@@ -239,15 +244,17 @@ def test_a_bar_file_can_stop_a_slot_from_stretching(make_bar: MakeBar, widget_di
 
 def test_a_bar_file_can_align_a_slot(make_bar: MakeBar, widget_dir: Path):
     file = _bar_file(widget_dir, 'import Yasb.Bar\n\nBar {\n    centerSlot.alignment: "left"\n}\n')
-    bar = make_bar(length=600, widgets=WIDGETS, file=file)
+    bar = make_bar(length=600, widgets=WIDGETS, layout=file)
     wait(50)
     assert abs(_left(bar, "c") - (PADDING + (600 - 2 * PADDING) / 3)) < 1
 
 
 @pytest.mark.parametrize("island", [False, True], ids=["bar", "island-bar"])
 def test_widgets_sit_on_whole_pixels(make_bar: MakeBar, widget_dir: Path, island: bool):
-    write_widget(widget_dir, "e", 'import QtQuick\nRectangle { objectName: "e"; implicitWidth: 40.4 }\n')
-    file = {"file": _bar_file(widget_dir, ISLAND_BAR)} if island else {}
+    write_widget(
+        widget_dir, "e", 'import QtQuick\nRectangle { objectName: "e"; property Item bar: null; implicitWidth: 40.4 }\n'
+    )
+    file = {"layout": _bar_file(widget_dir, ISLAND_BAR)} if island else {}
     # 576 pixels shared by three sections and a centred widget would otherwise put widgets between pixels
     bar = make_bar(length=600, widgets={"left": ["e", "a"], "center": ["c"], "right": ["d"]}, **file)
     wait(50)
@@ -272,7 +279,7 @@ def _root(bar: BarWindow) -> QQuickItem:
 
 def test_a_bar_file_sets_the_look(make_bar: MakeBar, widget_dir: Path):
     file = _bar_file(widget_dir, 'import Yasb.Bar\n\nBar {\n    color: "#ff0000"\n    padding: 20\n}\n')
-    bar = make_bar(length=600, widgets=WIDGETS, file=file)
+    bar = make_bar(length=600, widgets=WIDGETS, layout=file)
     wait(50)
     assert _root(bar).property("color") == QColor("#ff0000")
     assert _left(bar, "a") == 20
@@ -280,7 +287,7 @@ def test_a_bar_file_sets_the_look(make_bar: MakeBar, widget_dir: Path):
 
 def test_invalid_backdrop_shapes_leave_the_bar_without_blur(make_bar: MakeBar, widget_dir: Path):
     file = _bar_file(widget_dir, "import Yasb.Bar\n\nBar {\n    backdropShapes: [{ x: 0, y: 0 }]\n}\n")
-    backdrop = make_bar(backdrop=True, file=file)._backdrop_window
+    backdrop = make_bar(backdrop=True, layout=file)._backdrop_window
     assert backdrop is not None and backdrop._shapes == []
 
 
@@ -289,9 +296,9 @@ def _opened_backdrop_popup(make_bar: MakeBar, widget_dir: Path, backdrop: bool) 
         widget_dir,
         "import QtQuick\nimport Yasb.Bar\nimport Yasb.Common\n\nBar {\n    id: root\n    property alias popup: popup\n"
         "    BackdropPopup {\n        id: popup\n        width: 200\n        height: 120\n        anchor: root\n"
-        "        backdropItem: panel\n        Rectangle { id: panel; anchors.fill: parent; radius: 8 }\n    }\n}\n",
+        "        theme: root.theme\n        backdropItem: panel\n        Rectangle { id: panel; anchors.fill: parent; radius: 8 }\n    }\n}\n",
     )
-    popup = _root(make_bar(backdrop=backdrop, file=file)).property("popup")
+    popup = _root(make_bar(backdrop=backdrop, layout=file)).property("popup")
     QMetaObject.invokeMethod(popup, "open")
     wait(50)
     helper = popup.findChild(Backdrop)
@@ -308,13 +315,24 @@ def test_a_backdrop_popup_has_no_blur_when_its_bar_has_none(make_bar: MakeBar, w
     assert _opened_backdrop_popup(make_bar, widget_dir, backdrop=False)._backdrop_window is None
 
 
+def test_on_windows_10_a_backdrop_bar_and_its_popups_have_no_blur_and_say_so_once(
+    make_bar: MakeBar, widget_dir: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    # As on a Windows older than the backdrop needs
+    monkeypatch.setattr(composition, "HOST_BACKDROP_BUILD", 10**9)
+    assert _opened_backdrop_popup(make_bar, widget_dir, backdrop=True)._backdrop_window is None
+    assert [(record.levelname, record.getMessage()) for record in caplog.records if record.levelno >= 30] == [
+        ("WARNING", "Bar test-bar has no blur: its backdrop needs Windows 11")
+    ]
+
+
 def test_a_custom_layout_places_its_own_slots(make_bar: MakeBar, widget_dir: Path):
     file = _bar_file(
         widget_dir,
         "import QtQuick\nimport Yasb.Bar\n\nBarBase {\n    Row {\n        height: parent.height\n"
         '        WidgetSlot { name: "first" }\n        WidgetSlot { name: "second" }\n    }\n}\n',
     )
-    bar = make_bar(length=600, widgets={"first": ["a"], "second": ["c"]}, file=file)
+    bar = make_bar(length=600, widgets={"first": ["a"], "second": ["c"]}, layout=file)
     wait(50)
     assert set(_root(bar).property("slotNames")) == {"first", "second"}
     assert _left(bar, "a") == PADDING
@@ -343,8 +361,8 @@ def test_a_bad_bar_file_falls_back_to_the_built_in_bar(
     monkeypatch.setattr(window, "show_alert", alert)
     file = str(widget_dir / "bars" / "missing.qml") if body is None else _bar_file(widget_dir, body)
 
-    bar = make_bar(widgets=WIDGETS, file=file)
-    assert alerts == ["Failed to load the bar file of bar 'test-bar'"]
+    bar = make_bar(widgets=WIDGETS, layout=file)
+    assert alerts == ["Failed to load the layout of bar 'test-bar'"]
     assert set(_root(bar).property("slotNames")) == {"left", "center", "right"}
 
 
@@ -352,7 +370,8 @@ def test_a_widgets_hotkey_runs_its_handler(make_bar: MakeBar, widget_dir: Path):
     write_widget(
         widget_dir,
         "keyed",
-        "import QtQuick\nimport Yasb\n\nItem {\n    id: keyed\n\n    property int pressed: 0\n    implicitWidth: 10\n\n"
+        "import QtQuick\nimport Yasb\n\nItem {\n    id: keyed\n\n    property Item bar: null\n    property int pressed: 0\n"
+        "    implicitWidth: 10\n\n"
         '    Hotkey {\n        keys: "win+alt+k"\n        screen: "cursor"\n        onActivated: keyed.pressed += 1\n    }\n}\n',
     )
     bar = make_bar(widgets={"left": ["keyed"]})
@@ -394,13 +413,13 @@ def _islands(bar: BarWindow) -> list[list[float]]:
 
 
 def test_islands_hug_the_widgets_of_each_slot(make_bar: MakeBar, widget_dir: Path):
-    bar = make_bar(length=600, widgets={"left": ["a"], "center": ["c"]}, file=_bar_file(widget_dir, ISLAND_BAR))
+    bar = make_bar(length=600, widgets={"left": ["a"], "center": ["c"]}, layout=_bar_file(widget_dir, ISLAND_BAR))
     wait(50)
     assert _islands(bar) == [[0, 60], [240, 360]]
 
 
 def test_an_island_follows_its_widgets(make_bar: MakeBar, widget_dir: Path):
-    bar = make_bar(length=600, widgets={"left": ["a"]}, file=_bar_file(widget_dir, ISLAND_BAR))
+    bar = make_bar(length=600, widgets={"left": ["a"]}, layout=_bar_file(widget_dir, ISLAND_BAR))
     wait(50)
     widget = find_item(_root(bar), "a")
     assert widget is not None
@@ -411,20 +430,26 @@ def test_an_island_follows_its_widgets(make_bar: MakeBar, widget_dir: Path):
 
 def test_touching_islands_merge(make_bar: MakeBar, widget_dir: Path):
     # Just long enough for the widgets, so the slots touch
-    bar = make_bar(length=PADDING + LEFT + 100 + 40 + PADDING, widgets=WIDGETS, file=_bar_file(widget_dir, ISLAND_BAR))
+    bar = make_bar(
+        length=PADDING + LEFT + 100 + 40 + PADDING, widgets=WIDGETS, layout=_bar_file(widget_dir, ISLAND_BAR)
+    )
     wait(50)
     assert _islands(bar) == [[0, _root(bar).width()]]
 
 
 def test_an_island_bar_ignores_auto_length(make_bar: MakeBar, widget_dir: Path):
-    bar = make_bar(length="auto", widgets=WIDGETS, file=_bar_file(widget_dir, ISLAND_BAR))
+    bar = make_bar(length="auto", widgets=WIDGETS, layout=_bar_file(widget_dir, ISLAND_BAR))
     wait(50)
     assert _root(bar).width() == bar.width() == bar.target_screen.geometry().width()
 
 
 def test_a_widget_can_sit_outside_the_islands(make_bar: MakeBar, widget_dir: Path):
-    write_widget(widget_dir, "x", "import QtQuick\nItem { property bool island: false; implicitWidth: 30 }\n")
-    bar = make_bar(length=600, widgets={"left": ["a", "x", "b"]}, file=_bar_file(widget_dir, ISLAND_BAR))
+    write_widget(
+        widget_dir,
+        "x",
+        "import QtQuick\nItem { property Item bar: null; property bool island: false; implicitWidth: 30 }\n",
+    )
+    bar = make_bar(length=600, widgets={"left": ["a", "x", "b"]}, layout=_bar_file(widget_dir, ISLAND_BAR))
     wait(50)
     assert _islands(bar) == [[0, 60], [70 + 2 * SPACING, 150 + 2 * SPACING]]
 
@@ -432,7 +457,7 @@ def test_a_widget_can_sit_outside_the_islands(make_bar: MakeBar, widget_dir: Pat
 @pytest.mark.parametrize(("edge", "rail", "gap"), [("top", 2, 20), ("bottom", 27, 10)])
 def test_islands_are_drawn_and_the_gaps_left_empty(make_bar: MakeBar, widget_dir: Path, edge: str, rail: int, gap: int):
     file = _bar_file(widget_dir, ISLAND_BAR)
-    bar = make_bar(length=600, edge=edge, widgets={"left": ["a"], "center": ["c"]}, file=file)
+    bar = make_bar(length=600, edge=edge, widgets={"left": ["a"], "center": ["c"]}, layout=file)
     bar.show()
     wait(100)
     image = bar.grabWindow()
@@ -457,7 +482,7 @@ def test_edge_curves_grow_a_full_width_window(
     hollow: tuple[int, int],
     strip: tuple[int, int],
 ):
-    bar = make_bar(edge=edge, widgets={"left": ["a"]}, file=_bar_file(widget_dir, EDGE_CURVES_BAR))
+    bar = make_bar(edge=edge, widgets={"left": ["a"]}, layout=_bar_file(widget_dir, EDGE_CURVES_BAR))
     bar.show()
     wait(100)
     screen = bar.target_screen.geometry()
@@ -471,7 +496,7 @@ def test_edge_curves_grow_a_full_width_window(
 
 
 def test_edge_curves_need_a_full_width_bar(make_bar: MakeBar, widget_dir: Path):
-    bar = make_bar(length=600, widgets={"left": ["a"]}, file=_bar_file(widget_dir, EDGE_CURVES_BAR))
+    bar = make_bar(length=600, widgets={"left": ["a"]}, layout=_bar_file(widget_dir, EDGE_CURVES_BAR))
     assert bar.height() == 30
     assert bar.mask().isEmpty()
 
@@ -506,7 +531,7 @@ def _blue(color: QColor) -> bool:
 @pytest.mark.parametrize("edge", ["top", "bottom"])
 def test_a_vertical_fill_gradient_runs_top_to_bottom_on_either_edge(make_bar: MakeBar, widget_dir: Path, edge: str):
     file = _bar_file(widget_dir, _filled_island_bar("y2: bar.height"))
-    bar = make_bar(length=600, edge=edge, widgets={"left": ["a"]}, file=file)
+    bar = make_bar(length=600, edge=edge, widgets={"left": ["a"]}, layout=file)
     bar.show()
     wait(100)
     image = bar.grabWindow()
@@ -516,7 +541,7 @@ def test_a_vertical_fill_gradient_runs_top_to_bottom_on_either_edge(make_bar: Ma
 
 def test_a_horizontal_fill_gradient_spans_the_bar(make_bar: MakeBar, widget_dir: Path):
     file = _bar_file(widget_dir, _filled_island_bar("x2: bar.width"))
-    bar = make_bar(length=600, widgets={"left": ["a"]}, file=file)
+    bar = make_bar(length=600, widgets={"left": ["a"]}, layout=file)
     bar.show()
     wait(100)
     image = bar.grabWindow()
@@ -526,7 +551,7 @@ def test_a_horizontal_fill_gradient_spans_the_bar(make_bar: MakeBar, widget_dir:
 
 
 def test_a_bar_gradient_replaces_its_color(make_bar: MakeBar, widget_dir: Path):
-    bar = make_bar(length=600, widgets={"left": ["a"]}, file=_bar_file(widget_dir, _gradient_bar("Horizontal")))
+    bar = make_bar(length=600, widgets={"left": ["a"]}, layout=_bar_file(widget_dir, _gradient_bar("Horizontal")))
     bar.show()
     wait(100)
     image = bar.grabWindow()
@@ -541,7 +566,7 @@ def test_a_changed_gradient_stop_repaints_the_islands(make_bar: MakeBar, widget_
         "        y2: bar.height\n        GradientStop { position: 0; color: bar.first }\n"
         '        GradientStop { position: 1; color: "#0000ff" }\n    }\n}\n'
     )
-    bar = make_bar(length=600, widgets={"left": ["a"]}, file=_bar_file(widget_dir, body))
+    bar = make_bar(length=600, widgets={"left": ["a"]}, layout=_bar_file(widget_dir, body))
     bar.show()
     wait(100)
     _root(bar).setProperty("first", QColor("#0000ff"))
@@ -557,7 +582,7 @@ def test_switching_fill_gradients_repaints_the_islands(make_bar: MakeBar, widget
         '    property LinearGradient blue: LinearGradient { GradientStop { position: 0; color: "#0000ff" } }\n'
         "    fillGradient: bar.warm ? bar.red : bar.blue\n}\n"
     )
-    bar = make_bar(length=600, widgets={"left": ["a"]}, file=_bar_file(widget_dir, body))
+    bar = make_bar(length=600, widgets={"left": ["a"]}, layout=_bar_file(widget_dir, body))
     bar.show()
     wait(100)
     assert _red(bar.grabWindow().pixelColor(5, 1))
@@ -568,7 +593,11 @@ def test_switching_fill_gradients_repaints_the_islands(make_bar: MakeBar, widget
 
 def _tall_widgets(folder: Path, heights: dict[str, int]) -> None:
     for name, height in heights.items():
-        write_widget(folder, name, f'import QtQuick\nRectangle {{ objectName: "{name}"; implicitHeight: {height} }}\n')
+        write_widget(
+            folder,
+            name,
+            f'import QtQuick\nRectangle {{ objectName: "{name}"; property Item bar: null; implicitHeight: {height} }}\n',
+        )
 
 
 def test_a_vertical_bar_stacks_its_slots_top_to_bottom(make_bar: MakeBar, widget_dir: Path):
@@ -602,7 +631,7 @@ def test_a_vertical_island_bar_curves_into_the_screen_edges(
     strip: tuple[int, int],
 ):
     _tall_widgets(widget_dir, {"t": 40})
-    bar = make_bar(edge=edge, align="top", widgets={"top": ["t"]}, file=_bar_file(widget_dir, EDGE_CURVES_BAR))
+    bar = make_bar(edge=edge, align="top", widgets={"top": ["t"]}, layout=_bar_file(widget_dir, EDGE_CURVES_BAR))
     bar.show()
     wait(100)
     assert (bar.width(), _root(bar).width(), _root(bar).x()) == (44, 30, item_x)
@@ -665,7 +694,7 @@ def test_a_right_click_on_a_widget_that_shrinks_opens_no_bar_menu(make_bar: Make
     write_widget(
         widget_dir,
         "shrinks",
-        'import QtQuick\nRectangle {\n    objectName: "shrinks"\n    implicitWidth: 200\n'
+        'import QtQuick\nRectangle {\n    objectName: "shrinks"\n    property Item bar: null\n    implicitWidth: 200\n'
         "    MouseArea {\n        anchors.fill: parent\n        acceptedButtons: Qt.RightButton\n"
         "        onClicked: parent.implicitWidth = 40\n    }\n}\n",
     )

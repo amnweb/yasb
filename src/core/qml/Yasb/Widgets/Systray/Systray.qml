@@ -5,18 +5,19 @@ import QtQuick.Controls
 import Yasb
 import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
     id: systray
 
     // Chevron glyph shown when the button has no label; rotated to point away from the bar edge.
-    property string chevronIcon: ""
+    property string chevronIcon: "\ue972"
     // Button label; empty shows the chevron.
     property string labelCollapsed: ""
     property string labelExpanded: ""
     // Button side relative to pinned icons: left or right (top or bottom on a vertical bar).
     property string labelPosition: "left"
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
     // Modifier used to pin or unpin an icon: ctrl, alt, or shift.
     property string pinModifier: "alt"
     property int iconsPerRow: 5
@@ -31,27 +32,45 @@ Item {
     property bool tooltip: true
     // Use the Explorer hook instead of the legacy tray window; the first widget sets this for all bars.
     property bool useHook: true
-    property color hoveredColor: dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.1)
-    property BarBase bar: null
+    property color hoveredColor: theme.colors.hover
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
 
-    readonly property bool dark: bar ? bar.dark : Application.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Inherit the bar's text color and font unless overridden here.
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property color foreground: dark ? "#ebebeb" : "#1f1f1f"
-    readonly property string edge: bar?.edge ?? "top"
-    readonly property bool vertical: bar?.vertical ?? false
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    // The right-click menu: the theme's, unless set here
+    property color menuColor: theme.menu.background
+    property color menuBorderColor: theme.menu.border
+    property color menuTextColor: theme.colors.text
+    property real menuRadius: theme.menu.radius
+    property font menuFont: theme.menu.font
+    // Milliseconds the right-click menu takes to fade in
+    property int menuOpenDuration: theme.menu.openDuration
+    property color popupTextColor: theme.colors.text
+    property color popupTertiaryTextColor: theme.colors.textTertiary
+    readonly property string edge: bar.edge
+    readonly property bool vertical: bar.vertical
 
     readonly property int pinKey: {
         switch (pinModifier.toLowerCase()) {
@@ -71,29 +90,30 @@ Item {
         return Math.max(low, Math.min(value, high))
     }
 
-    // Place the popup beside the button, away from the bar edge and inside the screen.
+    // Place the popup popupGap away from the bar, lined up with the button, and inside the screen.
     function placePopup() {
         const button = toggle.mapToGlobal(0, 0)
-        const gap = 6
+        const start = mapToGlobal(0, 0)
+        const gap = popupGap
         const margin = 8
         let x
         let y
         switch (edge) {
         case "bottom":
             x = alignedPopupX(button.x)
-            y = button.y - popup.height - gap
+            y = start.y - popup.height - gap
             break
         case "left":
-            x = button.x + toggle.width + gap
+            x = start.x + width + gap
             y = button.y + (toggle.height - popup.height) / 2
             break
         case "right":
-            x = button.x - popup.width - gap
+            x = start.x - popup.width - gap
             y = button.y + (toggle.height - popup.height) / 2
             break
         default:
             x = alignedPopupX(button.x)
-            y = button.y + toggle.height + gap
+            y = start.y + height + gap
             break
         }
         const screen = systray.Screen
@@ -177,7 +197,7 @@ Item {
     SystrayModel {
         id: tray
 
-        screenName: systray.bar?.screenName ?? ""
+        screenName: systray.bar.screenName
         showBattery: systray.showBattery
         showVolume: systray.showVolume
         showNetwork: systray.showNetwork
@@ -272,7 +292,7 @@ Item {
             radius: 4
             color: {
                 if (button.dragOver)
-                    return Qt.alpha(systray.foreground, 0.16)
+                    return Qt.alpha(systray.popupTextColor, 0.16)
                 if (hover.hovered && !systray.dragging)
                     return systray.hoveredColor
                 return "transparent"
@@ -371,7 +391,7 @@ Item {
                 color: toggleHover.hovered ? systray.hoveredColor : "transparent"
             }
 
-            Text {
+            Label {
                 id: labelText
 
                 anchors.centerIn: parent
@@ -389,6 +409,7 @@ Item {
                 color: systray.textColor
                 font.family: systray.iconFont.family
                 font.weight: systray.iconFont.weight
+                font.variableAxes: systray.iconFont.variableAxes
                 font.pixelSize: systray.iconSize
                 // Point away from the bar edge while closed, and toward it while open.
                 rotation: {
@@ -506,13 +527,21 @@ Item {
                 rightInset: 0
                 bottomInset: 0
                 popupType: Popup.Item
+                // Fades in when it opens, in place of the style's growing from a third of its height
+                enter: Transition {
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: systray.menuOpenDuration; easing.type: Easing.OutCubic }
+                }
                 onClosed: menuWindow.close()
+                font: systray.menuFont
+                // Active and inactive only, so disabled controls keep the style's dimmed colours
+                palette.active.text: systray.menuTextColor
+                palette.inactive.text: systray.menuTextColor
 
                 background: Rectangle {
                     implicitWidth: 180
-                    radius: 8
-                    color: "#222222"
-                    border.color: "#363636"
+                    radius: systray.menuRadius
+                    color: systray.menuColor
+                    border.color: systray.menuBorderColor
                 }
 
                 MenuItem {
@@ -533,19 +562,21 @@ Item {
         readonly property int rows: Math.max(1, Math.ceil(iconCount / columns))
         // Wide enough for "No icons" while there are none
         readonly property int gridWidth: iconCount > 0 ? columns * cell : 120
-        // Surface margins and drop area padding on both sides.
-        readonly property int frame: 2 * 8 + 2 * 4
+        // Drop area padding on both sides
+        readonly property int frame: 2 * 4
 
         objectName: "menu"
         title: "Systray"
         width: gridWidth + frame
         height: rows * cell + frame
         anchor: toggle
+        font: systray.popupFont
+        theme: systray.theme
         backdropItem: surface
         // Keep the popup open during a drag or while an icon's app shows its menu.
         pinned: systray.dragging || tray.menuOpen
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: systray.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: systray.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -555,11 +586,10 @@ Item {
             id: surface
 
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: systray.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: systray.popupRadius
+            color: systray.popupColor
             border.width: 1
-            border.color: systray.dark ? "#3A3A3A" : "#D9D9D9"
+            border.color: systray.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: systray.edge === "bottom" ? Item.Bottom : Item.Top
@@ -576,8 +606,8 @@ Item {
                     anchors.centerIn: parent
                     visible: popup.iconCount === 0
                     text: systray.dragging ? "Drop here" : "No icons"
-                    color: Qt.alpha(systray.foreground, 0.5)
-                    font.pixelSize: 12
+                    color: systray.popupTertiaryTextColor
+                    font: systray.popupSmallFont
                 }
 
                 Grid {

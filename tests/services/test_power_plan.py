@@ -16,6 +16,7 @@ from core.services.power_plan import power_plan_api as api
 from core.utils.win32.bindings.kernel32 import SetEvent
 from core.widget_files import find_widget_file
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 BALANCED = "381b4222-f694-41f0-9685-ff5bb260df2e"
@@ -67,7 +68,7 @@ def test_popup_selects_the_plan_confirmed_by_windows(qapp: QGuiApplication, monk
     path = find_widget_file("PowerPlan")
     assert path is not None
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(path)))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
 
     try:

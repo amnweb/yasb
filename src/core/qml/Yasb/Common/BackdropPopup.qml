@@ -1,5 +1,7 @@
 import QtQuick
+import QtQuick.Controls
 import Yasb
+import Yasb.Themes
 
 // A popup in a window of its own, blurred behind `backdropItem` when its bar has a backdrop. `x`, `y`,
 // `width` and `height` are the popup on screen. It closes on Escape, when it loses focus and when the bar is
@@ -13,6 +15,10 @@ QtObject {
     property real height: 0
     // The item that opens the popup, usually the widget; pressing it toggles instead of closing
     property Item anchor: null
+    // The widget's theme; the controls in the popup take their accent and text colours from it
+    required property Theme theme
+    // The font every Label and control in the popup takes, the widget's popupFont
+    property font font
     // The item the blur follows, with its position, size, rounded corners and opacity
     property Item backdropItem: null
     // Animations a widget can set; the popup runs `enter` after it shows and `exit` before it hides
@@ -26,9 +32,9 @@ QtObject {
     property bool opening: false
     // Frames left until the window hides, so the closed state is drawn first
     property int framesUntilHidden: 0
-    property alias visible: window.visible
-    property alias title: window.title
-    property alias color: window.color
+    property alias visible: popupWindow.visible
+    property alias title: popupWindow.title
+    property alias color: popupWindow.color
 
     default property alias content: body.data
 
@@ -47,8 +53,12 @@ QtObject {
         item: popup.backdropItem
     }
 
+    readonly property PopupGraphics graphics: PopupGraphics {
+        window: popup.window
+    }
+
     readonly property Window window: Window {
-        id: window
+        id: popupWindow
 
         readonly property real roomX: Math.round(popup.side === "left" ? popup.windowWidth - popup.width
             : popup.side === "right" ? 0 : (popup.windowWidth - popup.width) / 2)
@@ -61,6 +71,15 @@ QtObject {
         transientParent: null
         flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.NoDropShadowWindowHint
         color: "transparent"
+        // Active and inactive only, so disabled controls keep the style's dimmed colours
+        palette.active.accent: popup.theme.colors.accent
+        palette.active.text: popup.theme.colors.text
+        palette.active.windowText: popup.theme.colors.text
+        palette.active.buttonText: popup.theme.colors.text
+        palette.inactive.accent: popup.theme.colors.accent
+        palette.inactive.text: popup.theme.colors.text
+        palette.inactive.windowText: popup.theme.colors.text
+        palette.inactive.buttonText: popup.theme.colors.text
         x: frame.x
         y: frame.y
         width: frame.width
@@ -69,7 +88,7 @@ QtObject {
         onActiveChanged: {
             if (!active && !popup.opening && !popup.pinned) {
                 Qt.callLater(() => {
-                    if (window.visible && !window.active && !popup.opening && !popup.pinned && !popup.bar?.active)
+                    if (popupWindow.visible && !popupWindow.active && !popup.opening && !popup.pinned && !popup.anchor?.Window.active)
                         popup.close()
                 })
             }
@@ -87,10 +106,15 @@ QtObject {
         onAfterAnimating: {
             if (popup.framesUntilHidden === 0)
                 return
-            if (--popup.framesUntilHidden === 0)
-                window.hide()
-            else
-                window.update()
+            if (--popup.framesUntilHidden === 0) {
+                // Hidden after this signal: giving back the graphics inside it hangs the app
+                Qt.callLater(() => {
+                    if (popup.closing)
+                        popupWindow.hide()
+                })
+            } else {
+                popupWindow.update()
+            }
         }
 
         // A press in the room around the popup counts as a press outside it
@@ -103,18 +127,20 @@ QtObject {
             }
         }
 
-        Item {
+        // A Control, so every Label and control in the popup takes the popup's font
+        Control {
             id: body
 
-            x: window.roomX
-            y: window.roomY
+            font: popup.font
+            x: popupWindow.roomX
+            y: popupWindow.roomY
             width: popup.width
             height: popup.height
         }
 
         Shortcut {
             sequence: "Escape"
-            enabled: window.visible
+            enabled: popupWindow.visible
             onActivated: popup.close()
         }
     }
@@ -127,31 +153,31 @@ QtObject {
         side = sideOfAnchor()
         makeRoom()
         // Windows rescales only visible windows, so one hidden during a scale change is sized again here
-        window.setWidth(window.frame.width)
-        window.setHeight(window.frame.height)
-        window.setX(window.frame.x)
-        window.setY(window.frame.y)
-        window.show()
-        window.requestActivate()
+        popupWindow.setWidth(popupWindow.frame.width)
+        popupWindow.setHeight(popupWindow.frame.height)
+        popupWindow.setX(popupWindow.frame.x)
+        popupWindow.setY(popupWindow.frame.y)
+        popupWindow.show()
+        popupWindow.requestActivate()
         enter?.restart()
         Qt.callLater(() => opening = false)
     }
 
     function close() {
-        if (!window.visible || closing)
+        if (!popupWindow.visible || closing)
             return
         enter?.stop()
         if (exit) {
             closing = true
             exit.restart()
         } else {
-            window.hide()
+            popupWindow.hide()
         }
     }
 
 
     function hide() {
-        window.hide()
+        popupWindow.hide()
     }
 
     function sideOfAnchor(): string {
@@ -166,10 +192,10 @@ QtObject {
     }
 
     function makeRoom() {
-        const screen = anchor ? anchor.Screen : window.screen
+        const screen = anchor ? anchor.Screen : popupWindow.screen
         const paddedWidth = Math.max(width, Math.min(width + 100, screen ? screen.width : width + 100))
         const paddedHeight = Math.max(height, Math.min(height + 100, screen ? screen.height : height + 100))
-        if (!window.visible) {
+        if (!popupWindow.visible) {
             windowWidth = Math.max(windowWidth, paddedWidth)
             windowHeight = Math.max(windowHeight, paddedHeight)
             return
@@ -189,7 +215,7 @@ QtObject {
         function onFinished() {
             if (popup.closing) {
                 popup.framesUntilHidden = 2
-                window.update()
+                popupWindow.update()
             }
         }
     }
@@ -201,7 +227,7 @@ QtObject {
 
         function onPressed(position: point) {
             const anchor = popup.anchor
-            if (window.visible && !popup.pinned && !(anchor && anchor.contains(anchor.mapFromItem(null, position))))
+            if (popupWindow.visible && !popup.pinned && !(anchor && anchor.contains(anchor.mapFromItem(null, position))))
                 popup.close()
         }
     }

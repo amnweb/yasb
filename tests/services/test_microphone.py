@@ -15,6 +15,7 @@ from core.services.microphone.input import AudioInput
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
 from tests.support.audio import FakeVolume
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 
@@ -134,7 +135,7 @@ def test_the_service_forgets_a_widget_once_qml_deleted_it(service: FakeInputServ
     assert service.listeners == []
 
 
-def test_the_bar_icon_shows_muted_and_a_missing_microphone(service: FakeInputService):
+def test_the_bar_icon_and_label_show_muted_and_a_missing_microphone(service: FakeInputService):
     register_qml_types()
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)
@@ -145,23 +146,26 @@ def test_the_bar_icon_shows_muted_and_a_missing_microphone(service: FakeInputSer
 
     engine.warnings.connect(collect_warnings)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Microphone" / "Microphone.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
     icon = find_item(widget, "icon")
-    assert icon is not None
+    label = find_item(widget, "label")
+    assert icon is not None and label is not None
+    assert label.property("text") == ""
     widget.setProperty("icon", "on")
     widget.setProperty("mutedIcon", "off")
-    assert icon.property("text") == "on"
+    widget.setProperty("label", "{level} on {device} {x}")
+    assert (icon.property("text"), label.property("text")) == ("on", "40% on Headset {x}")
     audio = widget.findChild(AudioInput)
     assert audio is not None
     audio.setMuted(True)
-    assert icon.property("text") == "off"
+    assert (icon.property("text"), label.property("text")) == ("off", "mute on Headset {x}")
     audio.setMuted(False)
     service.volume = None
     for listener in service.listeners:
         listener.on_input_device_changed()
-    assert icon.property("text") == "off"
+    assert (icon.property("text"), label.property("text")) == ("off", "No Device on  {x}")
     assert not warnings
     sip.delete(widget)
     # QML deletes the widget's own objects with deleteLater: run those deletions now, while their engine exists

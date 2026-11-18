@@ -4,7 +4,10 @@ from functools import cache
 from PyQt6.QtCore import QObject
 from PyQt6.QtQml import QJSEngine, QQmlEngine, qmlRegisterSingletonType, qmlRegisterType, qmlRegisterUncreatableType
 
+from core.app.update.installer import Updater
+from core.app.windows.about import About
 from core.bar.backdrop import Backdrop
+from core.bar.popup_graphics import PopupGraphics
 from core.bar.window import BarContext
 from core.services.active_window.tracker import ActiveWindowTracker
 from core.services.audio_visualizer.levels import AudioLevels
@@ -54,6 +57,7 @@ QML_VERSION = (1, 0)
 
 QML_TYPES: tuple[type[QObject], ...] = (
     Backdrop,
+    PopupGraphics,
     TimeZones,
     Hotkey,
     ActiveWindowTracker,
@@ -98,6 +102,8 @@ QML_TYPES: tuple[type[QObject], ...] = (
 QML_SINGLETONS: tuple[type[QObject], ...] = (Environment, PowerPlans, PowerModes)
 
 QML_UNCREATABLE_TYPES: tuple[type[QObject], ...] = (
+    About,
+    Updater,
     BarContext,
     DeviceList,
     DisplayList,

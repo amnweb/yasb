@@ -17,6 +17,7 @@ from core.services.bluetooth.bluetooth_types import BluetoothStatus, DeviceInfo,
 from core.services.bluetooth.monitor import BluetoothMonitor, DeviceList, device_row
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 HEADPHONES = DeviceInfo(
@@ -107,7 +108,7 @@ def widget(manager: FakeManager) -> Iterator[tuple[QQuickItem, list[str]]]:
 
     engine.warnings.connect(collect_warnings)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Bluetooth" / "Bluetooth.qml")))
-    item = component.create()
+    item = create_with_bar(component)
     assert isinstance(item, QQuickItem), [error.toString() for error in component.errors()]
     host = QQuickWindow()
     host.resize(200, 36)

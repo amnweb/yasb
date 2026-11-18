@@ -1,18 +1,22 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Yasb
 
 Window {
     id: window
 
-    required property QtObject about
+    required property About about
 
     readonly property string updateState: about.updateState
+
+    // Set when Windows draws Mica behind the window, from Windows 11 22H2 on; until then it has the style's colour
+    property bool mica: false
 
     title: qsTr("About YASB")
     flags: Qt.Dialog | Qt.WindowTitleHint | Qt.WindowCloseButtonHint | Qt.MSWindowsFixedSizeDialogHint
         | Qt.WindowStaysOnTopHint
-    color: "transparent"
+    color: mica ? "transparent" : palette.window
     width: 480
     height: layout.implicitHeight + 48
 

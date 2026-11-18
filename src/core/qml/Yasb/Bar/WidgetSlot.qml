@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 
@@ -7,7 +9,7 @@ Item {
     required property string name
     property string alignment: "left"
     property bool stretch: true
-    property Item bar: null
+    property BarBase bar: null
     property int spacing: bar ? bar.spacing : 0
 
     readonly property bool vertical: bar ? bar.vertical : false
@@ -24,10 +26,11 @@ Item {
     }
     readonly property var widgets: bar ? bar.context.widgets[name] ?? [] : []
 
-    function findBar(): Item {
+    function findBar(): BarBase {
         for (let item = parent; item; item = item.parent) {
-            if (typeof item.addSlot === "function")
-                return item
+            const found = item as BarBase
+            if (found)
+                return found
         }
         return null
     }
@@ -53,15 +56,12 @@ Item {
             width: slot.vertical ? slot.width : Math.ceil(implicitWidth)
             height: slot.vertical ? Math.ceil(implicitHeight) : slot.height
             visible: status === Loader.Ready
-            source: modelData.url
 
             // Accepting the request keeps the bar's menu off widgets, a widget's own menu still opens first
             ContextMenu.onRequested: {}
 
-            onLoaded: {
-                if (item.bar !== undefined)
-                    item.bar = slot.bar
-            }
+            // Every widget is made with its bar already set, so it never runs without one
+            Component.onCompleted: setSource(modelData.url, { bar: slot.bar })
 
             onStatusChanged: {
                 if (status === Loader.Error)

@@ -23,6 +23,7 @@ from core.utils.win32.constants import (
 from core.utils.win32.shell_hook import shell_event
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 SCREEN = "\\\\.\\DISPLAY1"
@@ -223,7 +224,7 @@ def test_the_widget_shows_the_active_window(desktop: Desktop):
     component = QQmlComponent(
         engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "ActiveWindow" / "ActiveWindow.qml"))
     )
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     assert not widget.property("visible")
 

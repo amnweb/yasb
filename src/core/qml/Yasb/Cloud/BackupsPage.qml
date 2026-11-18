@@ -1,13 +1,16 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.impl
 import QtQuick.Dialogs
 import QtQuick.Layouts
+import Yasb
 
 Item {
     id: page
 
-    required property QtObject cloud
+    required property Cloud cloud
 
     function confirm(title: string, message: string, action: string, accent: bool, accepted: var) {
         confirmDialog.title = title

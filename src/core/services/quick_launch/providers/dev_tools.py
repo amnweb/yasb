@@ -156,7 +156,7 @@ class DevToolsProvider(BaseProvider):
                     description=info["description"],
                     icon_path=ICON_DEV_TOOLS,
                     provider=self.name,
-                    action_data={"_home": True, "prefix": self.prefix, "initial_text": key},
+                    query=f"{key} ",
                 )
             )
         return results
@@ -172,7 +172,7 @@ class DevToolsProvider(BaseProvider):
                         description=info["description"],
                         icon_path=ICON_DEV_TOOLS,
                         provider=self.name,
-                        action_data={"_home": True, "prefix": self.prefix, "initial_text": key},
+                        query=f"{key} ",
                     )
                 )
         return results

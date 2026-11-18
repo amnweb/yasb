@@ -34,8 +34,8 @@ def _tree(root: Path, files: dict[str, bytes]) -> Path:
 
 
 CONFIG = {
-    "config.yaml": b"watch_stylesheet: true\n",
-    "styles.css": b".bar { color: red; }\n",
+    "config.yaml": b"theme: yasb\n",
+    "themes/yasb.qml": b"Theme {}\n",
     "assets/icon.png": b"\x89PNG fake",
     "scripts/hello.ps1": b"Write-Host hi",
 }
@@ -171,7 +171,7 @@ HOSTILE_NAMES = [
     "CON.txt",
     "aux.yaml",
     "COM1",
-    "LPT9.css",
+    "LPT9.qml",
     "nul",
     "sub/PRN.txt",
     "trailing. /x.yaml",
@@ -195,7 +195,7 @@ def test_every_hostile_entry_name_is_rejected():
 
 
 def test_legitimate_entry_names_are_accepted():
-    for name in ("config.yaml", "assets/icon.png", "a/b/c/deep.css", "dot.in.name.yaml", "unicode-éàü.yaml"):
+    for name in ("config.yaml", "assets/icon.png", "a/b/c/deep.qml", "dot.in.name.yaml", "unicode-éàü.yaml"):
         assert validate_member(name).as_posix()
 
 
@@ -349,7 +349,7 @@ def test_rollback_restores_the_original_after_a_mid_restore_failure():
         archive = base / "snap.zip"
         with zipfile.ZipFile(archive, "w") as zf:
             zf.writestr("config.yaml", "replacement")
-            zf.writestr("nested/file.css", "more")
+            zf.writestr("nested/file.qml", "more")
 
         # Fail the directory swap, which happens after the old config has been removed.
         # That is the worst moment for it: the folder is empty and only the safety archive
@@ -369,7 +369,7 @@ def test_rollback_restores_the_original_after_a_mid_restore_failure():
             os.replace = original_replace
 
         assert (target / "config.yaml").read_bytes() == b"precious original", "rollback did not restore the original"
-        assert not (target / "nested" / "file.css").exists(), "a partially restored file was left behind"
+        assert not (target / "nested" / "file.qml").exists(), "a partially restored file was left behind"
 
 
 # --- User exclude rules ------------------------------------------------------------------
@@ -435,22 +435,21 @@ def test_a_directory_rule_does_not_match_files_outside_it():
         root = _tree(Path(raw), CONFIG | {"tools/build.ps1": b"x"})
         kept = [c.relative for c in collect_files(root, ("tools/*",))]
         assert "config.yaml" in kept, "a directory rule swallowed a file at the root"
-        assert "styles.css" in kept
+        assert "themes/yasb.qml" in kept
         assert "tools/build.ps1" not in kept, "the directory rule did not apply to its own files"
 
 
-def test_config_and_styles_survive_a_rule_that_matches_them():
-    """The bar cannot start without these two, so no user rule may drop them."""
+def test_config_survives_a_rule_that_matches_it():
+    """The bar cannot start without it, so no user rule may drop it."""
     with tempfile.TemporaryDirectory() as raw:
-        root = _tree(Path(raw), CONFIG | {"data.yaml": b"x", "theme.css": b"x"})
-        kept = [c.relative for c in collect_files(root, ("*.yaml", "*.css"))]
+        root = _tree(Path(raw), CONFIG | {"data.yaml": b"x"})
+        kept = [c.relative for c in collect_files(root, ("*.yaml", "*.qml"))]
         assert "config.yaml" in kept, "config.yaml was excluded by a user rule"
-        assert "styles.css" in kept, "styles.css was excluded by a user rule"
         assert "data.yaml" not in kept, "the rule stopped applying to ordinary files"
-        assert "theme.css" not in kept
+        assert "themes/yasb.qml" not in kept
 
 
-def test_protection_is_the_root_pair_only():
+def test_protection_is_the_root_config_only():
     """A theme's own config.yaml deeper in the tree is still the user's to exclude."""
     with tempfile.TemporaryDirectory() as raw:
         root = _tree(Path(raw), CONFIG | {"themes/dark/config.yaml": b"x"})
@@ -462,9 +461,8 @@ def test_protection_is_the_root_pair_only():
 def test_an_explicit_rule_naming_config_still_cannot_exclude_it():
     with tempfile.TemporaryDirectory() as raw:
         root = _tree(Path(raw), CONFIG)
-        kept = [c.relative for c in collect_files(root, ("config.yaml", "styles.css"))]
+        kept = [c.relative for c in collect_files(root, ("config.yaml",))]
         assert "config.yaml" in kept
-        assert "styles.css" in kept
 
 
 def test_a_failed_rollback_is_reported_not_swallowed():

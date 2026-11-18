@@ -1,0 +1,11 @@
+module Yasb.Setup
+
+BarPage 1.0 BarPage.qml
+BehaviorPage 1.0 BehaviorPage.qml
+Choices 1.0 Choices.qml
+DonePage 1.0 DonePage.qml
+SetupPage 1.0 SetupPage.qml
+SetupWindow 1.0 SetupWindow.qml
+WelcomePage 1.0 WelcomePage.qml
+WidgetCard 1.0 WidgetCard.qml
+WidgetsPage 1.0 WidgetsPage.qml

@@ -1,14 +1,19 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
-    id: desktops
+    id: windowsDesktops
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // Button text can be {name} or {index}
     property string label: "{name}"
     property string activeLabel: "{name}"
@@ -25,6 +30,8 @@ Item {
     // Scroll over the widget to switch desktops: down for the next one, up for the previous one
     property bool scrollSwitching: true
     property bool reverseScroll: false
+    // The popup that renames a desktop
+    property int popupWidth: 304
     // Global hotkeys, with the actions that need no button. Set to [] for none
     property var keybindings: []
     // Example below, with the default hotkeys for switching and moving windows.
@@ -58,25 +65,55 @@ Item {
     property int spacing: 4
     property int buttonPadding: 8
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // The active desktop's button background, and how strongly desktops without windows are dimmed
-    property color activeBackground: Qt.alpha(textColor, 0.16)
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property color popupTextColor: theme.colors.text
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property color popupDividerColor: theme.colors.divider
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // The right-click menu: its width, and a look that is the theme's unless set here
+    property int menuWidth: 260
+    property color menuColor: theme.menu.background
+    property color menuBorderColor: theme.menu.border
+    property color menuTextColor: theme.colors.text
+    property real menuRadius: theme.menu.radius
+    property font menuFont: theme.menu.font
+    // Milliseconds the right-click menu takes to fade in
+    property int menuOpenDuration: theme.menu.openDuration
+    // The icons in the text fields' right-click menu
+    property int menuIconSize: 16
+    // Glyphs in the right-click menu take the theme's icon font, each part unless the widget file sets it
+    property font menuIconFont
+    menuIconFont.family: theme.bar.iconFont.family
+    menuIconFont.weight: theme.bar.iconFont.weight
+    menuIconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The background of the active desktop's button and of a hovered one, and how strongly desktops without windows
+    // are dimmed
+    property color activeBackground: theme.colors.selected
+    property color hoverColor: theme.colors.hover
     property real emptyOpacity: 0.5
-    readonly property color foreground: dark ? "#ebebeb" : "#1f1f1f"
-    readonly property color secondary: dark ? "#9d9d9d" : "#616161"
-    readonly property string edge: bar?.edge ?? "top"
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    readonly property string edge: bar.edge
 
-    readonly property alias service: service
+    readonly property alias service: virtualDesktops
     property real scrolled: 0
     // Held so the garbage collector doesn't destroy the open menu
     property Window openedMenu: null
@@ -85,7 +122,7 @@ Item {
     implicitHeight: row.implicitHeight
 
     function labelFor(desktop: var): string {
-        const format = desktop.number === service.current ? activeLabel
+        const format = desktop.number === virtualDesktops.current ? activeLabel
             : desktop.populated && populatedLabel !== "" ? populatedLabel : label
         return format.replace(/\{index\}/g, desktop.number).replace(/\{name\}/g, desktop.name || desktop.number)
     }
@@ -97,32 +134,32 @@ Item {
         switch (name) {
         case "activate_workspace":
         case "switch_desktop":
-            service.switchTo(target)
+            virtualDesktops.switchTo(target)
             break
         case "move_window_here":
         case "move_window_to":
-            service.moveFrontWindowTo(target)
+            virtualDesktops.moveFrontWindowTo(target)
             break
         case "delete_workspace":
-            service.remove(number)
+            virtualDesktops.remove(number)
             break
         case "delete_desktop":
-            service.remove(argument ? target : 0)
+            virtualDesktops.remove(argument ? target : 0)
             break
         case "create_desktop":
-            service.create()
+            virtualDesktops.create()
             break
         case "rename_desktop":
-            openRename(argument ? target : number || service.current)
+            openRename(argument ? target : number || virtualDesktops.current)
             break
         case "toggle_context_menu":
             openMenu(number)
             break
         case "next_desktop":
-            service.step(1)
+            virtualDesktops.step(1)
             break
         case "prev_desktop":
-            service.step(-1)
+            virtualDesktops.step(-1)
             break
         case "do_nothing":
         case undefined:
@@ -135,12 +172,12 @@ Item {
 
     function openMenu(number: int) {
         // Before the menu takes focus from the window its entries act on
-        service.readForeground()
+        virtualDesktops.readForeground()
         openedMenu?.close()
-        const index = service.desktops.findIndex(desktop => desktop.number === (number || service.current))
-        const button = desktopButtons.itemAt(index) ?? desktops
+        const index = virtualDesktops.desktops.findIndex(desktop => desktop.number === (number || virtualDesktops.current))
+        const button = desktopButtons.itemAt(index) ?? windowsDesktops
         const start = button.mapToGlobal(0, 0)
-        const screen = desktops.Screen
+        const screen = windowsDesktops.Screen
         openedMenu = menuWindow.createObject(null, {
             number: number,
             anchor: Qt.rect(start.x, start.y, button.width, button.height),
@@ -149,7 +186,7 @@ Item {
     }
 
     function openRename(number: int) {
-        const desktop = service.desktops.find(item => item.number === number)
+        const desktop = virtualDesktops.desktops.find(item => item.number === number)
         if (!desktop)
             return
         renamePopup.number = number
@@ -162,11 +199,11 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + 6
-            : edge === "right" ? start.x - renamePopup.width - 6 : start.x + (width - renamePopup.width) / 2
-        let py = edge === "top" ? start.y + height + 6
-            : edge === "bottom" ? start.y - renamePopup.height - 6 : start.y + (height - renamePopup.height) / 2
-        const screen = desktops.Screen
+        let px = edge === "left" ? start.x + width + popupGap
+            : edge === "right" ? start.x - renamePopup.width - popupGap : start.x + (width - renamePopup.width) / 2
+        let py = edge === "top" ? start.y + height + popupGap
+            : edge === "bottom" ? start.y - renamePopup.height - popupGap : start.y + (height - renamePopup.height) / 2
+        const screen = windowsDesktops.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - renamePopup.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - renamePopup.height - 8))
         renamePopup.x = Math.round(px)
@@ -179,76 +216,76 @@ Item {
     }
 
     VirtualDesktops {
-        id: service
+        id: virtualDesktops
     }
 
     Instantiator {
-        model: desktops.keybindings
+        model: windowsDesktops.keybindings
 
         delegate: Hotkey {
             required property var modelData
 
             keys: modelData.keys ?? ""
-            screen: desktops.hotkeyScreen
-            onActivated: desktops.run(modelData.action ?? "", 0)
+            screen: windowsDesktops.hotkeyScreen
+            onActivated: windowsDesktops.run(modelData.action ?? "", 0)
         }
     }
 
     WheelHandler {
-        enabled: desktops.scrollSwitching
+        enabled: windowsDesktops.scrollSwitching
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: event => {
-            desktops.scrolled += event.angleDelta.y
-            if (Math.abs(desktops.scrolled) < 120)
+            windowsDesktops.scrolled += event.angleDelta.y
+            if (Math.abs(windowsDesktops.scrolled) < 120)
                 return
-            const up = desktops.scrolled > 0
-            desktops.scrolled = 0
-            service.step(up !== desktops.reverseScroll ? -1 : 1)
+            const up = windowsDesktops.scrolled > 0
+            windowsDesktops.scrolled = 0
+            virtualDesktops.step(up !== windowsDesktops.reverseScroll ? -1 : 1)
         }
     }
 
     Row {
         id: row
 
-        spacing: desktops.spacing
+        spacing: windowsDesktops.spacing
 
         Repeater {
             id: desktopButtons
 
-            model: service.desktops
+            model: virtualDesktops.desktops
 
             delegate: Item {
                 id: button
 
                 required property var modelData
-                readonly property bool active: modelData.number === service.current
-                readonly property string caption: caption.text
+                readonly property bool active: modelData.number === virtualDesktops.current
+                readonly property string caption: captionLabel.text
 
                 objectName: `desktop-${modelData.number}`
-                width: Math.ceil(caption.implicitWidth) + 2 * desktops.buttonPadding
-                height: Math.max(desktops.height, Math.ceil(caption.implicitHeight) + 8)
+                width: Math.ceil(captionLabel.implicitWidth) + 2 * windowsDesktops.buttonPadding
+                height: Math.max(windowsDesktops.height, Math.ceil(captionLabel.implicitHeight) + 8)
                 Accessible.role: Accessible.Button
                 Accessible.name: `Desktop ${modelData.name || modelData.number}`
-                Accessible.onPressAction: desktops.run(desktops.leftClick, modelData.number)
+                Accessible.onPressAction: windowsDesktops.run(windowsDesktops.leftClick, modelData.number)
 
                 Rectangle {
                     y: Math.round((parent.height - height) / 2)
                     width: parent.width
-                    height: Math.round(Math.min(parent.height, caption.implicitHeight + 8))
+                    height: Math.round(Math.min(parent.height, captionLabel.implicitHeight + 8))
                     radius: 4
-                    color: button.active ? desktops.activeBackground
-                        : area.containsMouse ? Qt.alpha(desktops.textColor, 0.08) : "transparent"
+                    color: button.active ? windowsDesktops.activeBackground
+                        : area.containsMouse ? windowsDesktops.hoverColor : "transparent"
                 }
 
-                Text {
-                    id: caption
+                Label {
+                    id: captionLabel
 
                     anchors.centerIn: parent
-                    text: desktops.labelFor(button.modelData)
+                    text: windowsDesktops.labelFor(button.modelData)
                     textFormat: Text.PlainText
-                    color: desktops.textColor
-                    font: desktops.font
-                    opacity: button.active || button.modelData.populated ? 1 : desktops.emptyOpacity
+                    color: windowsDesktops.textColor
+                    font: windowsDesktops.font
+                    opacity: button.active || button.modelData.populated ? 1 : windowsDesktops.emptyOpacity
                 }
 
                 MouseArea {
@@ -258,8 +295,8 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-                    onClicked: mouse => desktops.run(mouse.button === Qt.LeftButton ? desktops.leftClick
-                        : mouse.button === Qt.MiddleButton ? desktops.middleClick : desktops.rightClick,
+                    onClicked: mouse => windowsDesktops.run(mouse.button === Qt.LeftButton ? windowsDesktops.leftClick
+                        : mouse.button === Qt.MiddleButton ? windowsDesktops.middleClick : windowsDesktops.rightClick,
                         button.modelData.number)
                 }
             }
@@ -276,9 +313,9 @@ Item {
         nameFilters: [qsTr("Images (*.png *.jpg *.jpeg *.bmp *.gif)")]
         onAccepted: {
             if (number)
-                service.setWallpaper(number, selectedFile)
+                virtualDesktops.setWallpaper(number, selectedFile)
             else
-                service.setWallpaperAll(selectedFile)
+                virtualDesktops.setWallpaperAll(selectedFile)
         }
     }
 
@@ -294,18 +331,16 @@ Item {
             required property rect anchor
             required property rect area
             // Room beside the menu for the window submenu, which only exists when a window was in front
-            readonly property bool withSubmenu: service.hasWindow
+            readonly property bool withSubmenu: virtualDesktops.hasWindow
             readonly property int gap: 6
-            readonly property string iconFamily: Qt.fontFamilies().includes("Segoe Fluent Icons")
-                ? "Segoe Fluent Icons" : "Segoe MDL2 Assets"
             readonly property int menuX: {
-                const wanted = desktops.edge === "left" ? anchor.x + anchor.width + gap
-                    : desktops.edge === "right" ? anchor.x - menu.width - gap : anchor.x + (anchor.width - menu.width) / 2
+                const wanted = windowsDesktops.edge === "left" ? anchor.x + anchor.width + gap
+                    : windowsDesktops.edge === "right" ? anchor.x - menu.width - gap : anchor.x + (anchor.width - menu.width) / 2
                 return Math.round(Math.max(area.x, Math.min(wanted, area.x + area.width - menu.width)))
             }
             readonly property int menuY: {
-                const wanted = desktops.edge === "bottom" ? anchor.y - menu.implicitHeight - gap
-                    : desktops.edge === "top" ? anchor.y + anchor.height + gap : anchor.y
+                const wanted = windowsDesktops.edge === "bottom" ? anchor.y - menu.implicitHeight - gap
+                    : windowsDesktops.edge === "top" ? anchor.y + anchor.height + gap : anchor.y
                 return Math.round(Math.max(area.y, Math.min(wanted, area.y + area.height - menu.implicitHeight)))
             }
 
@@ -319,19 +354,19 @@ Item {
 
             // Entries that don't apply are taken out, not hidden: Menu still lays out a hidden entry
             Component.onCompleted: {
-                if (service.desktops.length < 2)
+                if (virtualDesktops.desktops.length < 2)
                     menu.removeItem(deleteItem)
-                if (!service.hasWindow) {
+                if (!virtualDesktops.hasWindow) {
                     for (const item of [windowSeparator, moveHereItem, windowPinItem, appPinItem])
                         menu.removeItem(item)
                     menu.removeMenu(moveMenu)
                 }
-                if (!service.wallpaperSupported) {
+                if (!virtualDesktops.wallpaperSupported) {
                     for (const item of [wallpaperSeparator, wallpaperItem, wallpaperAllItem])
                         menu.removeItem(item)
                 }
                 // Measured before the window shows, so it doesn't open at the old size and then shrink
-                menu.contentItem.forceLayout?.()
+                (menu.contentItem as ListView)?.forceLayout()
                 show()
                 requestActivate()
                 menu.open()
@@ -359,7 +394,9 @@ Item {
                     x: actionItem.mirrored ? actionItem.width - width - 10 : 10
                     anchors.verticalCenter: parent.verticalCenter
                     text: actionItem.glyph
-                    font.family: menuHost.iconFamily
+                    font.family: windowsDesktops.menuIconFont.family
+                    font.weight: windowsDesktops.menuIconFont.weight
+                    font.variableAxes: windowsDesktops.menuIconFont.variableAxes
                     font.pixelSize: actionItem.iconSize
                     color: actionItem.palette.text
                     Accessible.ignored: true
@@ -372,12 +409,20 @@ Item {
                 leftInset: 0
                 rightInset: 0
                 bottomInset: 0
+                font: windowsDesktops.menuFont
+                // Active and inactive only, so disabled controls keep the style's dimmed colours
+                palette.active.text: windowsDesktops.menuTextColor
+                palette.inactive.text: windowsDesktops.menuTextColor
+                // Fades in when it opens, in place of the style's growing from a third of its height
+                enter: Transition {
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: windowsDesktops.menuOpenDuration; easing.type: Easing.OutCubic }
+                }
 
                 background: Rectangle {
-                    implicitWidth: 260
-                    radius: 8
-                    color: "#222222"
-                    border.color: "#363636"
+                    implicitWidth: windowsDesktops.menuWidth
+                    radius: windowsDesktops.menuRadius
+                    color: windowsDesktops.menuColor
+                    border.color: windowsDesktops.menuBorderColor
                 }
             }
 
@@ -396,7 +441,7 @@ Item {
                 ActionItem {
                     glyph: "\ue70f"
                     text: qsTr("Rename")
-                    onTriggered: desktops.openRename(menuHost.number)
+                    onTriggered: windowsDesktops.openRename(menuHost.number)
                 }
 
                 ActionItem {
@@ -404,7 +449,7 @@ Item {
 
                     glyph: "\ue74d"
                     text: qsTr("Delete")
-                    onTriggered: service.remove(menuHost.number)
+                    onTriggered: virtualDesktops.remove(menuHost.number)
                 }
 
                 MenuSeparator {}
@@ -412,7 +457,7 @@ Item {
                 ActionItem {
                     glyph: "\ue710"
                     text: qsTr("Create new desktop")
-                    onTriggered: service.create()
+                    onTriggered: virtualDesktops.create()
                 }
 
                 MenuSeparator {
@@ -424,7 +469,7 @@ Item {
 
                     glyph: "\ue7c2"
                     text: qsTr("Move window here")
-                    onTriggered: service.moveWindowTo(menuHost.number)
+                    onTriggered: virtualDesktops.moveWindowTo(menuHost.number)
                 }
 
                 BarLikeMenu {
@@ -434,13 +479,13 @@ Item {
                     popupType: Popup.Item
 
                     Instantiator {
-                        model: service.desktops
+                        model: virtualDesktops.desktops
 
                         delegate: MenuItem {
                             required property var modelData
 
                             text: modelData.name || qsTr("Desktop %1").arg(modelData.number)
-                            onTriggered: service.moveWindowTo(modelData.number)
+                            onTriggered: virtualDesktops.moveWindowTo(modelData.number)
                         }
 
                         onObjectAdded: (index, object) => moveMenu.insertItem(index, object)
@@ -451,17 +496,17 @@ Item {
                 ActionItem {
                     id: windowPinItem
 
-                    glyph: service.windowPinned ? "\ue77a" : "\ue718"
-                    text: service.windowPinned ? qsTr("Unpin window from all desktops") : qsTr("Pin window to all desktops")
-                    onTriggered: service.toggleWindowPin()
+                    glyph: virtualDesktops.windowPinned ? "\ue77a" : "\ue718"
+                    text: virtualDesktops.windowPinned ? qsTr("Unpin window from all desktops") : qsTr("Pin window to all desktops")
+                    onTriggered: virtualDesktops.toggleWindowPin()
                 }
 
                 ActionItem {
                     id: appPinItem
 
-                    glyph: service.appPinned ? "\ue77a" : "\ue718"
-                    text: service.appPinned ? qsTr("Unpin app from all desktops") : qsTr("Pin app to all desktops")
-                    onTriggered: service.toggleAppPin()
+                    glyph: virtualDesktops.appPinned ? "\ue77a" : "\ue718"
+                    text: virtualDesktops.appPinned ? qsTr("Unpin app from all desktops") : qsTr("Pin app to all desktops")
+                    onTriggered: virtualDesktops.toggleAppPin()
                 }
 
                 MenuSeparator {
@@ -473,7 +518,7 @@ Item {
 
                     glyph: "\ue8b9"
                     text: qsTr("Set wallpaper on this desktop")
-                    onTriggered: desktops.chooseWallpaper(menuHost.number)
+                    onTriggered: windowsDesktops.chooseWallpaper(menuHost.number)
                 }
 
                 ActionItem {
@@ -481,10 +526,16 @@ Item {
 
                     glyph: "\ue8b9"
                     text: qsTr("Set wallpaper on all desktops")
-                    onTriggered: desktops.chooseWallpaper(0)
+                    onTriggered: windowsDesktops.chooseWallpaper(0)
                 }
             }
         }
+    }
+
+    // An item of the text fields' right-click menu, its icon in menuIconSize
+    component FieldMenuItem: MenuItem {
+        icon.width: windowsDesktops.menuIconSize
+        icon.height: windowsDesktops.menuIconSize
     }
 
     BackdropPopup {
@@ -495,34 +546,35 @@ Item {
         property real reveal: 0
 
         function save() {
-            service.rename(number, nameField.text)
+            virtualDesktops.rename(number, nameField.text)
             close()
         }
 
         title: qsTr("Rename desktop")
-        width: 320
-        height: content.implicitHeight + 16
-        anchor: desktops
+        width: windowsDesktops.popupWidth
+        height: popupContent.implicitHeight
+        anchor: windowsDesktops
+        font: windowsDesktops.popupFont
+        theme: windowsDesktops.theme
         backdropItem: surface
-        enter: NumberAnimation { target: renamePopup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: renamePopup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: renamePopup; property: "reveal"; to: 1; duration: windowsDesktops.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: renamePopup; property: "reveal"; to: 0; duration: windowsDesktops.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: { if (!visible) reveal = 0 }
 
         Rectangle {
             id: surface
 
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: desktops.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#f3f3f3", 0.85)
+            radius: windowsDesktops.popupRadius
+            color: windowsDesktops.popupColor
             border.width: 1
-            border.color: desktops.dark ? "#3a3a3a" : "#d9d9d9"
+            border.color: windowsDesktops.popupBorderColor
             opacity: renamePopup.reveal
             scale: 0.85 + renamePopup.reveal * 0.15
-            transformOrigin: desktops.edge === "bottom" ? Item.Bottom : Item.Top
+            transformOrigin: windowsDesktops.edge === "bottom" ? Item.Bottom : Item.Top
 
             ColumnLayout {
-                id: content
+                id: popupContent
 
                 width: parent.width
                 spacing: 0
@@ -534,21 +586,111 @@ Item {
 
                     Text {
                         text: qsTr("Rename desktop")
-                        color: desktops.foreground
-                        font.pixelSize: 14
-                        font.weight: Font.DemiBold
+                        font: windowsDesktops.popupTitleFont
+                        color: windowsDesktops.popupTextColor
                     }
 
                     Text {
                         Layout.fillWidth: true
                         text: qsTr("Enter a new name for this desktop.")
-                        color: desktops.secondary
-                        font.pixelSize: 12
+                        color: windowsDesktops.popupSecondaryTextColor
+                        font: windowsDesktops.popupSmallFont
                         wrapMode: Text.Wrap
+                    }
+
+                    // The text fields' right-click menu: Qt's editing items and icons in the menu's look, acting on the field that
+                    // opened it
+                    Menu {
+                        id: fieldMenu
+
+                        readonly property TextField editor: parent as TextField
+                        readonly property bool editable: !(editor?.readOnly ?? true)
+                        readonly property bool selected: (editor?.selectedText.length ?? 0) > 0
+
+                        // A window of its own, so it opens where clicked even past the popup's edges
+                        popupType: Popup.Window
+                        // Its window is made once and reused, and Windows shows it again where it was, under the popup raised
+                        // since; raising it before it shows keeps it in front
+                        onAboutToShow: contentItem.Window.window?.raise()
+                        // Fades in when it opens, in place of the style's growing from a third of its height
+                        enter: Transition {
+                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: windowsDesktops.menuOpenDuration; easing.type: Easing.OutCubic }
+                        }
+                        topInset: 0
+                        leftInset: 0
+                        rightInset: 0
+                        bottomInset: 0
+                        font: windowsDesktops.menuFont
+                        // Active and inactive only, so disabled controls keep the style's dimmed colours
+                        palette.active.text: windowsDesktops.menuTextColor
+                        palette.inactive.text: windowsDesktops.menuTextColor
+
+                        background: Rectangle {
+                            implicitWidth: windowsDesktops.menuWidth
+                            radius: windowsDesktops.menuRadius
+                            color: windowsDesktops.menuColor
+                            border.color: windowsDesktops.menuBorderColor
+                        }
+
+                        FieldMenuItem {
+                            text: qsTr("Undo")
+                            icon.name: "edit-undo"
+                            enabled: fieldMenu.editor?.canUndo ?? false
+                            onTriggered: fieldMenu.editor.undo()
+                        }
+                        FieldMenuItem {
+                            text: qsTr("Redo")
+                            icon.name: "edit-redo"
+                            enabled: fieldMenu.editor?.canRedo ?? false
+                            onTriggered: fieldMenu.editor.redo()
+                        }
+                        MenuSeparator {}
+                        FieldMenuItem {
+                            text: qsTr("Cut")
+                            icon.name: "edit-cut"
+                            enabled: fieldMenu.editable && fieldMenu.selected
+                            onTriggered: fieldMenu.editor.cut()
+                        }
+                        FieldMenuItem {
+                            text: qsTr("Copy")
+                            icon.name: "edit-copy"
+                            enabled: fieldMenu.selected
+                            onTriggered: fieldMenu.editor.copy()
+                        }
+                        FieldMenuItem {
+                            text: qsTr("Paste")
+                            icon.name: "edit-paste"
+                            enabled: fieldMenu.editable && (fieldMenu.editor?.canPaste ?? false)
+                            onTriggered: fieldMenu.editor.paste()
+                        }
+                        FieldMenuItem {
+                            text: qsTr("Delete")
+                            icon.name: "edit-delete"
+                            enabled: fieldMenu.editable && fieldMenu.selected
+                            onTriggered: fieldMenu.editor.remove(fieldMenu.editor.selectionStart, fieldMenu.editor.selectionEnd)
+                        }
+                        MenuSeparator {}
+                        FieldMenuItem {
+                            text: qsTr("Select All")
+                            icon.name: "edit-select-all"
+                            onTriggered: fieldMenu.editor.selectAll()
+                        }
                     }
 
                     TextField {
                         id: nameField
+
+                        // Qt's own text menu is replaced by fieldMenu, which the right button opens
+                        ContextMenu.menu: null
+
+                        // A right-click opens the menu at the mouse cursor, on press or release as Windows sets it
+                        TapHandler {
+                            acceptedButtons: Qt.RightButton
+                            onPressedChanged: {
+                                if (pressed === (Application.styleHints.contextMenuTrigger === Qt.ContextMenuTrigger.Press))
+                                    fieldMenu.popup(nameField)
+                            }
+                        }
 
                         Layout.fillWidth: true
                         placeholderText: qsTr("Desktop name")
@@ -559,7 +701,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 1
-                    color: desktops.dark ? Qt.alpha("#ffffff", 0.08) : Qt.alpha("#000000", 0.08)
+                    color: windowsDesktops.popupDividerColor
                 }
 
                 RowLayout {

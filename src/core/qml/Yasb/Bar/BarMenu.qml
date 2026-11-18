@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import Yasb
@@ -7,12 +9,9 @@ import Yasb
 Window {
     id: barMenu
 
-    required property Item bar
+    required property BarBase bar
     required property point position
     required property rect area
-
-    readonly property string iconFamily: Qt.fontFamilies().includes("Segoe Fluent Icons")
-        ? "Segoe Fluent Icons" : "Segoe MDL2 Assets"
 
     // At the click, opening away from the bar's edge, and inside the screen
     readonly property real menuX: Math.max(area.x, Math.min(bar.edge === "right" ? position.x - menu.width : position.x,
@@ -60,7 +59,9 @@ Window {
             x: actionItem.mirrored ? actionItem.width - width - 10 : 10
             anchors.verticalCenter: parent.verticalCenter
             text: actionItem.glyph
-            font.family: barMenu.iconFamily
+            font.family: barMenu.bar.theme.bar.iconFont.family
+            font.weight: barMenu.bar.theme.bar.iconFont.weight
+            font.variableAxes: barMenu.bar.theme.bar.iconFont.variableAxes
             font.pixelSize: actionItem.iconSize
             color: actionItem.palette.text
             Accessible.ignored: true
@@ -70,7 +71,8 @@ Window {
     Menu {
         id: menu
 
-        font: barMenu.bar.font
+        font: barMenu.bar.theme.menu.font
+        palette.text: barMenu.bar.theme.colors.text
         topInset: 0
         leftInset: 0
         rightInset: 0
@@ -78,22 +80,19 @@ Window {
 
         background: Rectangle {
             implicitWidth: 200
-            radius: 8
-            color: "#222222"
-            border.color: "#363636"
+            radius: barMenu.bar.theme.menu.radius
+            color: barMenu.bar.theme.menu.background
+            border.color: barMenu.bar.theme.menu.border
         }
 
         popupType: Popup.Item
+        // Fades in when it opens, in place of the style's growing from a third of its height
+        enter: Transition {
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: barMenu.bar.theme.menu.openDuration; easing.type: Easing.OutCubic }
+        }
         x: -leftInset
         y: -topInset
         onClosed: barMenu.close()
-
-        MenuItem {
-            text: `Bar: ${barMenu.bar.name}`
-            enabled: false
-        }
-
-        MenuSeparator {}
 
         ActionItem {
             glyph: "\uf120"

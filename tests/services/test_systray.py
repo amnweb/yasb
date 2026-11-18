@@ -24,6 +24,7 @@ from core.utils.win32.constants import NIF_STATE, NIF_TIP, NIM_MODIFY, NIM_SETVE
 from core.utils.win32.undocumented import TRAY_VOLUME_ICON_GUID
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import wait
 
 
@@ -304,7 +305,7 @@ def test_the_widget_shows_pinned_icons_on_the_bar(tray: FakeTray, tmp_path: Path
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Systray" / "Systray.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(50)
     sources = [str(item.property("source")) for item in items(widget) if item.objectName() == "trayIcon"]

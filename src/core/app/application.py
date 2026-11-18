@@ -7,7 +7,7 @@ from collections.abc import Generator
 from types import FrameType
 
 from PyQt6 import sip
-from PyQt6.QtCore import QEventLoop, QSocketNotifier
+from PyQt6.QtCore import QEventLoop, QSocketNotifier, Qt
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtQml import QQmlEngine
 from watchdog.observers.api import BaseObserver
@@ -25,7 +25,12 @@ from core.services.media.art import MEDIA_ART_PROVIDER, MediaArtProvider
 from core.services.systray.systray import SYSTRAY_ICON_PROVIDER, SystrayIconProvider
 from core.utils.icons.image_provider import ICON_PROVIDER, IconImageProvider
 from core.utils.win32.composition import shutdown_composition
+from core.validation.config import YasbConfig
 from settings import QML_IMPORT_PATH
+
+# Lazy: a normal start never needs the setup
+lazy from core.app.windows.setup import Setup
+lazy from core.setup import setup_reason
 
 
 class YASBApplication(QGuiApplication):
@@ -43,6 +48,7 @@ class YASBApplication(QGuiApplication):
         self._engine.addImageProvider(SYSTRAY_ICON_PROVIDER, SystrayIconProvider())
         self._bars: BarManager | None = None
         self._tray: SystemTrayManager | None = None
+        self._setup: Setup | None = None
         self._observer: BaseObserver | None = None
         self.aboutToQuit.connect(self._stop_watching)
 
@@ -51,6 +57,7 @@ class YASBApplication(QGuiApplication):
             try:
                 return self.exec() if self._start() else 1
             finally:
+                self._setup = None
                 self._tray = None
                 self._bars = None
                 # Qt's threads still call or delete Python objects while the engine goes, which hangs for good once
@@ -61,6 +68,18 @@ class YASBApplication(QGuiApplication):
     def _start(self) -> bool:
         try:
             config = load_config()
+        except ConfigError as e:
+            if self._show_setup():
+                return True
+            _report_startup_error("YASB could not start", str(e), e.details)
+            return False
+        except Exception as e:
+            _report_startup_error("YASB stopped while starting", str(e) or type(e).__name__, traceback.format_exc())
+            return False
+        return self._start_bars(config)
+
+    def _start_bars(self, config: YasbConfig) -> bool:
+        try:
             if config.debug:
                 enable_debug_logging()
                 logging.info("Debug mode enabled.")
@@ -69,18 +88,40 @@ class YASBApplication(QGuiApplication):
             if config.watch:
                 self._observer = create_observer(self._bars)
                 self._observer.start()
-            if config.show_systray:
-                self._tray = SystemTrayManager(self._bars)
-                self._tray.show()
+            self._tray = SystemTrayManager(self._bars)
+            self._tray.show()
             if config.update_check:
                 _start_update_checker()
-        except ConfigError as e:
-            _report_startup_error("YASB could not start", str(e), e.details)
-            return False
         except Exception as e:
             _report_startup_error("YASB stopped while starting", str(e) or type(e).__name__, traceback.format_exc())
             return False
         return True
+
+    def _show_setup(self) -> bool:
+        """Opens the setup if config.yaml needs it; False if it did not."""
+        reason = setup_reason()
+        if reason is None:
+            return False
+        setup = Setup(reason)
+        # Queued, so the bars start after the window closes
+        setup.finished.connect(self._finish_setup, Qt.ConnectionType.QueuedConnection)
+        if not setup.show(self._engine):
+            setup.deleteLater()
+            return False
+        # The window deletes it on closing
+        self._setup = setup
+        return True
+
+    def _finish_setup(self) -> None:
+        self._setup = None
+        try:
+            config = load_config()
+        except ConfigError as e:
+            _report_startup_error("YASB could not start", str(e), e.details)
+            self.exit(1)
+            return
+        if not self._start_bars(config):
+            self.exit(1)
 
     def _stop_watching(self) -> None:
         if self._observer is not None:

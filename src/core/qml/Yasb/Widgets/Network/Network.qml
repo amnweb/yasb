@@ -6,6 +6,7 @@ import QtQuick.Layouts
 import Yasb
 import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
     id: network
@@ -19,7 +20,7 @@ Item {
     property int signalInterval: 1000
     // Hide the widget while the internet goes through a cable
     property bool hideIfEthernet: false
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
     // Wi-Fi and mobile signal glyphs, weakest first; the strongest forms a faint background.
     property list<string> wifiIcons: ["\ue872", "\ue873", "\ue874", "\ue701"]
     property list<string> mobileIcons: ["\ue86c", "\ue86d", "\ue86e", "\ue86f", "\ue870"]
@@ -33,13 +34,13 @@ Item {
     // Shown small over the icon while the connection has no internet
     property string noInternetIcon: "\ue7ba"
     // Windows' caution colors, so the badge stands out from the icon
-    property color noInternetColor: dark ? "#fce100" : "#9d5d00"
-    property int popupWidth: 360
+    property color noInternetColor: network.theme.colors.warning
+    property int popupWidth: 344
     // Popup alignment relative to the widget on a horizontal bar: left, right, or center.
     property string popupAlignment: "center"
     // Scroll the network list when it exceeds this height.
     property int maxListHeight: 320
-    property color errorColor: dark ? "#ff99a4" : "#c42b1c"
+    property color errorColor: network.theme.colors.critical
     // Text for each Wi-Fi error code
     property var errorTexts: ({
             accessDenied: "Location services are turned off",
@@ -53,26 +54,66 @@ Item {
             unsupportedAuthenticationProtocol: "This network's security is not supported"
         })
 
-    property BarBase bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
 
     property bool showAlternate: false
 
-    readonly property bool dark: bar ? bar.dark : Application.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Inherit the bar's text color and font unless overridden here.
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property string edge: bar?.edge ?? "top"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property color popupTextColor: theme.colors.text
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // The Wi-Fi heading
+    property font popupStrongFont
+    popupStrongFont.family: theme.popup.font.family
+    popupStrongFont.pixelSize: 13
+    popupStrongFont.weight: Font.DemiBold
+    // The Wi-Fi glyph beside it, and the refresh glyph
+    property int wifiIconSize: 20
+    property int popupIconSize: 14
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    // The right-click menu on a network: the theme's, unless set here
+    property int menuWidth: 200
+    property color menuColor: theme.menu.background
+    property color menuBorderColor: theme.menu.border
+    property color menuTextColor: theme.colors.text
+    property real menuRadius: theme.menu.radius
+    property font menuFont: theme.menu.font
+    // Milliseconds the right-click menu takes to fade in
+    property int menuOpenDuration: theme.menu.openDuration
+    // The icons in the text fields' right-click menu
+    property int menuIconSize: 16
+    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+    property color popupDividerColor: theme.colors.divider
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    property color popupTertiaryTextColor: theme.colors.textTertiary
+    property color popupHoverColor: theme.colors.hover
+    property color popupCardColor: theme.colors.card
+    property color popupCardBorderColor: theme.colors.cardBorder
+    readonly property string edge: bar.edge
 
     // The connection Windows uses for internet; kind is wifi, ethernet, mobile, other or none.
     readonly property var primary: connections.primary
@@ -114,7 +155,7 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const gap = 6
+        const gap = popupGap
         const margin = 8
         let px
         let py
@@ -209,10 +250,17 @@ Item {
         }
     }
 
+    // An item of the text fields' right-click menu, its icon in menuIconSize
+    component FieldMenuItem: MenuItem {
+        icon.width: network.menuIconSize
+        icon.height: network.menuIconSize
+    }
+
     component Glyph: Text {
         textFormat: Text.PlainText
         font.family: network.iconFont.family
         font.weight: network.iconFont.weight
+        font.variableAxes: network.iconFont.variableAxes
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
     }
@@ -267,8 +315,8 @@ Item {
 
         required property string page
 
-        color: linkArea.containsMouse ? popup.ink : Qt.alpha(popup.ink, 0.65)
-        font.pixelSize: 12
+        color: linkArea.containsMouse ? network.popupTextColor : network.popupSecondaryTextColor
+        font: network.popupSmallFont
         Accessible.role: Accessible.Link
         Accessible.name: text
         Accessible.onPressAction: linkArea.clicked(null)
@@ -305,7 +353,7 @@ Item {
             badgeColor: network.noInternetColor
         }
 
-        Text {
+        Label {
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
             visible: text !== ""
@@ -334,16 +382,17 @@ Item {
         property real reveal: 0
         // SSID whose controls are open; empty for a hidden network.
         property var expanded: undefined
-        readonly property color ink: network.dark ? "#ffffff" : "#000000"
 
         objectName: "popup"
         title: "Network"
         width: network.popupWidth
-        height: popupContent.implicitHeight + 16
+        height: popupContent.implicitHeight
         anchor: network
+        font: network.popupFont
+        theme: network.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: network.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: network.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -353,11 +402,10 @@ Item {
             id: surface
 
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: network.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: network.popupRadius
+            color: network.popupColor
             border.width: 1
-            border.color: network.dark ? "#3A3A3A" : "#D9D9D9"
+            border.color: network.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: network.edge === "bottom" ? Item.Bottom : Item.Top
@@ -373,17 +421,16 @@ Item {
                     Layout.leftMargin: 16
                     Layout.rightMargin: 10
                     Layout.topMargin: 12
-                    Layout.bottomMargin: 12
+                    Layout.bottomMargin: 10
                     text: "Network"
-                    color: popup.ink
-                    font.pixelSize: 16
-                    font.weight: Font.DemiBold
+                    color: network.popupTextColor
+                    font: network.popupTitleFont
                 }
 
                 LoadingLine {
                     Layout.fillWidth: true
                     running: wifi.scanning || wifi.connecting
-                    trackColor: Qt.alpha(popup.ink, 0.1)
+                    trackColor: network.popupDividerColor
                 }
 
                 // The internet connection when it is not Wi-Fi, such as Ethernet, mobile or a VPN, above the Wi-Fi
@@ -406,7 +453,7 @@ Item {
                         icons: network.signalIcons
                         strength: network.primary.signal
                         glyph: network.connectionIcon
-                        color: popup.ink
+                        color: network.popupTextColor
                     }
 
                     Text {
@@ -414,24 +461,24 @@ Item {
                         text: network.connectionName
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
-                        color: popup.ink
-                        font.pixelSize: 13
+                        color: network.popupTextColor
+                        font: network.popupFont
                     }
 
                     Column {
                         Text {
                             anchors.right: parent.right
                             text: network.connectionStatus
-                            color: Qt.alpha(popup.ink, 0.65)
-                            font.pixelSize: 12
+                            color: network.popupSecondaryTextColor
+                            font: network.popupSmallFont
                         }
 
                         Text {
                             anchors.right: parent.right
                             visible: text !== ""
                             text: network.primary.ipAddress
-                            color: Qt.alpha(popup.ink, 0.5)
-                            font.pixelSize: 12
+                            color: network.popupTertiaryTextColor
+                            font: network.popupSmallFont
                         }
                     }
                 }
@@ -444,7 +491,7 @@ Item {
                     Layout.rightMargin: 16
                     implicitHeight: 1
                     visible: connectionRow.visible && wifi.available
-                    color: Qt.alpha(popup.ink, 0.1)
+                    color: network.popupDividerColor
                 }
 
                 // Wi-Fi heading with the switch, shown when the PC has a Wi-Fi adapter.
@@ -461,9 +508,9 @@ Item {
                         Layout.preferredWidth: 20
                         Layout.preferredHeight: 20
                         text: network.wifiIcons[network.wifiIcons.length - 1] ?? ""
-                        color: popup.ink
+                        color: network.popupTextColor
                         opacity: wifi.enabled ? 1 : 0.5
-                        font.pixelSize: 20
+                        font.pixelSize: network.wifiIconSize
                     }
 
                     Column {
@@ -471,16 +518,15 @@ Item {
 
                         Text {
                             text: "Wi-Fi"
-                            color: popup.ink
-                            font.pixelSize: 13
-                            font.weight: Font.DemiBold
+                            color: network.popupTextColor
+                            font: network.popupStrongFont
                         }
 
                         Text {
                             visible: !wifi.enabled
                             text: "Off"
-                            color: Qt.alpha(popup.ink, 0.65)
-                            font.pixelSize: 12
+                            color: network.popupSecondaryTextColor
+                            font: network.popupSmallFont
                         }
                     }
 
@@ -499,14 +545,14 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             radius: 4
-                            color: Qt.alpha(popup.ink, refreshArea.containsMouse && !wifi.scanning ? 0.1 : 0)
+                            color: refreshArea.containsMouse && !wifi.scanning ? network.popupHoverColor : "transparent"
                         }
 
                         Glyph {
                             anchors.fill: parent
                             text: "\ue72c"
-                            color: popup.ink
-                            font.pixelSize: 14
+                            color: network.popupTextColor
+                            font.pixelSize: network.popupIconSize
                         }
 
                         MouseArea {
@@ -537,8 +583,8 @@ Item {
                     visible: wifi.available && wifi.enabled && list.count === 0 && wifi.error === ""
                     text: wifi.scanning ? "Looking for networks..." : "No networks found"
                     horizontalAlignment: Text.AlignHCenter
-                    color: Qt.alpha(popup.ink, 0.5)
-                    font.pixelSize: 13
+                    color: network.popupTertiaryTextColor
+                    font: network.popupFont
                 }
 
                 ListView {
@@ -619,9 +665,9 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             radius: 8
-                            color: Qt.alpha(popup.ink, wifiNetwork.expanded ? 0.03 : headerArea.containsMouse ? 0.06 : 0)
+                            color: wifiNetwork.expanded ? network.popupCardColor : headerArea.containsMouse ? network.popupHoverColor : "transparent"
                             border.width: wifiNetwork.expanded ? 1 : 0
-                            border.color: Qt.alpha(popup.ink, 0.04)
+                            border.color: network.popupCardBorderColor
                         }
 
                         ColumnLayout {
@@ -644,7 +690,7 @@ Item {
                                         size: 20
                                         icons: wifiNetwork.secured ? network.securedIcons : network.openIcons
                                         strength: wifiNetwork.quality
-                                        color: popup.ink
+                                        color: network.popupTextColor
                                     }
 
                                     Text {
@@ -652,24 +698,24 @@ Item {
                                         text: wifiNetwork.name
                                         textFormat: Text.PlainText
                                         elide: Text.ElideRight
-                                        color: wifiNetwork.hidden ? Qt.alpha(popup.ink, 0.65) : popup.ink
-                                        font.pixelSize: 13
+                                        color: wifiNetwork.hidden ? network.popupSecondaryTextColor : network.popupTextColor
+                                        font: network.popupFont
                                     }
 
                                     Column {
                                         Text {
                                             anchors.right: parent.right
                                             text: wifiNetwork.statusText
-                                            color: Qt.alpha(popup.ink, 0.65)
-                                            font.pixelSize: 12
+                                            color: network.popupSecondaryTextColor
+                                            font: network.popupSmallFont
                                         }
 
                                         Text {
                                             anchors.right: parent.right
                                             text: wifiNetwork.ipAddress ? `${wifiNetwork.quality}%, ${wifiNetwork.ipAddress}`
                                                 : `${wifiNetwork.quality}%`
-                                            color: Qt.alpha(popup.ink, 0.5)
-                                            font.pixelSize: 12
+                                            color: network.popupTertiaryTextColor
+                                            font: network.popupSmallFont
                                         }
                                     }
                                 }
@@ -704,6 +750,18 @@ Item {
                                 TextField {
                                     id: ssidField
 
+                                    // Qt's own text menu is replaced by fieldMenu, which the right button opens
+                                    ContextMenu.menu: null
+
+                                    // A right-click opens the menu at the mouse cursor, on press or release as Windows sets it
+                                    TapHandler {
+                                        acceptedButtons: Qt.RightButton
+                                        onPressedChanged: {
+                                            if (pressed === (Application.styleHints.contextMenuTrigger === Qt.ContextMenuTrigger.Press))
+                                                fieldMenu.popup(ssidField)
+                                        }
+                                    }
+
                                     Layout.fillWidth: true
                                     visible: wifiNetwork.hidden && !wifiNetwork.connected
                                     placeholderText: "Network name"
@@ -712,6 +770,18 @@ Item {
 
                                 TextField {
                                     id: passwordField
+
+                                    // Qt's own text menu is replaced by fieldMenu, which the right button opens
+                                    ContextMenu.menu: null
+
+                                    // A right-click opens the menu at the mouse cursor, on press or release as Windows sets it
+                                    TapHandler {
+                                        acceptedButtons: Qt.RightButton
+                                        onPressedChanged: {
+                                            if (pressed === (Application.styleHints.contextMenuTrigger === Qt.ContextMenuTrigger.Press))
+                                                fieldMenu.popup(passwordField)
+                                        }
+                                    }
 
                                     Layout.fillWidth: true
                                     visible: (wifiNetwork.needsPassword || wifiNetwork.hidden) && !wifiNetwork.connected
@@ -754,14 +824,14 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 44
-                    bottomLeftRadius: 7
-                    bottomRightRadius: 7
-                    color: Qt.alpha("#000000", network.dark ? 0.15 : 0.03)
+                    bottomLeftRadius: network.popupRadius - 1
+                    bottomRightRadius: network.popupRadius - 1
+                    color: network.popupSecondaryBackgroundColor
 
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: Qt.alpha(popup.ink, 0.1)
+                        color: network.popupDividerColor
                     }
 
                     SettingsLink {
@@ -801,7 +871,8 @@ Item {
                         elide: Text.ElideRight
                         horizontalAlignment: Text.AlignHCenter
                         color: network.errorColor
-                        font.pixelSize: 12
+                        font.family: network.popupSmallFont.family
+                        font.pixelSize: network.popupSmallFont.pixelSize
                         font.underline: footer.link !== "" && errorArea.containsMouse
                         Accessible.role: footer.link ? Accessible.Link : Accessible.StaticText
                         Accessible.name: text
@@ -824,6 +895,85 @@ Item {
             }
 
             // Right-click menu; only saved networks have editable settings.
+            // The text fields' right-click menu: Qt's editing items and icons in the menu's look, acting on the field that
+            // opened it
+            Menu {
+                id: fieldMenu
+
+                readonly property TextField editor: parent as TextField
+                readonly property bool editable: !(editor?.readOnly ?? true)
+                readonly property bool selected: (editor?.selectedText.length ?? 0) > 0
+
+                // A window of its own, so it opens where clicked even past the popup's edges
+                popupType: Popup.Window
+                // Its window is made once and reused, and Windows shows it again where it was, under the popup raised
+                // since; raising it before it shows keeps it in front
+                onAboutToShow: contentItem.Window.window?.raise()
+                // Fades in when it opens, in place of the style's growing from a third of its height
+                enter: Transition {
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: network.menuOpenDuration; easing.type: Easing.OutCubic }
+                }
+                topInset: 0
+                leftInset: 0
+                rightInset: 0
+                bottomInset: 0
+                font: network.menuFont
+                // Active and inactive only, so disabled controls keep the style's dimmed colours
+                palette.active.text: network.menuTextColor
+                palette.inactive.text: network.menuTextColor
+
+                background: Rectangle {
+                    implicitWidth: network.menuWidth
+                    radius: network.menuRadius
+                    color: network.menuColor
+                    border.color: network.menuBorderColor
+                }
+
+                FieldMenuItem {
+                    text: qsTr("Undo")
+                    icon.name: "edit-undo"
+                    enabled: fieldMenu.editor?.canUndo ?? false
+                    onTriggered: fieldMenu.editor.undo()
+                }
+                FieldMenuItem {
+                    text: qsTr("Redo")
+                    icon.name: "edit-redo"
+                    enabled: fieldMenu.editor?.canRedo ?? false
+                    onTriggered: fieldMenu.editor.redo()
+                }
+                MenuSeparator {}
+                FieldMenuItem {
+                    text: qsTr("Cut")
+                    icon.name: "edit-cut"
+                    enabled: fieldMenu.editable && fieldMenu.selected
+                    onTriggered: fieldMenu.editor.cut()
+                }
+                FieldMenuItem {
+                    text: qsTr("Copy")
+                    icon.name: "edit-copy"
+                    enabled: fieldMenu.selected
+                    onTriggered: fieldMenu.editor.copy()
+                }
+                FieldMenuItem {
+                    text: qsTr("Paste")
+                    icon.name: "edit-paste"
+                    enabled: fieldMenu.editable && (fieldMenu.editor?.canPaste ?? false)
+                    onTriggered: fieldMenu.editor.paste()
+                }
+                FieldMenuItem {
+                    text: qsTr("Delete")
+                    icon.name: "edit-delete"
+                    enabled: fieldMenu.editable && fieldMenu.selected
+                    onTriggered: fieldMenu.editor.remove(fieldMenu.editor.selectionStart, fieldMenu.editor.selectionEnd)
+                }
+                MenuSeparator {}
+                FieldMenuItem {
+                    text: qsTr("Select All")
+                    icon.name: "edit-select-all"
+                    onTriggered: fieldMenu.editor.selectAll()
+                }
+            }
+
             Menu {
                 id: networkMenu
 
@@ -839,6 +989,25 @@ Item {
                 }
 
                 popupType: Popup.Item
+                // Fades in when it opens, in place of the style's growing from a third of its height
+                enter: Transition {
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: network.menuOpenDuration; easing.type: Easing.OutCubic }
+                }
+                topInset: 0
+                leftInset: 0
+                rightInset: 0
+                bottomInset: 0
+                font: network.menuFont
+                // Active and inactive only, so disabled controls keep the style's dimmed colours
+                palette.active.text: network.menuTextColor
+                palette.inactive.text: network.menuTextColor
+
+                background: Rectangle {
+                    implicitWidth: network.menuWidth
+                    radius: network.menuRadius
+                    color: network.menuColor
+                    border.color: network.menuBorderColor
+                }
 
                 MenuItem {
                     text: "Connect automatically"

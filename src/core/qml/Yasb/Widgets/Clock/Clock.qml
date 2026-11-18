@@ -1,10 +1,14 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
-Text {
+Label {
     id: clock
 
     property string format: "HH:mm"
@@ -12,15 +16,49 @@ Text {
     property string locale: ""
     property var timeZones: []
     property bool showWeekNumbers: false
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
 
     property bool showAlternate: false
     property int timeZoneIndex: 0
 
     readonly property string activeFormat: showAlternate ? alternateFormat : format
     readonly property string timeZone: timeZones.length > 0 ? timeZones[timeZoneIndex % timeZones.length] : ""
-    readonly property bool dark: Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    readonly property string edge: bar?.edge ?? "top"
+    readonly property bool dark: theme.dark
+    property color accentColor: theme.colors.accent
+    // Today's number in the calendar, on the accent colour
+    property color todayTextColor: theme.colors.textOnAccent
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property color popupTextColor: theme.colors.text
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // The arrows that change the month, the weekday names and the week numbers
+    property font arrowFont
+    arrowFont.family: theme.popup.font.family
+    arrowFont.pixelSize: 18
+    property font weekdayFont
+    weekdayFont.family: theme.popup.font.family
+    weekdayFont.pixelSize: 11
+    property font weekNumberFont
+    weekNumberFont.family: theme.popup.font.family
+    weekNumberFont.pixelSize: 11
+    property color popupDividerColor: theme.colors.divider
+    readonly property string edge: bar.edge
 
     function nextTick(): int {
         const time = new Date()
@@ -59,10 +97,10 @@ Text {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + 6
-            : edge === "right" ? start.x - calendar.width - 6 : start.x + (width - calendar.width) / 2
-        let py = edge === "top" ? start.y + height + 6
-            : edge === "bottom" ? start.y - calendar.height - 6 : start.y + (height - calendar.height) / 2
+        let px = edge === "left" ? start.x + width + popupGap
+            : edge === "right" ? start.x - calendar.width - popupGap : start.x + (width - calendar.width) / 2
+        let py = edge === "top" ? start.y + height + popupGap
+            : edge === "bottom" ? start.y - calendar.height - popupGap : start.y + (height - calendar.height) / 2
         const screen = clock.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - calendar.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - calendar.height - 8))
@@ -70,15 +108,8 @@ Text {
         calendar.y = Math.round(py)
     }
 
-    // The bar's colour and font, each part unless the widget file sets it
-    color: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
+    // The theme's text colour; the font comes from the bar, each part unless the widget file sets it
+    color: clock.popupTextColor
     verticalAlignment: Text.AlignVCenter
 
     Component.onCompleted: refresh()
@@ -127,8 +158,6 @@ Text {
         property int month: today.getMonth()
         property int year: today.getFullYear()
 
-        readonly property color textColor: clock.dark ? "#ffffff" : "#000000"
-        readonly property color accent: "#0a84ff"
         readonly property var locale: clock.locale ? Qt.locale(clock.locale) : Qt.locale()
 
         function showMonth(offset: int) {
@@ -145,28 +174,29 @@ Text {
 
         objectName: "calendar"
         title: "Calendar"
-        width: content.implicitWidth + 48
-        height: content.implicitHeight + 40
+        width: popupContent.implicitWidth + 32
+        height: popupContent.implicitHeight + 24
         anchor: clock
+        font: clock.popupFont
+        theme: clock.theme
         backdropItem: surface
-        enter: NumberAnimation { target: calendar; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: calendar; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: calendar; property: "reveal"; to: 1; duration: clock.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: calendar; property: "reveal"; to: 0; duration: clock.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: { if (!visible) reveal = 0 }
 
         Rectangle {
             id: surface
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: clock.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: clock.popupRadius
+            color: clock.popupColor
             border.width: 1
-            border.color: clock.dark ? Qt.alpha("#3A3A3A", 1) : Qt.alpha("#D9D9D9", 1)
+            border.color: clock.popupBorderColor
             opacity: calendar.reveal
             scale: 0.85 + calendar.reveal * 0.15
             transformOrigin: clock.edge === "bottom" ? Item.Bottom : Item.Top
 
             ColumnLayout {
-                id: content
+                id: popupContent
                 x: 16
                 y: 12
                 spacing: 8
@@ -176,9 +206,8 @@ Text {
                         objectName: "title"
                         Layout.fillWidth: true
                         text: `${calendar.locale.standaloneMonthName(calendar.month)} ${calendar.year}`
-                        color: calendar.textColor
-                        font.pixelSize: 14
-                        font.bold: true
+                        font: clock.popupTitleFont
+                        color: clock.popupTextColor
                     }
 
                     Repeater {
@@ -188,8 +217,8 @@ Text {
                             required property var modelData
 
                             text: modelData.label
-                            color: calendar.textColor
-                            font.pixelSize: 18
+                            color: clock.popupTextColor
+                            font: clock.arrowFont
                             leftPadding: 8
                             rightPadding: 8
 
@@ -199,6 +228,16 @@ Text {
                             }
                         }
                     }
+                }
+
+                // The header's bottom line, across the whole calendar
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: -16
+                    Layout.rightMargin: -16
+                    Layout.topMargin: 2
+                    implicitHeight: 1
+                    color: clock.popupDividerColor
                 }
 
                 GridLayout {
@@ -218,9 +257,9 @@ Text {
                             required property string shortName
 
                             text: shortName
-                            color: calendar.textColor
+                            color: clock.popupTextColor
                             opacity: 0.6
-                            font.pixelSize: 11
+                            font: clock.weekdayFont
                             horizontalAlignment: Text.AlignHCenter
                         }
                     }
@@ -236,9 +275,9 @@ Text {
                             required property int weekNumber
 
                             text: weekNumber
-                            color: calendar.textColor
+                            color: clock.popupTextColor
                             opacity: 0.5
-                            font.pixelSize: 11
+                            font: clock.weekNumberFont
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
@@ -260,9 +299,9 @@ Text {
                             readonly property bool today: calendar.isToday(model.date)
 
                             text: model.day
-                            color: today ? "#ffffff" : calendar.textColor
+                            color: today ? clock.todayTextColor : clock.popupTextColor
                             opacity: model.month === grid.month ? 1 : 0.35
-                            font.pixelSize: 12
+                            font: clock.popupSmallFont
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
 
@@ -271,7 +310,7 @@ Text {
                                 width: 26
                                 height: 26
                                 radius: 13
-                                color: calendar.accent
+                                color: clock.accentColor
                                 visible: day.today
                                 z: -1
                             }

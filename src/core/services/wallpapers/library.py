@@ -18,6 +18,7 @@ class WallpaperLibrary(QObject):
     imagesChanged = pyqtSignal()
     currentChanged = pyqtSignal()
     scanningChanged = pyqtSignal()
+    wallpaperSet = pyqtSignal(str)
 
     _last_random: str | None = None
 
@@ -102,20 +103,23 @@ class WallpaperLibrary(QObject):
     def screenCount(self) -> int:
         return len(WallpaperManager.monitor_ids())
 
-    @pyqtSlot(str)
-    def setWallpaper(self, path: str) -> None:
-        if not WallpaperManager.set_wallpaper(path, animation=self._animation):
-            return
+    # The set methods are false when the wallpaper is not set, as while a transition still plays
+    @pyqtSlot(str, result="bool")
+    def setWallpaper(self, path: str) -> bool:
+        if not WallpaperManager.set_wallpaper(path, animation=self._animation, announce=self.wallpaperSet):
+            return False
         index = next((index for index, image in enumerate(self._images) if image["path"] == path), -1)
         if index >= 0:
             self._current = {screen.name(): index for screen in QGuiApplication.screens()}
             self.currentChanged.emit()
+        return True
 
-    @pyqtSlot(str, int)
-    def setWallpaperOn(self, path: str, screen: int) -> None:
+    @pyqtSlot(str, int, result="bool")
+    def setWallpaperOn(self, path: str, screen: int) -> bool:
         monitors = WallpaperManager.monitor_ids()
-        if 0 <= screen < len(monitors):
-            WallpaperManager.set_wallpaper(path, monitors[screen])
+        return 0 <= screen < len(monitors) and WallpaperManager.set_wallpaper(
+            path, monitors[screen], announce=self.wallpaperSet
+        )
 
     @pyqtSlot()
     def setRandomWallpaper(self) -> None:
@@ -128,5 +132,5 @@ class WallpaperLibrary(QObject):
         if not choices:
             return
         pick = random.choice(choices)
-        WallpaperLibrary._last_random = pick
-        self.setWallpaper(pick)
+        if self.setWallpaper(pick):
+            WallpaperLibrary._last_random = pick

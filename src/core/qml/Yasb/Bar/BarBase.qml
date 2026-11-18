@@ -1,13 +1,16 @@
 import QtQuick
 import QtQuick.Controls
 import Yasb
+import Yasb.Themes
 
 Item {
     id: base
 
     required property BarContext context
+    // The context holds it as a plain object, since Python can't name the Theme type
+    readonly property Theme theme: context.theme as Theme
 
-    readonly property bool dark: Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
+    readonly property bool dark: theme.dark
     readonly property string name: context.name
     readonly property string screenName: context.screenName
     readonly property string edge: context.edge
@@ -25,12 +28,9 @@ Item {
 
     property int padding: 12
     property int spacing: 12
-    property color textColor: dark ? "#ffffff" : "#000000"
-    property font font: Qt.font({ pixelSize: 13 })
-    property font iconFont: Qt.font({ family: "Segoe Fluent Icons" })
     property real contentImplicitLength: longestContent()
     property list<string> slotNames: []
-    property list<Item> slots: []
+    property list<WidgetSlot> slots: []
 
     // Opened by a right-click on the bar: null for no menu, or a Component of your own with the same properties
     property Component contextMenu: Component {
@@ -52,7 +52,7 @@ Item {
         return longest
     }
 
-    function addSlot(slot: Item) {
+    function addSlot(slot: WidgetSlot) {
         slots = [...slots, slot]
         slotNames = [...slotNames, slot.name]
     }
@@ -106,14 +106,16 @@ Item {
         id: surface
 
         anchors.fill: parent
-        color: dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+        color: base.theme.bar.background
         border.width: 0
-        border.color: dark ? Qt.alpha("#3A3A3A", 1) : Qt.alpha("#D9D9D9", 1)
+        border.color: base.theme.bar.border
     }
 
-    Item {
+    // A Control, so every Label in the widgets takes the theme's bar font, each part unless the widget sets it
+    Control {
         id: contentArea
 
+        font: base.theme.bar.font
         anchors.fill: parent
         anchors.leftMargin: base.vertical ? 0 : base.padding
         anchors.rightMargin: base.vertical ? 0 : base.padding

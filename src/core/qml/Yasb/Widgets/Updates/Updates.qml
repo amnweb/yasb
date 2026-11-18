@@ -4,12 +4,16 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
-    id: widget
+    // Not updates: the id would hide AvailableUpdates' updates property
+    id: updatesWidget
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // Which sources are checked; winget and Scoop are left out where they are not installed
     property bool windowsUpdate: true
     property bool winget: true
@@ -21,7 +25,7 @@ Item {
     // Updates to leave out, by a name or id they contain, in any case, such as ["Microsoft.Edge", "Defender"]
     property list<string> exclude: []
     // Label placeholders: {count}, {windows}, {winget} and {scoop}
-    property string label: "{count}"
+    property string label: ""
     // The glyph in front of the label, in the icon font
     property string icon: "\ue896"
     // Hides the widget while there is nothing to update and no restart waiting
@@ -29,45 +33,93 @@ Item {
     property bool tooltip: true
     // Hotkey that opens the popup, such as "alt+shift+u"
     property string keys: ""
-    property int popupWidth: 380
+    property int popupWidth: 364
     // Popup alignment relative to the widget on a horizontal bar: left, right or center
     property string popupAlignment: "center"
     // The updates scroll when they exceed this height
     property int maxListHeight: 420
-    property color accentColor: dark ? "#60CDFF" : "#005FB8"
-    property color cautionColor: dark ? "#FCE100" : "#9D5D00"
-    property color criticalColor: dark ? "#FF99A4" : "#C42B1C"
-    property color successColor: dark ? "#6CCB5F" : "#0F7B0F"
+    property color accentColor: updatesWidget.theme.colors.accent
+    property color cautionColor: updatesWidget.theme.colors.warning
+    property color criticalColor: updatesWidget.theme.colors.critical
+    property color successColor: updatesWidget.theme.colors.success
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
+    property int iconSize: theme.bar.iconFont.pixelSize
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property string edge: bar?.edge ?? "top"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property color popupTextColor: theme.colors.text
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+    property color popupCardColor: theme.colors.card
+    property color popupCardBorderColor: theme.colors.cardBorder
+    property color popupDividerColor: theme.colors.divider
+    property color popupTertiaryTextColor: theme.colors.textTertiary
+    property color popupHoverColor: theme.colors.hover
+    property color popupControlColor: theme.colors.control
+    property color popupControlHoverColor: theme.colors.controlHover
+    property color popupControlPressedColor: theme.colors.controlPressed
+    property color popupControlBorderColor: theme.colors.controlBorder
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // Glyphs: the popup's buttons and warnings, and the one shown when everything is up to date
+    property int popupIconSize: 14
+    property int statusIconSize: 28
+    // The message when everything is up to date, each source's name and count, each update's name, and each
+    // skipped update's name
+    property font statusFont
+    statusFont.family: theme.popup.font.family
+    statusFont.pixelSize: 14
+    property font sectionFont
+    sectionFont.family: theme.popup.font.family
+    sectionFont.pixelSize: 14
+    sectionFont.weight: Font.DemiBold
+    property font countFont
+    countFont.family: theme.popup.font.family
+    countFont.pixelSize: 11
+    countFont.weight: Font.DemiBold
+    property font updateNameFont
+    updateNameFont.family: theme.popup.font.family
+    updateNameFont.pixelSize: 13
+    updateNameFont.weight: Font.DemiBold
+    property font skippedNameFont
+    skippedNameFont.family: theme.popup.font.family
+    skippedNameFont.pixelSize: 14
+    readonly property string edge: bar.edge
 
     // The updates of each source by its id
     readonly property var bySource: {
         const found = { windows: 0, winget: 0, scoop: 0 }
-        for (const update of updates.updates)
+        for (const update of available.updates)
             found[update.source] = (found[update.source] ?? 0) + 1
         return found
     }
     readonly property string text: label.replace(/\{(\w+)\}/g,
-        (match, key) => key === "count" ? String(updates.count) : String(bySource[key] ?? match))
+        (match, key) => key === "count" ? String(available.count) : String(bySource[key] ?? match))
     // When a source was last checked: the time today, the day and time before
     readonly property string checked: {
-        const at = updates.checked
+        const at = available.checked
         if (!(at instanceof Date) || isNaN(at))
             return ""
         const time = Qt.formatTime(at, Qt.locale().timeFormat(Locale.ShortFormat))
@@ -77,9 +129,9 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const gap = 6
+        const gap = popupGap
         const margin = 8
-        const screen = widget.Screen
+        const screen = updatesWidget.Screen
         let px
         let py
         switch (edge) {
@@ -114,14 +166,14 @@ Item {
     }
 
     // A hidden widget takes no room on the bar, as its slot keeps the size it asks for
-    readonly property bool shown: !hideWhenNone || updates.count > 0 || updates.restartRequired
+    readonly property bool shown: !hideWhenNone || available.count > 0 || available.restartRequired
 
     implicitWidth: shown ? row.implicitWidth : 0
     implicitHeight: shown ? row.implicitHeight : 0
     visible: shown
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
-    Accessible.name: qsTr("%n update(s) available", "", updates.count)
+    Accessible.name: qsTr("%n update(s) available", "", available.count)
     Accessible.onPressAction: togglePopup()
     Keys.onReturnPressed: togglePopup()
     Keys.onSpacePressed: togglePopup()
@@ -129,37 +181,37 @@ Item {
     Component.onDestruction: popup.hide()
 
     AvailableUpdates {
-        id: updates
+        id: available
 
-        windowsUpdate: widget.windowsUpdate
-        winget: widget.winget
-        scoop: widget.scoop
-        windowsInterval: widget.windowsInterval
-        packageInterval: widget.packageInterval
-        exclude: widget.exclude
+        windowsUpdate: updatesWidget.windowsUpdate
+        winget: updatesWidget.winget
+        scoop: updatesWidget.scoop
+        windowsInterval: updatesWidget.windowsInterval
+        packageInterval: updatesWidget.packageInterval
+        exclude: updatesWidget.exclude
     }
 
     Hotkey {
-        keys: widget.keys
-        onActivated: widget.togglePopup()
+        keys: updatesWidget.keys
+        onActivated: updatesWidget.togglePopup()
     }
 
     Connections {
-        target: widget.Window.window
+        target: updatesWidget.Window.window
 
         function onVisibleChanged() {
-            if (!widget.Window.window?.visible)
+            if (!updatesWidget.Window.window?.visible)
                 popup.hide()
         }
 
         function onXChanged() {
             if (popup.visible)
-                widget.placePopup()
+                updatesWidget.placePopup()
         }
 
         function onYChanged() {
             if (popup.visible)
-                widget.placePopup()
+                updatesWidget.placePopup()
         }
     }
 
@@ -169,7 +221,7 @@ Item {
 
         function onHeightChanged() {
             if (popup.visible)
-                widget.placePopup()
+                updatesWidget.placePopup()
         }
     }
 
@@ -177,44 +229,45 @@ Item {
         textFormat: Text.PlainText
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        font.family: widget.iconFont.family
-        font.weight: widget.iconFont.weight
+        font.family: updatesWidget.iconFont.family
+        font.weight: updatesWidget.iconFont.weight
+        font.variableAxes: updatesWidget.iconFont.variableAxes
     }
 
     // Text in the popup: plain, in its ink or muted colour, cut short with an ellipsis rather than widening a row
-    component Label: Text {
+    component PopupText: Text {
         property bool muted: false
 
         Layout.minimumWidth: 0
         textFormat: Text.PlainText
         elide: Text.ElideRight
-        color: muted ? popup.muted : popup.ink
-        font.pixelSize: 13
+        color: muted ? updatesWidget.popupTertiaryTextColor : updatesWidget.popupTextColor
+        font: updatesWidget.popupFont
     }
 
     // A line between the popup's parts
     component Divider: Rectangle {
         Layout.fillWidth: true
         implicitHeight: 1
-        color: popup.line
+        color: updatesWidget.popupDividerColor
     }
 
-    // A WinUI card, holding a source's updates
+    // A card holding a source's updates
     component Card: Rectangle {
         Layout.fillWidth: true
         Layout.leftMargin: 12
         Layout.rightMargin: 12
         radius: 8
-        color: widget.dark ? Qt.alpha("#ffffff", 0.0512) : Qt.alpha("#ffffff", 0.7)
+        color: updatesWidget.popupCardColor
         border.width: 1
-        border.color: Qt.alpha("#000000", widget.dark ? 0.1 : 0.0578)
+        border.color: updatesWidget.popupCardBorderColor
     }
 
     // The line above a row in a card, after its first
     component RowSeparator: Rectangle {
         width: parent.width
         height: 1
-        color: Qt.alpha(popup.ink, 0.06)
+        color: updatesWidget.popupDividerColor
     }
 
     component Link: Text {
@@ -222,8 +275,8 @@ Item {
 
         signal clicked
 
-        color: linkArea.containsMouse ? popup.ink : popup.secondary
-        font.pixelSize: 12
+        color: linkArea.containsMouse ? updatesWidget.popupTextColor : updatesWidget.popupSecondaryTextColor
+        font: updatesWidget.popupSmallFont
         Accessible.role: Accessible.Link
         Accessible.name: text
         Accessible.onPressAction: link.clicked()
@@ -239,7 +292,7 @@ Item {
         }
     }
 
-    // A small framed button, as WinUI's standard buttons are
+    // A small framed button
     component SmallButton: Rectangle {
         id: button
 
@@ -249,9 +302,9 @@ Item {
         implicitWidth: buttonText.implicitWidth + 20
         implicitHeight: 26
         radius: 4
-        color: Qt.alpha(popup.ink, buttonArea.pressed ? 0.04 : buttonArea.containsMouse ? 0.09 : 0.06)
+        color: buttonArea.pressed ? updatesWidget.popupControlPressedColor : buttonArea.containsMouse ? updatesWidget.popupControlHoverColor : updatesWidget.popupControlColor
         border.width: 1
-        border.color: Qt.alpha(popup.ink, 0.08)
+        border.color: updatesWidget.popupControlBorderColor
         Accessible.role: Accessible.Button
         Accessible.name: text
         Accessible.onPressAction: button.clicked()
@@ -262,8 +315,8 @@ Item {
             anchors.centerIn: parent
             text: button.text
             textFormat: Text.PlainText
-            color: popup.ink
-            font.pixelSize: 12
+            color: updatesWidget.popupTextColor
+            font: updatesWidget.popupSmallFont
         }
 
         MouseArea {
@@ -282,7 +335,7 @@ Item {
 
         property string glyph
         property string tip
-        property color tint: popup.secondary
+        property color tint: updatesWidget.popupSecondaryTextColor
         signal clicked
 
         implicitWidth: 26
@@ -297,14 +350,14 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 4
-            color: Qt.alpha(popup.ink, actionArea.containsMouse ? 0.08 : 0)
+            color: actionArea.containsMouse ? updatesWidget.popupHoverColor : "transparent"
         }
 
         Glyph {
             anchors.fill: parent
             text: action.glyph
             color: action.tint
-            font.pixelSize: 14
+            font.pixelSize: updatesWidget.popupIconSize
         }
 
         MouseArea {
@@ -326,20 +379,22 @@ Item {
         Glyph {
             objectName: "icon"
             anchors.verticalCenter: parent.verticalCenter
-            visible: widget.icon !== ""
-            text: widget.icon
-            color: widget.textColor
-            font.pixelSize: widget.font.pixelSize + 1
+            visible: updatesWidget.icon !== ""
+            text: updatesWidget.icon
+            color: updatesWidget.textColor
+            font.pixelSize: updatesWidget.iconSize
         }
 
-        Text {
+        Label {
+            id: barLabel
+
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
             visible: text !== ""
-            text: widget.text
+            text: updatesWidget.text
             textFormat: Text.PlainText
-            color: widget.textColor
-            font: widget.font
+            color: updatesWidget.textColor
+            font: updatesWidget.font
         }
     }
 
@@ -352,23 +407,23 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: mouse => {
             if (mouse.button === Qt.LeftButton)
-                widget.togglePopup()
+                updatesWidget.togglePopup()
             else
-                updates.check("")
+                available.check("")
         }
     }
 
     ToolTip {
         objectName: "tooltip"
         popupType: Popup.Window
-        visible: widget.tooltip && area.containsMouse && !popup.visible
+        visible: updatesWidget.tooltip && area.containsMouse && !popup.visible
         delay: 400
-        text: updates.count === 0 ? qsTr("Everything is up to date")
-            : [qsTr("%n update(s)", "", updates.count),
-                ...updates.sources.filter(source => source.count > 0).map(source => `${source.name}: ${source.count}`)]
+        text: available.count === 0 ? qsTr("Everything is up to date")
+            : [qsTr("%n update(s)", "", available.count),
+                ...available.sources.filter(source => source.count > 0).map(source => `${source.name}: ${source.count}`)]
                 .join("\n")
         // Away from the bar's edge
-        y: widget.edge === "bottom" ? -implicitHeight - 6 : widget.height + 6
+        y: updatesWidget.edge === "bottom" ? -implicitHeight - 6 : updatesWidget.height + 6
     }
 
     BackdropPopup {
@@ -377,38 +432,36 @@ Item {
         property real reveal: 0
         // Whether the popup lists the versions skipped instead of the updates
         property bool showSkipped: false
-        readonly property color ink: widget.dark ? "#ffffff" : "#000000"
         // Supporting text, and labels, times and other text to read last
-        readonly property color secondary: Qt.alpha(ink, 0.786)
-        readonly property color muted: Qt.alpha(ink, 0.544)
         // The lines between the parts
-        readonly property color line: Qt.alpha(ink, 0.08)
         // The sources with something to show: updates, an error, or for Windows a restart waiting
-        readonly property var shownSources: updates.sources.filter(source => source.installed
+        readonly property var shownSources: available.sources.filter(source => source.installed
             && (source.count > 0 || source.error !== "" || source.installing
-                || (source.id === "windows" && updates.restartRequired)))
+                || (source.id === "windows" && available.restartRequired)))
         readonly property string subtitle: {
             // Every source still being checked, as "Windows Update, winget and Scoop"
-            const checking = updates.sources.filter(source => source.checking).map(source => source.name)
+            const checking = available.sources.filter(source => source.checking).map(source => source.name)
             if (checking.length > 0) {
                 const names = checking.length === 1 ? checking[0]
                     : qsTr("%1 and %2").arg(checking.slice(0, -1).join(", ")).arg(checking[checking.length - 1])
                 return qsTr("Checking %1...").arg(names)
             }
-            if (updates.count > 0)
-                return qsTr("%n available", "", updates.count)
-            return updates.sources.filter(source => source.installed).map(source => source.name).join(", ")
+            if (available.count > 0)
+                return qsTr("%n available", "", available.count)
+            return available.sources.filter(source => source.installed).map(source => source.name).join(", ")
         }
 
         objectName: "popup"
         title: qsTr("Updates")
-        width: widget.popupWidth
+        width: updatesWidget.popupWidth
         // Never taller than the screen
-        height: Math.min(popupContent.implicitHeight + 16, widget.Screen.desktopAvailableHeight - 24)
-        anchor: widget
+        height: Math.min(popupContent.implicitHeight, updatesWidget.Screen.desktopAvailableHeight - 40)
+        anchor: updatesWidget
+        font: updatesWidget.popupFont
+        theme: updatesWidget.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: updatesWidget.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: updatesWidget.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -418,14 +471,13 @@ Item {
             id: surface
 
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: widget.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: updatesWidget.popupRadius
+            color: updatesWidget.popupColor
             border.width: 1
-            border.color: widget.dark ? "#3A3A3A" : "#D9D9D9"
+            border.color: updatesWidget.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
-            transformOrigin: widget.edge === "bottom" ? Item.Bottom : Item.Top
+            transformOrigin: updatesWidget.edge === "bottom" ? Item.Bottom : Item.Top
             clip: true
 
             ColumnLayout {
@@ -448,20 +500,19 @@ Item {
                         Layout.minimumWidth: 0
                         spacing: 2
 
-                        Label {
+                        PopupText {
                             width: parent.width
                             text: popup.showSkipped ? qsTr("Skipped versions") : qsTr("Updates")
-                            font.pixelSize: 14
-                            font.weight: Font.DemiBold
+                            font: updatesWidget.popupTitleFont
                         }
 
-                        Label {
+                        PopupText {
                             objectName: "subtitle"
                             width: parent.width
                             visible: !popup.showSkipped && text !== ""
                             text: popup.subtitle
                             muted: true
-                            font.pixelSize: 12
+                            font: updatesWidget.popupSmallFont
                         }
                     }
 
@@ -470,11 +521,11 @@ Item {
                         Layout.preferredWidth: 28
                         Layout.preferredHeight: 28
                         visible: !popup.showSkipped
-                        enabled: !updates.checking
+                        enabled: !available.checking
                         opacity: enabled ? 1 : 0.4
                         Accessible.role: Accessible.Button
                         Accessible.name: qsTr("Check again")
-                        Accessible.onPressAction: updates.check("")
+                        Accessible.onPressAction: available.check("")
                         ToolTip.visible: refreshArea.containsMouse
                         ToolTip.delay: 500
                         ToolTip.text: qsTr("Check again")
@@ -482,14 +533,14 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             radius: 4
-                            color: Qt.alpha(popup.ink, refreshArea.containsMouse ? 0.1 : 0)
+                            color: refreshArea.containsMouse ? updatesWidget.popupHoverColor : "transparent"
                         }
 
                         Glyph {
                             anchors.fill: parent
                             text: "\ue72c"
-                            color: refreshArea.containsMouse ? popup.ink : popup.muted
-                            font.pixelSize: 14
+                            color: refreshArea.containsMouse ? updatesWidget.popupTextColor : updatesWidget.popupTertiaryTextColor
+                            font.pixelSize: updatesWidget.popupIconSize
                         }
 
                         MouseArea {
@@ -498,7 +549,7 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: updates.check("")
+                            onClicked: available.check("")
                         }
                     }
                 }
@@ -506,8 +557,8 @@ Item {
                 // The header's bottom line, which the loading bar runs along
                 LoadingLine {
                     Layout.fillWidth: true
-                    running: updates.checking || updates.sources.some(source => source.installing)
-                    trackColor: popup.line
+                    running: available.checking || available.sources.some(source => source.installing)
+                    trackColor: updatesWidget.popupDividerColor
                 }
 
                 // Nothing to update
@@ -522,24 +573,24 @@ Item {
                     Glyph {
                         Layout.alignment: Qt.AlignHCenter
                         text: "\ue930"
-                        color: widget.successColor
-                        font.pixelSize: 28
+                        color: updatesWidget.successColor
+                        font.pixelSize: updatesWidget.statusIconSize
                     }
 
-                    Label {
+                    PopupText {
                         Layout.alignment: Qt.AlignHCenter
                         Layout.topMargin: 8
-                        text: updates.checking && widget.checked === "" ? qsTr("Checking for updates...")
+                        text: available.checking && updatesWidget.checked === "" ? qsTr("Checking for updates...")
                             : qsTr("Everything is up to date")
-                        font.pixelSize: 14
+                        font: updatesWidget.statusFont
                     }
 
-                    Label {
+                    PopupText {
                         Layout.alignment: Qt.AlignHCenter
-                        visible: widget.checked !== ""
-                        text: qsTr("Checked %1").arg(widget.checked)
+                        visible: updatesWidget.checked !== ""
+                        text: qsTr("Checked %1").arg(updatesWidget.checked)
                         muted: true
-                        font.pixelSize: 12
+                        font: updatesWidget.popupSmallFont
                     }
                 }
 
@@ -549,7 +600,7 @@ Item {
 
                     objectName: "sources"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(contentHeight, widget.maxListHeight)
+                    Layout.preferredHeight: Math.min(contentHeight, updatesWidget.maxListHeight)
                     visible: !popup.showSkipped && popup.shownSources.length > 0
                     clip: true
                     contentHeight: sourceColumn.implicitHeight
@@ -570,9 +621,9 @@ Item {
 
                                 required property var modelData
                                 required property int index
-                                readonly property var items: updates.updates.filter(update => update.source === modelData.id)
+                                readonly property var items: available.updates.filter(update => update.source === modelData.id)
                                 readonly property bool failed: modelData.error !== ""
-                                readonly property bool restart: modelData.id === "windows" && updates.restartRequired
+                                readonly property bool restart: modelData.id === "windows" && available.restartRequired
 
                                 Layout.fillWidth: true
                                 // Long names are cut short instead of widening the popup
@@ -589,12 +640,11 @@ Item {
                                     spacing: 8
 
                                     // Shrinks with an ellipsis when the row is short, but never grows past its text
-                                    Label {
+                                    PopupText {
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: implicitWidth
                                         text: section.modelData.name
-                                        font.pixelSize: 14
-                                        font.weight: Font.DemiBold
+                                        font: updatesWidget.sectionFont
                                     }
 
                                     Rectangle {
@@ -602,7 +652,7 @@ Item {
                                         implicitWidth: Math.max(implicitHeight, countText.implicitWidth + 12)
                                         implicitHeight: 18
                                         radius: 9
-                                        color: Qt.alpha(popup.ink, 0.08)
+                                        color: Qt.alpha(updatesWidget.popupTextColor, 0.08)
 
                                         Text {
                                             id: countText
@@ -610,26 +660,25 @@ Item {
                                             anchors.centerIn: parent
                                             text: String(section.modelData.count)
                                             textFormat: Text.PlainText
-                                            color: popup.secondary
-                                            font.pixelSize: 11
-                                            font.weight: Font.DemiBold
+                                            color: updatesWidget.popupSecondaryTextColor
+                                            font: updatesWidget.countFont
                                         }
                                     }
 
                                     Item { Layout.fillWidth: true }
 
-                                    Label {
+                                    PopupText {
                                         visible: section.modelData.installing
                                         text: qsTr("Updating...")
                                         muted: true
-                                        font.pixelSize: 12
+                                        font: updatesWidget.popupSmallFont
                                     }
 
                                     SmallButton {
                                         visible: !section.modelData.installing
                                             && (section.modelData.id === "windows" || section.items.length > 0)
                                         text: section.modelData.id === "windows" ? qsTr("Open settings") : qsTr("Update all")
-                                        onClicked: updates.install(section.modelData.id, section.items.map(update => update.id))
+                                        onClicked: available.install(section.modelData.id, section.items.map(update => update.id))
                                     }
                                 }
 
@@ -650,17 +699,17 @@ Item {
                                             visible: section.failed
                                             spacing: 8
 
-                                            Label {
+                                            PopupText {
                                                 Layout.fillWidth: true
                                                 text: section.modelData.error
                                                 wrapMode: Text.WordWrap
-                                                color: widget.criticalColor
-                                                font.pixelSize: 12
+                                                color: updatesWidget.criticalColor
+                                                font: updatesWidget.popupSmallFont
                                             }
 
                                             Link {
                                                 text: qsTr("Try again")
-                                                onClicked: updates.check(section.modelData.id)
+                                                onClicked: available.check(section.modelData.id)
                                             }
                                         }
 
@@ -684,16 +733,16 @@ Item {
 
                                                 Glyph {
                                                     text: "\ue777"
-                                                    color: widget.cautionColor
-                                                    font.pixelSize: 14
+                                                    color: updatesWidget.cautionColor
+                                                    font.pixelSize: updatesWidget.popupIconSize
                                                 }
 
-                                                Label {
+                                                PopupText {
                                                     Layout.fillWidth: true
                                                     text: qsTr("Restart your PC to finish installing Windows updates")
                                                     wrapMode: Text.WordWrap
-                                                    color: popup.secondary
-                                                    font.pixelSize: 12
+                                                    color: updatesWidget.popupSecondaryTextColor
+                                                    font: updatesWidget.popupSmallFont
                                                 }
                                             }
                                         }
@@ -723,7 +772,7 @@ Item {
                                                     anchors.fill: parent
                                                     anchors.margins: 3
                                                     radius: 4
-                                                    color: Qt.alpha(popup.ink, rowHover.hovered ? 0.04 : 0)
+                                                    color: rowHover.hovered ? updatesWidget.popupHoverColor : "transparent"
                                                 }
 
                                                 // Stays hovered over the row's buttons too; a MouseArea would lose the hover to them
@@ -746,11 +795,10 @@ Item {
                                                         Layout.fillWidth: true
                                                         Layout.minimumWidth: 0
 
-                                                        Label {
+                                                        PopupText {
                                                             width: parent.width
                                                             text: updateRow.modelData.name
-                                                            font.pixelSize: 13
-                                                            font.weight: Font.DemiBold
+                                                            font: updatesWidget.updateNameFont
                                                         }
 
                                                         // The installed version, then the new one in the accent colour
@@ -758,25 +806,25 @@ Item {
                                                             width: parent.width
                                                             visible: updateRow.packaged
 
-                                                            Label {
+                                                            PopupText {
                                                                 text: `${updateRow.modelData.installedVersion || qsTr("Unknown")} · `
                                                                 muted: true
-                                                                font.pixelSize: 12
+                                                                font: updatesWidget.popupSmallFont
                                                             }
 
-                                                            Label {
+                                                            PopupText {
                                                                 text: updateRow.modelData.availableVersion
                                                                 muted: true
-                                                                font.pixelSize: 12
+                                                                font: updatesWidget.popupSmallFont
                                                             }
                                                         }
 
-                                                        Label {
+                                                        PopupText {
                                                             width: parent.width
                                                             visible: !updateRow.packaged && text !== ""
                                                             text: updateRow.details
                                                             muted: true
-                                                            font.pixelSize: 12
+                                                            font: updatesWidget.popupSmallFont
                                                         }
                                                     }
 
@@ -784,15 +832,15 @@ Item {
                                                         visible: updateRow.packaged && rowHover.hovered
                                                         glyph: "\ued1a"
                                                         tip: qsTr("Skip this version")
-                                                        onClicked: updates.skip(updateRow.modelData.source, updateRow.modelData.id)
+                                                        onClicked: available.skip(updateRow.modelData.source, updateRow.modelData.id)
                                                     }
 
                                                     RowAction {
                                                         visible: updateRow.packaged && rowHover.hovered && !section.modelData.installing
                                                         glyph: "\ue896"
                                                         tip: qsTr("Update")
-                                                        tint: widget.accentColor
-                                                        onClicked: updates.install(updateRow.modelData.source, [updateRow.modelData.id])
+                                                        tint: updatesWidget.accentColor
+                                                        onClicked: available.install(updateRow.modelData.source, [updateRow.modelData.id])
                                                     }
                                                 }
                                             }
@@ -812,7 +860,7 @@ Item {
 
                     objectName: "skipped"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(contentHeight, widget.maxListHeight)
+                    Layout.preferredHeight: Math.min(contentHeight, updatesWidget.maxListHeight)
                     visible: popup.showSkipped
                     clip: true
                     contentHeight: skippedColumn.implicitHeight
@@ -825,10 +873,10 @@ Item {
                         width: skippedList.width
                         spacing: 0
 
-                        Label {
+                        PopupText {
                             Layout.fillWidth: true
                             Layout.margins: 16
-                            visible: updates.skipped.length === 0
+                            visible: available.skipped.length === 0
                             text: qsTr("No versions are skipped.")
                             horizontalAlignment: Text.AlignHCenter
                             muted: true
@@ -837,7 +885,7 @@ Item {
                         Card {
                             Layout.topMargin: 12
                             Layout.bottomMargin: 12
-                            visible: updates.skipped.length > 0
+                            visible: available.skipped.length > 0
                             implicitHeight: skippedRows.implicitHeight
 
                             ColumnLayout {
@@ -847,7 +895,7 @@ Item {
                                 spacing: 0
 
                                 Repeater {
-                                    model: updates.skipped
+                                    model: available.skipped
 
                                     delegate: Item {
                                         id: skippedRow
@@ -874,23 +922,23 @@ Item {
                                                 Layout.fillWidth: true
                                                 Layout.minimumWidth: 0
 
-                                                Label {
+                                                PopupText {
                                                     width: parent.width
                                                     text: skippedRow.modelData.name
-                                                    font.pixelSize: 14
+                                                    font: updatesWidget.skippedNameFont
                                                 }
 
-                                                Label {
+                                                PopupText {
                                                     width: parent.width
                                                     text: [skippedRow.modelData.version, skippedRow.modelData.source].filter(part => part).join(" · ")
                                                     muted: true
-                                                    font.pixelSize: 12
+                                                    font: updatesWidget.popupSmallFont
                                                 }
                                             }
 
                                             Link {
                                                 text: qsTr("Show again")
-                                                onClicked: updates.restore(skippedRow.modelData.source, skippedRow.modelData.id)
+                                                onClicked: available.restore(skippedRow.modelData.source, skippedRow.modelData.id)
                                             }
                                         }
                                     }
@@ -907,9 +955,9 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: 7
-                    bottomRightRadius: 7
-                    color: Qt.alpha("#000000", widget.dark ? 0.15 : 0.03)
+                    bottomLeftRadius: updatesWidget.popupRadius - 1
+                    bottomRightRadius: updatesWidget.popupRadius - 1
+                    color: updatesWidget.popupSecondaryBackgroundColor
 
                     Divider { width: parent.width }
 
@@ -917,20 +965,20 @@ Item {
                         objectName: "skippedLink"
                         x: 16
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: popup.showSkipped || updates.skipped.length > 0
-                        text: popup.showSkipped ? qsTr("Back") : qsTr("Skipped (%1)").arg(updates.skipped.length)
+                        visible: popup.showSkipped || available.skipped.length > 0
+                        text: popup.showSkipped ? qsTr("Back") : qsTr("Skipped (%1)").arg(available.skipped.length)
                         onClicked: popup.showSkipped = !popup.showSkipped
                     }
 
-                    Label {
+                    PopupText {
                         objectName: "checked"
                         anchors.right: parent.right
                         anchors.rightMargin: 16
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: !popup.showSkipped && widget.checked !== "" && popup.shownSources.length > 0
-                        text: qsTr("Checked %1").arg(widget.checked)
+                        visible: !popup.showSkipped && updatesWidget.checked !== "" && popup.shownSources.length > 0
+                        text: qsTr("Checked %1").arg(updatesWidget.checked)
                         muted: true
-                        font.pixelSize: 12
+                        font: updatesWidget.popupSmallFont
                     }
                 }
             }

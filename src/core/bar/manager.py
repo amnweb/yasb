@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import suppress
 from pathlib import Path
 
@@ -6,7 +7,7 @@ from PyQt6.QtCore import QCoreApplication, QEvent, QObject, QTimer, QUrl, pyqtSi
 from PyQt6.QtGui import QGuiApplication, QScreen
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 
-from core import widget_files
+from core import theme_files, widget_files
 from core.app.controller import reload_application
 from core.app.windows.alert_dialog import show_alert
 from core.bar.hotkeys import WidgetHotkeys
@@ -77,8 +78,28 @@ class BarManager(QObject):
 
     @pyqtSlot(str)
     def _on_qml_changed(self, path: str) -> None:
+        if not self.uses_file(path):
+            return
+        logging.debug("QML file changed: %s", path)
         self._changed_qml.add(path)
         self._qml_timer.start()
+
+    def _named_files(self) -> set[Path]:
+        """The layouts and themes config.yaml names, where they are or would be."""
+        files = {bar.bar_file for bar in self.bars if bar.bar_file != BAR_QML}
+        for bar in self.bars:
+            theme = bar.config.theme
+            if theme and theme.lower() != theme_files.DEFAULT_THEME:
+                files.add(theme_files.config_qml_file(theme, theme_files.USER_THEMES_DIR))
+        return files
+
+    def uses_file(self, path: str) -> bool:
+        """Whether a QML file is one the bars load: in the widgets folder, or a layout or theme config.yaml names.
+        Any other QML file in the config folder is left alone."""
+        key = path_key(path)
+        return key.startswith(path_key(widget_files.USER_WIDGETS_DIR) + os.sep) or key in {
+            path_key(file) for file in self._named_files()
+        }
 
     def _compile_errors(self, url: QUrl) -> list[str]:
         component = QQmlComponent(self.engine, url)
@@ -99,12 +120,12 @@ class BarManager(QObject):
             else:
                 self.revisions.accept(path)
             changed.add(path_key(path))
-        reloaded = False
+        rebuilt = False
         for bar in self.bars:
-            if bar.uses(changed) or bar.widget_files_changed():
-                bar.reload_qml()
-                reloaded = True
-        if reloaded:
+            if (bar.uses(changed) or bar.widget_files_changed()) and bar.reload_qml(changed):
+                rebuilt = True
+        # The hotkeys belong to the widgets, which only a rebuilt bar replaces
+        if rebuilt:
             self.hotkeys.restart(self.bars)
         if failed:
             show_alert(
@@ -131,7 +152,7 @@ class BarManager(QObject):
             )
 
     def qml_folders(self) -> set[Path]:
-        return {bar.bar_file.parent for bar in self.bars if bar.bar_file != BAR_QML}
+        return {file.parent for file in self._named_files()}
 
     def _find_screen(self, name: str) -> QScreen | None:
         primary = QGuiApplication.primaryScreen()

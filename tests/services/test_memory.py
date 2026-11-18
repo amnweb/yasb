@@ -10,6 +10,7 @@ from core.services.memory.memory_api import MemoryData, SwapMemory, VirtualMemor
 from core.services.memory.monitor import MemoryMonitor
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 GIB = 1024**3
@@ -64,7 +65,7 @@ def test_the_widget_shows_the_memory_use_and_the_alternate_label(worker: FakeWor
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Memory" / "Memory.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
 
@@ -75,3 +76,8 @@ def test_the_widget_shows_the_memory_use_and_the_alternate_label(worker: FakeWor
 
     widget.setProperty("showAlternate", True)
     assert label.property("text") == "8.0G/16.0G"
+
+    widget.setProperty(
+        "alternateLabel", "{virtual_mem_outof} {swap_mem_percent} {virtual_mem_total:.0f} {virtual_mem_cached} {x}"
+    )
+    assert label.property("text") == "8.0G / 16.0G 12.5 16G 1.0G {x}"

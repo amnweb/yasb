@@ -13,8 +13,11 @@ _windows: dict[str, QWindow] = {}
 _closes_on_quit = False
 
 
-def show_window(engine: QQmlEngine, type_name: str, properties: dict[str | None, Any]) -> QWindow | None:
-    """Shows the window type from Yasb.Common, or brings it forward when it's already open.
+def show_window(
+    engine: QQmlEngine, type_name: str, properties: dict[str | None, Any], module: str = "Common"
+) -> QWindow | None:
+    """Shows the window type from the Yasb module (Yasb.Common unless named), or brings it forward when it's
+    already open.
 
     The window owns the objects in properties that have no parent.
     """
@@ -30,7 +33,7 @@ def show_window(engine: QQmlEngine, type_name: str, properties: dict[str | None,
         _closes_on_quit = True
     # Not loadFromModule: PyQt keeps the GIL while it waits for Qt's loader thread, which can log through Python
     component = QQmlComponent(
-        engine, QUrl.fromLocalFile(os.path.join(QML_IMPORT_PATH, "Yasb", "Common", f"{type_name}.qml"))
+        engine, QUrl.fromLocalFile(os.path.join(QML_IMPORT_PATH, "Yasb", module, f"{type_name}.qml"))
     )
     window = component.createWithInitialProperties(properties)
     if not isinstance(window, QWindow):
@@ -48,7 +51,7 @@ def show_window(engine: QQmlEngine, type_name: str, properties: dict[str | None,
 
     _windows[type_name] = window
     window.visibleChanged.connect(closed)
-    enable_mica(int(window.winId()))
+    window.setProperty("mica", enable_mica(int(window.winId())))
     window.show()
     window.requestActivate()
     return window

@@ -19,6 +19,7 @@ from core.utils.system import app_data_path
 from core.utils.worker import run_in_worker
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 
@@ -303,7 +304,7 @@ def load_widget() -> Iterator[tuple[QQuickItem, list[str]]]:
 
     engine.warnings.connect(collect_warnings)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Updates" / "Updates.qml")))
-    item = component.create()
+    item = create_with_bar(component)
     assert isinstance(item, QQuickItem), [error.toString() for error in component.errors()]
     # An item counts as visible only in a window, as on a bar
     host = QQuickWindow()
@@ -335,9 +336,9 @@ def open_popup(item: QQuickItem) -> QQuickItem:
 
 def test_the_popup_lists_each_source_with_its_updates(widget: tuple[QQuickItem, list[str]]):
     item, warnings = widget
-    label = find_item(item, "label")
-    assert label is not None
-    until(lambda: label.property("text") == "4")
+    updates = item.findChild(AvailableUpdates)
+    assert updates is not None
+    until(lambda: updates.property("count") == 4)
     assert item.isVisible()
     content = open_popup(item)
     sections = find_item(content, "sources")

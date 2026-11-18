@@ -11,9 +11,12 @@ Window {
     property string details
     property bool detailsShown: false
 
+    // Set when Windows draws Mica behind the window, from Windows 11 22H2 on; until then it has the style's colour
+    property bool mica: false
+
     title: "YASB"
     flags: Qt.Tool | Qt.WindowStaysOnTopHint
-    color: "transparent"
+    color: mica ? "transparent" : palette.window
     width: 520
     height: layout.implicitHeight
 
@@ -77,7 +80,7 @@ Window {
             standardButtons: DialogButtonBox.Ok
 
             // The box clears the highlight of its buttons while it builds them
-            Component.onCompleted: standardButton(DialogButtonBox.Ok).highlighted = true
+            Component.onCompleted: (standardButton(DialogButtonBox.Ok) as Button).highlighted = true
             onAccepted: dialog.close()
 
             Button {

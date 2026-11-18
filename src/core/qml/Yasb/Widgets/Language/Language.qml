@@ -1,15 +1,19 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import Yasb
 import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
-    id: root
+    // Not language: the id would hide KeyboardLanguage's language property
+    id: languageWidget
 
-    property BarBase bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // Label placeholders: {lang[language_code]} {lang[iso_language_code]} {lang[country_code]} {lang[full_name]}
     // {lang[native_country_name]} {lang[native_lang_name]} {lang[layout_name]} {lang[full_layout_name]}
     // {lang[layout_country_name]}. Right-click to show the alternate label.
@@ -19,10 +23,10 @@ Item {
     property int updateInterval: 1000
     // Icon glyph before the text, using iconFont. Empty hides it.
     property string icon: "\ue765"
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
     // Label and icon color while Caps Lock is on.
     property color capsLockColor: textColor
-    property int popupWidth: 300
+    property int popupWidth: 284
     // Popup alignment relative to the widget on a horizontal bar: left, right, or center.
     property string popupAlignment: "center"
     // Use layoutIcon for each layout, or its language code when false.
@@ -31,24 +35,48 @@ Item {
 
     property bool showAlternate: false
 
-    readonly property bool dark: bar ? bar.dark : Application.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Inherit the bar's text color and font unless overridden here.
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // Inherit icon font family and weight from the bar unless overridden.
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont.weight ?? Font.Normal
-    readonly property color foreground: dark ? "#ebebeb" : "#1f1f1f"
-    readonly property color accent: dark ? "#60cdff" : "#005fb8"
-    readonly property string edge: bar?.edge ?? "top"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property color accentColor: theme.colors.accent
+    property color popupTextColor: theme.colors.text
+    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+    property color popupDividerColor: theme.colors.divider
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    property color popupHoverColor: theme.colors.hover
+    property color popupSelectedColor: theme.colors.selected
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // Each layout's glyph, or its code such as EN when showLayoutIcon is off, and the arrow of the settings link
+    property int layoutIconSize: 18
+    property font codeFont
+    codeFont.family: theme.popup.font.family
+    codeFont.pixelSize: 12
+    codeFont.weight: Font.DemiBold
+    property int footerIconSize: 10
+    readonly property string edge: bar.edge
 
     readonly property var lang: keyboard.language
     readonly property color labelColor: keyboard.capsLock ? capsLockColor : textColor
@@ -60,7 +88,7 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const gap = 6
+        const gap = popupGap
         const margin = 8
         let px
         let py
@@ -79,7 +107,7 @@ Item {
             py = edge === "bottom" ? start.y - popup.height - gap : start.y + height + gap
             break
         }
-        const screen = root.Screen
+        const screen = languageWidget.Screen
         px = Math.max(screen.virtualX + margin, Math.min(px, screen.virtualX + screen.width - popup.width - margin))
         py = Math.max(screen.virtualY + margin, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - popup.height - margin))
         popup.x = Math.round(px)
@@ -117,22 +145,22 @@ Item {
     KeyboardLanguage {
         id: keyboard
 
-        updateInterval: root.updateInterval
+        updateInterval: languageWidget.updateInterval
     }
 
     Connections {
-        target: root.Window.window
+        target: languageWidget.Window.window
         function onVisibleChanged() {
-            if (!root.Window.window?.visible)
+            if (!languageWidget.Window.window?.visible)
                 popup.hide()
         }
-        function onXChanged() { if (popup.visible) root.placePopup() }
-        function onYChanged() { if (popup.visible) root.placePopup() }
+        function onXChanged() { if (popup.visible) languageWidget.placePopup() }
+        function onYChanged() { if (popup.visible) languageWidget.placePopup() }
     }
 
     Connections {
         target: popup
-        function onHeightChanged() { if (popup.visible) root.placePopup() }
+        function onHeightChanged() { if (popup.visible) languageWidget.placePopup() }
     }
 
     Row {
@@ -144,22 +172,23 @@ Item {
         Text {
             objectName: "icon"
             anchors.verticalCenter: parent.verticalCenter
-            visible: root.icon !== ""
-            text: root.icon
-            color: root.labelColor
-            font.family: root.iconFont.family
-            font.weight: root.iconFont.weight
-            font.pixelSize: root.iconSize
+            visible: languageWidget.icon !== ""
+            text: languageWidget.icon
+            color: languageWidget.labelColor
+            font.family: languageWidget.iconFont.family
+            font.weight: languageWidget.iconFont.weight
+            font.variableAxes: languageWidget.iconFont.variableAxes
+            font.pixelSize: languageWidget.iconSize
         }
 
-        Text {
+        Label {
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
             visible: text !== ""
-            text: root.text
+            text: languageWidget.text
             textFormat: Text.PlainText
-            color: root.labelColor
-            font: root.font
+            color: languageWidget.labelColor
+            font: languageWidget.font
         }
     }
 
@@ -169,9 +198,9 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: mouse => {
             if (mouse.button === Qt.LeftButton)
-                root.togglePopup()
+                languageWidget.togglePopup()
             else
-                root.showAlternate = !root.showAlternate
+                languageWidget.showAlternate = !languageWidget.showAlternate
         }
     }
 
@@ -180,25 +209,26 @@ Item {
         property real reveal: 0
         objectName: "popup"
         title: "Keyboard layouts"
-        width: root.popupWidth
-        height: column.implicitHeight + 16
-        anchor: root
+        width: languageWidget.popupWidth
+        height: column.implicitHeight
+        anchor: languageWidget
+        font: languageWidget.popupFont
+        theme: languageWidget.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: languageWidget.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: languageWidget.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: { if (!visible) reveal = 0 }
 
         Rectangle {
             id: surface
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: root.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: languageWidget.popupRadius
+            color: languageWidget.popupColor
             border.width: 1
-            border.color: root.dark ? "#3A3A3A" : "#D9D9D9"
+            border.color: languageWidget.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
-            transformOrigin: root.edge === "bottom" ? Item.Bottom : Item.Top
+            transformOrigin: languageWidget.edge === "bottom" ? Item.Bottom : Item.Top
 
             ColumnLayout {
                 id: column
@@ -210,11 +240,17 @@ Item {
                     Layout.leftMargin: 16
                     Layout.rightMargin: 16
                     Layout.topMargin: 12
+                    Layout.bottomMargin: 10
+                    text: "Keyboard layouts"
+                    font: languageWidget.popupTitleFont
+                    color: languageWidget.popupTextColor
+                }
+                // The header's bottom line
+                Rectangle {
+                    Layout.fillWidth: true
                     Layout.bottomMargin: 8
-                    text: "<b>Keyboard</b> Layouts"
-                    textFormat: Text.StyledText
-                    color: root.foreground
-                    font.pixelSize: 16
+                    implicitHeight: 1
+                    color: languageWidget.popupDividerColor
                 }
 
                 Text {
@@ -223,8 +259,8 @@ Item {
                     Layout.bottomMargin: 8
                     visible: keyboard.layouts.length === 0
                     text: "No keyboard layouts"
-                    color: Qt.alpha(root.foreground, 0.6)
-                    font.pixelSize: 13
+                    color: languageWidget.popupSecondaryTextColor
+                    font: languageWidget.popupFont
                 }
 
                 Column {
@@ -245,11 +281,11 @@ Item {
                             width: parent.width
                             height: 52
                             radius: 4
-                            color: Qt.alpha(root.foreground, modelData.current ? 0.06 : itemArea.containsMouse ? 0.04 : 0)
+                            color: modelData.current ? languageWidget.popupSelectedColor : itemArea.containsMouse ? languageWidget.popupHoverColor : "transparent"
                             Accessible.role: Accessible.RadioButton
                             Accessible.name: `${modelData.name}, ${modelData.layout}`
                             Accessible.checked: modelData.current
-                            Accessible.onPressAction: root.choose(modelData.id)
+                            Accessible.onPressAction: languageWidget.choose(modelData.id)
 
                             // The current layout's mark, as in Windows' own menu
                             Rectangle {
@@ -258,20 +294,20 @@ Item {
                                 height: 16
                                 radius: 1.5
                                 visible: item.modelData.current
-                                color: root.accent
+                                color: languageWidget.accentColor
                             }
 
                             Text {
                                 x: 14
                                 width: 36
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: root.showLayoutIcon ? root.layoutIcon : item.modelData.code
+                                text: languageWidget.showLayoutIcon ? languageWidget.layoutIcon : item.modelData.code
                                 textFormat: Text.PlainText
-                                color: root.foreground
+                                color: languageWidget.popupTextColor
                                 opacity: item.modelData.current ? 1 : 0.75
-                                font.family: root.showLayoutIcon ? root.iconFont.family : root.font.family
-                                font.weight: root.showLayoutIcon ? root.iconFont.weight : Font.DemiBold
-                                font.pixelSize: root.showLayoutIcon ? 18 : 12
+                                font.family: languageWidget.showLayoutIcon ? languageWidget.iconFont.family : languageWidget.codeFont.family
+                                font.weight: languageWidget.showLayoutIcon ? languageWidget.iconFont.weight : languageWidget.codeFont.weight
+                                font.pixelSize: languageWidget.showLayoutIcon ? languageWidget.layoutIconSize : languageWidget.codeFont.pixelSize
                             }
 
                             Column {
@@ -285,8 +321,8 @@ Item {
                                     text: item.modelData.name
                                     textFormat: Text.PlainText
                                     elide: Text.ElideRight
-                                    color: root.foreground
-                                    font.pixelSize: 13
+                                    color: languageWidget.popupTextColor
+                                    font: languageWidget.popupFont
                                 }
 
                                 Text {
@@ -294,8 +330,8 @@ Item {
                                     text: item.modelData.layout
                                     textFormat: Text.PlainText
                                     elide: Text.ElideRight
-                                    color: Qt.alpha(root.foreground, 0.65)
-                                    font.pixelSize: 12
+                                    color: languageWidget.popupSecondaryTextColor
+                                    font: languageWidget.popupSmallFont
                                 }
                             }
 
@@ -304,7 +340,7 @@ Item {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.choose(item.modelData.id)
+                                onClicked: languageWidget.choose(item.modelData.id)
                             }
                         }
                     }
@@ -316,9 +352,9 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: 7
-                    bottomRightRadius: 7
-                    color: Qt.alpha("#000000", (root.dark ? 0.15 : 0.03) + (footerArea.containsMouse ? 0.05 : 0))
+                    bottomLeftRadius: languageWidget.popupRadius - 1
+                    bottomRightRadius: languageWidget.popupRadius - 1
+                    color: footerArea.containsMouse ? Qt.tint(languageWidget.popupSecondaryBackgroundColor, languageWidget.popupHoverColor) : languageWidget.popupSecondaryBackgroundColor
                     Accessible.role: Accessible.Link
                     Accessible.name: "More keyboard settings"
                     Accessible.onPressAction: {
@@ -329,7 +365,7 @@ Item {
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: Qt.alpha(root.foreground, 0.08)
+                        color: languageWidget.popupDividerColor
                     }
 
                     Text {
@@ -337,20 +373,21 @@ Item {
                         anchors.leftMargin: 15
                         anchors.verticalCenter: parent.verticalCenter
                         text: "More keyboard settings"
-                        color: footerArea.containsMouse ? root.foreground : Qt.alpha(root.foreground, 0.75)
-                        font.pixelSize: 12
+                        color: footerArea.containsMouse ? languageWidget.popupTextColor : languageWidget.popupSecondaryTextColor
+                        font: languageWidget.popupSmallFont
                     }
 
                     Text {
                         anchors.right: parent.right
                         anchors.rightMargin: 14
                         anchors.verticalCenter: parent.verticalCenter
-                        text: ""
-                        color: root.foreground
+                        text: "\ue76c"
+                        color: languageWidget.popupTextColor
                         opacity: footerArea.containsMouse ? 1 : 0.75
-                        font.family: root.iconFont.family
-                        font.weight: root.iconFont.weight
-                        font.pixelSize: 10
+                        font.family: languageWidget.iconFont.family
+                        font.weight: languageWidget.iconFont.weight
+                        font.variableAxes: languageWidget.iconFont.variableAxes
+                        font.pixelSize: languageWidget.footerIconSize
                     }
 
                     MouseArea {

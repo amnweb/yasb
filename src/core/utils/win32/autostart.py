@@ -1,9 +1,14 @@
 """Starting YASB with Windows, through the current user's Run key. Kept free of Qt, so yasbc can use it too."""
 
 import logging
+import os
 import winreg
 
 from core.utils.win32.registry_keys import RUN_KEY
+from settings import SCRIPT_PATH
+
+EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
+AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
 
 
 def _open_startup_registry(access_flag: int):

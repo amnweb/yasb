@@ -639,42 +639,42 @@ class ColorProvider(BaseProvider):
                     description="Generate a random color with all conversions",
                     icon_path=ICON_COLOR,
                     provider=self.name,
-                    action_data={"_replace_input": "random"},
+                    query="random",
                 ),
                 ProviderResult(
                     title="Contrast Check",
                     description="Type: contrast #fff vs #333",
                     icon_path=ICON_COLOR,
                     provider=self.name,
-                    action_data={"_replace_input": "contrast "},
+                    query="contrast ",
                 ),
                 ProviderResult(
                     title="Mix / Blend",
                     description="Type: mix #ff0000 + #0000ff",
                     icon_path=ICON_COLOR,
                     provider=self.name,
-                    action_data={"_replace_input": "mix "},
+                    query="mix ",
                 ),
                 ProviderResult(
                     title="Lighten / Darken",
                     description="Type: lighten #ff6347 20 or darken #ff6347 20",
                     icon_path=ICON_COLOR,
                     provider=self.name,
-                    action_data={"_replace_input": "lighten "},
+                    query="lighten ",
                 ),
                 ProviderResult(
                     title="Color Harmonies",
                     description="Type: harmony #ff6347",
                     icon_path=ICON_COLOR,
                     provider=self.name,
-                    action_data={"_replace_input": "harmony "},
+                    query="harmony ",
                 ),
                 ProviderResult(
                     title="Color Blindness Simulation",
                     description="Type: blind #ff6347",
                     icon_path=ICON_COLOR,
                     provider=self.name,
-                    action_data={"_replace_input": "blind "},
+                    query="blind ",
                 ),
             ]
 
@@ -690,7 +690,7 @@ class ColorProvider(BaseProvider):
                         description=f"rgb({rr}, {rg}, {rb}) - press Enter to view all conversions",
                         icon_char=_color_swatch_svg(rand_hex),
                         provider=self.name,
-                        action_data={"_replace_input": rand_hex},
+                        query=rand_hex,
                     )
                 )
             return results
@@ -812,7 +812,7 @@ class ColorProvider(BaseProvider):
                     description=f"{p_rgb} - {p_hsl}",
                     icon_char=shade_swatch,
                     provider=self.name,
-                    action_data={"_replace_input": p_hex},
+                    query=p_hex,
                 )
             )
 
@@ -866,14 +866,14 @@ class ColorProvider(BaseProvider):
                 description=f"rgb({r1}, {g1}, {b1}) - press Enter to view conversions",
                 icon_char=_color_swatch_svg(hex1),
                 provider=self.name,
-                action_data={"_replace_input": hex1},
+                query=hex1,
             ),
             ProviderResult(
                 title=hex2,
                 description=f"rgb({r2}, {g2}, {b2}) - press Enter to view conversions",
                 icon_char=_color_swatch_svg(hex2),
                 provider=self.name,
-                action_data={"_replace_input": hex2},
+                query=hex2,
             ),
         ]
         return results
@@ -899,7 +899,7 @@ class ColorProvider(BaseProvider):
                     description=f"rgb({mr}, {mg}, {mb}) - {pct}% blend - press Enter to view conversions",
                     icon_char=swatch,
                     provider=self.name,
-                    action_data={"_replace_input": m_hex},
+                    query=m_hex,
                 )
             )
         return results
@@ -918,7 +918,7 @@ class ColorProvider(BaseProvider):
                 description=f"rgb({r}, {g}, {b})",
                 icon_char=_color_swatch_svg(orig_hex),
                 provider=self.name,
-                action_data={"_replace_input": orig_hex},
+                query=orig_hex,
             ),
         ]
         action = "Lighten" if lighten else "Darken"
@@ -933,7 +933,7 @@ class ColorProvider(BaseProvider):
                     description=f"rgb({nr}, {ng}, {nb}) - {action} {step}%",
                     icon_char=_color_swatch_svg(n_hex),
                     provider=self.name,
-                    action_data={"_replace_input": n_hex},
+                    query=n_hex,
                 )
             )
         return results
@@ -951,7 +951,7 @@ class ColorProvider(BaseProvider):
                 description=f"rgb({r}, {g}, {b})",
                 icon_char=_color_swatch_svg(orig_hex),
                 provider=self.name,
-                action_data={"_replace_input": orig_hex},
+                query=orig_hex,
             ),
         ]
         for harmony_name, colors in _harmonies(r, g, b).items():
@@ -962,7 +962,7 @@ class ColorProvider(BaseProvider):
                         description=f"{harmony_name} - rgb({cr}, {cg}, {cb})",
                         icon_char=_color_swatch_svg(c_hex),
                         provider=self.name,
-                        action_data={"_replace_input": c_hex},
+                        query=c_hex,
                     )
                 )
         return results
@@ -981,7 +981,7 @@ class ColorProvider(BaseProvider):
                 description=f"rgb({r}, {g}, {b}) - Normal vision",
                 icon_char=_color_swatch_svg(orig_hex),
                 provider=self.name,
-                action_data={"_replace_input": orig_hex},
+                query=orig_hex,
             ),
         ]
         descriptions = {
@@ -1010,7 +1010,7 @@ class ColorProvider(BaseProvider):
                     description=f"{descriptions.get(name, '')} \u00b7 {shift} \u00b7 rgb({sr}, {sg}, {sb})",
                     icon_char=split_swatch,
                     provider=self.name,
-                    action_data={"_replace_input": s_hex},
+                    query=s_hex,
                 )
             )
         return results

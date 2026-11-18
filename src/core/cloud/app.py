@@ -11,13 +11,13 @@ from PyQt6 import sip
 from PyQt6.QtCore import QTimer, QUrl
 from PyQt6.QtGui import QGuiApplication, QIcon, QWindow
 from PyQt6.QtNetwork import QSslSocket
-from PyQt6.QtQml import QQmlComponent, QQmlEngine
+from PyQt6.QtQml import QQmlComponent, QQmlEngine, qmlRegisterUncreatableType
 
 from core.cloud import logs
 from core.cloud.constants import APP_LOG_FILE, TASK_LOG_FILE
 from core.utils.win32.dwm import enable_mica
 from env import set_defaults
-from settings import QML_IMPORT_PATH, SCRIPT_PATH
+from settings import APP_ICON, QML_IMPORT_PATH
 
 MUTEX_NAME = "Global\\YASB.Cloud.SingleInstance"
 ERROR_ALREADY_EXISTS = 183
@@ -69,7 +69,7 @@ def main() -> int:
     set_defaults()
     app = QGuiApplication([*sys.argv, "-style", "FluentWinUI3"])
     app.setApplicationName("YASB Cloud")
-    app.setWindowIcon(QIcon(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")))
+    app.setWindowIcon(QIcon(APP_ICON))
 
     _warm_tls()
 
@@ -77,6 +77,8 @@ def main() -> int:
     # UI to decide there is nothing to do.
     from core.cloud.ui.cloud import Cloud
 
+    # YASB Cloud loads none of the bar's QML types, so it registers the one its window takes
+    qmlRegisterUncreatableType(Cloud, "Yasb", 1, 0, "Cloud is created by YASB Cloud", "Cloud")
     cloud = Cloud()
     engine = QQmlEngine()
     component = QQmlComponent(
@@ -86,7 +88,7 @@ def main() -> int:
     if not isinstance(window, QWindow):
         logging.error("Could not open YASB Cloud: %s", [error.toString() for error in component.errors()])
         return 1
-    enable_mica(int(window.winId()))
+    window.setProperty("mica", enable_mica(int(window.winId())))
     window.show()
     QTimer.singleShot(0, cloud.start)
     result = app.exec()

@@ -78,7 +78,9 @@ def test_opaque_python_objects_are_rejected():
 
 def test_qmldir_declares_the_module():
     files = module_files(Path("out"), [Fixture], ())
-    assert files[Path("out/Yasb/qmldir")] == "module Yasb\ntypeinfo plugins.qmltypes\ndepends QtQml 2.0\n"
+    assert files[Path("out/Yasb/qmldir")] == (
+        "module Yasb\ntypeinfo plugins.qmltypes\ndepends QtQml 2.0\ndepends QtQuick 2.0\n"
+    )
 
 
 def test_check_reports_stale_output_without_writing(tmp_path: Path, capsys: pytest.CaptureFixture[str]):

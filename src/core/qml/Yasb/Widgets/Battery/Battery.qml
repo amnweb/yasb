@@ -1,6 +1,8 @@
 import QtQuick
+import QtQuick.Controls
 import Yasb
 import Yasb.Bar
+import Yasb.Themes
 
 Item {
     id: battery
@@ -20,37 +22,37 @@ Item {
     property int lowThreshold: 25
     property int mediumThreshold: 75
     property int highThreshold: 95
-    property string iconFont: Qt.fontFamilies().includes("Segoe Fluent Icons") ? "Segoe Fluent Icons" : "Segoe MDL2 Assets"
-
-    property list<string> batteryIcons: ["", "", "", "", "", "", "", "", "", "", ""]
-    property list<string> chargingIcons: ["", "", "", "", "", "", "", "", "", "", ""]
-    property int iconSize: 18
+    // Glyphs from empty to full; the percentage picks one, spread over however many there are
+    property list<string> batteryIcons: ["\ue850", "\ue851", "\ue852", "\ue853", "\ue854", "\ue855", "\ue856", "\ue857", "\ue858", "\ue859", "\ue83f"]
+    property list<string> chargingIcons: ["\ue85a", "\ue85b", "\ue85c", "\ue85d", "\ue85e", "\ue85f", "\ue860", "\ue861", "\ue862", "\ue83e", "\uea93"]
     // The charging icon blinks while the battery charges
     property bool blinkCharging: true
     property int blinkInterval: 500
-    property color criticalColor: dark ? "#ff99a4" : "#c42b1c"
-    property color lowColor: dark ? "#fce100" : "#9d5d00"
+
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
+
+    property bool showAlternate: false
+
+    readonly property bool dark: theme.dark
+
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
+    property font font
+    // The icon takes the theme's icon font, each part unless the widget file sets it
+    property int iconSize: theme.bar.iconFont.pixelSize
+    property font iconFont
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The icon by status, and while it blinks
+    property color criticalColor: theme.colors.critical
+    property color lowColor: theme.colors.warning
     property color mediumColor: textColor
     property color highColor: textColor
     property color fullColor: textColor
     property color chargingColor: textColor
-    property color blinkingColor: Qt.alpha("#119909", 0.8)
-
-    property BarBase bar: null
-
-    property bool showAlternate: false
-
-    readonly property bool dark: bar ? bar.dark : Application.styleHints.colorScheme === Qt.ColorScheme.Dark
-
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
-    property font font
-    font.family: bar?.font.family ?? Application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
+    property color blinkingColor: theme.colors.success
 
     readonly property var info: monitor.data
     readonly property bool shown: monitor.available || !hideUnsupported
@@ -152,7 +154,9 @@ Item {
             textFormat: Text.PlainText
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-            font.family: battery.iconFont
+            font.family: battery.iconFont.family
+            font.weight: battery.iconFont.weight
+            font.variableAxes: battery.iconFont.variableAxes
             font.pixelSize: battery.iconSize
             color: blinkOn ? battery.statusColor : battery.blinkingColor
 
@@ -173,7 +177,7 @@ Item {
             }
         }
 
-        Text {
+        Label {
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
             visible: text !== ""

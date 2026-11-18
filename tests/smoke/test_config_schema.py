@@ -15,20 +15,20 @@ def test_a_bar_fills_its_slots_with_widgets_by_name():
         {
             "bars": {
                 "main": {
-                    "file": "bars/main.qml",
+                    "layout": "bars/main.qml",
                     "widgets": {"left": ["clock", "active_window"], "tray": ["media-lite"]},
                 }
             }
         }
     )
     bar = config.bars["main"]
-    assert bar.file == "bars/main.qml"
+    assert bar.layout == "bars/main.qml"
     assert bar.widgets == {"left": ["clock", "active_window"], "tray": ["media-lite"]}
 
 
-def test_a_bar_without_file_or_widgets_uses_the_defaults():
+def test_a_bar_without_layout_or_widgets_uses_the_defaults():
     bar = YasbConfig.model_validate({"bars": {"main": {}}}).bars["main"]
-    assert (bar.file, bar.widgets) == (None, {})
+    assert (bar.layout, bar.widgets) == (None, {})
 
 
 REJECTED: dict[str, dict[str, Any]] = {
@@ -36,7 +36,7 @@ REJECTED: dict[str, dict[str, Any]] = {
     "old_alignment": {"bars": {"main": {"alignment": {"position": "top"}}}},
     "old_blur_effect": {"bars": {"main": {"blur_effect": {"enabled": True}}}},
     "old_layouts": {"bars": {"main": {"layouts": {"left": {"stretch": False}}}}},
-    "empty_file": {"bars": {"main": {"file": ""}}},
+    "empty_layout": {"bars": {"main": {"layout": ""}}},
     "path_in_slot_name": {"bars": {"main": {"widgets": {"../left": ["clock"]}}}},
     "path_in_widget_name": {"bars": {"main": {"widgets": {"left": ["../clock"]}}}},
     "widget_name_starts_with_digit": {"bars": {"main": {"widgets": {"left": ["2fa"]}}}},

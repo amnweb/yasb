@@ -267,10 +267,6 @@ user32.InternalGetWindowText.restype = INT
 user32.SetForegroundWindow.argtypes = [HWND]
 user32.SetForegroundWindow.restype = BOOL
 
-# Using LPVOID for the data pointer to avoid hard dependency on struct definition here
-user32.SetWindowCompositionAttribute.argtypes = [HWND, LPVOID]
-user32.SetWindowCompositionAttribute.restype = c_int
-
 # Additional user32 APIs commonly used across the codebase
 user32.GetAncestor.argtypes = [HWND, UINT]
 user32.GetAncestor.restype = HWND
@@ -682,10 +678,6 @@ def InternalGetWindowText(hwnd: int, buf_size: int = 512) -> str:
 
 def SetForegroundWindow(hwnd: int) -> bool:
     return bool(user32.SetForegroundWindow(hwnd))
-
-
-def SetWindowCompositionAttribute(hwnd: int, data: CArgObject) -> int:
-    return user32.SetWindowCompositionAttribute(hwnd, data)
 
 
 def GetAncestor(hwnd: int, ga_flags: int) -> int:

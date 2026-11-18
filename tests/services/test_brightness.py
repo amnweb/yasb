@@ -13,6 +13,7 @@ from core.services.brightness import control as control_module
 from core.services.brightness.control import DisplayBrightness, DisplayList, is_night
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 BUILT_IN, EXTERNAL = 1, 2
@@ -156,7 +157,7 @@ def load_widget() -> tuple[QQuickItem, QQuickWindow, QQmlEngine, list[str]]:
 
     engine.warnings.connect(collect_warnings)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Brightness" / "Brightness.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     host = QQuickWindow()
     widget.setParentItem(host.contentItem())

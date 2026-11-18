@@ -26,6 +26,7 @@ from core.services.network_traffic.monitor import EMPTY_DATA, EMPTY_HISTORY, Net
 from core.services.network_traffic.usage import Session
 from core.widget_files import BUILTIN_WIDGETS_DIR, find_widget_file
 from settings import QML_IMPORT_PATH
+from tests.support.bar import create_with_bar
 from tests.support.network import FakeWatcher, connection
 from tests.support.qt import find_item, wait
 
@@ -215,7 +216,7 @@ def widget(samplers: dict[str, FakeSampler], sampler: FakeSampler) -> Iterator[C
         component = QQmlComponent(
             engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "NetworkTraffic/NetworkTraffic.qml"))
         )
-        item = component.createWithInitialProperties(cast(dict[str | None, Any], properties))
+        item = create_with_bar(component, cast(dict[str | None, Any], properties))
         assert isinstance(item, QQuickItem), [error.toString() for error in component.errors()]
         created.append(item)
         host = QQuickWindow()
@@ -243,7 +244,9 @@ def test_network_traffic_is_discovered_as_a_builtin_qml_widget():
     assert find_widget_file("NetworkTraffic") == BUILTIN_WIDGETS_DIR / "NetworkTraffic/NetworkTraffic.qml"
 
 
-def test_bar_label_is_optional_and_session_label_can_be_overridden(widget: Callable[..., QQuickItem]):
+def test_bar_label_is_optional_and_session_label_can_be_overridden(
+    widget: Callable[..., QQuickItem], sampler: FakeSampler
+):
     item = widget()
     label = find_item(item, "label")
     assert label is not None and label.property("text") == ""
@@ -253,6 +256,16 @@ def test_bar_label_is_optional_and_session_label_can_be_overridden(widget: Calla
     assert label.property("text") == "↓ 2.0 KiB  ↑ 1.0 KiB"
     item.setProperty("alternateLabel", "My session")
     assert label.property("text") == "My session"
+    item.setProperty(
+        "alternateLabel", "{download_speed} {upload_speed} {session_time} {today_downloaded} {today_uploaded} {x}"
+    )
+    assert label.property("text") == "2.0 Mbps 1.0 Mbps 2m 1.0 GiB 1.0 MiB {x}"
+
+    ten_days_ago = {"stamp": STAMP - 10 * 86400 * 1000, "downloaded": 1024**3, "uploaded": 0}
+    sampler.history = {**HISTORY, "daily": [ten_days_ago, POINT]}
+    sampler.historyChanged.emit()
+    item.setProperty("alternateLabel", "{week_downloaded} {month_downloaded} {month_uploaded} {network} {adapter} {ip}")
+    assert label.property("text") == "1.0 GiB 2.0 GiB 1.0 MiB Home Ethernet 192.0.2.10"
 
 
 def test_offline_hiding_releases_layout_space(widget: Callable[..., QQuickItem], sampler: FakeSampler):

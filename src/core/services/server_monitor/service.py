@@ -1,5 +1,4 @@
 import logging
-import os
 from dataclasses import dataclass
 from threading import Event
 from typing import Any, ClassVar, cast
@@ -11,7 +10,7 @@ from core.app.windows.toast import ToastNotifier
 from core.services.server_monitor.worker import ServerStatus, check_server
 from core.utils.feed import Feed
 from core.utils.worker import run_in_worker
-from settings import SCRIPT_PATH
+from settings import APP_ICON_TRANSPARENT
 
 logger = logging.getLogger("server_monitor")
 
@@ -112,7 +111,7 @@ class ServerCheckFeed(Feed[ServerSettings]):
         if messages:
             try:
                 toaster = ToastNotifier()
-                icon = os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png")
+                icon = APP_ICON_TRANSPARENT
                 for message in messages:
                     toaster.show(icon, "Server Monitor", message)
             except OSError, RuntimeError:

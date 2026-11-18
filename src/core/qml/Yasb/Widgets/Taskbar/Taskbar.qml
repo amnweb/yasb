@@ -4,12 +4,14 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
+import Yasb.Themes
 
 Item {
     id: taskbar
 
-    property Item bar: null
-    property int iconSize: 16
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     // One button per app holding all its windows, or one per window
     property bool grouping: true
     // The number of windows on a grouped button, from two
@@ -49,23 +51,63 @@ Item {
     // height is the bar's less this at both edges
     property int buttonMargin: 2
     property int buttonRadius: 5
-    property color accentColor: dark ? "#60CDFF" : "#005FB8"
-    // A window asking for attention
-    property color attentionColor: "#ff99a4"
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    // The look: the theme's, unless set here
+    readonly property bool dark: theme.dark
+    // Titles take the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
+    // A button under the pointer, pressed, and of the window in front
+    property color hoverColor: theme.colors.hover
+    property color pressedColor: theme.colors.pressed
+    property color selectedColor: theme.colors.selected
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    readonly property string edge: bar?.edge ?? "top"
-    readonly property bool vertical: bar?.vertical ?? false
-    readonly property color ink: dark ? "#ffffff" : "#000000"
+    property int iconSize: theme.bar.iconFont.pixelSize
+    // The indicator of the window in front, and of a window asking for attention, which also tints its button
+    property color indicatorColor: theme.colors.accent
+    property color attentionColor: theme.colors.critical
+    // The badge with the number of windows on a grouped button
+    property color countColor: dark ? "#3A3A3A" : "#E0E0E0"
+    property color countTextColor: Qt.alpha(textColor, 0.85)
+    property font countFont
+    countFont.pixelSize: 9
+    // The right-click menu
+    property int menuWidth: 260
+    property font menuFont: theme.menu.font
+    // Glyphs in the right-click menu take the theme's icon font, each part unless the widget file sets it
+    property font menuIconFont
+    menuIconFont.family: theme.bar.iconFont.family
+    menuIconFont.weight: theme.bar.iconFont.weight
+    menuIconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // Emoji shown in place of a menu entry's glyph
+    property font emojiFont
+    emojiFont.family: "Segoe UI Emoji"
+    property color menuColor: theme.menu.background
+    property color menuBorderColor: theme.menu.border
+    property color menuTextColor: theme.colors.text
+    property real menuRadius: theme.menu.radius
+    // Milliseconds the right-click menu takes to fade in
+    property int menuOpenDuration: theme.menu.openDuration
+    // The window previews; previewIconFont draws a preview's close glyph, which turns previewCloseTextColor on
+    // previewCloseColor while pointed at
+    property color previewColor: bar.color
+    property color previewTextColor: theme.colors.text
+    property color previewSecondaryTextColor: theme.colors.textSecondary
+    property color previewHoverColor: theme.colors.hover
+    property color previewPressedColor: theme.colors.pressed
+    property real previewRadius: theme.popup.radius
+    property font previewFont
+    previewFont.family: theme.bar.font.family
+    previewFont.pixelSize: 12
+    property font previewIconFont
+    previewIconFont.family: theme.bar.iconFont.family
+    previewIconFont.pixelSize: 10
+    property color previewCloseColor: "#C42B1C"
+    property color previewCloseTextColor: "#ffffff"
+    property int previewOpenDuration: theme.popup.openDuration
+    property int previewCloseDuration: theme.popup.closeDuration
+
+    readonly property string edge: bar.edge
+    readonly property bool vertical: bar.vertical
 
     // The buttons in order, each {key, app, windows}: a whole app when grouping, else a window, or a pinned app
     // with no window open. Pinned apps come first; the others follow in the order they were dragged to, then as they
@@ -295,7 +337,7 @@ Item {
     // A hidden widget takes no room on the bar, as its slot keeps the size it asks for
     readonly property bool shown: !hideWhenEmpty || buttons.length > 0
 
-    implicitWidth: !shown ? 0 : vertical ? (bar?.width ?? iconSize + 12) : shownExtent
+    implicitWidth: !shown ? 0 : vertical ? bar.width : shownExtent
     implicitHeight: !shown ? 0 : vertical ? shownExtent : iconSize + 12
 
     // Takes away the buttons of closed apps once they have shrunk
@@ -309,7 +351,7 @@ Item {
     TaskbarApps {
         id: apps
 
-        screenName: taskbar.onlyThisScreen ? (taskbar.bar?.screenName ?? "") : ""
+        screenName: taskbar.onlyThisScreen ? taskbar.bar.screenName : ""
         onlyVisible: taskbar.onlyVisible
         strictFiltering: taskbar.strictFiltering
         ignoreClasses: taskbar.ignoreClasses
@@ -417,8 +459,6 @@ Item {
             required property rect area
             readonly property int gap: 6
             readonly property int iconSize: 16
-            readonly property string iconFamily: Qt.fontFamilies().includes("Segoe Fluent Icons")
-                ? "Segoe Fluent Icons" : "Segoe MDL2 Assets"
 
             flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.NoDropShadowWindowHint
             color: "transparent"
@@ -504,7 +544,9 @@ Item {
                                 visible: image.status !== Image.Ready
                                 text: menuItem.entry.iconText ?? menuItem.entry.glyph ?? ""
                                 textFormat: Text.PlainText
-                                font.family: menuItem.entry.iconText ? "Segoe UI Emoji" : menuHost.iconFamily
+                                font.family: menuItem.entry.iconText ? taskbar.emojiFont.family : taskbar.menuIconFont.family
+                                font.weight: menuItem.entry.iconText ? taskbar.emojiFont.weight : taskbar.menuIconFont.weight
+                                font.variableAxes: menuItem.entry.iconText ? taskbar.emojiFont.variableAxes : taskbar.menuIconFont.variableAxes
                                 font.pixelSize: menuItem.iconSize
                                 color: menuItem.palette.text
                                 Accessible.ignored: true
@@ -537,23 +579,31 @@ Item {
             Menu {
                 id: menu
 
-                font: taskbar.font
+                font: taskbar.menuFont
                 topInset: 0
                 leftInset: 0
                 rightInset: 0
                 bottomInset: 0
                 popupType: Popup.Item
-                // The items take their text colour from this, so it matches the background in light and dark
-                palette.text: taskbar.ink
-                palette.windowText: taskbar.ink
-                palette.buttonText: taskbar.ink
+                // Fades in when it opens, in place of the style's growing from a third of its height
+                enter: Transition {
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: taskbar.menuOpenDuration; easing.type: Easing.OutCubic }
+                }
+                // The items take their text colour from this
+                // Active and inactive only, so disabled controls keep the style's dimmed colours
+                palette.active.text: taskbar.menuTextColor
+                palette.active.windowText: taskbar.menuTextColor
+                palette.active.buttonText: taskbar.menuTextColor
+                palette.inactive.text: taskbar.menuTextColor
+                palette.inactive.windowText: taskbar.menuTextColor
+                palette.inactive.buttonText: taskbar.menuTextColor
                 onClosed: menuHost.close()
 
                 background: Rectangle {
-                    implicitWidth: 260
-                    radius: 8
-                    color: taskbar.dark ? "#222222" : "#f9f9f9"
-                    border.color: taskbar.dark ? "#363636" : "#e5e5e5"
+                    implicitWidth: taskbar.menuWidth
+                    radius: taskbar.menuRadius
+                    color: taskbar.menuColor
+                    border.color: taskbar.menuBorderColor
                 }
             }
         }
@@ -574,11 +624,22 @@ Item {
         animationDuration: taskbar.animationDuration
         edge: taskbar.edge
         vertical: taskbar.vertical
-        dark: taskbar.dark
-        tint: taskbar.bar?.color ?? (dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85))
+        hoveredRunning: (previewPopup.hovered as AppButton)?.running ?? false
+        pendingRunning: (previewPopup.previewPending as AppButton)?.running ?? false
+        pendingKey: (previewPopup.previewPending as AppButton)?.key ?? ""
+        tint: taskbar.previewColor
+        textColor: taskbar.previewTextColor
+        secondaryTextColor: taskbar.previewSecondaryTextColor
+        hoverColor: taskbar.previewHoverColor
+        pressedColor: taskbar.previewPressedColor
+        radius: taskbar.previewRadius
+        titleFont: taskbar.previewFont
+        iconFont: taskbar.previewIconFont
+        closeColor: taskbar.previewCloseColor
+        closeTextColor: taskbar.previewCloseTextColor
         attentionColor: taskbar.attentionColor
-        fontFamily: taskbar.font.family
-        iconFontFamily: taskbar.bar?.iconFont?.family ?? "Segoe Fluent Icons"
+        openDuration: taskbar.previewOpenDuration
+        closeDuration: taskbar.previewCloseDuration
     }
 
     // Takes this taskbar's own buttons to new places, and brings a window to the front while a file is held over its
@@ -649,7 +710,7 @@ Item {
         Repeater {
             model: buttonModel
 
-            delegate: Item {
+            component AppButton: Item {
                 id: button
 
                 required property string key
@@ -790,8 +851,9 @@ Item {
                     anchors.rightMargin: taskbar.vertical ? taskbar.buttonMargin : 0
                     radius: taskbar.buttonRadius
                     color: button.flashing ? "transparent"
-                        : button.active ? Qt.alpha(taskbar.ink, tap.pressed ? 0.05 : 0.08)
-                        : Qt.alpha(taskbar.ink, tap.pressed ? 0.03 : hover.hovered && taskbar.draggedKey === "" ? 0.05 : 0)
+                        : tap.pressed ? taskbar.pressedColor
+                        : button.active ? taskbar.selectedColor
+                        : hover.hovered && taskbar.draggedKey === "" ? taskbar.hoverColor : "transparent"
 
                     Behavior on color {
                         enabled: taskbar.animation
@@ -832,7 +894,7 @@ Item {
                     sourceSize: Qt.size(taskbar.iconSize, taskbar.iconSize)
                 }
 
-                Text {
+                Label {
                     id: title
 
                     objectName: "title"
@@ -844,8 +906,8 @@ Item {
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                     color: taskbar.textColor
-                    opacity: button.titled ? (button.minimized ? 0.6 : 1) : 0
                     font: taskbar.font
+                    opacity: button.titled ? (button.minimized ? 0.6 : 1) : 0
 
                     Behavior on opacity {
                         enabled: taskbar.animation && button.placedOnce
@@ -867,8 +929,8 @@ Item {
                     width: taskbar.vertical ? 3 : length
                     height: taskbar.vertical ? length : 3
                     radius: 1.5
-                    color: button.flashing ? taskbar.attentionColor : button.active ? taskbar.accentColor
-                        : Qt.alpha(taskbar.ink, button.minimized ? 0.35 : 0.55)
+                    color: button.flashing ? taskbar.attentionColor : button.active ? taskbar.indicatorColor
+                        : Qt.alpha(taskbar.textColor, button.minimized ? 0.35 : 0.55)
 
                     Behavior on width {
                         enabled: taskbar.animation
@@ -890,7 +952,7 @@ Item {
                     width: Math.max(height, countText.implicitWidth + 4)
                     height: 11
                     radius: 5.5
-                    color: taskbar.dark ? "#3A3A3A" : "#E0E0E0"
+                    color: taskbar.countColor
 
                     Text {
                         id: countText
@@ -898,8 +960,8 @@ Item {
                         anchors.centerIn: parent
                         text: String(button.windows.length)
                         textFormat: Text.PlainText
-                        color: Qt.alpha(taskbar.ink, 0.85)
-                        font.pixelSize: 9
+                        color: taskbar.countTextColor
+                        font: taskbar.countFont
                     }
                 }
 
@@ -944,6 +1006,8 @@ Item {
                     y: taskbar.edge === "bottom" ? -implicitHeight - 6 : button.height + 6
                 }
             }
+
+            delegate: AppButton {}
         }
     }
 }

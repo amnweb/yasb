@@ -1,25 +1,30 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
     id: media
 
-    property Item bar: null
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
     property bool hideEmpty: true
     // The album art on the bar, in a circle; the icon glyph, in iconFont, shows while there is none
     property bool showThumbnail: true
     property int thumbnailSize: 20
     property string icon: "\ue8d6"
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
     property bool showArtist: false
     property bool showProgress: false
     // The title's widest size on the bar, in pixels
     property int maxLabelWidth: 150
-    property int popupWidth: 296
+    property int popupWidth: 280
     // The album art in the popup and its rounded corners
     property int imageSize: 160
     property int imageRadius: 12
@@ -29,23 +34,56 @@ Item {
     // Shuffle and repeat while they are on
     property color activeColor: dark ? "#05ec4a" : "#0a8a3a"
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property color accent: dark ? "#60cdff" : "#005fb8"
-    readonly property string edge: bar?.edge ?? "top"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The glyph on the play button
+    property color primaryGlyphColor: theme.colors.textOnAccent
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property color popupTextColor: theme.colors.text
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property color popupDividerColor: theme.colors.divider
+    // Glyphs: the play button's, the other buttons', the player app's when it has no icon, and the one shown
+    // without a cover
+    property int playIconSize: 20
+    property int controlIconSize: 16
+    property int appIconSize: 16
+    property int coverIconSize: 40
+    // The track's title and artist, and the times beside the timeline
+    property font trackTitleFont
+    trackTitleFont.family: theme.popup.font.family
+    trackTitleFont.pixelSize: 15
+    trackTitleFont.weight: Font.DemiBold
+    property font artistFont
+    artistFont.family: theme.popup.font.family
+    artistFont.pixelSize: 12
+    artistFont.weight: Font.DemiBold
+    property font timeFont
+    timeFont.family: theme.popup.font.family
+    timeFont.pixelSize: 11
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    property color popupTertiaryTextColor: theme.colors.textTertiary
+    property color popupHoverColor: theme.colors.hover
+    // The right-click menu: the theme's, unless set here
+    property color menuColor: theme.menu.background
+    property color menuBorderColor: theme.menu.border
+    property color accentColor: theme.colors.accent
+    readonly property string edge: bar.edge
     readonly property string label: player.title && media.showArtist && player.artist
         ? `${player.title} - ${player.artist}` : player.title || player.appName
     readonly property var app: audio.apps.find(entry => (player.appId !== "" && entry.appId === player.appId)
@@ -61,10 +99,10 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + 6
-            : edge === "right" ? start.x - popup.width - 6 : start.x + (width - popup.width) / 2
-        let py = edge === "top" ? start.y + height + 6
-            : edge === "bottom" ? start.y - popup.height - 6 : start.y + (height - popup.height) / 2
+        let px = edge === "left" ? start.x + width + popupGap
+            : edge === "right" ? start.x - popup.width - popupGap : start.x + (width - popup.width) / 2
+        let py = edge === "top" ? start.y + height + popupGap
+            : edge === "bottom" ? start.y - popup.height - popupGap : start.y + (height - popup.height) / 2
         const screen = media.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - popup.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - popup.height - 8))
@@ -167,10 +205,11 @@ Item {
             color: media.textColor
             font.family: media.iconFont.family
             font.weight: media.iconFont.weight
+            font.variableAxes: media.iconFont.variableAxes
             font.pixelSize: media.iconSize
         }
 
-        Text {
+        Label {
             anchors.verticalCenter: parent.verticalCenter
             width: Math.min(implicitWidth, media.maxLabelWidth)
             visible: player.available
@@ -188,7 +227,7 @@ Item {
         height: 2
         radius: 1
         visible: media.showProgress && player.duration > 0
-        color: media.accent
+        color: media.accentColor
     }
 
     component PlayerButton: Item {
@@ -209,7 +248,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: width / 2
-            color: button.primary && button.enabled ? popup.ink : Qt.alpha(popup.ink, area.containsMouse ? 0.1 : 0)
+            color: button.primary && button.enabled ? media.popupTextColor : area.containsMouse ? media.popupHoverColor : "transparent"
         }
 
         Text {
@@ -217,9 +256,10 @@ Item {
             text: button.glyph
             font.family: media.iconFont.family
             font.weight: media.iconFont.weight
-            font.pixelSize: button.primary ? 20 : 16
-            color: button.primary && button.enabled ? (media.dark ? "#000000" : "#ffffff")
-                : button.active ? media.activeColor : popup.ink
+            font.variableAxes: media.iconFont.variableAxes
+            font.pixelSize: button.primary ? media.playIconSize : media.controlIconSize
+            color: button.primary && button.enabled ? media.primaryGlyphColor
+                : button.active ? media.activeColor : media.popupTextColor
             opacity: button.enabled ? 1 : 0.35
         }
 
@@ -235,16 +275,17 @@ Item {
     BackdropPopup {
         id: popup
         property real reveal: 0
-        readonly property color ink: media.dark ? "#ffffff" : "#000000"
         property bool volumeShown: false
         readonly property bool volumeHovered: volumeArea.containsMouse || volumeBoxHover.hovered
         title: "Now playing"
         width: media.popupWidth
-        height: content.implicitHeight + 16
+        height: popupContent.implicitHeight
         anchor: media
+        font: media.popupFont
+        theme: media.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: media.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: media.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible) {
                 reveal = 0
@@ -256,11 +297,13 @@ Item {
         Rectangle {
             id: surface
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: media.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: media.popupRadius
+            color: media.popupColor
+            // Active and inactive only, so disabled controls keep the style's dimmed colours
+            palette.active.accent: media.accentColor
+            palette.inactive.accent: media.accentColor
             border.width: 1
-            border.color: media.dark ? Qt.alpha("#3A3A3A", 1) : Qt.alpha("#D9D9D9", 1)
+            border.color: media.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: media.edge === "bottom" ? Item.Bottom : Item.Top
@@ -317,7 +360,7 @@ Item {
             }
 
             ColumnLayout {
-                id: content
+                id: popupContent
                 width: parent.width
                 spacing: 0
 
@@ -325,7 +368,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.leftMargin: 16
                     Layout.rightMargin: 16
-                    Layout.topMargin: 16
+                    Layout.topMargin: 12
                     implicitHeight: 24
                     z: 1
 
@@ -343,10 +386,11 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: media.app?.muted ? "\ue74f" : "\ue767"
-                            color: popup.ink
+                            color: media.popupTextColor
                             font.family: media.iconFont.family
                             font.weight: media.iconFont.weight
-                            font.pixelSize: 16
+                            font.variableAxes: media.iconFont.variableAxes
+                            font.pixelSize: media.controlIconSize
                             opacity: !media.app ? 0.3 : media.app.muted ? 0.6 : 1
                         }
 
@@ -372,9 +416,9 @@ Item {
                         height: 144
                         radius: 10
                         visible: popup.volumeShown
-                        color: media.dark ? "#202020" : "#f9f9f9"
+                        color: media.menuColor
                         border.width: 1
-                        border.color: media.dark ? "#363636" : "#e5e5e5"
+                        border.color: media.menuBorderColor
 
                         HoverHandler {
                             id: volumeBoxHover
@@ -400,14 +444,14 @@ Item {
                                 width: 3
                                 height: volumeSlider.availableHeight
                                 radius: 2
-                                color: Qt.alpha(popup.ink, 0.1)
+                                color: Qt.alpha(media.popupTextColor, 0.1)
 
                                 Rectangle {
                                     anchors.bottom: parent.bottom
                                     width: parent.width
                                     height: volumeSlider.position * parent.height
                                     radius: 2
-                                    color: popup.ink
+                                    color: media.popupTextColor
                                 }
                             }
                             handle: Item {}
@@ -433,10 +477,11 @@ Item {
                             anchors.centerIn: parent
                             visible: appIcon.status !== Image.Ready
                             text: "\ue8d6"
-                            color: popup.ink
+                            color: media.popupTextColor
                             font.family: media.iconFont.family
                             font.weight: media.iconFont.weight
-                            font.pixelSize: 16
+                            font.variableAxes: media.iconFont.variableAxes
+                            font.pixelSize: media.appIconSize
                             opacity: 0.65
                         }
 
@@ -452,6 +497,14 @@ Item {
                             }
                         }
                     }
+                }
+                // The header's bottom line
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 10
+                    Layout.bottomMargin: 8
+                    implicitHeight: 1
+                    color: media.popupDividerColor
                 }
 
                 Item {
@@ -469,15 +522,16 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         visible: art.status !== Image.Ready
-                        color: Qt.alpha(popup.ink, 0.06)
+                        color: Qt.alpha(media.popupTextColor, 0.06)
 
                         Text {
                             anchors.centerIn: parent
                             text: "\ue8d6"
-                            color: popup.ink
+                            color: media.popupTextColor
                             font.family: media.iconFont.family
                             font.weight: media.iconFont.weight
-                            font.pixelSize: 40
+                            font.variableAxes: media.iconFont.variableAxes
+                            font.pixelSize: media.coverIconSize
                             opacity: 0.5
                         }
                     }
@@ -518,9 +572,8 @@ Item {
                     text: player.available ? player.title || "Unknown Title" : "Nothing playing"
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
-                    color: popup.ink
-                    font.pixelSize: 15
-                    font.weight: Font.DemiBold
+                    color: media.popupTextColor
+                    font: media.trackTitleFont
                 }
 
                 Text {
@@ -532,9 +585,8 @@ Item {
                     text: player.available ? player.artist || "Unknown Artist" : ""
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
-                    color: Qt.alpha(popup.ink, 0.65)
-                    font.pixelSize: 12
-                    font.weight: Font.DemiBold
+                    color: media.popupSecondaryTextColor
+                    font: media.artistFont
                 }
 
                 Slider {
@@ -560,13 +612,13 @@ Item {
                         width: timeline.width
                         height: thick ? 6 : 2
                         radius: 3
-                        color: Qt.alpha(popup.ink, thick ? 0.2 : 0.1)
+                        color: Qt.alpha(media.popupTextColor, thick ? 0.2 : 0.1)
 
                         Rectangle {
                             width: timeline.position * parent.width
                             height: parent.height
                             radius: 3
-                            color: popup.ink
+                            color: media.popupTextColor
                         }
                     }
                     handle: Item {}
@@ -586,16 +638,16 @@ Item {
 
                     Text {
                         text: media.time(player.duration > 0 ? Math.min(timeline.pressed ? timeline.value : player.position, player.duration) : 0)
-                        color: Qt.alpha(popup.ink, 0.5)
-                        font.pixelSize: 11
+                        color: media.popupTertiaryTextColor
+                        font: media.timeFont
                     }
                     Item {
                         Layout.fillWidth: true
                     }
                     Text {
                         text: media.time(player.duration)
-                        color: Qt.alpha(popup.ink, 0.5)
-                        font.pixelSize: 11
+                        color: media.popupTertiaryTextColor
+                        font: media.timeFont
                     }
                 }
 

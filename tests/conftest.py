@@ -23,6 +23,8 @@ def pytest_configure(config: pytest.Config) -> None:
         target.mkdir()
         os.environ[name] = str(target)
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    # Offscreen Qt takes its fonts only from this folder, and has none without it
+    os.environ.setdefault("QT_QPA_FONTDIR", os.path.join(os.environ["WINDIR"], "Fonts"))
     os.environ.setdefault("QT_QUICK_BACKEND", "software")
     os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Basic")
 

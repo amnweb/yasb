@@ -31,14 +31,17 @@ from core.bar.autohide import AutoHideManager, MaximizedWindowWatcher
 from core.bar.geometry import bar_geometry, bar_length
 from core.bar.revisions import Revisions, path_key
 from core.events.service import EventService
+from core.theme_files import config_qml_file, load_theme
 from core.utils.qml import qml_property
 from core.utils.win32 import app_bar
-from core.utils.win32.composition import BackdropWindow
+from core.utils.win32.composition import BackdropWindow, host_backdrop_supported
 from core.validation.bar import BarConfig
 from core.widget_files import bar_widget_files
 from settings import APP_BAR_TITLE, DEFAULT_CONFIG_DIRECTORY, SCRIPT_PATH
 
 BAR_QML = Path(SCRIPT_PATH) / "core" / "qml" / "Yasb" / "Bar" / "Bar.qml"
+USER_LAYOUTS_DIR = Path(DEFAULT_CONFIG_DIRECTORY) / "layouts"
+DEFAULT_LAYOUT = "default"
 SCREENSHOT_DIR = Path.home() / "Pictures" / "YASB_Screenshots"
 SCREENSHOT_MARGIN = 10
 # Long enough for the menu that asked for a screenshot to leave the screen
@@ -57,6 +60,7 @@ OVERHANG_SIDES = {"top": (0, 0, 0, 1), "bottom": (0, -1, 0, 0), "left": (0, 0, 1
 
 class BarContext(QObject):
     autoHideChanged = pyqtSignal()
+    themeChanged = pyqtSignal()
 
     def __init__(self, window: BarWindow):
         super().__init__(window)
@@ -67,10 +71,33 @@ class BarContext(QObject):
             slot: [{"name": file.name, "url": window.revisions.url(file.path).toString()} for file in slot_files]
             for slot, slot_files in files.items()
         }
+        self._theme: QObject | None = None
+        self.theme_keys: set[str] = set()
+        self.update_theme()
+
+    def update_theme(self) -> None:
+        """Loads the bar's theme, and again after its file changed, in place of the one shown."""
+        window, shown = self._window, self._theme
+        self._theme, self.theme_keys, errors = load_theme(window.engine, window.revisions, window.config.theme, self)
+        if errors:
+            logging.error("Bar %s uses the default theme, its theme could not load: %s", window.name, errors[0])
+            show_alert(
+                title=f"Failed to load the theme of bar '{window.name}'",
+                message="The bar uses the default theme instead.",
+                details=errors[0],
+            )
+        if shown is not None:
+            self.themeChanged.emit()
+            shown.deleteLater()
 
     @qml_property(str, constant=True)
     def name(self) -> str:
         return self._window.name
+
+    def _get_theme(self) -> QObject | None:
+        return self._theme
+
+    theme = pyqtProperty(QObject, _get_theme, notify=themeChanged)
 
     @qml_property(str, constant=True)
     def screenName(self) -> str:
@@ -123,7 +150,7 @@ class BarWindow(QQuickWindow):
         revisions: Revisions | None = None,
     ):
         super().__init__()
-        self._engine = engine
+        self.engine = engine
         # A child of the engine, so a trim still pending when the engine is deleted goes with it
         self._trim_timer = QTimer(engine)
         self._trim_timer.setSingleShot(True)
@@ -161,7 +188,9 @@ class BarWindow(QQuickWindow):
         self.hwnd = int(self.winId())
 
         self.reposition()
-        if config.backdrop:
+        if config.backdrop and not host_backdrop_supported():
+            logging.warning("Bar %s has no blur: its backdrop needs Windows 11", self.name)
+        elif config.backdrop:
             try:
                 self._backdrop_window = BackdropWindow(self)
                 self._fit_backdrop()
@@ -185,16 +214,17 @@ class BarWindow(QQuickWindow):
         self._animation.show_bar(initial=True)
 
     def _resolve_bar_file(self) -> Path:
-        if self.config.file is None:
+        """The bar's layout file, as config.yaml names it, or the built-in bar."""
+        layout = self.config.layout
+        if layout is None or layout.lower() == DEFAULT_LAYOUT:
             return BAR_QML
-        path = Path(self.config.file)
-        return path if path.is_absolute() else Path(DEFAULT_CONFIG_DIRECTORY) / path
+        return config_qml_file(layout, USER_LAYOUTS_DIR)
 
     def _create(self, path: Path) -> tuple[QQuickItem | None, BarContext | None, list[str]]:
         if not path.is_file():
             return None, None, [f"{path} does not exist"]
         context = BarContext(self)
-        component = QQmlComponent(self._engine, self.revisions.url(path))
+        component = QQmlComponent(self.engine, self.revisions.url(path))
         created = None if component.isError() else component.createWithInitialProperties({"context": context})
         errors = [error.toString() for error in component.errors()]
         item = created if isinstance(created, QQuickItem) else None
@@ -274,7 +304,7 @@ class BarWindow(QQuickWindow):
             details = "\n".join(errors)
             logging.error("Bar %s could not load %s, using the built-in bar:\n%s", self.name, path, details)
             show_alert(
-                title=f"Failed to load the bar file of bar '{self.name}'",
+                title=f"Failed to load the layout of bar '{self.name}'",
                 message="YASB is showing its built-in bar instead.",
                 details=details,
             )
@@ -286,7 +316,19 @@ class BarWindow(QQuickWindow):
         if item is not None and context is not None:
             self._show(item, context, path)
 
-    def reload_qml(self) -> None:
+    def reload_qml(self, changed: set[str]) -> bool:
+        """Builds the bar again after the files with keys *changed* did, and tells whether it did. When of its files
+        only its theme changed, the theme is swapped in instead."""
+        context = self.context
+        if (
+            context is not None
+            and not changed & (context.widget_keys | {path_key(self.bar_file)})
+            and not self.widget_files_changed()
+        ):
+            context.update_theme()
+            self.reposition()
+            logging.info("Bar %s reloaded its theme", self.name)
+            return False
         path = self.bar_file
         item, context, errors = self._create(path)
         if item is None and self.shown_file == BAR_QML and path != BAR_QML:
@@ -298,19 +340,20 @@ class BarWindow(QQuickWindow):
                 "Bar %s kept its current content, %s could not be loaded:\n%s", self.name, self.bar_file, details
             )
             show_alert(
-                title=f"Failed to reload the bar file of bar '{self.name}'",
+                title=f"Failed to reload the layout of bar '{self.name}'",
                 message="The bar keeps the version it shows now.",
                 details=details,
             )
-            return
+            return False
         self._show(item, context, path)
         self.reposition()
         logging.info("Bar %s reloaded %s", self.name, path)
+        return True
 
     def uses(self, keys: set[str]) -> bool:
         if path_key(self.bar_file) in keys:
             return True
-        return self.context is not None and bool(self.context.widget_keys & keys)
+        return self.context is not None and bool((self.context.widget_keys | self.context.theme_keys) & keys)
 
     def widget_files_changed(self) -> bool:
         files = bar_widget_files(self.config)

@@ -1,16 +1,20 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Yasb
 
 Window {
     id: window
 
-    required property QtObject cloud
+    required property Cloud cloud
 
     readonly property bool dark: Application.styleHints.colorScheme === Qt.Dark
 
+    // Set when Windows draws Mica behind the window, from Windows 11 22H2 on; until then it has the style's colour
+    property bool mica: false
+
     title: "YASB Cloud"
-    color: "transparent"
+    color: mica ? "transparent" : palette.window
     minimumWidth: 820
     minimumHeight: 480
 

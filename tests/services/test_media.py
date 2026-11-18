@@ -23,6 +23,7 @@ from core.services.volume import output as output_module
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
 from tests.support.audio import FakeAudioService
+from tests.support.bar import create_with_bar
 from tests.support.qt import wait
 
 
@@ -243,7 +244,7 @@ def test_the_widget_shows_the_title_and_finds_the_players_audio(service: MediaSe
     engine.addImportPath(QML_IMPORT_PATH)
     engine.addImageProvider(MEDIA_ART_PROVIDER, MediaArtProvider())
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Media" / "Media.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
     widget.setProperty("showArtist", False)
@@ -267,7 +268,7 @@ def test_the_widget_takes_no_space_without_a_player(service: MediaService, monke
     engine.addImportPath(QML_IMPORT_PATH)
     engine.addImageProvider(MEDIA_ART_PROVIDER, MediaArtProvider())
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Media" / "Media.qml")))
-    widget = component.createWithInitialProperties({"hideEmpty": True})
+    widget = create_with_bar(component, {"hideEmpty": True})
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
     # So the bar leaves no gap where it would be

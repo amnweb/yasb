@@ -1,44 +1,81 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Shapes
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
     id: gpu
 
+    // Label placeholders: {info[utilization]} in %, sizes such as 8.0G: {info[mem_used]} {info[mem_free]}
+    // {info[mem_total]} {info[mem_shared_used]} {info[mem_shared_total]}, {info[temp]} in °C, {info[fan_speed]} in %,
+    // {info[power_draw]} in W, {info[name]} and {info[index]}. :.0f after a name sets the decimals, as
+    // {info[utilization]:.0f}. Right-click shows the alternate label.
+    property string label: "{info[utilization]:.0f}%"
+    property string alternateLabel: "{info[mem_used]}/{info[mem_total]}"
     property int updateInterval: 2000
     property int gpuIndex: 0
-    property color graphColor: "#0f6bff"
+    property color graphColor: theme.colors.accent
     // Square grid lines behind the graph
     property bool graphGrid: true
     property color temperatureColor: "#ff6b35"
     // The glyph in front of the text, drawn in iconFont and the text colour; "" for none
     property string icon: "\uf211"
-    property int iconSize: 16
-    property Item bar: null
+    property int iconSize: theme.bar.iconFont.pixelSize
+    property int popupWidth: 400
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
 
     property bool showAlternate: false
+    readonly property string text: format(showAlternate ? alternateLabel : label)
     property list<real> history: []
     property list<real> temperatures: []
 
-    readonly property bool dark: Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    // Text on the bar takes the bar's colour and font, each part unless the widget file sets it
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
+    readonly property bool dark: theme.dark
+    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+    property color textColor: theme.colors.text
     property font font
-    font.family: bar?.font.family ?? Qt.application.font.family
-    font.pixelSize: bar?.font.pixelSize ?? 13
-    font.weight: bar?.font.weight ?? Font.Normal
-    font.italic: bar?.font.italic ?? false
-    font.letterSpacing: bar?.font.letterSpacing ?? 0
-    font.capitalization: bar?.font.capitalization ?? Font.MixedCase
-    font.variableAxes: bar?.font.variableAxes ?? ({})
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property string edge: bar?.edge ?? "top"
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property color popupTextColor: theme.colors.text
+    property real popupRadius: theme.popup.radius
+    property real popupGap: theme.popup.gap
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 13
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    property color popupDividerColor: theme.colors.divider
+    property color popupSecondaryTextColor: theme.colors.textSecondary
+    property color popupTertiaryTextColor: theme.colors.textTertiary
+    property color popupCardColor: theme.colors.card
+    property color popupCardBorderColor: theme.colors.cardBorder
+    property font popupTitleFont
+    popupTitleFont.family: theme.popup.font.family
+    popupTitleFont.pixelSize: 16
+    popupTitleFont.weight: Font.DemiBold
+    // The pin glyph, and each stat's value under its name
+    property int popupIconSize: 14
+    property font valueFont
+    valueFont.family: theme.popup.font.family
+    valueFont.pixelSize: 20
+    valueFont.weight: Font.Bold
+    readonly property string edge: bar.edge
 
     function spline(points: var): string {
         if (points.length < 2)
@@ -71,7 +108,7 @@ Item {
         return `${(used / unit).toFixed(digits)} / ${(total / unit).toFixed(digits)} ${units[index]}`
     }
 
-    function size(bytes: real, suffix: string): string {
+    function size(bytes: real, decimals: int): string {
         if (Math.abs(bytes) < 1024)
             return `${Math.trunc(bytes)}B`
         const units = "KMGTPEZY"
@@ -81,15 +118,30 @@ Item {
             unit *= 1024
             ++index
         }
-        return `${(bytes / unit).toFixed(1)}${units[index]}${suffix}`
+        return `${(bytes / unit).toFixed(decimals)}${units[index]}`
+    }
+
+    function format(template: string): string {
+        const data = monitor.data
+        const sizes = ["mem_used", "mem_free", "mem_total", "mem_shared_used", "mem_shared_total"]
+        return template.replace(/\{info\[(\w+)\](?::\.(\d+)f)?\}/g, (match, key, decimals) => {
+            if (!Object.prototype.hasOwnProperty.call(data, key))
+                return match
+            const value = data[key]
+            if (sizes.includes(key))
+                return size(value, decimals === undefined ? 1 : Number(decimals))
+            if (typeof value === "number" && decimals !== undefined)
+                return value.toFixed(Number(decimals))
+            return String(value)
+        })
     }
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + 6
-            : edge === "right" ? start.x - popup.width - 6 : start.x + (width - popup.width) / 2
-        let py = edge === "top" ? start.y + height + 6
-            : edge === "bottom" ? start.y - popup.height - 6 : start.y + (height - popup.height) / 2
+        let px = edge === "left" ? start.x + width + popupGap
+            : edge === "right" ? start.x - popup.width - popupGap : start.x + (width - popup.width) / 2
+        let py = edge === "top" ? start.y + height + popupGap
+            : edge === "bottom" ? start.y - popup.height - popupGap : start.y + (height - popup.height) / 2
         const screen = gpu.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - popup.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - popup.height - 8))
@@ -133,6 +185,12 @@ Item {
         function onYChanged() { if (popup.visible && !popup.pinned) gpu.placePopup() }
     }
 
+    // Keep the popup anchored when its height changes
+    Connections {
+        target: popup
+        function onHeightChanged() { if (popup.visible && !popup.pinned) gpu.placePopup() }
+    }
+
     Row {
         id: row
 
@@ -146,17 +204,16 @@ Item {
             color: gpu.textColor
             font.family: gpu.iconFont.family
             font.weight: gpu.iconFont.weight
+            font.variableAxes: gpu.iconFont.variableAxes
             font.pixelSize: gpu.iconSize
         }
 
-        Text {
-            id: label
-
+        Label {
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
-            text: gpu.showAlternate
-                ? `${gpu.size(monitor.data.mem_used, "")}/${gpu.size(monitor.data.mem_total, "")}`
-                : `${monitor.data.utilization.toFixed(0)}%`
+            visible: text !== ""
+            text: gpu.text
+            textFormat: Text.PlainText
             color: gpu.textColor
             font: gpu.font
         }
@@ -177,7 +234,6 @@ Item {
     BackdropPopup {
         id: popup
         property real reveal: 0
-        readonly property color ink: gpu.dark ? "#ffffff" : "#000000"
         readonly property var stats: {
             const data = monitor.data
             const temperature = data.temp > 0
@@ -198,12 +254,14 @@ Item {
         }
         objectName: "menu"
         title: "GPU"
-        width: 416
-        height: content.implicitHeight + 16
+        width: gpu.popupWidth
+        height: popupContent.implicitHeight
         anchor: gpu
+        font: gpu.popupFont
+        theme: gpu.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: gpu.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: gpu.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible) {
                 reveal = 0
@@ -214,17 +272,16 @@ Item {
         Rectangle {
             id: surface
             anchors.fill: parent
-            anchors.margins: 8
-            radius: 8
-            color: gpu.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#F3F3F3", 0.85)
+            radius: gpu.popupRadius
+            color: gpu.popupColor
             border.width: 1
-            border.color: gpu.dark ? Qt.alpha("#3A3A3A", 1) : Qt.alpha("#D9D9D9", 1)
+            border.color: gpu.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: gpu.edge === "bottom" ? Item.Bottom : Item.Top
 
             ColumnLayout {
-                id: content
+                id: popupContent
                 width: parent.width
                 spacing: 0
 
@@ -233,14 +290,13 @@ Item {
                     Layout.leftMargin: 16
                     Layout.rightMargin: 10
                     Layout.topMargin: 12
-                    Layout.bottomMargin: 12
+                    Layout.bottomMargin: 10
 
                     Text {
                         Layout.fillWidth: true
-                        text: "<b>GPU</b> Usage"
-                        textFormat: Text.StyledText
-                        color: popup.ink
-                        font.pixelSize: 16
+                        text: "GPU usage"
+                        font: gpu.popupTitleFont
+                        color: gpu.popupTextColor
 
                         MouseArea {
                             property point grab
@@ -268,11 +324,12 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: popup.pinned ? "\ue77a" : "\ue840"
-                            color: popup.ink
+                            color: gpu.popupTextColor
                             opacity: popup.pinned ? 1 : 0.6
                             font.family: gpu.iconFont.family
                             font.weight: gpu.iconFont.weight
-                            font.pixelSize: 14
+                            font.variableAxes: gpu.iconFont.variableAxes
+                            font.pixelSize: gpu.popupIconSize
                         }
 
                         MouseArea {
@@ -281,13 +338,20 @@ Item {
                         }
                     }
                 }
+                // The header's bottom line
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 8
+                    implicitHeight: 1
+                    color: gpu.popupDividerColor
+                }
 
                 Text {
                     leftPadding: 14
                     bottomPadding: 4
                     text: "Utilization"
-                    color: Qt.alpha(popup.ink, 0.5)
-                    font.pixelSize: 12
+                    color: gpu.popupTertiaryTextColor
+                    font: gpu.popupSmallFont
                 }
 
                 Item {
@@ -317,7 +381,7 @@ Item {
 
                         ShapePath {
                             fillColor: "transparent"
-                            strokeColor: Qt.alpha(popup.ink, 0.05)
+                            strokeColor: Qt.alpha(gpu.popupTextColor, 0.05)
                             strokeWidth: 1
 
                             PathSvg {
@@ -371,8 +435,8 @@ Item {
                     leftPadding: 14
                     bottomPadding: 4
                     text: "Temperature"
-                    color: Qt.alpha(popup.ink, 0.5)
-                    font.pixelSize: 12
+                    color: gpu.popupTertiaryTextColor
+                    font: gpu.popupSmallFont
                 }
 
                 Item {
@@ -403,7 +467,7 @@ Item {
 
                         ShapePath {
                             fillColor: "transparent"
-                            strokeColor: Qt.alpha(popup.ink, 0.05)
+                            strokeColor: Qt.alpha(gpu.popupTextColor, 0.05)
                             strokeWidth: 1
 
                             PathSvg {
@@ -473,9 +537,9 @@ Item {
                             implicitHeight: values.implicitHeight + 16
                             opacity: cell ? 1 : 0
                             radius: 8
-                            color: Qt.alpha(popup.ink, 0.03)
+                            color: gpu.popupCardColor
                             border.width: 1
-                            border.color: Qt.alpha(popup.ink, 0.04)
+                            border.color: gpu.popupCardBorderColor
 
                             ColumnLayout {
                                 id: values
@@ -493,8 +557,8 @@ Item {
                                     bottomPadding: 2
                                     horizontalAlignment: stat.alignment
                                     text: stat.cell ? stat.cell[0] : ""
-                                    color: Qt.alpha(popup.ink, 0.65)
-                                    font.pixelSize: 13
+                                    color: gpu.popupSecondaryTextColor
+                                    font: gpu.popupFont
                                 }
 
                                 Text {
@@ -505,9 +569,8 @@ Item {
                                     horizontalAlignment: stat.alignment
                                     text: stat.cell ? stat.cell[1] : ""
                                     elide: Text.ElideRight
-                                    color: popup.ink
-                                    font.pixelSize: 20
-                                    font.weight: Font.Bold
+                                    color: gpu.popupTextColor
+                                    font: gpu.valueFont
                                 }
                             }
                         }

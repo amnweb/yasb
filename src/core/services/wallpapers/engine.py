@@ -1,8 +1,10 @@
 """YASB wallpaper transition engine.
 
 Plays a short animation over the desktop when the wallpaper changes, then hands
-the new image to Windows. The overlay is a frameless widget parented to WorkerW
-so it draws above the wallpaper and below the desktop icons.
+the new image to Windows. The overlay is a window parented to WorkerW so it
+draws above the wallpaper and below the desktop icons. Its visuals belong to the
+shared compositor, and the Desktop Window Manager plays their animation, so it
+keeps going while the GUI thread is busy and other windows animate smoothly.
 
 Scaling and positioning have to match what Windows does. If they do not, the
 last frame of the animation sits on different pixels than the wallpaper Windows
@@ -25,28 +27,23 @@ import logging
 import math
 import os
 import winreg
-from ctypes import wintypes
-from typing import override
+from ctypes import COMError, wintypes
+from datetime import timedelta
+from functools import cache
+from typing import Any, override
 
-import PyQt6.sip as sip
-from PyQt6.QtCore import QByteArray, QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, QTimer, pyqtSignal
-from PyQt6.QtGui import (
-    QCloseEvent,
-    QColor,
-    QGuiApplication,
-    QImage,
-    QImageReader,
-    QPainter,
-    QPainterPath,
-    QPaintEvent,
-    QPixmap,
-    QPolygonF,
-    QRasterWindow,
-)
+from PyQt6.QtCore import QCoreApplication, QObject, Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor, QGuiApplication, QImage, QImageReader, QPainter
+from winrt.windows.ui.composition import CompositionClip, Compositor
+from winrt.windows.ui.composition.desktop import DesktopWindowTarget
+from winrt.windows.ui.composition.interop import create_desktop_window_target
 
-from core.utils.win32.bindings.kernel32 import SetEnvironmentVariable
+from core.utils.win32.bindings.kernel32 import GetLastError, GetModuleHandle
 from core.utils.win32.bindings.user32 import (
     MONITORENUMPROC,
+    CreateWindowEx,
+    DefWindowProc,
+    DestroyWindow,
     EnumChildWindows,
     EnumWindows,
     FindWindow,
@@ -61,24 +58,30 @@ from core.utils.win32.bindings.user32 import (
     ShowWindow,
     user32,
 )
+from core.utils.win32.composition import compositor, drawing_surface
 from core.utils.win32.constants import (
     GWL_EXSTYLE,
     GWL_STYLE,
     HWND_TOP,
     SW_SHOW,
+    SW_SHOWNA,
     SWP_FRAMECHANGED,
     SWP_NOACTIVATE,
     WM_DESTROY,
     WS_CHILD,
     WS_EX_LAYERED,
+    WS_EX_NOREDIRECTIONBITMAP,
+    WS_EX_TRANSPARENT,
     WS_POPUP,
 )
 from core.utils.win32.registry_keys import COLORS_KEY, DESKTOP_KEY
-from core.utils.win32.structs import WNDENUMPROC
+from core.utils.win32.structs import WNDCLASS, WNDENUMPROC, WNDPROC
 from core.utils.win32.typecheck import CPointer
 from core.utils.win32.undocumented import WM_SPAWN_WORKER
 
 logger = logging.getLogger("wallpaper_engine")
+
+TRANSITION_WINDOW_CLASS = "YasbWallpaperTransition"
 
 # (x, y, width, height, device pixel ratio) of one monitor, in logical pixels.
 type ScreenArea = tuple[int, int, int, int, float]
@@ -196,7 +199,7 @@ def _monitors_tile_a_rectangle(areas: list[ScreenArea]) -> bool:
     return covered == (right - left) * (bottom - top)
 
 
-def _wants_autospan(px: QPixmap, areas: list[ScreenArea]) -> bool:
+def _wants_autospan(px: QImage, areas: list[ScreenArea]) -> bool:
     """Whether Windows would turn this fit/fill into a span.
 
     Windows calls this autospan. A landscape image wider than the panorama
@@ -277,7 +280,7 @@ def _transcode_size(iw: int, ih: int) -> tuple[int, int]:
     )
 
 
-def _apply_transcode_cap(px: QPixmap) -> QPixmap:
+def _apply_transcode_cap(px: QImage) -> QImage:
     """Shrink *px* to the size Windows would have transcoded it to."""
     w, h = _transcode_size(px.width(), px.height())
     if (w, h) == (px.width(), px.height()):
@@ -340,26 +343,28 @@ def _locate_workerw() -> int:
     return worker
 
 
-def _attach_to_workerw(widget: WallpaperEngine) -> bool:
-    """Parent *widget* to WorkerW and compute per-monitor screen areas."""
+def _attach_to_workerw(hwnd: int) -> list[ScreenArea]:
+    """Parent window *hwnd* to WorkerW, size it to WorkerW, and return each monitor's area in it, measured from the
+    top-left monitor corner; none without a WorkerW."""
     worker = _locate_workerw()
     if not worker:
-        return False
-    hwnd = int(widget.winId())
+        return []
+
+    # A child before SetParent, as its docs ask: made one after, the window becomes the active and focused window of
+    # YASB's GUI thread, and YASB's own windows, the bar and the gallery, lose activation and keyboard focus to it
+    style = GetWindowLongPtr(hwnd, GWL_STYLE)
+    SetWindowLongPtr(hwnd, GWL_STYLE, (style | WS_CHILD) & ~WS_POPUP)
 
     exstyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE)
-
     SetWindowLongPtr(hwnd, GWL_EXSTYLE, exstyle & ~WS_EX_LAYERED)
     SetParent(hwnd, worker)
     SetWindowLongPtr(hwnd, GWL_EXSTYLE, exstyle)
 
-    style = GetWindowLongPtr(hwnd, GWL_STYLE)
-    SetWindowLongPtr(hwnd, GWL_STYLE, (style | WS_CHILD) & ~WS_POPUP)
-
     wr = wintypes.RECT()
     GetWindowRect(worker, ctypes.byref(wr))
     ww, wh = wr.right - wr.left, wr.bottom - wr.top
-    dpr = widget.devicePixelRatioF() or 1.0
+    screen = QGuiApplication.primaryScreen()
+    dpr = (screen.devicePixelRatio() if screen is not None else 1.0) or 1.0
 
     areas: list[ScreenArea] = []
     for ml, mt, mr, mb in _enum_physical_monitors():
@@ -372,139 +377,75 @@ def _attach_to_workerw(widget: WallpaperEngine) -> bool:
                 dpr,
             )
         )
-    widget.set_screen_areas(areas)
 
     SetWindowPos(hwnd, HWND_TOP, 0, 0, ww, wh, SWP_NOACTIVATE | SWP_FRAMECHANGED)
-    return True
+    if not areas:
+        return []
+    min_x = min(dx for dx, _, _, _, _ in areas)
+    min_y = min(dy for _, dy, _, _, _ in areas)
+    return [(dx - min_x, dy - min_y, dw, dh, d) for dx, dy, dw, dh, d in areas]
+
+
+def _physical_areas(areas: list[ScreenArea]) -> list[ScreenArea]:
+    """The areas in physical pixels, which Windows lays the wallpaper out in and the compositor draws in."""
+    return [(round(dx * dpr), round(dy * dpr), round(dw * dpr), round(dh * dpr), dpr) for dx, dy, dw, dh, dpr in areas]
 
 
 class _ImageLoader(QThread):
-    """Background thread to load new and old wallpaper images without blocking the UI."""
+    """Reads the new and old wallpaper and lays each out on every monitor, off the GUI thread.
+
+    Emits each wallpaper as one image per monitor, at the monitor's size in physical pixels with the desktop
+    background colour where the picture does not reach, or two empty lists when either file could not be read.
+    """
 
     loaded = pyqtSignal(object, object)
 
-    def __init__(self, new_path: str, old_path: str):
+    def __init__(self, new_path: str, old_path: str, areas: list[ScreenArea], fit_mode: str, bg_color: QColor):
         super().__init__()
         self.new_path = new_path
         self.old_path = old_path
+        self.fit_mode = fit_mode
+        self._bg_color = bg_color
+        self._areas = _physical_areas(areas)
 
-    def run(self):
-        reader = QImageReader(self.new_path)
+    @override
+    def run(self) -> None:
+        new_img, old_img = self._read(self.new_path), self._read(self.old_path)
+        if new_img.isNull() or old_img.isNull():
+            logger.warning(
+                "Could not read %s, the wallpaper is set without a transition",
+                self.new_path if new_img.isNull() else self.old_path,
+            )
+            self.loaded.emit([], [])
+            return
+        self.loaded.emit(self._compose(old_img), self._compose(new_img))
+
+    @staticmethod
+    def _read(path: str) -> QImage:
+        """The image at *path*, turned the way its EXIF orientation asks, as Windows shows it."""
+        reader = QImageReader(path)
         reader.setAutoTransform(True)
-        new_img = reader.read()
-        old_img = QImage(self.old_path)
-        self.loaded.emit(new_img, old_img)
+        return reader.read()
 
+    def _compose(self, px: QImage) -> list[QImage]:
+        """One image per monitor: the background colour with *px* laid out on it."""
+        monitors: list[QImage] = []
+        for (scaled, ox, oy), (_, _, dw, dh, _) in zip(self._compute_per_screen_scaled(px), self._areas):
+            monitor = QImage(dw, dh, QImage.Format.Format_RGB32)
+            monitor.fill(self._bg_color)
+            painter = QPainter(monitor)
+            painter.drawImage(ox, oy, scaled)
+            painter.end()
+            monitors.append(monitor)
+        return monitors
 
-class WallpaperEngine(QRasterWindow):
-    _ANIMATION_MS = 1200
-    _FRAME_MS = 16
-
-    finished = pyqtSignal()
-
-    def __init__(self, image_path: str, animation: str = "circle") -> None:
-        super().__init__()
-        self._image_path = image_path
-        self._animation = animation
-        self._progress = 0.0
-        self._committed = False
-        self._areas: list[ScreenArea] = []
-        self._dpr = 1.0
-        self._per_screen_scaled_old: list[tuple[QPixmap, int, int]] = []
-        self._per_screen_scaled_new: list[tuple[QPixmap, int, int]] = []
-        self.fit_mode = _read_fit_mode()
-        self._bg_color = _read_background_color()
-        self._pixmap_new = QPixmap()
-        self._pixmap_old = QPixmap()
-        self._resources_freed = False
-
-        primary = QGuiApplication.primaryScreen()
-        if primary is not None:
-            self.setGeometry(primary.geometry())
-        self.setFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowTransparentForInput)
-        self.setProperty("_q_showWithoutActivating", True)
-        # YASB turns off the redirection surface for its Direct3D windows; this one paints with GDI and needs it
-        redirection = os.environ.pop("QT_QPA_DISABLE_REDIRECTION_SURFACE", None)
-        try:
-            self.winId()
-        finally:
-            if redirection is not None:
-                os.environ["QT_QPA_DISABLE_REDIRECTION_SURFACE"] = redirection
-                # Kept out of Windows' copy, which programs YASB starts get, as env.py does
-                SetEnvironmentVariable("QT_QPA_DISABLE_REDIRECTION_SURFACE", None)
-
-        self._timeline = QTimeLine(self._ANIMATION_MS, self)
-        self._timeline.setUpdateInterval(self._FRAME_MS)
-        self._timeline.setEasingCurve(QEasingCurve.Type.OutQuad)
-        self._timeline.valueChanged.connect(self._on_progress)
-        self._timeline.finished.connect(self._on_finished)
-
-    def start(self) -> None:
-        """Load images asynchronously, then attach to WorkerW and begin animation."""
-        self._wallpaper_loader = _ImageLoader(self._image_path, _transcoded_wallpaper_path())
-        self._wallpaper_loader.loaded.connect(self._on_images_loaded)
-        self._wallpaper_loader.start()
-
-    def _on_images_loaded(self, new_img: QImage, old_img: QImage) -> None:
-        self._pixmap_new = QPixmap.fromImage(new_img)
-        self._pixmap_old = QPixmap.fromImage(old_img)
-
-        # If either image fails to load, skip animation and let caller commit immediately
-        if self._pixmap_new.isNull() or self._pixmap_old.isNull():
-            self.finished.emit()
-            self.deleteLater()
-            return
-
-        self.setOpacity(0.0)
-        if not _attach_to_workerw(self):
-            self.finished.emit()
-            self.deleteLater()
-            return
-
-        self.show()
-        QTimer.singleShot(0, self._start_fade_in)
-
-    def _start_fade_in(self) -> None:
-        self._fade_timeline = QTimeLine(50, self)
-        self._fade_timeline.setUpdateInterval(self._FRAME_MS)
-        self._fade_timeline.valueChanged.connect(self.setOpacity)
-        self._fade_timeline.finished.connect(self._on_fade_in_done)
-        self._fade_timeline.start()
-
-    def _on_fade_in_done(self) -> None:
-        self.setOpacity(1.0)
-        self._timeline.start()
-
-    def set_screen_areas(self, areas: list[ScreenArea]) -> None:
-        if areas:
-            min_x = min(dx for dx, _, _, _, _ in areas)
-            min_y = min(dy for _, dy, _, _, _ in areas)
-            self._areas = [(dx - min_x, dy - min_y, dw, dh, dpr) for dx, dy, dw, dh, dpr in areas]
-            total_w = max(dx + dw for dx, _, dw, _, _ in self._areas)
-            total_h = max(dy + dh for _, dy, _, dh, _ in self._areas)
-            self.resize(total_w, total_h)
-        else:
-            self._areas = areas
-        self._dpr = areas[0][4] if areas else (self.devicePixelRatioF() or 1.0)
-        self._per_screen_scaled_new = self._compute_per_screen_scaled(self._pixmap_new)
-        self._per_screen_scaled_old = self._compute_per_screen_scaled(self._pixmap_old)
-
-    def _compute_per_screen_scaled(self, px: QPixmap) -> list[tuple[QPixmap, int, int]]:
-        """Compute (pixmap, offset_x, offset_y) per screen area for the given source image."""
+    def _compute_per_screen_scaled(self, px: QImage) -> list[tuple[QImage, int, int]]:
+        """Compute (image, offset_x, offset_y) per screen area for the given source image."""
         areas = self._areas
-        if px.isNull():
-            return []
         # Lay out what Windows lays out: its transcoded copy, not the file.
         px = _apply_transcode_cap(px)
-        dpr = self._dpr
-        if dpr != 1.0:
-            areas = [
-                (round(dx * dpr), round(dy * dpr), round(dw * dpr), round(dh * dpr), d) for dx, dy, dw, dh, d in areas
-            ]
-            px = QPixmap(px)
-            px.setDevicePixelRatio(dpr)
-        vw = max(dx + dw for dx, _, dw, _, _ in areas) if areas else int(round(self.width() * dpr))
-        vh = max(dy + dh for _, dy, _, dh, _ in areas) if areas else int(round(self.height() * dpr))
+        vw = max(dx + dw for dx, _, dw, _, _ in areas)
+        vh = max(dy + dh for _, dy, _, dh, _ in areas)
 
         mode = self.fit_mode
         # Only span and tile are laid out against the virtual desktop; Windows
@@ -521,13 +462,13 @@ class WallpaperEngine(QRasterWindow):
         return [self._scale_for_screen(px, dw, dh) for _, _, dw, dh, _ in areas]
 
     #  Per-mode scaling helpers
-    def _cover_or_contain(self, px: QPixmap, dw: int, dh: int, cover: bool) -> QPixmap:
+    def _cover_or_contain(self, px: QImage, dw: int, dh: int, cover: bool) -> QImage:
         """Scale to cover or contain *dw* x *dh*, rounding the way Windows rounds.
 
         Windows works the ratios out in single precision, takes max for cover and
         min for contain, then adds a half to each axis before truncating. Done
-        here rather than through QPixmap.scaled, which rounds differently and
-        lands a pixel off.
+        here rather than through QImage.scaled with an aspect ratio mode, which
+        rounds differently and lands a pixel off.
         """
         ratios = (dw / px.width(), dh / px.height())
         s = max(ratios) if cover else min(ratios)
@@ -539,8 +480,8 @@ class WallpaperEngine(QRasterWindow):
         )
 
     def _scale_span(
-        self, px: QPixmap, areas: list[ScreenArea], vw: int, vh: int, cover: bool = True
-    ) -> list[tuple[QPixmap, int, int]]:
+        self, px: QImage, areas: list[ScreenArea], vw: int, vh: int, cover: bool = True
+    ) -> list[tuple[QImage, int, int]]:
         """One image across the whole virtual desktop, each monitor clips its part.
 
         *cover* is false only when a fit has been autospanned. Windows keeps the
@@ -553,7 +494,7 @@ class WallpaperEngine(QRasterWindow):
         oy = _trunc_div(vh - scaled.height(), 3 if cover else 2)
         return [(scaled, ox - dx, oy - dy) for dx, dy, _, _, _ in areas]
 
-    def _scale_tile(self, px: QPixmap, areas: list[ScreenArea], vw: int, vh: int) -> list[tuple[QPixmap, int, int]]:
+    def _scale_tile(self, px: QImage, areas: list[ScreenArea], vw: int, vh: int) -> list[tuple[QImage, int, int]]:
         """Repeat the image at its native size from the virtual desktop origin.
 
         Windows never scales a tiled wallpaper, whatever its size, and the grid
@@ -564,19 +505,16 @@ class WallpaperEngine(QRasterWindow):
         if iw <= 0 or ih <= 0:
             return [(px, 0, 0) for _ in areas]
 
-        src = QPixmap(px)
-        src.setDevicePixelRatio(1.0)
-        tiled = QPixmap(vw, vh)
+        tiled = QImage(vw, vh, QImage.Format.Format_RGB32)
         tiled.fill(self._bg_color)
         tp = QPainter(tiled)
         for ty in range(0, vh, ih):
             for tx in range(0, vw, iw):
-                tp.drawPixmap(tx, ty, src)
+                tp.drawImage(tx, ty, px)
         tp.end()
-        tiled.setDevicePixelRatio(self._dpr)
         return [(tiled, -dx, -dy) for dx, dy, _, _, _ in areas]
 
-    def _scale_for_screen(self, px: QPixmap, sw: int, sh: int) -> tuple[QPixmap, int, int]:
+    def _scale_for_screen(self, px: QImage, sw: int, sh: int) -> tuple[QImage, int, int]:
         """Lay one image out on one monitor: centre, stretch, fit or fill.
 
         Centre never scales. An oversized image is cropped by the monitor rect,
@@ -599,166 +537,231 @@ class WallpaperEngine(QRasterWindow):
         oy = _trunc_div(sh - scaled.height(), 3 if mode == "fill" else 2)
         return scaled, ox, oy
 
-    def _on_progress(self, value: float) -> None:
-        self._progress = value
-        self.update()
+
+# The engine of each transition window, for the window procedure
+_engines: dict[int, WallpaperEngine] = {}
+
+
+def _window_procedure(hwnd: int, message: int, wparam: int, lparam: int) -> int:
+    if message == WM_DESTROY:
+        engine = _engines.pop(hwnd, None)
+        if engine is not None:
+            # Not from the window procedure, as ending can set the wallpaper
+            QTimer.singleShot(0, engine.on_window_destroyed)
+    return DefWindowProc(hwnd, message, wparam, lparam)
+
+
+_procedure = WNDPROC(_window_procedure)
+
+
+@cache
+def _window_class() -> str:
+    window_class = WNDCLASS(
+        lpfnWndProc=_procedure, hInstance=GetModuleHandle(None), lpszClassName=TRANSITION_WINDOW_CLASS
+    )
+    if not user32.RegisterClassW(ctypes.byref(window_class)):
+        raise ctypes.WinError(GetLastError())
+    return TRANSITION_WINDOW_CLASS
+
+
+class WallpaperEngine(QObject):
+    _ANIMATION_MS = 800
+
+    # The animation is over: set the wallpaper, whose path it carries
+    finished = pyqtSignal(str)
+    # Windows took the wallpaper: the manager emits it once SetWallpaper succeeds, for whoever asked for it
+    wallpaperSet = pyqtSignal(str)
+    # The window is off the desktop: Windows destroyed it, putting the wallpaper up, or the engine closed it
+    closed = pyqtSignal()
+
+    def __init__(self, image_path: str, animation: str = "circle", shown_path: str = "") -> None:
+        """*shown_path* is the wallpaper Windows was last given for every screen, "" when the screens differ."""
+        super().__init__()
+        self._image_path = image_path
+        self._animation = animation
+        # Windows rewrites its transcoded copy some time after SetWallpaper, so that copy can still be the wallpaper
+        # before, or half written, when a transition starts soon after one ends
+        self._old_path = shown_path if os.path.isfile(shown_path) else _transcoded_wallpaper_path()
+        self._committed = False
+        self._shown = False
+        self._closed = False
+        self._areas: list[ScreenArea] = []
+        self.fit_mode = _read_fit_mode()
+        self._bg_color = _read_background_color()
+        self._wallpaper_loader: _ImageLoader | None = None
+        self._target: DesktopWindowTarget | None = None
+        # Without a redirection surface the window shows only its visuals
+        self.hwnd = CreateWindowEx(
+            WS_EX_NOREDIRECTIONBITMAP | WS_EX_TRANSPARENT,
+            _window_class(),
+            None,
+            WS_POPUP,
+            0,
+            0,
+            0,
+            0,
+            None,
+            None,
+            GetModuleHandle(None),
+            None,
+        )
+        if not self.hwnd:
+            raise ctypes.WinError(GetLastError())
+        _engines[self.hwnd] = self
+
+    @property
+    def playing(self) -> bool:
+        return not self._committed
+
+    def start(self) -> None:
+        """Attach to WorkerW, lay the images out on a worker thread, then play the animation."""
+        if (app := QCoreApplication.instance()) is not None:
+            # Before the shared compositor shuts down
+            app.aboutToQuit.connect(self.close)
+        self._areas = _attach_to_workerw(self.hwnd)
+        if not self._areas:
+            self._skip()
+            return
+        logger.debug("Transition %s to %s starts on %d monitors", self._animation, self._image_path, len(self._areas))
+        self._wallpaper_loader = _ImageLoader(
+            self._image_path, self._old_path, self._areas, self.fit_mode, self._bg_color
+        )
+        self._wallpaper_loader.loaded.connect(self._on_images_loaded)
+        self._wallpaper_loader.start()
+
+    def _skip(self) -> None:
+        """Ends without an animation, so the caller sets the wallpaper at once."""
+        self._on_finished()
+        self.close()
+
+    def _on_images_loaded(self, old: list[QImage], new: list[QImage]) -> None:
+        # If either image fails to load, skip animation and let caller commit immediately
+        if not new:
+            self._skip()
+            return
+        try:
+            self._show(old, new)
+        except OSError, COMError:
+            logger.exception("Wallpaper transition failed, the wallpaper is set without it")
+            self._skip()
+            return
+        self._shown = True
+        logger.debug("Transition to %s shown, ends in %d ms", self._image_path, self._ANIMATION_MS)
+        # The compositor plays the animation by itself; this only tells when it is over
+        QTimer.singleShot(self._ANIMATION_MS, self._on_finished)
+
+    def _show(self, old: list[QImage], new: list[QImage]) -> None:
+        """Each monitor shows the old wallpaper, and the new one grows in front of it through the animated clips."""
+        shared = compositor()
+        root = shared.create_container_visual()
+        for (x, y, width, height, _), old_image, new_image in zip(_physical_areas(self._areas), old, new):
+            monitor = shared.create_sprite_visual()
+            monitor.offset = (x, y, 0)
+            monitor.size = (width, height)
+            monitor.brush = shared.create_surface_brush(drawing_surface(old_image))
+            brush = shared.create_surface_brush(drawing_surface(new_image))
+            for clip in self._reveal_clips(shared, width, height):
+                reveal = shared.create_sprite_visual()
+                reveal.size = (width, height)
+                reveal.brush = brush
+                if clip is not None:
+                    reveal.clip = clip
+                # A visual's children draw in front of its own brush
+                monitor.children.insert_at_top(reveal)
+            root.children.insert_at_top(monitor)
+        self._target = create_desktop_window_target(shared, self.hwnd)
+        self._target.root = root
+        ShowWindow(self.hwnd, SW_SHOWNA)
+
+    def _reveal_clips(self, shared: Compositor, width: int, height: int) -> list[CompositionClip | None]:
+        """The clips the new wallpaper shows through on one monitor, already animating; None shows it at once."""
+        # The centre the circle and diamond grow from, rounded down as the GDI version did
+        cx, cy = width // 2, height // 2
+        if self._animation in ("circle", "slide_top"):
+            if self._animation == "slide_top":
+                cy = 0
+            # Until it reaches the farthest corner
+            reach = max(math.hypot(x - cx, y - cy) for x in (0, width) for y in (0, height))
+            ellipse = shared.create_ellipse_geometry()
+            ellipse.center = (cx, cy)
+            ellipse.radius = (0.0, 0.0)
+            ellipse.start_animation(
+                "Radius", self._ease_out(shared.create_vector2_key_frame_animation(), (0.0, 0.0), (reach, reach))
+            )
+            return [shared.create_geometric_clip(ellipse)]
+        if self._animation == "diamond":
+            # A square turned on its corner, whose half diagonal reaches the farthest corner
+            side = (max(cx, width - cx) + max(cy, height - cy)) * math.sqrt(2)
+            square = shared.create_rectangle_geometry()
+            square.offset = (cx - side / 2, cy - side / 2)
+            square.size = (side, side)
+            diamond = shared.create_geometric_clip(square)
+            diamond.center_point = (cx, cy)
+            diamond.rotation_angle_in_degrees = 45
+            diamond.scale = (0.0, 0.0)
+            diamond.start_animation(
+                "Scale", self._ease_out(shared.create_vector2_key_frame_animation(), (0.0, 0.0), (1.0, 1.0))
+            )
+            return [diamond]
+        if self._animation == "split":
+            # A band grows from the top edge and one from the bottom edge, meeting in the middle
+            top, bottom = shared.create_inset_clip(), shared.create_inset_clip()
+            top.bottom_inset = bottom.top_inset = height
+            top.start_animation(
+                "BottomInset", self._ease_out(shared.create_scalar_key_frame_animation(), height, height / 2)
+            )
+            bottom.start_animation(
+                "TopInset", self._ease_out(shared.create_scalar_key_frame_animation(), height, height / 2)
+            )
+            return [top, bottom]
+        return [None]
+
+    def _ease_out(self, animation: Any, start: Any, end: Any) -> Any:
+        """animation from start to end over the transition's length, easing out like Qt's OutQuad, 2p - p^2, which is
+        exactly the cubic Bezier through control points (1/3, 2/3) and (2/3, 1)."""
+        animation.insert_key_frame(0.0, start)
+        animation.insert_key_frame(
+            1.0, end, compositor().create_cubic_bezier_easing_function((1 / 3, 2 / 3), (2 / 3, 1.0))
+        )
+        animation.duration = timedelta(milliseconds=self._ANIMATION_MS)
+        return animation
 
     def _on_finished(self) -> None:
-        self._progress = 1.0
-        self.update()
         if not self._committed:
             self._committed = True
-            self.finished.emit()
+            logger.debug("Transition to %s finished", self._image_path)
+            self.finished.emit(self._image_path)
 
-    def _clip_path_for_monitor(self, dx: int, dy: int, dw: int, dh: int, t: float) -> QPainterPath:
-        """Reveal shape for the new wallpaper."""
-        if t >= 1.0:
-            r = QRectF(float(dx), float(dy), float(dw), float(dh))
-            p = QPainterPath()
-            p.addRect(r)
-            return p
-
-        if self._animation == "circle":
-            return self._clip_circle(dx, dy, dw, dh, t)
-        if self._animation == "slide_top":
-            return self._clip_slide_top(dx, dy, dw, dh, t)
-        if self._animation == "diamond":
-            return self._clip_diamond(dx, dy, dw, dh, t)
-        if self._animation == "split":
-            return self._clip_split(dx, dy, dw, dh, t)
-        r = QRectF(float(dx), float(dy), float(dw), float(dh))
-        p = QPainterPath()
-        p.addRect(r)
-        return p
-
-    def _clip_circle(self, dx: int, dy: int, dw: int, dh: int, t: float) -> QPainterPath:
-        cx, cy = dx + dw // 2, dy + dh // 2
-        r = max(
-            1.0,
-            max(
-                math.hypot(cx - dx, cy - dy),
-                math.hypot(cx - (dx + dw), cy - dy),
-                math.hypot(cx - dx, cy - (dy + dh)),
-                math.hypot(cx - (dx + dw), cy - (dy + dh)),
+    def on_window_destroyed(self) -> None:
+        """Windows destroyed the window, as Explorer replaces WorkerW for the new wallpaper. Destroyed before the
+        animation ended, the transition ends here, so the wallpaper is still set."""
+        logger.debug("Transition window for %s destroyed by Windows", self._image_path)
+        if not self._committed:
+            logger.warning(
+                "Windows destroyed the wallpaper transition %s, the wallpaper is set without it",
+                "during its animation" if self._shown else "before it showed",
             )
-            * t,
-        )
-        path = QPainterPath()
-        path.addEllipse(QRectF(cx - r, cy - r, 2 * r, 2 * r))
-        return path
+            self._on_finished()
+        self.close()
 
-    def _clip_diamond(self, dx: int, dy: int, dw: int, dh: int, t: float) -> QPainterPath:
-        cx, cy = dx + dw // 2, dy + dh // 2
-        max_r = max(
-            abs(cx - dx) + abs(cy - dy),
-            abs(cx - (dx + dw)) + abs(cy - dy),
-            abs(cx - dx) + abs(cy - (dy + dh)),
-            abs(cx - (dx + dw)) + abs(cy - (dy + dh)),
-        )
-        rr = max(1.0, float(max_r) * t)
-        poly = QPolygonF(
-            [
-                QPointF(cx, cy - rr),
-                QPointF(cx + rr, cy),
-                QPointF(cx, cy + rr),
-                QPointF(cx - rr, cy),
-            ]
-        )
-        path = QPainterPath()
-        path.addPolygon(poly)
-        return path
-
-    def _clip_split(self, dx: int, dy: int, dw: int, dh: int, t: float) -> QPainterPath:
-        half = int(dh / 2 * t)
-        top = QPainterPath()
-        top.addRect(QRectF(float(dx), float(dy), float(dw), float(max(1, half))))
-        bot = QPainterPath()
-        bot.addRect(QRectF(float(dx), float(dy + dh - max(1, half)), float(dw), float(max(1, half))))
-        return top.united(bot)
-
-    def _clip_slide_top(self, dx: int, dy: int, dw: int, dh: int, t: float) -> QPainterPath:
-        cx = dx + dw // 2
-        max_r = math.hypot(dw / 2, dh)
-        r = max(1.0, max_r * t)
-        circ = QPainterPath()
-        circ.addEllipse(QRectF(cx - r, dy - r, 2 * r, 2 * r))
-        rect = QPainterPath()
-        rect.addRect(QRectF(float(dx), float(dy), float(dw), float(dh)))
-        return circ.intersected(rect)
-
-    @override
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
-        p = QPainter(self)
-
-        t = self._progress
-
-        for i, (dx, dy, dw, dh, _) in enumerate(self._areas):
-            clip = self._clip_path_for_monitor(dx, dy, dw, dh, t)
-
-            if t < 1.0:
-                if i < len(self._per_screen_scaled_old):
-                    scaled_o, ox_o, oy_o = self._per_screen_scaled_old[i]
-                    p.save()
-                    p.setClipRect(QRectF(float(dx), float(dy), float(dw), float(dh)))
-
-                    # Fill old area background
-                    p.fillRect(QRectF(float(dx), float(dy), float(dw), float(dh)), self._bg_color)
-                    p.drawPixmap(QPointF(dx + ox_o / self._dpr, dy + oy_o / self._dpr), scaled_o)
-                    p.restore()
-                else:
-                    p.fillRect(QRectF(float(dx), float(dy), float(dw), float(dh)), self._bg_color)
-
-            if i >= len(self._per_screen_scaled_new):
-                continue
-            scaled_n, ox_n, oy_n = self._per_screen_scaled_new[i]
-            p.save()
-            p.setClipPath(clip, Qt.ClipOperation.IntersectClip)
-            p.setClipRect(QRectF(float(dx), float(dy), float(dw), float(dh)), Qt.ClipOperation.IntersectClip)
-
-            # Fill new area background
-            p.fillRect(QRectF(float(dx), float(dy), float(dw), float(dh)), self._bg_color)
-            p.drawPixmap(QPointF(dx + ox_n / self._dpr, dy + oy_n / self._dpr), scaled_n)
-            p.restore()
-
-    def _free_resources(self):
-        if getattr(self, "_resources_freed", True):
+    def close(self) -> None:
+        """Takes the transition off the desktop and deletes the engine."""
+        if self._closed:
             return
-        self._resources_freed = True
-
-        for tl in (self._timeline, getattr(self, "_fade_timeline", None)):
-            if tl and tl.state() != QTimeLine.State.NotRunning:
-                tl.stop()
-
-        self._pixmap_new = QPixmap()
-        self._pixmap_old = QPixmap()
-        self._per_screen_scaled_new.clear()
-        self._per_screen_scaled_old.clear()
-
-        wl = getattr(self, "_wallpaper_loader", None)
-        if wl is not None:
-            try:
-                wl.loaded.disconnect()
-            except TypeError, RuntimeError:
-                pass
-            if wl.isRunning():
-                wl.quit()
-                wl.wait(1000)
+        self._closed = True
+        loader = self._wallpaper_loader
+        if loader is not None:
+            # Still reading only when YASB quits meanwhile; Qt must not delete it while it runs
+            loader.loaded.disconnect()
+            loader.wait()
             self._wallpaper_loader = None
-
-    @override
-    def nativeEvent(
-        self, eventType: QByteArray | bytes | bytearray | memoryview, message: sip.voidptr | None
-    ) -> tuple[bool, sip.voidptr]:
-        if message is None:
-            return False, sip.voidptr(0)
-        msg = ctypes.cast(int(message), ctypes.POINTER(wintypes.MSG)).contents
-        if msg.message == WM_DESTROY:
-            self._free_resources()
-            self.deleteLater()
-            return True, sip.voidptr(0)
-        return False, sip.voidptr(0)
-
-    @override
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
-        self._free_resources()
-        super().closeEvent(a0)
+        if self._target is not None:
+            # The WinRT setter accepts null, although the projection's stub does not.
+            self._target.root = None  # pyright: ignore[reportAttributeAccessIssue]
+            self._target.close()
+            self._target = None
+        # Still there, unless Windows destroyed it
+        if _engines.pop(self.hwnd, None) is not None:
+            DestroyWindow(self.hwnd)
+        self.closed.emit()
+        self.deleteLater()

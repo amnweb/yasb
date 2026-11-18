@@ -17,6 +17,7 @@ from core.utils.icons.service import IconService
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
 from tests.support.audio import FakeAudioService
+from tests.support.bar import create_with_bar
 from tests.support.qt import find_item, wait
 
 
@@ -138,13 +139,22 @@ def test_the_widget_shows_the_level(service: FakeAudioService):
     engine = QQmlEngine()
     engine.addImportPath(QML_IMPORT_PATH)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Volume" / "Volume.qml")))
-    widget = component.create()
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
     icon = find_item(widget, "icon")
     assert icon is not None
     # 30% is one wave
     assert icon.property("text") == "\ue993"
+
+    label = find_item(widget, "label")
+    assert label is not None and label.property("text") == ""
+    widget.setProperty("label", "{level} on {device} {x}")
+    assert label.property("text") == "30% on Speakers {x}"
+    service.volume.muted = True
+    for listener in service.listeners:
+        listener.on_output_volume_changed()
+    assert label.property("text") == "mute on Speakers {x}"
     sip.delete(widget)
     # QML deletes the widget's own objects with deleteLater: run those deletions now, while their engine exists
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)

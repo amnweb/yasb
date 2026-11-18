@@ -23,7 +23,7 @@ import certifi
 
 from core.app.windows.toast import ToastNotifier, get_app_identifier
 from core.utils.system import app_data_path, get_architecture
-from settings import APP_ID, BUILD_VERSION, IS_FROZEN, RELEASE_CHANNEL, SCRIPT_PATH
+from settings import APP_ICON_TRANSPARENT, APP_ID, BUILD_VERSION, IS_FROZEN, RELEASE_CHANNEL
 
 # GitHub API configuration
 GITHUB_API_URL = "https://api.github.com/repos/amnweb/yasb/releases/latest"
@@ -413,7 +413,7 @@ def start_update_checker() -> None:
             if release_info:
                 for cb in _update_callbacks:
                     cb(release_info)
-                icon_path = f"{SCRIPT_PATH}/assets/images/app_transparent.png"
+                icon_path = APP_ICON_TRANSPARENT
                 toaster = ToastNotifier()
 
                 # Determine launch URL and message based on channel

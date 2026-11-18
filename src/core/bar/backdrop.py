@@ -4,7 +4,7 @@ from PyQt6.QtCore import QObject, QRectF, pyqtProperty, pyqtSignal
 from PyQt6.QtQuick import QQuickItem, QQuickWindow
 
 from core.bar.window import BarWindow
-from core.utils.win32.composition import BackdropWindow
+from core.utils.win32.composition import BackdropWindow, host_backdrop_supported
 
 
 class Backdrop(QObject):
@@ -52,7 +52,7 @@ class Backdrop(QObject):
         if window is None or window is self._window:
             return
         bar = self._bar
-        if not isinstance(bar, BarWindow) or not bar.config.backdrop:
+        if not isinstance(bar, BarWindow) or not bar.config.backdrop or not host_backdrop_supported():
             return
         if self._backdrop_window is not None:
             self._backdrop_window.close()

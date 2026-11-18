@@ -1,15 +1,21 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.impl
 import QtQuick.Layouts
 import Yasb
+import Yasb.Bar
 import Yasb.Common
+import Yasb.Themes
 
 Item {
-    id: launcher
+    id: quickLaunch
 
-    property Item bar: null
-    property string hotkey: "alt+space"
+    required property BarBase bar
+    readonly property Theme theme: bar.theme
+    // Hotkey that opens the launcher, such as "alt+space"
+    property string hotkey: ""
     // active, cursor or primary: which screen's widget opens on the hotkey
     property string hotkeyScreen: "active"
     // What each search provider does: on or off, the prefix typed before a space to use it ("*" for none),
@@ -171,25 +177,78 @@ Item {
     property bool rememberLastQuery: false
     property bool showIcons: true
     property int resultIconSize: 24
+    // The popup shows only the search bar until something is typed or a prefix is picked
+    property bool compactMode: false
+    // One line per result: the title on the left and the description on the right, in at most half the row
+    property bool compactText: false
     property int popupWidth: 720
     property int popupHeight: 480
     // The glyph on the bar, drawn in iconFont and the text colour
     property string icon: "\ue721"
-    property int iconSize: 16
+    property int iconSize: theme.bar.iconFont.pixelSize
 
-    readonly property bool dark: bar ? bar.dark : Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
-    property color textColor: bar?.textColor ?? (dark ? "#ffffff" : "#000000")
-    // Glyphs take the family and weight of the bar's icon font unless the widget file sets them
+    readonly property bool dark: theme.dark
+    property color textColor: theme.colors.text
+    // Glyphs take the theme's icon font, each part unless the widget file sets it
     property font iconFont
-    iconFont.family: bar?.iconFont?.family ?? "Segoe Fluent Icons"
-    iconFont.weight: bar?.iconFont?.weight ?? Font.Normal
-    readonly property color foreground: dark ? "#f3f3f3" : "#1b1b1b"
-    readonly property color secondary: dark ? "#9a9a9a" : "#5f5f5f"
-    readonly property color hover: Qt.alpha(foreground, 0.06)
-    readonly property color selected: Qt.alpha(foreground, 0.1)
+    iconFont.family: theme.bar.iconFont.family
+    iconFont.weight: theme.bar.iconFont.weight
+    iconFont.variableAxes: theme.bar.iconFont.variableAxes
+    // The popup: the theme's, unless set here
+    property color popupColor: theme.popup.background
+    property color popupBorderColor: theme.popup.border
+    property color popupTextColor: theme.colors.text
+    property color popupSecondaryTextColor: theme.colors.textTertiary
+    property real popupRadius: theme.popup.radius
+    // Text in the popup: the theme's font family, in this widget's sizes
+    property font popupFont
+    popupFont.family: theme.popup.font.family
+    popupFont.pixelSize: 14
+    property font popupSmallFont
+    popupSmallFont.family: theme.popup.font.family
+    popupSmallFont.pixelSize: 12
+    // Bold text in the preview, the search field and its glyph, each group's heading in the results, and the
+    // colour's code under the picker's lens
+    property font popupStrongFont
+    popupStrongFont.family: theme.popup.font.family
+    popupStrongFont.pixelSize: 13
+    popupStrongFont.weight: Font.DemiBold
+    property font searchFont
+    searchFont.family: theme.popup.font.family
+    searchFont.pixelSize: 16
+    property int searchIconSize: 18
+    property font sectionFont
+    sectionFont.family: theme.popup.font.family
+    sectionFont.pixelSize: 12
+    sectionFont.weight: Font.DemiBold
+    property font colorCodeFont
+    colorCodeFont.family: theme.popup.font.family
+    colorCodeFont.pointSize: 9
+    colorCodeFont.weight: Font.Bold
+    // Emoji shown in place of a result's icon
+    property font emojiFont
+    emojiFont.family: "Segoe UI Emoji"
+    property int popupOpenDuration: theme.popup.openDuration
+    property int popupCloseDuration: theme.popup.closeDuration
+    // The right-click menu on a result: the theme's, unless set here
+    property int menuWidth: 200
+    property color menuColor: theme.menu.background
+    property color menuBorderColor: theme.menu.border
+    property color menuTextColor: theme.colors.text
+    property real menuRadius: theme.menu.radius
+    property font menuFont: theme.menu.font
+    // Milliseconds the right-click menu takes to fade in
+    property int menuOpenDuration: theme.menu.openDuration
+    // The icons in the text fields' right-click menu
+    property int menuIconSize: 16
+    property color popupDividerColor: theme.colors.divider
+    property color popupHoverColor: theme.colors.hover
+    property color popupSelectedColor: theme.colors.selected
 
     property string prefix: ""
     property bool previewShown: false
+    // In compactMode, while nothing is typed and no prefix is picked
+    readonly property bool collapsed: compactMode && prefix === "" && field.text.trim() === ""
 
     implicitWidth: label.width
     implicitHeight: label.height
@@ -202,8 +261,9 @@ Item {
     }
 
     function open() {
-        popup.x = Math.round(launcher.Screen.virtualX + (launcher.Screen.width - popup.width) / 2)
-        popup.y = Math.round(launcher.Screen.virtualY + (launcher.Screen.height - popup.height) / 3)
+        popup.x = Math.round(quickLaunch.Screen.virtualX + (quickLaunch.Screen.width - popup.width) / 2)
+        // From the full height, so the search bar stays where it is when the results show
+        popup.y = Math.round(quickLaunch.Screen.virtualY + (quickLaunch.Screen.height - quickLaunch.popupHeight) / 3)
         if (!rememberLastQuery) {
             prefix = ""
             field.text = ""
@@ -243,7 +303,7 @@ Item {
         let row = list.currentIndex
         for (let i = 0; i < list.count; i++) {
             row = Math.max(0, Math.min(list.count - 1, row + step))
-            if (!list.itemAtIndex(row)?.separator)
+            if (!(list.itemAtIndex(row) as ResultRow)?.separator)
                 break
         }
         list.currentIndex = row
@@ -254,9 +314,15 @@ Item {
         if (!actions.length)
             return
         list.currentIndex = row
-        menu.row = row
-        menu.actions = actions
-        menu.popup(item)
+        resultMenu.row = row
+        resultMenu.actions = actions
+        resultMenu.popup(item)
+    }
+
+    // An item of the text fields' right-click menu, its icon in menuIconSize
+    component FieldMenuItem: MenuItem {
+        icon.width: quickLaunch.menuIconSize
+        icon.height: quickLaunch.menuIconSize
     }
 
     component SvgIcon: IconImage {
@@ -267,61 +333,62 @@ Item {
         id: label
 
         y: Math.round((parent.height - height) / 2)
-        width: launcher.iconSize
-        height: launcher.iconSize
+        width: quickLaunch.iconSize
+        height: quickLaunch.iconSize
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        text: launcher.icon
-        color: launcher.textColor
-        font.family: launcher.iconFont.family
-        font.weight: launcher.iconFont.weight
-        font.pixelSize: launcher.iconSize
+        text: quickLaunch.icon
+        color: quickLaunch.textColor
+        font.family: quickLaunch.iconFont.family
+        font.weight: quickLaunch.iconFont.weight
+        font.variableAxes: quickLaunch.iconFont.variableAxes
+        font.pixelSize: quickLaunch.iconSize
     }
 
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: launcher.toggle()
+        onClicked: quickLaunch.toggle()
     }
 
     Hotkey {
-        keys: launcher.hotkey
-        screen: launcher.hotkeyScreen
-        onActivated: launcher.toggle()
+        keys: quickLaunch.hotkey
+        screen: quickLaunch.hotkeyScreen
+        onActivated: quickLaunch.toggle()
     }
 
     QuickLaunchSearch {
         id: search
 
-        maxResults: launcher.maxResults
-        homePage: launcher.homePage
+        maxResults: quickLaunch.maxResults
+        homePage: quickLaunch.homePage
         providers: ({
-            apps: settingsOf(launcher.apps),
-            bookmarks: settingsOf(launcher.bookmarks),
-            calculator: settingsOf(launcher.calculator),
-            clipboard_history: settingsOf(launcher.clipboardHistory),
-            color: settingsOf(launcher.color),
-            binance: settingsOf(launcher.binance),
-            currency: settingsOf(launcher.currency),
-            dev_tools: settingsOf(launcher.devTools),
-            emoji: settingsOf(launcher.emoji),
-            file_search: settingsOf(launcher.fileSearch),
-            github_notifications: settingsOf(launcher.githubNotifications),
-            hacker_news: settingsOf(launcher.hackerNews),
-            ip_info: settingsOf(launcher.ipInfo),
-            kill_process: settingsOf(launcher.killProcess),
-            port_viewer: settingsOf(launcher.portViewer),
-            settings: settingsOf(launcher.settings),
-            snippets: settingsOf(launcher.snippets),
-            ssh: settingsOf(launcher.ssh),
-            system_commands: settingsOf(launcher.systemCommands),
-            unit_converter: settingsOf(launcher.unitConverter),
-            vscode: settingsOf(launcher.vscode),
-            web_search: settingsOf(launcher.webSearch),
-            window_switcher: settingsOf(launcher.windowSwitcher),
-            windows_terminal: settingsOf(launcher.windowsTerminal),
-            world_clock: settingsOf(launcher.worldClock),
-            wsl: settingsOf(launcher.wsl)
+            apps: settingsOf(quickLaunch.apps),
+            bookmarks: settingsOf(quickLaunch.bookmarks),
+            calculator: settingsOf(quickLaunch.calculator),
+            clipboard_history: settingsOf(quickLaunch.clipboardHistory),
+            color: settingsOf(quickLaunch.color),
+            binance: settingsOf(quickLaunch.binance),
+            currency: settingsOf(quickLaunch.currency),
+            dev_tools: settingsOf(quickLaunch.devTools),
+            emoji: settingsOf(quickLaunch.emoji),
+            file_search: settingsOf(quickLaunch.fileSearch),
+            github_notifications: settingsOf(quickLaunch.githubNotifications),
+            hacker_news: settingsOf(quickLaunch.hackerNews),
+            ip_info: settingsOf(quickLaunch.ipInfo),
+            kill_process: settingsOf(quickLaunch.killProcess),
+            port_viewer: settingsOf(quickLaunch.portViewer),
+            settings: settingsOf(quickLaunch.settings),
+            snippets: settingsOf(quickLaunch.snippets),
+            ssh: settingsOf(quickLaunch.ssh),
+            system_commands: settingsOf(quickLaunch.systemCommands),
+            unit_converter: settingsOf(quickLaunch.unitConverter),
+            vscode: settingsOf(quickLaunch.vscode),
+            web_search: settingsOf(quickLaunch.webSearch),
+            window_switcher: settingsOf(quickLaunch.windowSwitcher),
+            windows_terminal: settingsOf(quickLaunch.windowsTerminal),
+            world_clock: settingsOf(quickLaunch.worldClock),
+            wsl: settingsOf(quickLaunch.wsl)
         })
 
         function settingsOf(provider: Provider): var {
@@ -330,8 +397,7 @@ Item {
         }
 
         onCloseRequested: popup.close()
-        onPrefixRequested: value => launcher.setPrefix(value, "")
-        onQueryRequested: text => launcher.showQuery(text)
+        onQueryRequested: text => quickLaunch.showQuery(text)
         onColorPickRequested: prefix => {
             popup.close()
             colorPicker.prefix = prefix
@@ -344,8 +410,12 @@ Item {
 
         property string prefix
 
-        quickLaunch: search
-        onPicked: color => launcher.showQuery(prefix + color)
+        launcherSearch: search
+        frameColor: quickLaunch.popupBorderColor
+        labelColor: quickLaunch.popupColor
+        textColor: quickLaunch.popupTextColor
+        font: quickLaunch.colorCodeFont
+        onPicked: color => quickLaunch.showQuery(prefix + color)
     }
 
     Component.onDestruction: popup.hide()
@@ -356,12 +426,15 @@ Item {
         property real reveal: 0
 
         title: "Quick Launch"
-        width: launcher.popupWidth
-        height: launcher.popupHeight
-        anchor: launcher
+        width: quickLaunch.popupWidth
+        // The search bar with its margins and the border
+        height: quickLaunch.collapsed ? searchBar.implicitHeight + 2 * 12 + 2 : quickLaunch.popupHeight
+        anchor: quickLaunch
+        font: quickLaunch.popupFont
+        theme: quickLaunch.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: 180; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: 140; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: quickLaunch.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: quickLaunch.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible) {
                 reveal = 0
@@ -373,10 +446,10 @@ Item {
             id: surface
 
             anchors.fill: parent
-            radius: 8
-            color: launcher.dark ? Qt.alpha("#202020", 0.85) : Qt.alpha("#f3f3f3", 0.85)
+            radius: quickLaunch.popupRadius
+            color: quickLaunch.popupColor
             border.width: 1
-            border.color: launcher.dark ? Qt.alpha("#3A3A3A", 1) : Qt.alpha("#D9D9D9", 1)      
+            border.color: quickLaunch.popupBorderColor      
             opacity: popup.reveal
             scale: 0.92 + popup.reveal * 0.08
 
@@ -386,12 +459,26 @@ Item {
                 spacing: 0
 
                 RowLayout {
+                    id: searchBar
+
                     Layout.fillWidth: true
                     Layout.margins: 12
                     spacing: 0
 
                     TextField {
                         id: field
+
+                        // Qt's own text menu is replaced by fieldMenu, which the right button opens
+                        ContextMenu.menu: null
+
+                        // A right-click opens the menu at the mouse cursor, on press or release as Windows sets it
+                        TapHandler {
+                            acceptedButtons: Qt.RightButton
+                            onPressedChanged: {
+                                if (pressed === (Application.styleHints.contextMenuTrigger === Qt.ContextMenuTrigger.Press))
+                                    fieldMenu.popup(field)
+                            }
+                        }
 
                         Layout.fillWidth: true
                         Layout.preferredHeight: 40
@@ -408,8 +495,8 @@ Item {
                             // Its text starts where the prefix was typed, so it stays in place
                             x: 12 - leftPadding
                             anchors.verticalCenter: parent.verticalCenter
-                            visible: launcher.prefix !== ""
-                            text: launcher.prefix
+                            visible: quickLaunch.prefix !== ""
+                            text: quickLaunch.prefix
                             font.pixelSize: field.font.pixelSize
                             leftPadding: 8
                             rightPadding: 8
@@ -417,7 +504,7 @@ Item {
                             bottomPadding: 3
                             background: Rectangle {
                                 radius: 4
-                                color: launcher.selected
+                                color: quickLaunch.popupSelectedColor
                             }
                         }
 
@@ -426,40 +513,41 @@ Item {
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
                             text: "\ue721"
-                            color: launcher.dark ? "#f3f3f3" : "#202020"
-                            font.family: launcher.iconFont.family
-                            font.weight: launcher.iconFont.weight
-                            font.pixelSize: 18
+                            color: quickLaunch.popupTextColor
+                            font.family: quickLaunch.iconFont.family
+                            font.weight: quickLaunch.iconFont.weight
+                            font.variableAxes: quickLaunch.iconFont.variableAxes
+                            font.pixelSize: quickLaunch.searchIconSize
                         }
 
-                        placeholderText: launcher.prefix
-                            ? search.prefixes.find(p => p.prefix === launcher.prefix)?.placeholder ?? ""
-                            : launcher.placeholder
-                        font.pixelSize: 16
+                        placeholderText: quickLaunch.prefix
+                            ? search.prefixes.find(p => p.prefix === quickLaunch.prefix)?.placeholder ?? ""
+                            : quickLaunch.placeholder
+                        font: quickLaunch.searchFont
                         verticalAlignment: TextInput.AlignVCenter
 
                         onTextEdited: {
                             const typed = search.prefixes.find(p => text.startsWith(`${p.prefix} `))
-                            if (!launcher.prefix && typed)
-                                launcher.setPrefix(typed.prefix, text.slice(typed.prefix.length + 1))
+                            if (!quickLaunch.prefix && typed)
+                                quickLaunch.setPrefix(typed.prefix, text.slice(typed.prefix.length + 1))
                             else
-                                launcher.runSearch()
+                                quickLaunch.runSearch()
                         }
 
                         Keys.onPressed: event => {
                             if (event.key === Qt.Key_Down || event.key === Qt.Key_Up) {
-                                launcher.select(event.key === Qt.Key_Down ? 1 : -1)
+                                quickLaunch.select(event.key === Qt.Key_Down ? 1 : -1)
                             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                                 search.execute(list.currentIndex)
                             } else if (event.key === Qt.Key_Right && search.prediction && cursorPosition === text.length) {
                                 text = search.prediction
-                                launcher.runSearch()
-                            } else if (event.key === Qt.Key_Backspace && launcher.prefix && cursorPosition === 0
+                                quickLaunch.runSearch()
+                            } else if (event.key === Qt.Key_Backspace && quickLaunch.prefix && cursorPosition === 0
                                        && selectedText === "") {
-                                launcher.prefix = ""
-                                launcher.runSearch()
+                                quickLaunch.prefix = ""
+                                quickLaunch.runSearch()
                             } else if (event.key === Qt.Key_P && event.modifiers === Qt.AltModifier) {
-                                launcher.previewShown = !launcher.previewShown
+                                quickLaunch.previewShown = !quickLaunch.previewShown
                             } else {
                                 return
                             }
@@ -479,13 +567,15 @@ Item {
 
                 LoadingLine {
                     Layout.fillWidth: true
+                    visible: !quickLaunch.collapsed
                     running: search.loading
-                    trackColor: launcher.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.08)
+                    trackColor: quickLaunch.popupDividerColor
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    visible: !quickLaunch.collapsed
                     spacing: 0
 
                     ListView {
@@ -505,11 +595,11 @@ Item {
 
                             function onModelReset() {
                                 list.currentIndex = -1
-                                Qt.callLater(launcher.select, 1)
+                                Qt.callLater(quickLaunch.select, 1)
                             }
                         }
 
-                        delegate: Item {
+                        component ResultRow: Item {
                             id: row
 
                             required property int index
@@ -521,14 +611,14 @@ Item {
                             required property string path
 
                             width: ListView.view.width
-                            height: separator ? 28 : Math.max(launcher.showIcons ? launcher.resultIconSize : 0, texts.implicitHeight) + 16
+                            height: separator ? 28 : Math.max(quickLaunch.showIcons ? quickLaunch.resultIconSize : 0, texts.implicitHeight) + 16
 
                             Rectangle {
                                 anchors.fill: parent
                                 radius: 6
                                 visible: !row.separator
-                                color: row.ListView.isCurrentItem ? launcher.selected
-                                    : mouse.containsMouse ? launcher.hover : "transparent"
+                                color: row.ListView.isCurrentItem ? quickLaunch.popupSelectedColor
+                                    : mouse.containsMouse ? quickLaunch.popupHoverColor : "transparent"
                             }
 
                             Label {
@@ -538,9 +628,8 @@ Item {
                                 anchors.bottomMargin: 4
                                 visible: row.separator
                                 text: row.title
-                                color: launcher.secondary
-                                font.pixelSize: 12
-                                font.weight: Font.DemiBold
+                                color: quickLaunch.popupSecondaryTextColor
+                                font: quickLaunch.sectionFont
                             }
 
                             Item {
@@ -548,15 +637,15 @@ Item {
 
                                 x: 10
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: launcher.resultIconSize
-                                height: launcher.resultIconSize
-                                visible: launcher.showIcons && !row.separator
+                                width: quickLaunch.resultIconSize
+                                height: quickLaunch.resultIconSize
+                                visible: quickLaunch.showIcons && !row.separator
 
                                 Image {
                                     anchors.fill: parent
                                     visible: row.icon !== ""
                                     source: row.icon
-                                    sourceSize: Qt.size(launcher.resultIconSize, launcher.resultIconSize)
+                                    sourceSize: Qt.size(quickLaunch.resultIconSize, quickLaunch.resultIconSize)
                                     fillMode: Image.PreserveAspectFit
                                 }
 
@@ -564,12 +653,12 @@ Item {
                                     anchors.centerIn: parent
                                     visible: row.icon === ""
                                     text: row.iconText
-                                    font.family: "Segoe UI Emoji"
-                                    font.pixelSize: launcher.resultIconSize * 0.75
+                                    font.family: quickLaunch.emojiFont.family
+                                    font.pixelSize: quickLaunch.resultIconSize * 0.75
                                 }
                             }
 
-                            ColumnLayout {
+                            GridLayout {
                                 id: texts
 
                                 anchors.left: iconBox.visible ? iconBox.right : parent.left
@@ -578,7 +667,9 @@ Item {
                                 anchors.rightMargin: 10
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: !row.separator
-                                spacing: 2
+                                columns: quickLaunch.compactText ? 2 : 1
+                                columnSpacing: 12
+                                rowSpacing: 2
 
                                 Label {
                                     Layout.fillWidth: true
@@ -588,13 +679,15 @@ Item {
                                 }
 
                                 Label {
-                                    Layout.fillWidth: true
+                                    Layout.fillWidth: !quickLaunch.compactText
+                                    Layout.preferredWidth: quickLaunch.compactText ? Math.min(implicitWidth, texts.width / 2) : -1
+                                    horizontalAlignment: quickLaunch.compactText ? Text.AlignRight : Text.AlignLeft
                                     visible: row.description !== ""
                                     text: row.description
                                     elide: Text.ElideRight
                                     textFormat: Text.PlainText
-                                    color: launcher.secondary
-                                    font.pixelSize: 12
+                                    color: quickLaunch.popupSecondaryTextColor
+                                    font: quickLaunch.popupSmallFont
                                 }
                             }
 
@@ -610,7 +703,7 @@ Item {
 
                                 onClicked: event => {
                                     if (event.button === Qt.RightButton)
-                                        launcher.showMenu(row.index, row)
+                                        quickLaunch.showMenu(row.index, row)
                                     else {
                                         list.currentIndex = row.index
                                         search.execute(row.index)
@@ -627,24 +720,28 @@ Item {
                                 Drag.mimeData: ({ "text/uri-list": `file:///${row.path.replace(/\\/g, "/")}` })
                             }
                         }
+
+                        delegate: ResultRow {}
                     }
 
                     Rectangle {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 1
                         visible: preview.visible
-                        color: launcher.dark ? Qt.alpha("#ffffff", 0.1) : Qt.alpha("#000000", 0.08)
+                        color: quickLaunch.popupDividerColor
                     }
 
                     Preview {
                         id: preview
 
                         Layout.fillHeight: true
-                        Layout.preferredWidth: Math.round(launcher.popupWidth * 0.4)
-                        dark: launcher.dark
-                        secondary: launcher.secondary
+                        Layout.preferredWidth: Math.round(quickLaunch.popupWidth * 0.4)
+                        textColor: quickLaunch.popupSecondaryTextColor
+                        font: quickLaunch.popupSmallFont
+                        strongFont: quickLaunch.popupStrongFont
+                        editMenu: fieldMenu
                         content: list.currentIndex >= 0 ? search.preview(list.currentIndex) : ({})
-                        forced: launcher.previewShown
+                        forced: quickLaunch.previewShown
                         onAction: (id, values) => search.previewAction(list.currentIndex, id, values)
                         onCancelled: search.cancelEdit()
                     }
@@ -655,7 +752,7 @@ Item {
                 anchors.centerIn: parent
                 anchors.verticalCenterOffset: 30
                 spacing: 8
-                visible: list.count === 0 && !search.loading
+                visible: list.count === 0 && !search.loading && !quickLaunch.collapsed
 
                 Image {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -665,30 +762,133 @@ Item {
 
                 Label {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: field.text || launcher.prefix ? "No results" : "Type to search..."
-                    color: launcher.secondary
+                    text: field.text || quickLaunch.prefix ? "No results" : "Type to search..."
+                    color: quickLaunch.popupSecondaryTextColor
+                }
+            }
+
+            // The text fields' right-click menu: Qt's editing items and icons in the menu's look, acting on the field that
+            // opened it
+            Menu {
+                id: fieldMenu
+
+                // The field it opened on: a TextField, or the preview form's multi-line TextArea
+                readonly property TextField line: parent as TextField
+                readonly property TextArea area: parent as TextArea
+                readonly property bool editable: !((line?.readOnly ?? area?.readOnly) ?? true)
+                readonly property bool selected: ((line?.selectedText.length ?? area?.selectedText.length) ?? 0) > 0
+
+                // A window of its own, so it opens where clicked even past the popup's edges
+                popupType: Popup.Window
+                // Its window is made once and reused, and Windows shows it again where it was, under the popup raised
+                // since; raising it before it shows keeps it in front
+                onAboutToShow: contentItem.Window.window?.raise()
+                // Fades in when it opens, in place of the style's growing from a third of its height
+                enter: Transition {
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: quickLaunch.menuOpenDuration; easing.type: Easing.OutCubic }
+                }
+                topInset: 0
+                leftInset: 0
+                rightInset: 0
+                bottomInset: 0
+                font: quickLaunch.menuFont
+                // Active and inactive only, so disabled controls keep the style's dimmed colours
+                palette.active.text: quickLaunch.menuTextColor
+                palette.inactive.text: quickLaunch.menuTextColor
+
+                background: Rectangle {
+                    implicitWidth: quickLaunch.menuWidth
+                    radius: quickLaunch.menuRadius
+                    color: quickLaunch.menuColor
+                    border.color: quickLaunch.menuBorderColor
+                }
+
+                FieldMenuItem {
+                    text: qsTr("Undo")
+                    icon.name: "edit-undo"
+                    enabled: (fieldMenu.line?.canUndo ?? fieldMenu.area?.canUndo) ?? false
+                    onTriggered: fieldMenu.line ? fieldMenu.line.undo() : fieldMenu.area?.undo()
+                }
+                FieldMenuItem {
+                    text: qsTr("Redo")
+                    icon.name: "edit-redo"
+                    enabled: (fieldMenu.line?.canRedo ?? fieldMenu.area?.canRedo) ?? false
+                    onTriggered: fieldMenu.line ? fieldMenu.line.redo() : fieldMenu.area?.redo()
+                }
+                MenuSeparator {}
+                FieldMenuItem {
+                    text: qsTr("Cut")
+                    icon.name: "edit-cut"
+                    enabled: fieldMenu.editable && fieldMenu.selected
+                    onTriggered: fieldMenu.line ? fieldMenu.line.cut() : fieldMenu.area?.cut()
+                }
+                FieldMenuItem {
+                    text: qsTr("Copy")
+                    icon.name: "edit-copy"
+                    enabled: fieldMenu.selected
+                    onTriggered: fieldMenu.line ? fieldMenu.line.copy() : fieldMenu.area?.copy()
+                }
+                FieldMenuItem {
+                    text: qsTr("Paste")
+                    icon.name: "edit-paste"
+                    enabled: fieldMenu.editable && ((fieldMenu.line?.canPaste ?? fieldMenu.area?.canPaste) ?? false)
+                    onTriggered: fieldMenu.line ? fieldMenu.line.paste() : fieldMenu.area?.paste()
+                }
+                FieldMenuItem {
+                    text: qsTr("Delete")
+                    icon.name: "edit-delete"
+                    enabled: fieldMenu.editable && fieldMenu.selected
+                    onTriggered: fieldMenu.line ? fieldMenu.line.remove(fieldMenu.line.selectionStart, fieldMenu.line.selectionEnd)
+                        : fieldMenu.area?.remove(fieldMenu.area.selectionStart, fieldMenu.area.selectionEnd)
+                }
+                MenuSeparator {}
+                FieldMenuItem {
+                    text: qsTr("Select All")
+                    icon.name: "edit-select-all"
+                    onTriggered: fieldMenu.line ? fieldMenu.line.selectAll() : fieldMenu.area?.selectAll()
                 }
             }
 
             Menu {
-                id: menu
+                id: resultMenu
 
                 property int row: -1
                 property var actions: []
 
+                popupType: Popup.Item
+                // Fades in when it opens, in place of the style's growing from a third of its height
+                enter: Transition {
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: quickLaunch.menuOpenDuration; easing.type: Easing.OutCubic }
+                }
+                topInset: 0
+                leftInset: 0
+                rightInset: 0
+                bottomInset: 0
+                font: quickLaunch.menuFont
+                // Active and inactive only, so disabled controls keep the style's dimmed colours
+                palette.active.text: quickLaunch.menuTextColor
+                palette.inactive.text: quickLaunch.menuTextColor
+
+                background: Rectangle {
+                    implicitWidth: quickLaunch.menuWidth
+                    radius: quickLaunch.menuRadius
+                    color: quickLaunch.menuColor
+                    border.color: quickLaunch.menuBorderColor
+                }
+
                 Instantiator {
-                    model: menu.actions
+                    model: resultMenu.actions
 
                     delegate: MenuItem {
                         required property var modelData
 
                         text: modelData.label
                         enabled: modelData.enabled
-                        onTriggered: search.runContextAction(menu.row, modelData.id)
+                        onTriggered: search.runContextAction(resultMenu.row, modelData.id)
                     }
 
-                    onObjectAdded: (index, object) => menu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => menu.removeItem(object)
+                    onObjectAdded: (index, object) => resultMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => resultMenu.removeItem(object)
                 }
             }
         }
