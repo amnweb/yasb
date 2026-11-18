@@ -77,12 +77,14 @@ class FakeEngine(QObject):
         self.animation = animation
         self.shown_path = shown_path
         self.on_desktop = True
+        self.playing = True
         FakeEngine.made.append(self)
 
     def start(self) -> None:
         pass
 
     def finish(self) -> None:
+        self.playing = False
         self.finished.emit(self.image_path)
 
     def close(self) -> None:
@@ -158,20 +160,19 @@ def test_setting_a_wallpaper_plays_the_transition_first(desktop: FakeDesktop, fo
     assert library.screenCount() == 2
 
 
-def test_no_wallpaper_is_set_until_windows_destroys_the_transition(desktop: FakeDesktop, folder: Path):
+def test_no_wallpaper_is_set_while_a_transition_plays(desktop: FakeDesktop, folder: Path):
     library = WallpaperLibrary()
     library.setProperty("animation", "circle")
     library.setWallpaper(str(folder / "wallpaper 1.png"))
     [engine] = FakeEngine.made
-    engine.finish()
-    # Not even once the animation is over, as Windows still has the window to destroy
     assert not library.setWallpaper(str(folder / "wallpaper 10.png"))
     assert not library.setWallpaperOn(str(folder / "wallpaper 2.png"), 1)
-    assert len(FakeEngine.made) == 1 and desktop.set == [(None, "wallpaper 1.png")]
-    engine.close()
+    assert len(FakeEngine.made) == 1 and desktop.set == []
+    engine.finish()
     assert not WallpaperManager.transition_playing()
+    # The next one takes the finished transition off the desktop
     assert library.setWallpaper(str(folder / "wallpaper 10.png"))
-    assert FakeEngine.made[-1].image_path == str(folder / "wallpaper 10.png")
+    assert not engine.on_desktop and FakeEngine.made[-1].image_path == str(folder / "wallpaper 10.png")
 
 
 def test_a_transition_whose_wallpaper_windows_refuses_closes_itself(desktop: FakeDesktop, folder: Path):
@@ -365,7 +366,7 @@ def test_escape_closes_the_gallery_without_setting_anything(desktop: FakeDesktop
 def test_a_refused_pick_keeps_the_gallery_open(desktop: FakeDesktop, folder: Path, monkeypatch: pytest.MonkeyPatch):
     widget, host, _engine, warnings = load_widget(folder)
     window = open_gallery(widget)
-    # A transition still on the desktop
+    # A transition still playing
     monkeypatch.setattr(WallpaperManager, "_engine", FakeEngine("wallpaper 1.png", "circle", ""))
     press(window, Qt.Key.Key_Return)
     # Longer than the gallery takes to fade out and close
