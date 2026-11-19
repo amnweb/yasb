@@ -115,23 +115,25 @@ class ClipboardHistoryProvider(BaseProvider):
             logging.debug("Clipboard image read failed: %s", exc)
             return b"", (0, 0)
 
-    @staticmethod
-    def _get_history_items_mta():
-        """Call the blocking WinRT API from an MTA thread to avoid STA restriction."""
-        if Clipboard is None:
-            raise RuntimeError("Clipboard history API unavailable")
-        return Clipboard.get_history_items_async().get()
-
     def _load_history(self) -> tuple[str, list[dict[str, Any]]]:
         if Clipboard is None or ClipboardHistoryItemsResultStatus is None:
             return "unavailable", []
 
+        # Every blocking WinRT ``.get()`` (history query, but also get_text_async /
+        # get_bitmap_async / stream reads per item) raises on an STA thread such as
+        # the query worker (it calls CoInitialize()), so run the whole load on MTA.
         try:
             with ThreadPoolExecutor(max_workers=1) as pool:
-                result = pool.submit(self._get_history_items_mta).result(timeout=5)
+                return pool.submit(self._load_history_mta).result(timeout=10)
         except Exception as exc:
             logging.debug("Clipboard history query failed: %s", exc)
             return "error", []
+
+    def _load_history_mta(self) -> tuple[str, list[dict[str, Any]]]:
+        """Query and parse clipboard history. Must run on an MTA thread."""
+        if Clipboard is None or ClipboardHistoryItemsResultStatus is None:
+            return "unavailable", []
+        result = Clipboard.get_history_items_async().get()
 
         status = result.status
         if status == ClipboardHistoryItemsResultStatus.ACCESS_DENIED:
@@ -179,8 +181,8 @@ class ClipboardHistoryProvider(BaseProvider):
                         )
                         entries.append(entry)
                         continue
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.debug("Clipboard text read failed: %s", exc)
 
             # Image
             if "Bitmap" in formats:
@@ -204,8 +206,8 @@ class ClipboardHistoryProvider(BaseProvider):
                         )
                         entries.append(entry)
                         continue
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.debug("Clipboard bitmap read failed: %s", exc)
 
             # Unknown format
             entry.update(
