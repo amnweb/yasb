@@ -66,6 +66,7 @@
     - [Weather](./(Widget)-Weather)
     - [WHKD](./(Widget)-Whkd)
     - [WiFi](./(Widget)-WiFi)
+    - [Wireless Battery](./(Widget)-Wireless-Battery)
     - [Window Controls](./(Widget)-Window-Controls)
     - [Window Switcher](./(Widget)-Window-Switcher)
     - [Windows Desktops](./(Widget)-Windows-Desktops)
