@@ -10,59 +10,67 @@ import Yasb.Themes
 Item {
     id: switcher
 
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Hotkey that opens the switcher, such as "alt+w". With a modifier it works like Alt+Tab: hold alt and press w
+        // to move on, let go of alt to switch
+        property string hotkey: ""
+        // active, cursor or primary: which screen's widget opens on the hotkey
+        property string hotkeyScreen: "active"
+        // Pixels of each window's icon; with previews a small one sits beside the title instead
+        property int appIconSize: 48
+        property int previewIconSize: 16
+        // The most windows side by side before the row scrolls, 1 or more; the row never takes more than 90% of the screen
+        property int maxVisibleApps: 8
+        // The selected window's title under the row
+        property bool showTitle: true
+        // A live picture of each window under its title
+        property bool preview: false
+        // Pixels of each picture's width, 100 to 360; its height is 9/16 of it
+        property int previewWidth: 240
+        // The glyph on the bar, drawn in iconFont and the text colour
+        property string icon: "\uf156"
+        property int iconSize: theme.bar.iconFont.pixelSize
+
+        property color textColor: theme.colors.text
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property color popupDividerColor: theme.colors.divider
+        property color popupSelectedColor: theme.colors.selected
+        property color accentColor: theme.colors.accent
+        property real popupRadius: theme.popup.radius
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        // Pixels around the row, around each window and inside it, and of the selected window's border
+        property int popupPadding: 10
+        property int itemSpacing: 5
+        property int itemPadding: 10
+        property real itemRadius: 8
+        property int selectionBorderWidth: 2
+        // Each window's title beside its icon when previews show, in the theme's font family
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        // The selected window's title under the row
+        property font windowTitleFont
+        windowTitleFont.family: theme.popup.font.family
+        windowTitleFont.pixelSize: 12
+        windowTitleFont.weight: 600
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Hotkey that opens the switcher, such as "alt+w". With a modifier it works like Alt+Tab: hold alt and press w
-    // to move on, let go of alt to switch
-    property string hotkey: ""
-    // active, cursor or primary: which screen's widget opens on the hotkey
-    property string hotkeyScreen: "active"
-    // Pixels of each window's icon; with previews a small one sits beside the title instead
-    property int appIconSize: 48
-    property int previewIconSize: 16
-    // The most windows side by side before the row scrolls, 1 or more; the row never takes more than 90% of the screen
-    property int maxVisibleApps: 8
-    // The selected window's title under the row
-    property bool showTitle: true
-    // A live picture of each window under its title
-    property bool preview: false
-    // Pixels of each picture's width, 100 to 360; its height is 9/16 of it
-    property int previewWidth: 240
-    // The glyph on the bar, drawn in iconFont and the text colour
-    property string icon: "\uf156"
-    property int iconSize: theme.bar.iconFont.pixelSize
-
-    property color textColor: theme.colors.text
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property color popupDividerColor: theme.colors.divider
-    property color popupSelectedColor: theme.colors.selected
-    property color accentColor: theme.colors.accent
-    property real popupRadius: theme.popup.radius
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    // Pixels around the row, around each window and inside it, and of the selected window's border
-    property int popupPadding: 10
-    property int itemSpacing: 5
-    property int itemPadding: 10
-    property real itemRadius: 8
-    property int selectionBorderWidth: 2
-    // Each window's title beside its icon when previews show, in the theme's font family
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    // The selected window's title under the row
-    property font windowTitleFont
-    windowTitleFont.family: theme.popup.font.family
-    windowTitleFont.pixelSize: 12
-    windowTitleFont.weight: Font.DemiBold
+    readonly property Settings settings: Settings {
+        theme: switcher.theme
+    }
 
     // The windows shown, by hwnd, front to back as they were when the switcher opened
     property var order: []
@@ -78,11 +86,11 @@ Item {
             windows[window.hwnd] = window
         return windows
     }
-    readonly property real cellWidth: (preview ? previewWidth : appIconSize) + 2 * (itemPadding + selectionBorderWidth + itemSpacing)
-    readonly property real cellHeight: (preview ? Math.max(previewIconSize, previewMetrics.height) + 6 + Math.round(previewWidth * 9 / 16)
-        : appIconSize) + 2 * (itemPadding + selectionBorderWidth + itemSpacing)
-    readonly property int visibleCount: Math.max(1, Math.min(order.length, maxVisibleApps,
-        Math.floor((Screen.width * 0.95 - 2 * popupPadding) / cellWidth)))
+    readonly property real cellWidth: (settings.preview ? settings.previewWidth : settings.appIconSize) + 2 * (settings.itemPadding + settings.selectionBorderWidth + settings.itemSpacing)
+    readonly property real cellHeight: (settings.preview ? Math.max(settings.previewIconSize, previewMetrics.height) + 6 + Math.round(settings.previewWidth * 9 / 16)
+        : settings.appIconSize) + 2 * (settings.itemPadding + settings.selectionBorderWidth + settings.itemSpacing)
+    readonly property int visibleCount: Math.max(1, Math.min(order.length, settings.maxVisibleApps,
+        Math.floor((Screen.width * 0.95 - 2 * settings.popupPadding) / cellWidth)))
 
     implicitWidth: label.width
     implicitHeight: label.height
@@ -159,7 +167,7 @@ Item {
     TextMetrics {
         id: previewMetrics
 
-        font: switcher.popupFont
+        font: switcher.settings.popupFont
         text: "Hg"
     }
 
@@ -167,16 +175,16 @@ Item {
         id: label
 
         y: Math.round((parent.height - height) / 2)
-        width: switcher.iconSize
-        height: switcher.iconSize
+        width: switcher.settings.iconSize
+        height: switcher.settings.iconSize
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        text: switcher.icon
-        color: switcher.textColor
-        font.family: switcher.iconFont.family
-        font.weight: switcher.iconFont.weight
-        font.variableAxes: switcher.iconFont.variableAxes
-        font.pixelSize: switcher.iconSize
+        text: switcher.settings.icon
+        color: switcher.settings.textColor
+        font.family: switcher.settings.iconFont.family
+        font.weight: switcher.settings.iconFont.weight
+        font.variableAxes: switcher.settings.iconFont.variableAxes
+        font.pixelSize: switcher.settings.iconSize
     }
 
     MouseArea {
@@ -186,8 +194,8 @@ Item {
     }
 
     Hotkey {
-        keys: switcher.hotkey
-        screen: switcher.hotkeyScreen
+        keys: switcher.settings.hotkey
+        screen: switcher.settings.hotkeyScreen
         onActivated: switcher.toggle()
     }
 
@@ -220,11 +228,11 @@ Item {
         x: Math.round(switcher.Screen.virtualX + (switcher.Screen.width - width) / 2)
         y: Math.round(switcher.Screen.virtualY + (switcher.Screen.height - height) / 2)
         anchor: switcher
-        font: switcher.popupFont
+        font: switcher.settings.popupFont
         theme: switcher.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: switcher.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: switcher.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: switcher.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: switcher.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible) {
                 reveal = 0
@@ -239,12 +247,12 @@ Item {
             id: surface
 
             anchors.fill: parent
-            implicitWidth: content.implicitWidth + 2 * switcher.popupPadding
-            implicitHeight: content.implicitHeight + 2 * switcher.popupPadding
-            radius: switcher.popupRadius
-            color: switcher.popupColor
+            implicitWidth: content.implicitWidth + 2 * switcher.settings.popupPadding
+            implicitHeight: content.implicitHeight + 2 * switcher.settings.popupPadding
+            radius: switcher.settings.popupRadius
+            color: switcher.settings.popupColor
             border.width: 1
-            border.color: switcher.popupBorderColor
+            border.color: switcher.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             // Nothing takes a key or click while the popup fades
@@ -288,8 +296,8 @@ Item {
             Column {
                 id: content
 
-                x: switcher.popupPadding
-                y: switcher.popupPadding
+                x: switcher.settings.popupPadding
+                y: switcher.settings.popupPadding
 
                 ListView {
                     id: row
@@ -314,53 +322,53 @@ Item {
 
                         Rectangle {
                             anchors.fill: parent
-                            anchors.margins: switcher.itemSpacing
-                            radius: switcher.itemRadius
-                            color: cell.selected ? switcher.popupSelectedColor : "transparent"
-                            border.width: switcher.selectionBorderWidth
-                            border.color: cell.selected ? switcher.accentColor : "transparent"
+                            anchors.margins: switcher.settings.itemSpacing
+                            radius: switcher.settings.itemRadius
+                            color: cell.selected ? switcher.settings.popupSelectedColor : "transparent"
+                            border.width: switcher.settings.selectionBorderWidth
+                            border.color: cell.selected ? switcher.settings.accentColor : "transparent"
 
                             Image {
-                                visible: !switcher.preview
+                                visible: !switcher.settings.preview
                                 anchors.centerIn: parent
-                                width: switcher.appIconSize
-                                height: switcher.appIconSize
-                                sourceSize: Qt.size(switcher.appIconSize, switcher.appIconSize)
-                                source: !switcher.preview ? cell.window?.icon ?? "" : ""
+                                width: switcher.settings.appIconSize
+                                height: switcher.settings.appIconSize
+                                sourceSize: Qt.size(switcher.settings.appIconSize, switcher.settings.appIconSize)
+                                source: !switcher.settings.preview ? cell.window?.icon ?? "" : ""
                             }
 
                             Column {
-                                visible: switcher.preview
-                                x: switcher.itemPadding + switcher.selectionBorderWidth
-                                y: switcher.itemPadding + switcher.selectionBorderWidth
+                                visible: switcher.settings.preview
+                                x: switcher.settings.itemPadding + switcher.settings.selectionBorderWidth
+                                y: switcher.settings.itemPadding + switcher.settings.selectionBorderWidth
                                 spacing: 6
 
                                 Row {
-                                    width: switcher.previewWidth
-                                    height: Math.max(switcher.previewIconSize, previewMetrics.height)
+                                    width: switcher.settings.previewWidth
+                                    height: Math.max(switcher.settings.previewIconSize, previewMetrics.height)
                                     spacing: 6
 
                                     Image {
                                         anchors.verticalCenter: parent.verticalCenter
-                                        width: switcher.previewIconSize
-                                        height: switcher.previewIconSize
-                                        sourceSize: Qt.size(switcher.previewIconSize, switcher.previewIconSize)
-                                        source: switcher.preview ? cell.window?.icon ?? "" : ""
+                                        width: switcher.settings.previewIconSize
+                                        height: switcher.settings.previewIconSize
+                                        sourceSize: Qt.size(switcher.settings.previewIconSize, switcher.settings.previewIconSize)
+                                        source: switcher.settings.preview ? cell.window?.icon ?? "" : ""
                                     }
 
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
-                                        width: parent.width - switcher.previewIconSize - parent.spacing
+                                        width: parent.width - switcher.settings.previewIconSize - parent.spacing
                                         text: cell.window?.title ?? ""
-                                        color: switcher.popupTextColor
-                                        font: switcher.popupFont
+                                        color: switcher.settings.popupTextColor
+                                        font: switcher.settings.popupFont
                                         elide: Text.ElideRight
                                     }
                                 }
 
                                 Item {
-                                    width: switcher.previewWidth
-                                    height: Math.round(switcher.previewWidth * 9 / 16)
+                                    width: switcher.settings.previewWidth
+                                    height: Math.round(switcher.settings.previewWidth * 9 / 16)
 
                                     WindowThumbnail {
                                         readonly property real aspect: sourceWidth > 0 && sourceHeight > 0
@@ -369,7 +377,7 @@ Item {
                                         anchors.centerIn: parent
                                         width: Math.min(parent.width, parent.height * aspect)
                                         height: width / aspect
-                                        hwnd: switcher.preview ? cell.modelData : 0
+                                        hwnd: switcher.settings.preview ? cell.modelData : 0
                                     }
                                 }
                             }
@@ -397,20 +405,20 @@ Item {
                 }
 
                 Item {
-                    visible: switcher.showTitle
+                    visible: switcher.settings.showTitle
                     width: row.width
                     height: 10
                 }
 
                 Rectangle {
-                    visible: switcher.showTitle
+                    visible: switcher.settings.showTitle
                     width: row.width
                     height: 1
-                    color: switcher.popupDividerColor
+                    color: switcher.settings.popupDividerColor
                 }
 
                 Text {
-                    visible: switcher.showTitle
+                    visible: switcher.settings.showTitle
                     width: row.width
                     topPadding: 10
                     bottomPadding: 5
@@ -418,8 +426,8 @@ Item {
                     rightPadding: 10
                     horizontalAlignment: Text.AlignHCenter
                     text: switcher.byHwnd[switcher.order[switcher.current]]?.title ?? " "
-                    color: switcher.popupTextColor
-                    font: switcher.windowTitleFont
+                    color: switcher.settings.popupTextColor
+                    font: switcher.settings.windowTitleFont
                     elide: Text.ElideRight
                 }
             }

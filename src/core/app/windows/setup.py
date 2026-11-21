@@ -14,7 +14,7 @@ from core.app.update.service import get_update_service
 from core.app.windows.qml_window import show_window
 from core.cloud.constants import BASE_URL as CLOUD_URL
 from core.config import ConfigError
-from core.qml_types import QML_URI, QML_VERSION
+from core.qml_types import QML_URI, SERVICE_API_VERSION
 from core.setup import (
     ICON_FONT_URL,
     THEME_NAME,
@@ -30,13 +30,14 @@ from core.utils.shell_utils import shell_open
 from core.utils.validation_errors import format_pydantic_errors_to_yaml
 from core.utils.win32.autostart import AUTOSTART_FILE, disable_autostart, enable_autostart
 from core.utils.win32.composition import host_backdrop_supported
+from core.widget_files import builtin_manifests
 from settings import APP_ICON, APP_NAME, WEBSITE_DOCS_URL
 
 
 @cache
 def register_setup_type() -> None:
     """Registers Setup for QML, apart from the other types so a normal start never loads it."""
-    major, minor = QML_VERSION
+    major, minor = SERVICE_API_VERSION
     qmlRegisterUncreatableType(Setup, QML_URI, major, minor, "Setup is created by YASB", "Setup")
 
 
@@ -109,6 +110,10 @@ class Setup(QObject):
     @qml_property(str, constant=True)
     def themeName(self) -> str:
         return THEME_NAME
+
+    @qml_property("QVariantMap", constant=True)
+    def widgets(self) -> dict[str, Any]:
+        return builtin_manifests()
 
     @pyqtSlot("QVariantMap", result="QString")
     def finish(self, choices: dict[str, Any]) -> str:

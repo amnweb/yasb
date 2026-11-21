@@ -17,7 +17,7 @@ from PyQt6.QtCore import QByteArray, QMetaMethod, QMetaObject, QMetaProperty, QO
 
 from core.app.windows.setup import Setup
 from core.cloud.ui.cloud import Cloud
-from core.qml_types import QML_SINGLETONS, QML_TYPES, QML_UNCREATABLE_TYPES, QML_URI, QML_VERSION
+from core.qml_types import QML_SINGLETONS, QML_TYPES, QML_UNCREATABLE_TYPES, QML_URI, SERVICE_API_VERSION
 
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "qmltypes"
 DEPENDENCIES = ("QtQml 2.0", "QtQuick 2.0")
@@ -240,7 +240,7 @@ def render_qmltypes(
             classes[name] = cls
 
     described = set(classes.values())
-    major, minor = QML_VERSION
+    major, minor = SERVICE_API_VERSION
     writer = _Writer()
     writer.line("import QtQuick.tooling 1.2")
     writer.line("")

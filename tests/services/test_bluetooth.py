@@ -134,20 +134,21 @@ def test_a_row_shows_battery_only_while_connected():
 def test_the_bar_names_the_connected_devices(manager: FakeManager, widget: tuple[QQuickItem, list[str]]):
     item, warnings = widget
     label, icon = find_item(item, "label"), find_item(item, "icon")
+    settings = item.property("settings")
     assert label is not None and icon is not None
     for name, glyph in (("offIcon", "off"), ("onIcon", "on"), ("connectedIcon", "connected")):
-        item.setProperty(name, glyph)
+        settings.setProperty(name, glyph)
     assert label.property("visible") is False and icon.property("text") == "off"
 
-    item.setProperty("label", "{device_name} ({device_count})")
-    item.setProperty("deviceAliases", {"WH-1000XM4": "Headphones"})
+    settings.setProperty("label", "{device_name} ({device_count})")
+    settings.setProperty("deviceAliases", {"WH-1000XM4": "Headphones"})
     manager.status(True, HEADPHONES, MOUSE, KEYBOARD)
     assert label.property("text") == "Headphones, keys (2)"
     assert icon.property("text") == "connected"
 
-    item.setProperty("maxLength", 8)
+    settings.setProperty("maxLength", 8)
     assert label.property("text") == "Headphon..."
-    item.setProperty("maxLength", 0)
+    settings.setProperty("maxLength", 0)
     manager.status(True, MOUSE)
     assert label.property("text") == "No devices connected (0)" and icon.property("text") == "on"
     manager.status(False)

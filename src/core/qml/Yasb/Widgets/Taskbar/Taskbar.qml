@@ -10,103 +10,120 @@ import Yasb.Themes
 Item {
     id: taskbar
 
+    component PreviewIcons: QtObject {
+        property string close
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // One button per app holding all its windows, or one per window
+        property bool grouping: true
+        // The number of windows on a grouped button, from two
+        property bool showCount: true
+        // The running-window indicator along each button's edge
+        property bool showIndicator: true
+        // Window titles beside the icons: never, focused (the window in front) or always
+        property string titles: "never"
+        property int titleMaxWidth: 64
+        property bool tooltip: true
+        // What a middle click on a button does: launch (a new window of the app), close (its window) or none
+        property string middleClick: "launch"
+        property bool animation: true
+        property int animationDuration: 300
+        // Icon size
+        property int iconSize: 16
+        // Only windows on the bar's own screen
+        property bool onlyThisScreen: false
+        // Leaves out cloaked windows, such as those on other virtual desktops
+        property bool onlyVisible: false
+        // Leaves out windows that cannot be minimized, such as some dialogs
+        property bool strictFiltering: true
+        // Windows to leave out, by their exact class, process or title, such as ["Notepad.exe"]
+        property list<string> ignoreClasses: []
+        property list<string> ignoreProcesses: []
+        property list<string> ignoreTitles: []
+        // Live previews of a button's windows while the pointer rests on it, after previewDelay milliseconds
+        property bool preview: true
+        property int previewDelay: 400
+        property int previewWidth: 240
+        // Fades every other window while the pointer rests on a preview, showing that one on the desktop
+        property bool peek: true
+        // Hides the widget while there is nothing pinned or open
+        property bool hideWhenEmpty: false
+        property int spacing: 4
+        // Space before and after a button's icon and title, or above and below its icon on a vertical bar
+        property int buttonPadding: 8
+        // Space between a button and the bar's top and bottom edges, or its sides on a vertical bar; the button's
+        // height is the bar's less this at both edges
+        property int buttonMargin: 2
+        property int buttonRadius: 5
+
+        // The look: the theme's, unless set here
+        // Titles take the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        // A button under the pointer, pressed, and of the window in front
+        property color hoverColor: theme.colors.hover
+        property color pressedColor: theme.colors.pressed
+        property color selectedColor: theme.colors.selected
+        property font font
+        // The indicator of the window in front, and of a window asking for attention, which also tints its button
+        property color indicatorColor: theme.colors.accent
+        property color attentionColor: theme.colors.critical
+        // The badge with the number of windows on a grouped button
+        property color countColor: theme.dark ? "#3A3A3A" : "#E0E0E0"
+        property color countTextColor: Qt.alpha(theme.colors.text, 0.85)
+        property font countFont
+        countFont.pixelSize: 9
+        // The right-click menu
+        property int menuWidth: 260
+        property font menuFont: theme.menu.font
+        // Glyphs in the right-click menu take the theme's icon font, each part unless the widget file sets it
+        property font menuIconFont
+        menuIconFont.family: theme.bar.iconFont.family
+        menuIconFont.weight: theme.bar.iconFont.weight
+        menuIconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // Emoji shown in place of a menu entry's glyph
+        property font emojiFont
+        emojiFont.family: "Segoe UI Emoji"
+        property color menuColor: theme.menu.background
+        property color menuBorderColor: theme.menu.border
+        property color menuTextColor: theme.colors.text
+        property real menuRadius: theme.menu.radius
+        // Milliseconds the right-click menu takes to fade in
+        property int menuOpenDuration: theme.menu.openDuration
+        // The window previews; previewIconFont draws a preview's close glyph, which turns previewCloseTextColor on
+        // previewCloseColor while pointed at
+        property color previewColor: theme.bar.background
+        property color previewTextColor: theme.colors.text
+        property color previewSecondaryTextColor: theme.colors.textSecondary
+        property color previewHoverColor: theme.colors.hover
+        property color previewPressedColor: theme.colors.pressed
+        property real previewRadius: theme.popup.radius
+        property font previewFont
+        previewFont.family: theme.bar.font.family
+        previewFont.pixelSize: 12
+        readonly property PreviewIcons previewIcons: PreviewIcons {
+            close: "\ue8bb"
+        }
+        property font previewIconFont
+        previewIconFont.family: theme.popup.iconFont.family
+        previewIconFont.weight: theme.popup.iconFont.weight
+        previewIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        previewIconFont.pixelSize: 10
+        property color previewCloseColor: "#C42B1C"
+        property color previewCloseTextColor: "#ffffff"
+        property int previewOpenDuration: theme.popup.openDuration
+        property int previewCloseDuration: theme.popup.closeDuration
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // One button per app holding all its windows, or one per window
-    property bool grouping: true
-    // The number of windows on a grouped button, from two
-    property bool showCount: true
-    // The running-window indicator along each button's edge
-    property bool showIndicator: true
-    // Window titles beside the icons: never, focused (the window in front) or always
-    property string titles: "never"
-    property int titleMaxWidth: 64
-    property bool tooltip: true
-    // What a middle click on a button does: launch (a new window of the app), close (its window) or none
-    property string middleClick: "launch"
-    property bool animation: true
-    property int animationDuration: 300
-    // Icon size
-    property int iconSize: 16
-    // Only windows on the bar's own screen
-    property bool onlyThisScreen: false
-    // Leaves out cloaked windows, such as those on other virtual desktops
-    property bool onlyVisible: false
-    // Leaves out windows that cannot be minimized, such as some dialogs
-    property bool strictFiltering: true
-    // Windows to leave out, by their exact class, process or title, such as ["Notepad.exe"]
-    property list<string> ignoreClasses: []
-    property list<string> ignoreProcesses: []
-    property list<string> ignoreTitles: []
-    // Live previews of a button's windows while the pointer rests on it, after previewDelay milliseconds
-    property bool preview: true
-    property int previewDelay: 400
-    property int previewWidth: 240
-    // Fades every other window while the pointer rests on a preview, showing that one on the desktop
-    property bool peek: true
-    // Hides the widget while there is nothing pinned or open
-    property bool hideWhenEmpty: false
-    property int spacing: 4
-    // Space before and after a button's icon and title, or above and below its icon on a vertical bar
-    property int buttonPadding: 8
-    // Space between a button and the bar's top and bottom edges, or its sides on a vertical bar; the button's
-    // height is the bar's less this at both edges
-    property int buttonMargin: 2
-    property int buttonRadius: 5
+    readonly property Settings settings: Settings {
+        theme: taskbar.theme
+    }
 
-    // The look: the theme's, unless set here
     readonly property bool dark: theme.dark
-    // Titles take the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    // A button under the pointer, pressed, and of the window in front
-    property color hoverColor: theme.colors.hover
-    property color pressedColor: theme.colors.pressed
-    property color selectedColor: theme.colors.selected
-    property font font
-    // The indicator of the window in front, and of a window asking for attention, which also tints its button
-    property color indicatorColor: theme.colors.accent
-    property color attentionColor: theme.colors.critical
-    // The badge with the number of windows on a grouped button
-    property color countColor: dark ? "#3A3A3A" : "#E0E0E0"
-    property color countTextColor: Qt.alpha(textColor, 0.85)
-    property font countFont
-    countFont.pixelSize: 9
-    // The right-click menu
-    property int menuWidth: 260
-    property font menuFont: theme.menu.font
-    // Glyphs in the right-click menu take the theme's icon font, each part unless the widget file sets it
-    property font menuIconFont
-    menuIconFont.family: theme.bar.iconFont.family
-    menuIconFont.weight: theme.bar.iconFont.weight
-    menuIconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // Emoji shown in place of a menu entry's glyph
-    property font emojiFont
-    emojiFont.family: "Segoe UI Emoji"
-    property color menuColor: theme.menu.background
-    property color menuBorderColor: theme.menu.border
-    property color menuTextColor: theme.colors.text
-    property real menuRadius: theme.menu.radius
-    // Milliseconds the right-click menu takes to fade in
-    property int menuOpenDuration: theme.menu.openDuration
-    // The window previews; previewIconFont draws a preview's close glyph, which turns previewCloseTextColor on
-    // previewCloseColor while pointed at
-    property color previewColor: bar.color
-    property color previewTextColor: theme.colors.text
-    property color previewSecondaryTextColor: theme.colors.textSecondary
-    property color previewHoverColor: theme.colors.hover
-    property color previewPressedColor: theme.colors.pressed
-    property real previewRadius: theme.popup.radius
-    property font previewFont
-    previewFont.family: theme.bar.font.family
-    previewFont.pixelSize: 12
-    property font previewIconFont
-    previewIconFont.family: theme.bar.iconFont.family
-    previewIconFont.pixelSize: 10
-    property color previewCloseColor: "#C42B1C"
-    property color previewCloseTextColor: "#ffffff"
-    property int previewOpenDuration: theme.popup.openDuration
-    property int previewCloseDuration: theme.popup.closeDuration
-
     readonly property string edge: bar.edge
     readonly property bool vertical: bar.vertical
 
@@ -118,7 +135,7 @@ Item {
         const others = []
         for (const app of apps.apps) {
             const into = app.pinned ? pinned : others
-            if (grouping || app.windows.length === 0)
+            if (settings.grouping || app.windows.length === 0)
                 into.push({ key: app.id, app: app, windows: app.windows })
             else
                 for (const window of app.windows)
@@ -157,9 +174,9 @@ Item {
             at[key] = offset
             const length = lengths[key] ?? 0
             // A button shrinking away takes its gap with it
-            offset += length > 0 ? length + spacing : 0
+            offset += length > 0 ? length + settings.spacing : 0
         }
-        return { offsets: at, extent: Math.max(0, offset - spacing) }
+        return { offsets: at, extent: Math.max(0, offset - settings.spacing) }
     }
     readonly property var offsets: layout.offsets
     readonly property real extent: layout.extent
@@ -167,8 +184,8 @@ Item {
     // centres it, smoothly rather than at once
     property real shownExtent: extent
     Behavior on shownExtent {
-        enabled: taskbar.animation && taskbar.ready
-        NumberAnimation { duration: taskbar.animationDuration; easing.type: Easing.OutCubic }
+        enabled: taskbar.settings.animation && taskbar.ready
+        NumberAnimation { duration: taskbar.settings.animationDuration; easing.type: Easing.OutCubic }
     }
     // The buttons of closed apps, by key, kept while they shrink and fade away, until when in milliseconds
     property var leaving: ({})
@@ -232,8 +249,8 @@ Item {
             if (liveSet.has(key))
                 return
             if (!(key in stillLeaving)) {
-                if (!(key in leaving) && animation && ready)
-                    stillLeaving[key] = now + animationDuration
+                if (!(key in leaving) && settings.animation && ready)
+                    stillLeaving[key] = now + settings.animationDuration
                 else
                     return
             }
@@ -280,7 +297,7 @@ Item {
         for (const key of placed) {
             const start = offsets[key]
             const length = lengths[key] ?? 0
-            if (length > 0 && along >= start && along < start + length + spacing)
+            if (length > 0 && along >= start && along < start + length + settings.spacing)
                 return key
         }
         return ""
@@ -336,10 +353,10 @@ Item {
     Component.onDestruction: previewPopup.dismiss()
 
     // A hidden widget takes no room on the bar, as its slot keeps the size it asks for
-    readonly property bool shown: !hideWhenEmpty || buttons.length > 0
+    readonly property bool shown: !settings.hideWhenEmpty || buttons.length > 0
 
     implicitWidth: !shown ? 0 : vertical ? bar.width : shownExtent
-    implicitHeight: !shown ? 0 : vertical ? shownExtent : iconSize + 12
+    implicitHeight: !shown ? 0 : vertical ? shownExtent : settings.iconSize + 12
 
     // Takes away the buttons of closed apps once they have shrunk
     Timer {
@@ -352,12 +369,12 @@ Item {
     TaskbarApps {
         id: apps
 
-        screenName: taskbar.onlyThisScreen ? taskbar.bar.screenName : ""
-        onlyVisible: taskbar.onlyVisible
-        strictFiltering: taskbar.strictFiltering
-        ignoreClasses: taskbar.ignoreClasses
-        ignoreProcesses: taskbar.ignoreProcesses
-        ignoreTitles: taskbar.ignoreTitles
+        screenName: taskbar.settings.onlyThisScreen ? taskbar.bar.screenName : ""
+        onlyVisible: taskbar.settings.onlyVisible
+        strictFiltering: taskbar.settings.strictFiltering
+        ignoreClasses: taskbar.settings.ignoreClasses
+        ignoreProcesses: taskbar.settings.ignoreProcesses
+        ignoreTitles: taskbar.settings.ignoreTitles
     }
 
     ListModel {
@@ -545,9 +562,9 @@ Item {
                                 visible: image.status !== Image.Ready
                                 text: menuItem.entry.iconText ?? menuItem.entry.glyph ?? ""
                                 textFormat: Text.PlainText
-                                font.family: menuItem.entry.iconText ? taskbar.emojiFont.family : taskbar.menuIconFont.family
-                                font.weight: menuItem.entry.iconText ? taskbar.emojiFont.weight : taskbar.menuIconFont.weight
-                                font.variableAxes: menuItem.entry.iconText ? taskbar.emojiFont.variableAxes : taskbar.menuIconFont.variableAxes
+                                font.family: menuItem.entry.iconText ? taskbar.settings.emojiFont.family : taskbar.settings.menuIconFont.family
+                                font.weight: menuItem.entry.iconText ? taskbar.settings.emojiFont.weight : taskbar.settings.menuIconFont.weight
+                                font.variableAxes: menuItem.entry.iconText ? taskbar.settings.emojiFont.variableAxes : taskbar.settings.menuIconFont.variableAxes
                                 font.pixelSize: menuItem.iconSize
                                 color: menuItem.palette.text
                                 Accessible.ignored: true
@@ -580,7 +597,7 @@ Item {
             Menu {
                 id: menu
 
-                font: taskbar.menuFont
+                font: taskbar.settings.menuFont
                 topInset: 0
                 leftInset: 0
                 rightInset: 0
@@ -588,23 +605,23 @@ Item {
                 popupType: Popup.Item
                 // Fades in when it opens, in place of the style's growing from a third of its height
                 enter: Transition {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: taskbar.menuOpenDuration; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: taskbar.settings.menuOpenDuration; easing.type: Easing.OutCubic }
                 }
                 // The items take their text colour from this
                 // Active and inactive only, so disabled controls keep the style's dimmed colours
-                palette.active.text: taskbar.menuTextColor
-                palette.active.windowText: taskbar.menuTextColor
-                palette.active.buttonText: taskbar.menuTextColor
-                palette.inactive.text: taskbar.menuTextColor
-                palette.inactive.windowText: taskbar.menuTextColor
-                palette.inactive.buttonText: taskbar.menuTextColor
+                palette.active.text: taskbar.settings.menuTextColor
+                palette.active.windowText: taskbar.settings.menuTextColor
+                palette.active.buttonText: taskbar.settings.menuTextColor
+                palette.inactive.text: taskbar.settings.menuTextColor
+                palette.inactive.windowText: taskbar.settings.menuTextColor
+                palette.inactive.buttonText: taskbar.settings.menuTextColor
                 onClosed: menuHost.close()
 
                 background: Rectangle {
-                    implicitWidth: taskbar.menuWidth
-                    radius: taskbar.menuRadius
-                    color: taskbar.menuColor
-                    border.color: taskbar.menuBorderColor
+                    implicitWidth: taskbar.settings.menuWidth
+                    radius: taskbar.settings.menuRadius
+                    color: taskbar.settings.menuColor
+                    border.color: taskbar.settings.menuBorderColor
                 }
             }
         }
@@ -617,30 +634,31 @@ Item {
         backend: apps
         buttonsByKey: taskbar.buttonsByKey
         syncModel: taskbar.syncModel
-        allowed: taskbar.preview && taskbar.draggedKey === "" && taskbar.menu === null
-        peek: taskbar.peek
-        previewDelay: taskbar.previewDelay
-        previewWidth: taskbar.previewWidth
-        animation: taskbar.animation
-        animationDuration: taskbar.animationDuration
+        allowed: taskbar.settings.preview && taskbar.draggedKey === "" && taskbar.menu === null
+        peek: taskbar.settings.peek
+        previewDelay: taskbar.settings.previewDelay
+        previewWidth: taskbar.settings.previewWidth
+        animation: taskbar.settings.animation
+        animationDuration: taskbar.settings.animationDuration
         edge: taskbar.edge
         vertical: taskbar.vertical
         hoveredRunning: (previewPopup.hovered as AppButton)?.running ?? false
         pendingRunning: (previewPopup.previewPending as AppButton)?.running ?? false
         pendingKey: (previewPopup.previewPending as AppButton)?.key ?? ""
-        tint: taskbar.previewColor
-        textColor: taskbar.previewTextColor
-        secondaryTextColor: taskbar.previewSecondaryTextColor
-        hoverColor: taskbar.previewHoverColor
-        pressedColor: taskbar.previewPressedColor
-        radius: taskbar.previewRadius
-        titleFont: taskbar.previewFont
-        iconFont: taskbar.previewIconFont
-        closeColor: taskbar.previewCloseColor
-        closeTextColor: taskbar.previewCloseTextColor
-        attentionColor: taskbar.attentionColor
-        openDuration: taskbar.previewOpenDuration
-        closeDuration: taskbar.previewCloseDuration
+        tint: taskbar.settings.previewColor
+        textColor: taskbar.settings.previewTextColor
+        secondaryTextColor: taskbar.settings.previewSecondaryTextColor
+        hoverColor: taskbar.settings.previewHoverColor
+        pressedColor: taskbar.settings.previewPressedColor
+        radius: taskbar.settings.previewRadius
+        titleFont: taskbar.settings.previewFont
+        iconFont: taskbar.settings.previewIconFont
+        closeIcon: taskbar.settings.previewIcons.close
+        closeColor: taskbar.settings.previewCloseColor
+        closeTextColor: taskbar.settings.previewCloseTextColor
+        attentionColor: taskbar.settings.attentionColor
+        openDuration: taskbar.settings.previewOpenDuration
+        closeDuration: taskbar.settings.previewCloseDuration
     }
 
     // Takes this taskbar's own buttons to new places, and brings a window to the front while a file is held over its
@@ -730,10 +748,10 @@ Item {
                 // The window a title or click is about: the one in front, else the first
                 readonly property var window: activeWindow ?? windows[0] ?? null
                 readonly property bool titled: !taskbar.vertical && running
-                    && (taskbar.titles === "always" || (taskbar.titles === "focused" && active))
+                    && (taskbar.settings.titles === "always" || (taskbar.settings.titles === "focused" && active))
                 readonly property string icon: app?.pinned || !window ? (app?.icon ?? "") : window.icon
                 // The button's length along the bar once its title has opened or shut
-                readonly property real length: leaving ? 0 : taskbar.iconSize + 2 * taskbar.buttonPadding
+                readonly property real length: leaving ? 0 : taskbar.settings.iconSize + 2 * taskbar.settings.buttonPadding
                     + (titled ? title.width + 6 : 0)
                 // Fades and grows in when it comes after the bar first filled
                 property real shown: 1
@@ -776,7 +794,7 @@ Item {
                 Component.onCompleted: {
                     kept = current
                     taskbar.setLength(key, length)
-                    if (taskbar.animation && taskbar.ready) {
+                    if (taskbar.settings.animation && taskbar.ready) {
                         shown = 0
                         appear.start()
                     }
@@ -803,12 +821,12 @@ Item {
                 scale: 0.5 + shown / 2
 
                 Behavior on along {
-                    enabled: taskbar.animation && button.placedOnce
-                    NumberAnimation { duration: taskbar.animationDuration; easing.type: Easing.OutCubic }
+                    enabled: taskbar.settings.animation && button.placedOnce
+                    NumberAnimation { duration: taskbar.settings.animationDuration; easing.type: Easing.OutCubic }
                 }
                 Behavior on size {
-                    enabled: taskbar.animation && button.placedOnce
-                    NumberAnimation { duration: taskbar.animationDuration; easing.type: Easing.OutCubic }
+                    enabled: taskbar.settings.animation && button.placedOnce
+                    NumberAnimation { duration: taskbar.settings.animationDuration; easing.type: Easing.OutCubic }
                 }
 
                 NumberAnimation {
@@ -817,7 +835,7 @@ Item {
                     target: button
                     property: "shown"
                     to: 0
-                    duration: taskbar.animationDuration
+                    duration: taskbar.settings.animationDuration
                     easing.type: Easing.OutCubic
                 }
 
@@ -827,7 +845,7 @@ Item {
                     target: button
                     property: "shown"
                     to: 1
-                    duration: taskbar.animationDuration
+                    duration: taskbar.settings.animationDuration
                     easing.type: Easing.OutCubic
                 }
 
@@ -836,8 +854,8 @@ Item {
                 Drag.supportedActions: Qt.MoveAction
                 Drag.mimeData: ({ [taskbar.mimeType]: button.key })
                 Drag.imageSource: button.icon
-                Drag.imageSourceSize: Qt.size(taskbar.iconSize, taskbar.iconSize)
-                Drag.hotSpot: Qt.point(taskbar.iconSize / 2, taskbar.iconSize / 2)
+                Drag.imageSourceSize: Qt.size(taskbar.settings.iconSize, taskbar.settings.iconSize)
+                Drag.hotSpot: Qt.point(taskbar.settings.iconSize / 2, taskbar.settings.iconSize / 2)
                 Drag.onDragStarted: {
                     previewPopup.dismiss()
                     taskbar.draggedKey = button.key
@@ -846,18 +864,18 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    anchors.topMargin: taskbar.vertical ? 0 : taskbar.buttonMargin
-                    anchors.bottomMargin: taskbar.vertical ? 0 : taskbar.buttonMargin
-                    anchors.leftMargin: taskbar.vertical ? taskbar.buttonMargin : 0
-                    anchors.rightMargin: taskbar.vertical ? taskbar.buttonMargin : 0
-                    radius: taskbar.buttonRadius
+                    anchors.topMargin: taskbar.vertical ? 0 : taskbar.settings.buttonMargin
+                    anchors.bottomMargin: taskbar.vertical ? 0 : taskbar.settings.buttonMargin
+                    anchors.leftMargin: taskbar.vertical ? taskbar.settings.buttonMargin : 0
+                    anchors.rightMargin: taskbar.vertical ? taskbar.settings.buttonMargin : 0
+                    radius: taskbar.settings.buttonRadius
                     color: button.flashing ? "transparent"
-                        : tap.pressed ? taskbar.pressedColor
-                        : button.active ? taskbar.selectedColor
-                        : hover.hovered && taskbar.draggedKey === "" ? taskbar.hoverColor : "transparent"
+                        : tap.pressed ? taskbar.settings.pressedColor
+                        : button.active ? taskbar.settings.selectedColor
+                        : hover.hovered && taskbar.draggedKey === "" ? taskbar.settings.hoverColor : "transparent"
 
                     Behavior on color {
-                        enabled: taskbar.animation
+                        enabled: taskbar.settings.animation
                         ColorAnimation { duration: 120 }
                     }
 
@@ -865,13 +883,13 @@ Item {
                         id: attentionHighlight
 
                         anchors.fill: parent
-                        radius: taskbar.buttonRadius
+                        radius: taskbar.settings.buttonRadius
                         visible: button.flashing
-                        color: Qt.alpha(taskbar.attentionColor, 0.28)
+                        color: Qt.alpha(taskbar.settings.attentionColor, 0.28)
 
                         SequentialAnimation on opacity {
                             running: button.flashing && !button.leaving
-                                && taskbar.animation && taskbar.animationDuration > 0
+                                && taskbar.settings.animation && taskbar.settings.animationDuration > 0
                             NumberAnimation { from: 0; to: 1; duration: 500; easing.type: Easing.InOutSine }
                             SequentialAnimation {
                                 loops: 5
@@ -887,32 +905,32 @@ Item {
 
                 // The icon keeps its place at the button's start, and the title beside it shows as the button grows
                 Image {
-                    x: taskbar.vertical ? (parent.width - width) / 2 : taskbar.buttonPadding
+                    x: taskbar.vertical ? (parent.width - width) / 2 : taskbar.settings.buttonPadding
                     y: (parent.height - height) / 2
                     source: button.icon
-                    width: taskbar.iconSize
-                    height: taskbar.iconSize
-                    sourceSize: Qt.size(taskbar.iconSize, taskbar.iconSize)
+                    width: taskbar.settings.iconSize
+                    height: taskbar.settings.iconSize
+                    sourceSize: Qt.size(taskbar.settings.iconSize, taskbar.settings.iconSize)
                 }
 
                 Label {
                     id: title
 
                     objectName: "title"
-                    x: taskbar.buttonPadding + taskbar.iconSize + 6
+                    x: taskbar.settings.buttonPadding + taskbar.settings.iconSize + 6
                     y: (parent.height - height) / 2
-                    visible: !taskbar.vertical && taskbar.titles !== "never"
-                    width: Math.min(implicitWidth, taskbar.titleMaxWidth)
+                    visible: !taskbar.vertical && taskbar.settings.titles !== "never"
+                    width: Math.min(implicitWidth, taskbar.settings.titleMaxWidth)
                     text: button.window?.title ?? ""
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
-                    color: taskbar.textColor
-                    font: taskbar.font
+                    color: taskbar.settings.textColor
+                    font: taskbar.settings.font
                     opacity: button.titled ? (button.minimized ? 0.6 : 1) : 0
 
                     Behavior on opacity {
-                        enabled: taskbar.animation && button.placedOnce
-                        NumberAnimation { duration: taskbar.animationDuration; easing.type: Easing.OutCubic }
+                        enabled: taskbar.settings.animation && button.placedOnce
+                        NumberAnimation { duration: taskbar.settings.animationDuration; easing.type: Easing.OutCubic }
                     }
                 }
 
@@ -922,23 +940,23 @@ Item {
                     objectName: "indicator"
                     readonly property real length: button.active || button.flashing ? 16 : 6
 
-                    visible: taskbar.showIndicator && button.running
-                    x: taskbar.edge === "left" ? taskbar.buttonMargin
-                        : taskbar.edge === "right" ? parent.width - width - taskbar.buttonMargin
+                    visible: taskbar.settings.showIndicator && button.running
+                    x: taskbar.edge === "left" ? taskbar.settings.buttonMargin
+                        : taskbar.edge === "right" ? parent.width - width - taskbar.settings.buttonMargin
                         : (parent.width - width) / 2
-                    y: taskbar.vertical ? (parent.height - height) / 2 : parent.height - height - taskbar.buttonMargin
+                    y: taskbar.vertical ? (parent.height - height) / 2 : parent.height - height - taskbar.settings.buttonMargin
                     width: taskbar.vertical ? 3 : length
                     height: taskbar.vertical ? length : 3
                     radius: 1.5
-                    color: button.flashing ? taskbar.attentionColor : button.active ? taskbar.indicatorColor
-                        : Qt.alpha(taskbar.textColor, button.minimized ? 0.35 : 0.55)
+                    color: button.flashing ? taskbar.settings.attentionColor : button.active ? taskbar.settings.indicatorColor
+                        : Qt.alpha(taskbar.settings.textColor, button.minimized ? 0.35 : 0.55)
 
                     Behavior on width {
-                        enabled: taskbar.animation
+                        enabled: taskbar.settings.animation
                         NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
                     }
                     Behavior on height {
-                        enabled: taskbar.animation
+                        enabled: taskbar.settings.animation
                         NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
                     }
                 }
@@ -946,14 +964,14 @@ Item {
                 // The number of windows a grouped button holds
                 Rectangle {
                     objectName: "count"
-                    visible: taskbar.grouping && taskbar.showCount && button.windows.length > 1
+                    visible: taskbar.settings.grouping && taskbar.settings.showCount && button.windows.length > 1
                     anchors.right: parent.right
                     anchors.top: parent.top
                     anchors.margins: 3
                     width: Math.max(height, countText.implicitWidth + 4)
                     height: 11
                     radius: 5.5
-                    color: taskbar.countColor
+                    color: taskbar.settings.countColor
 
                     Text {
                         id: countText
@@ -961,8 +979,8 @@ Item {
                         anchors.centerIn: parent
                         text: String(button.windows.length)
                         textFormat: Text.PlainText
-                        color: taskbar.countTextColor
-                        font: taskbar.countFont
+                        color: taskbar.settings.countTextColor
+                        font: taskbar.settings.countFont
                     }
                 }
 
@@ -982,9 +1000,9 @@ Item {
                             button.click()
                         else if (mouseButton === Qt.RightButton)
                             taskbar.openMenu(button)
-                        else if (taskbar.middleClick === "launch")
+                        else if (taskbar.settings.middleClick === "launch")
                             apps.launch(button.app.id)
-                        else if (taskbar.middleClick === "close" && button.window)
+                        else if (taskbar.settings.middleClick === "close" && button.window)
                             apps.close(button.window.hwnd)
                     }
                 }
@@ -998,8 +1016,8 @@ Item {
 
                 ToolTip {
                     popupType: Popup.Window
-                    visible: taskbar.tooltip && hover.hovered && taskbar.draggedKey === "" && taskbar.menu === null
-                        && !(taskbar.preview && button.running)
+                    visible: taskbar.settings.tooltip && hover.hovered && taskbar.draggedKey === "" && taskbar.menu === null
+                        && !(taskbar.settings.preview && button.running)
                     delay: 500
                     text: button.running ? button.windows.map(window => window.title).join("\n")
                         : (button.app?.name ?? "")

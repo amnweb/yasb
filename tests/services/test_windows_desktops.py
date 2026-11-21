@@ -246,16 +246,13 @@ def test_the_widget_labels_desktops_and_runs_actions_and_hotkeys(service: FakeDe
     component = QQmlComponent(
         engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "WindowsDesktops" / "WindowsDesktops.qml"))
     )
-    widget = create_with_bar(
-        component,
-        {
-            "label": "{index}",
-            "activeLabel": "[{name}]",
-            "populatedLabel": "{name}*",
-            "hotkeys": [{"hotkey": "alt+2", "action": "switch_desktop 2"}],
-        },
-    )
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+    settings = widget.property("settings")
+    settings.setProperty("label", "{index}")
+    settings.setProperty("activeLabel", "[{name}]")
+    settings.setProperty("populatedLabel", "{name}*")
+    settings.setProperty("hotkeys", [{"hotkey": "alt+2", "action": "switch_desktop 2"}])
     window = QQuickWindow()
     widget.setParentItem(window.contentItem())
     wait(10)

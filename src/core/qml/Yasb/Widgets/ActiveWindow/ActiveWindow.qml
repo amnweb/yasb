@@ -7,27 +7,35 @@ import Yasb.Themes
 Item {
     id: activeWindow
 
-    property string label: "{win[title]}"
-    property string alternateLabel: "[class_name='{win[class_name]}' exe='{win[process][name]}' hwnd={win[hwnd]}]"
-    property string noWindowLabel: ""
-    property bool showIcon: true
-    property int iconSize: theme.bar.iconFont.pixelSize
-    property int maxLength: 32
-    property string ellipsis: "..."
-    property bool monitorExclusive: false
-    property var rewrite: []
-    property list<string> ignoreTitles: []
-    property list<string> ignoreClasses: []
-    property list<string> ignoreProcesses: []
+    component Settings: QtObject {
+        required property Theme theme
+
+        property string label: "{win[title]}"
+        property string alternateLabel: "[class_name='{win[class_name]}' exe='{win[process][name]}' hwnd={win[hwnd]}]"
+        property string noWindowLabel: ""
+        property bool showIcon: true
+        property int iconSize: theme.bar.iconFont.pixelSize
+        property int maxLength: 32
+        property string ellipsis: "..."
+        property bool monitorExclusive: false
+        property var rewrite: []
+        property list<string> ignoreTitles: []
+        property list<string> ignoreClasses: []
+        property list<string> ignoreProcesses: []
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
+    readonly property Settings settings: Settings {
+        theme: activeWindow.theme
+    }
 
     readonly property alias tracker: windowTracker
     readonly property bool dark: theme.dark
-    readonly property bool shown: windowTracker.hasWindow || noWindowLabel !== ""
+    readonly property bool shown: windowTracker.hasWindow || settings.noWindowLabel !== ""
 
     implicitWidth: shown ? row.implicitWidth : 0
     implicitHeight: shown ? row.implicitHeight : 0
@@ -37,16 +45,16 @@ Item {
         id: windowTracker
 
         screenName: activeWindow.bar.screenName
-        monitorExclusive: activeWindow.monitorExclusive
-        label: activeWindow.label
-        alternateLabel: activeWindow.alternateLabel
-        noWindowLabel: activeWindow.noWindowLabel
-        maxLength: activeWindow.maxLength
-        ellipsis: activeWindow.ellipsis
-        rewrite: activeWindow.rewrite
-        ignoreTitles: activeWindow.ignoreTitles
-        ignoreClasses: activeWindow.ignoreClasses
-        ignoreProcesses: activeWindow.ignoreProcesses
+        monitorExclusive: activeWindow.settings.monitorExclusive
+        label: activeWindow.settings.label
+        alternateLabel: activeWindow.settings.alternateLabel
+        noWindowLabel: activeWindow.settings.noWindowLabel
+        maxLength: activeWindow.settings.maxLength
+        ellipsis: activeWindow.settings.ellipsis
+        rewrite: activeWindow.settings.rewrite
+        ignoreTitles: activeWindow.settings.ignoreTitles
+        ignoreClasses: activeWindow.settings.ignoreClasses
+        ignoreProcesses: activeWindow.settings.ignoreProcesses
     }
 
     Row {
@@ -57,11 +65,11 @@ Item {
 
         Image {
             y: Math.round((parent.height - height) / 2)
-            visible: activeWindow.showIcon && windowTracker.icon !== ""
+            visible: activeWindow.settings.showIcon && windowTracker.icon !== ""
             source: windowTracker.icon
-            width: activeWindow.iconSize
-            height: activeWindow.iconSize
-            sourceSize: Qt.size(activeWindow.iconSize, activeWindow.iconSize)
+            width: activeWindow.settings.iconSize
+            height: activeWindow.settings.iconSize
+            sourceSize: Qt.size(activeWindow.settings.iconSize, activeWindow.settings.iconSize)
         }
 
         Label {
@@ -69,8 +77,8 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: windowTracker.text
             textFormat: Text.PlainText
-            color: activeWindow.textColor
-            font: activeWindow.font
+            color: activeWindow.settings.textColor
+            font: activeWindow.settings.font
         }
     }
 

@@ -1,10 +1,21 @@
+import json
+import re
 from pathlib import Path
 
 import pytest
 
 from core import widget_files
 from core.validation.config import YasbConfig
-from core.widget_files import WidgetFile, bar_widget_files, find_widget_file, undefined_widgets
+from core.widget_files import (
+    WIDGET_LIST,
+    WidgetFile,
+    bar_widget_files,
+    builtin_manifests,
+    find_widget_file,
+    outdated_widgets,
+    undefined_widgets,
+)
+from settings import SERVICE_API_VERSION
 
 
 @pytest.fixture
@@ -90,3 +101,52 @@ def test_undefined_widgets_ignores_disabled_bars(widget_dirs: tuple[Path, Path])
         }
     )
     assert undefined_widgets(config) == ["a", "b"]
+
+
+def test_a_namespaced_widget_is_found_by_its_own_file_name(widget_dirs: tuple[Path, Path]):
+    user, builtin = widget_dirs
+    _widget(builtin, "Clock")
+    folder = user / "amnweb.clock"
+    folder.mkdir()
+    (folder / "Clock.qml").touch()
+    assert str(find_widget_file("amnweb.clock")) == str(folder / "Clock.qml")
+    assert YasbConfig.model_validate({"bars": {"main": {"widgets": {"left": ["amnweb.clock"]}}}})
+
+
+def _manifest(user: Path, name: str, **fields: object) -> None:
+    (user / name / "manifest.json").write_text(json.dumps({"id": name, **fields}), encoding="utf-8")
+
+
+def test_a_copy_its_manifest_says_no_longer_fits_gives_way_to_the_builtin(widget_dirs: tuple[Path, Path]):
+    user, builtin = widget_dirs
+    builtin_clock = _widget(builtin, "Clock")
+    (builtin / WIDGET_LIST).write_text(json.dumps({"widgets": [{"id": "Clock", "version": 2}]}), encoding="utf-8")
+    copy = _widget(user, "Clock")
+    _manifest(user, "Clock", version=2, yasbApi=SERVICE_API_VERSION[0])
+    assert str(find_widget_file("clock")) == str(copy)
+
+    _manifest(user, "Clock", version=1, yasbApi=SERVICE_API_VERSION[0])
+    assert str(find_widget_file("Clock")) == str(builtin_clock)
+    config = YasbConfig.model_validate({"bars": {"main": {"widgets": {"left": ["Clock"]}}}})
+    assert list(outdated_widgets(config)) == ["Clock"]
+
+
+def test_a_widget_made_for_another_api_or_under_another_id_is_skipped(widget_dirs: tuple[Path, Path]):
+    user, _ = widget_dirs
+    _widget(user, "Mine")
+    _manifest(user, "Mine", yasbApi=SERVICE_API_VERSION[0] + 1)
+    config = YasbConfig.model_validate({"bars": {"main": {"widgets": {"left": ["Mine"]}}}})
+    assert find_widget_file("Mine") is None
+    assert "YASB API" in outdated_widgets(config)["Mine"]
+    assert undefined_widgets(config) == []
+
+    (user / "Mine" / "manifest.json").write_text(json.dumps({"id": "amnweb.mine", "yasbApi": SERVICE_API_VERSION[0]}))
+    assert find_widget_file("Mine") is None
+    assert "amnweb.mine" in outdated_widgets(config)["Mine"]
+
+
+def test_the_widget_list_names_every_widget_in_qmldir():
+    qmldir = (widget_files.BUILTIN_WIDGETS_DIR / "qmldir").read_text(encoding="utf-8")
+    declared = re.findall(r"^(\w+) \d+\.\d+ \1/\1\.qml$", qmldir, flags=re.MULTILINE)
+    assert len(declared) > 20
+    assert list(builtin_manifests()) == declared

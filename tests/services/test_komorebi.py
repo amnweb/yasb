@@ -17,7 +17,7 @@ from core.services.komorebi.workspaces import KomorebiWorkspacesModel
 from core.utils.icons.service import IconService
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
-from tests.support.bar import create_with_bar
+from tests.support.bar import make_bar
 from tests.support.qt import find_item, wait
 
 # The monitor handles komorebi knows the two screens by
@@ -302,9 +302,16 @@ def make_widget(engine: QQmlEngine, properties: dict[str, Any]) -> tuple[QQuickI
     engine.warnings.connect(collect)
     path = BUILTIN_WIDGETS_DIR / "KomorebiWorkspaces" / "KomorebiWorkspaces.qml"
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(path)))
-    initial: dict[str | None, Any] = {name: value for name, value in properties.items()}
-    widget = create_with_bar(component, initial)
+    # Set on its settings while the widget is made, as a user's file sets them
+    bar = make_bar(engine)
+    widget = component.beginCreate(engine.rootContext())
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+    component.setInitialProperties(widget, {"bar": bar})
+    settings = widget.property("settings")
+    for name, value in properties.items():
+        settings.setProperty(name, value)
+    component.completeCreate()
+    bar.setParent(widget)
     return widget, warnings
 
 
@@ -336,15 +343,16 @@ def test_the_widget_labels_workspaces_by_their_state(listeners: list[FakeListene
 
     send(listeners[0], three_workspaces(focused=2))
     assert labels(widget) == ["Code*", "2", "[Web@1]"]
-    widget.setProperty("hideEmptyWorkspaces", True)
+    settings = widget.property("settings")
+    settings.setProperty("hideEmptyWorkspaces", True)
     assert labels(widget) == ["Code*", "[Web@1]"]
 
     # An empty workspace still shows while the monitor shows it
-    widget.setProperty("zeroBasedIndex", True)
+    settings.setProperty("zeroBasedIndex", True)
     send(listeners[0], three_workspaces(focused=1))
     assert labels(widget) == ["Code*", "[ws1@0]", "Web*"]
 
-    widget.setProperty("hideIfOffline", True)
+    settings.setProperty("hideIfOffline", True)
     send(listeners[0], None)
     assert not widget.property("visible") and widget.property("implicitWidth") == 0
     assert not warnings

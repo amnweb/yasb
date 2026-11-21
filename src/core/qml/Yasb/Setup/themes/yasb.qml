@@ -45,7 +45,7 @@ Theme {
         // Widget labels on the bar
         font.family: "Segoe UI"
         font.pixelSize: 13
-        // Widget icons, on the bar and in popups
+        // Widget icons on the bar
         iconFont.family: "Segoe Fluent Icons"
         iconFont.pixelSize: 16
     }
@@ -60,6 +60,8 @@ Theme {
         openDuration: 180
         closeDuration: 140
         font.family: "Segoe UI"
+        // Icons in popups
+        iconFont.family: "Segoe Fluent Icons"
     }
 
     // Right-click menus

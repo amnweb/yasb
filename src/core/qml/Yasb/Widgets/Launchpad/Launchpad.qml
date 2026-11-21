@@ -14,74 +14,96 @@ import Yasb.Themes
 Item {
     id: launchpad
 
+    component PopupIcons: QtObject {
+        property string search
+        property string hidden
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Hotkey that opens the launchpad, such as "alt+l"
+        property string hotkey: "alt+l"
+        // active, cursor or primary: which screen's widget opens on the hotkey
+        property string hotkeyScreen: "active"
+        // Pixels of the popup; it never takes more than 90% of the screen
+        property int popupWidth: 860
+        property int popupHeight: 600
+        // Pixels of each app's icon, and of the room inside each tile around its icon and name
+        property int appIconSize: 48
+        property int tilePadding: 32
+        // The most apps side by side in an open group
+        property int groupColumns: 4
+        property string searchPlaceholder: qsTr("Search apps")
+        // The glyph on the bar, drawn in iconFont and the text colour
+        property string icon: "\ue8a9"
+        property int iconSize: theme.bar.iconFont.pixelSize
+        property int searchIconSize: 16
+        readonly property PopupIcons popupIcons: PopupIcons {
+            search: "\ue721"
+            // The mark on a hidden app's tile
+            hidden: "\ued1a"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+
+        property color textColor: theme.colors.text
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+        property color popupHoverColor: theme.colors.hover
+        property color popupSelectedColor: theme.colors.selected
+        // Behind a group's icons on its tile
+        property color popupCardColor: theme.colors.card
+        property color accentColor: theme.colors.accent
+        property real popupRadius: theme.popup.radius
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        // Milliseconds apps take to slide to their new place, and a group to open or close
+        property int moveDuration: 220
+        property int groupDuration: 220
+        // An open group, and the shade laid over the grid behind it
+        property color groupColor: theme.colors.background
+        property color groupBorderColor: theme.popup.border
+        property color smokeColor: theme.colors.smoke
+        property real groupRadius: 12
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 12
+        property font searchFont
+        searchFont.family: theme.popup.font.family
+        searchFont.pixelSize: 16
+        property font groupNameFont
+        groupNameFont.family: theme.popup.font.family
+        groupNameFont.pixelSize: 16
+        groupNameFont.weight: 600
+        // The right-click menus: the theme's, unless set here
+        property int menuWidth: 200
+        property color menuColor: theme.menu.background
+        property color menuBorderColor: theme.menu.border
+        property color menuTextColor: theme.colors.text
+        property real menuRadius: theme.menu.radius
+        property font menuFont: theme.menu.font
+        property int menuOpenDuration: theme.menu.openDuration
+        // The icons in the text fields' right-click menu
+        property int menuIconSize: 16
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Hotkey that opens the launchpad, such as "alt+l"
-    property string hotkey: "alt+l"
-    // active, cursor or primary: which screen's widget opens on the hotkey
-    property string hotkeyScreen: "active"
-    // Pixels of the popup; it never takes more than 90% of the screen
-    property int popupWidth: 860
-    property int popupHeight: 600
-    // Pixels of each app's icon, and of the room inside each tile around its icon and name
-    property int appIconSize: 48
-    property int tilePadding: 32
-    // The most apps side by side in an open group
-    property int groupColumns: 4
-    property string searchPlaceholder: qsTr("Search apps")
-    // The glyph on the bar, drawn in iconFont and the text colour
-    property string icon: "\ue8a9"
-    property int iconSize: theme.bar.iconFont.pixelSize
-    property int searchIconSize: 16
-
-    property color textColor: theme.colors.text
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property color popupSecondaryTextColor: theme.colors.textSecondary
-    property color popupHoverColor: theme.colors.hover
-    property color popupSelectedColor: theme.colors.selected
-    // Behind a group's icons on its tile
-    property color popupCardColor: theme.colors.card
-    property color accentColor: theme.colors.accent
-    property real popupRadius: theme.popup.radius
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    // Milliseconds apps take to slide to their new place, and a group to open or close
-    property int moveDuration: 220
-    property int groupDuration: 220
-    // An open group, and the shade laid over the grid behind it
-    property color groupColor: theme.colors.background
-    property color groupBorderColor: theme.popup.border
-    property color smokeColor: theme.colors.smoke
-    property real groupRadius: 12
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 12
-    property font searchFont
-    searchFont.family: theme.popup.font.family
-    searchFont.pixelSize: 16
-    property font groupNameFont
-    groupNameFont.family: theme.popup.font.family
-    groupNameFont.pixelSize: 16
-    groupNameFont.weight: Font.DemiBold
-    // The right-click menus: the theme's, unless set here
-    property int menuWidth: 200
-    property color menuColor: theme.menu.background
-    property color menuBorderColor: theme.menu.border
-    property color menuTextColor: theme.colors.text
-    property real menuRadius: theme.menu.radius
-    property font menuFont: theme.menu.font
-    property int menuOpenDuration: theme.menu.openDuration
-    // The icons in the text fields' right-click menu
-    property int menuIconSize: 16
+    readonly property Settings settings: Settings {
+        theme: launchpad.theme
+    }
 
     implicitWidth: label.width
     implicitHeight: label.height
@@ -401,7 +423,7 @@ Item {
             width: 3
             height: tile.height - 16
             radius: 1.5
-            color: launchpad.accentColor
+            color: launchpad.settings.accentColor
         }
 
         // The part that follows the mouse while the tile is dragged
@@ -431,9 +453,9 @@ Item {
                 to: ""
 
                 ParentAnimation {
-                    NumberAnimation { properties: "x,y"; duration: launchpad.moveDuration; easing.type: Easing.OutCubic }
+                    NumberAnimation { properties: "x,y"; duration: launchpad.settings.moveDuration; easing.type: Easing.OutCubic }
                 }
-                NumberAnimation { property: "scale"; duration: launchpad.moveDuration; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "scale"; duration: launchpad.settings.moveDuration; easing.type: Easing.OutCubic }
             }
 
             // The tile's own look, which a dragged tile takes with it; the whole tile lights up while a dragged app is
@@ -441,11 +463,11 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: tile.current || tile.chosen || tile.merging ? launchpad.popupSelectedColor
-                    : mouse.drag.active || (mouse.containsMouse && !launchpad.dragging) ? launchpad.popupHoverColor
+                color: tile.current || tile.chosen || tile.merging ? launchpad.settings.popupSelectedColor
+                    : mouse.drag.active || (mouse.containsMouse && !launchpad.dragging) ? launchpad.settings.popupHoverColor
                     : "transparent"
                 border.width: tile.current || tile.chosen || tile.merging ? 2 : 0
-                border.color: launchpad.accentColor
+                border.color: launchpad.settings.accentColor
                 Behavior on color {
                     ColorAnimation { duration: 80 }
                 }
@@ -453,15 +475,15 @@ Item {
 
             Item {
                 x: Math.round((parent.width - width) / 2)
-                y: launchpad.tilePadding
-                width: launchpad.appIconSize
-                height: launchpad.appIconSize
+                y: launchpad.settings.tilePadding
+                width: launchpad.settings.appIconSize
+                height: launchpad.settings.appIconSize
                 opacity: tile.hiddenApp ? 0.45 : 1
 
                 Image {
                     visible: !tile.group
                     anchors.fill: parent
-                    sourceSize: Qt.size(launchpad.appIconSize, launchpad.appIconSize)
+                    sourceSize: Qt.size(launchpad.settings.appIconSize, launchpad.settings.appIconSize)
                     source: launchpad.iconOf(tile.app)
                 }
 
@@ -469,7 +491,7 @@ Item {
                     visible: tile.group
                     anchors.fill: parent
                     radius: 12
-                    color: launchpad.popupCardColor
+                    color: launchpad.settings.popupCardColor
 
                     Grid {
                         anchors.centerIn: parent
@@ -482,7 +504,7 @@ Item {
                             Image {
                                 required property var modelData
 
-                                readonly property int size: Math.floor((launchpad.appIconSize - 15) / 2)
+                                readonly property int size: Math.floor((launchpad.settings.appIconSize - 15) / 2)
 
                                 width: size
                                 height: size
@@ -496,14 +518,14 @@ Item {
 
             Text {
                 x: 6
-                y: launchpad.tilePadding + launchpad.appIconSize + 6
+                y: launchpad.settings.tilePadding + launchpad.settings.appIconSize + 6
                 width: parent.width - 12
                 height: launchpad.nameHeight
                 horizontalAlignment: Text.AlignHCenter
                 text: tile.group ? tile.name : tile.app?.name ?? ""
-                color: launchpad.popupTextColor
+                color: launchpad.settings.popupTextColor
                 opacity: tile.hiddenApp ? 0.45 : 1
-                font: launchpad.popupFont
+                font: launchpad.settings.popupFont
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
@@ -513,11 +535,11 @@ Item {
                 visible: tile.hiddenApp
                 x: parent.width - width - 10
                 y: 10
-                text: "\ued1a"
-                color: launchpad.popupSecondaryTextColor
-                font.family: launchpad.iconFont.family
-                font.weight: launchpad.iconFont.weight
-                font.variableAxes: launchpad.iconFont.variableAxes
+                text: launchpad.settings.popupIcons.hidden
+                color: launchpad.settings.popupSecondaryTextColor
+                font.family: launchpad.settings.popupIconFont.family
+                font.weight: launchpad.settings.popupIconFont.weight
+                font.variableAxes: launchpad.settings.popupIconFont.variableAxes
                 font.pixelSize: 14
             }
         }
@@ -558,8 +580,8 @@ Item {
 
     // An item of the text fields' right-click menu, its icon in menuIconSize
     component FieldMenuItem: MenuItem {
-        icon.width: launchpad.menuIconSize
-        icon.height: launchpad.menuIconSize
+        icon.width: launchpad.settings.menuIconSize
+        icon.height: launchpad.settings.menuIconSize
     }
 
     // A text field with its right-click menu in the widget's look
@@ -584,22 +606,22 @@ Item {
         popupType: Popup.Item
         // Fades in when it opens, in place of the style's growing from a third of its height
         enter: Transition {
-            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: launchpad.menuOpenDuration; easing.type: Easing.OutCubic }
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: launchpad.settings.menuOpenDuration; easing.type: Easing.OutCubic }
         }
         topInset: 0
         leftInset: 0
         rightInset: 0
         bottomInset: 0
-        font: launchpad.menuFont
+        font: launchpad.settings.menuFont
         // Active and inactive only, so disabled controls keep the style's dimmed colours
-        palette.active.text: launchpad.menuTextColor
-        palette.inactive.text: launchpad.menuTextColor
+        palette.active.text: launchpad.settings.menuTextColor
+        palette.inactive.text: launchpad.settings.menuTextColor
 
         background: Rectangle {
-            implicitWidth: launchpad.menuWidth
-            radius: launchpad.menuRadius
-            color: launchpad.menuColor
-            border.color: launchpad.menuBorderColor
+            implicitWidth: launchpad.settings.menuWidth
+            radius: launchpad.settings.menuRadius
+            color: launchpad.settings.menuColor
+            border.color: launchpad.settings.menuBorderColor
         }
     }
 
@@ -607,16 +629,16 @@ Item {
         id: label
 
         y: Math.round((parent.height - height) / 2)
-        width: launchpad.iconSize
-        height: launchpad.iconSize
+        width: launchpad.settings.iconSize
+        height: launchpad.settings.iconSize
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        text: launchpad.icon
-        color: launchpad.textColor
-        font.family: launchpad.iconFont.family
-        font.weight: launchpad.iconFont.weight
-        font.variableAxes: launchpad.iconFont.variableAxes
-        font.pixelSize: launchpad.iconSize
+        text: launchpad.settings.icon
+        color: launchpad.settings.textColor
+        font.family: launchpad.settings.iconFont.family
+        font.weight: launchpad.settings.iconFont.weight
+        font.variableAxes: launchpad.settings.iconFont.variableAxes
+        font.pixelSize: launchpad.settings.iconSize
     }
 
     MouseArea {
@@ -626,8 +648,8 @@ Item {
     }
 
     Hotkey {
-        keys: launchpad.hotkey
-        screen: launchpad.hotkeyScreen
+        keys: launchpad.settings.hotkey
+        screen: launchpad.settings.hotkeyScreen
         onActivated: launchpad.toggle()
     }
 
@@ -647,7 +669,7 @@ Item {
     FontMetrics {
         id: nameMetrics
 
-        font: launchpad.popupFont
+        font: launchpad.settings.popupFont
     }
 
     NumberAnimation {
@@ -655,7 +677,7 @@ Item {
 
         target: launchpad
         property: "groupReveal"
-        duration: launchpad.groupDuration
+        duration: launchpad.settings.groupDuration
         easing.type: Easing.OutCubic
         onFinished: {
             if (launchpad.groupReveal === 0) {
@@ -673,16 +695,16 @@ Item {
         property real reveal: 0
 
         title: "Launchpad"
-        width: Math.min(launchpad.popupWidth, Math.round(launchpad.Screen.width * 0.9))
-        height: Math.min(launchpad.popupHeight, Math.round(launchpad.Screen.height * 0.9))
+        width: Math.min(launchpad.settings.popupWidth, Math.round(launchpad.Screen.width * 0.9))
+        height: Math.min(launchpad.settings.popupHeight, Math.round(launchpad.Screen.height * 0.9))
         x: Math.round(launchpad.Screen.virtualX + (launchpad.Screen.width - width) / 2)
         y: Math.round(launchpad.Screen.virtualY + (launchpad.Screen.height - height) / 2)
         anchor: launchpad
-        font: launchpad.popupFont
+        font: launchpad.settings.popupFont
         theme: launchpad.theme
         backdropItem: surfaceItem
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: launchpad.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: launchpad.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: launchpad.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: launchpad.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible) {
                 reveal = 0
@@ -701,10 +723,10 @@ Item {
             id: surfaceItem
 
             anchors.fill: parent
-            radius: launchpad.popupRadius
-            color: launchpad.popupColor
+            radius: launchpad.settings.popupRadius
+            color: launchpad.settings.popupColor
             border.width: 1
-            border.color: launchpad.popupBorderColor
+            border.color: launchpad.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.86 + popup.reveal * 0.14
             // Nothing takes a click while the popup fades
@@ -729,15 +751,15 @@ Item {
                 y: 16
                 width: parent.width - 32
                 height: 40
-                leftPadding: 12 + launchpad.searchIconSize + 10
-                placeholderText: launchpad.searchPlaceholder
-                color: launchpad.popupTextColor
-                font: launchpad.searchFont
+                leftPadding: 12 + launchpad.settings.searchIconSize + 10
+                placeholderText: launchpad.settings.searchPlaceholder
+                color: launchpad.settings.popupTextColor
+                font: launchpad.settings.searchFont
                 background: Rectangle {
                     radius: 6
-                    color: launchpad.popupCardColor
+                    color: launchpad.settings.popupCardColor
                     border.width: field.activeFocus ? 1 : 0
-                    border.color: launchpad.accentColor
+                    border.color: launchpad.settings.accentColor
                 }
                 onTextChanged: launchpad.query = text
                 Keys.onShortcutOverride: event => event.accepted = event.key === Qt.Key_Escape
@@ -767,12 +789,12 @@ Item {
                 Text {
                     x: 12
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "\uE721"
-                    color: launchpad.popupSecondaryTextColor
-                    font.family: launchpad.iconFont.family
-                    font.weight: launchpad.iconFont.weight
-                    font.variableAxes: launchpad.iconFont.variableAxes
-                    font.pixelSize: launchpad.searchIconSize
+                    text: launchpad.settings.popupIcons.search
+                    color: launchpad.settings.popupSecondaryTextColor
+                    font.family: launchpad.settings.popupIconFont.family
+                    font.weight: launchpad.settings.popupIconFont.weight
+                    font.variableAxes: launchpad.settings.popupIconFont.variableAxes
+                    font.pixelSize: launchpad.settings.searchIconSize
                 }
             }
 
@@ -782,8 +804,8 @@ Item {
                 y: field.y + field.height + 32
                 text: launchpad.query.trim() ? qsTr("No apps found")
                     : launchpad.library.loading ? qsTr("Loading apps...") : qsTr("No apps")
-                color: launchpad.popupSecondaryTextColor
-                font: launchpad.popupFont
+                color: launchpad.settings.popupSecondaryTextColor
+                font: launchpad.settings.popupFont
             }
 
             GridView {
@@ -814,8 +836,8 @@ Item {
                         x: 6
                         bottomPadding: 6
                         text: qsTr("Hidden apps")
-                        color: launchpad.popupSecondaryTextColor
-                        font: launchpad.popupFont
+                        color: launchpad.settings.popupSecondaryTextColor
+                        font: launchpad.settings.popupFont
                     }
 
                     Grid {
@@ -840,22 +862,22 @@ Item {
                 // Apps slide aside to make room, and into the place a moved one left. Each slide also brings opacity
                 // and scale back to full, as one can cut an app's fade-in short and leave it half shown
                 displaced: Transition {
-                    NumberAnimation { properties: "x,y"; duration: launchpad.moveDuration; easing.type: Easing.OutCubic }
-                    NumberAnimation { property: "opacity"; to: 1; duration: launchpad.moveDuration }
-                    NumberAnimation { property: "scale"; to: 1; duration: launchpad.moveDuration }
+                    NumberAnimation { properties: "x,y"; duration: launchpad.settings.moveDuration; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; to: 1; duration: launchpad.settings.moveDuration }
+                    NumberAnimation { property: "scale"; to: 1; duration: launchpad.settings.moveDuration }
                 }
                 move: Transition {
-                    NumberAnimation { properties: "x,y"; duration: launchpad.moveDuration; easing.type: Easing.OutCubic }
-                    NumberAnimation { property: "opacity"; to: 1; duration: launchpad.moveDuration }
-                    NumberAnimation { property: "scale"; to: 1; duration: launchpad.moveDuration }
+                    NumberAnimation { properties: "x,y"; duration: launchpad.settings.moveDuration; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; to: 1; duration: launchpad.settings.moveDuration }
+                    NumberAnimation { property: "scale"; to: 1; duration: launchpad.settings.moveDuration }
                 }
                 add: Transition {
-                    NumberAnimation { property: "scale"; from: 0.6; to: 1; duration: launchpad.moveDuration; easing.type: Easing.OutCubic }
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: launchpad.moveDuration }
+                    NumberAnimation { property: "scale"; from: 0.6; to: 1; duration: launchpad.settings.moveDuration; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: launchpad.settings.moveDuration }
                 }
                 remove: Transition {
-                    NumberAnimation { property: "scale"; to: 0.6; duration: launchpad.moveDuration; easing.type: Easing.InCubic }
-                    NumberAnimation { property: "opacity"; to: 0; duration: launchpad.moveDuration }
+                    NumberAnimation { property: "scale"; to: 0.6; duration: launchpad.settings.moveDuration; easing.type: Easing.InCubic }
+                    NumberAnimation { property: "opacity"; to: 0; duration: launchpad.settings.moveDuration }
                 }
 
                 WheelHandler {
@@ -928,8 +950,8 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: launchpad.popupRadius
-                    color: launchpad.smokeColor
+                    radius: launchpad.settings.popupRadius
+                    color: launchpad.settings.smokeColor
                     opacity: launchpad.groupReveal * groupLayer.shown
 
                     MouseArea {
@@ -952,10 +974,10 @@ Item {
                     y: startY + (Math.round((parent.height - height) / 2) - startY) * launchpad.groupReveal
                     scale: 0.2 + 0.8 * launchpad.groupReveal
                     opacity: Math.min(1, launchpad.groupReveal * 1.5) * groupLayer.shown
-                    radius: launchpad.groupRadius
-                    color: launchpad.groupColor
+                    radius: launchpad.settings.groupRadius
+                    color: launchpad.settings.groupColor
                     border.width: 1
-                    border.color: launchpad.groupBorderColor
+                    border.color: launchpad.settings.groupBorderColor
 
                     // Takes clicks and drops on the group, so they do not reach the grid behind
                     MouseArea {
@@ -969,13 +991,13 @@ Item {
                         y: 14
                         width: parent.width - 32
                         horizontalAlignment: TextInput.AlignHCenter
-                        color: launchpad.popupTextColor
-                        font: launchpad.groupNameFont
+                        color: launchpad.settings.popupTextColor
+                        font: launchpad.settings.groupNameFont
                         background: Rectangle {
                             radius: 6
-                            color: groupName.activeFocus ? launchpad.popupCardColor : "transparent"
+                            color: groupName.activeFocus ? launchpad.settings.popupCardColor : "transparent"
                             border.width: groupName.activeFocus ? 1 : 0
-                            border.color: launchpad.accentColor
+                            border.color: launchpad.settings.accentColor
                         }
                         onEditingFinished: launchpad.renameOpenGroup()
                         Keys.onShortcutOverride: event => event.accepted = event.key === Qt.Key_Escape
@@ -1242,10 +1264,10 @@ Item {
     // Every tile holds its icon and two lines of name, as Start does. It is twelve average letters of popupFont wide,
     // never narrower than the icon, plus tilePadding on each side, and the name may run across all of it
     readonly property real nameHeight: Math.ceil(nameMetrics.height * 2)
-    readonly property real cellWidth: Math.max(appIconSize, Math.ceil(nameMetrics.averageCharacterWidth * 12)) + 2 * tilePadding
-    readonly property real cellHeight: appIconSize + 6 + nameHeight + 2 * tilePadding
+    readonly property real cellWidth: Math.max(settings.appIconSize, Math.ceil(nameMetrics.averageCharacterWidth * 12)) + 2 * settings.tilePadding
+    readonly property real cellHeight: settings.appIconSize + 6 + nameHeight + 2 * settings.tilePadding
     readonly property int columns: Math.max(1, Math.floor(grid.width / cellWidth))
-    readonly property int groupAcross: Math.max(1, Math.min(groupColumns, openApps.length))
+    readonly property int groupAcross: Math.max(1, Math.min(settings.groupColumns, openApps.length))
     readonly property bool insideGroup: groupCard.contains(groupCard.mapFromItem(surfaceItem, dragPoint.x, dragPoint.y))
     readonly property Item surface: surfaceItem
     readonly property Item dragLayer: dragLayerItem

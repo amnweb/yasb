@@ -12,91 +12,120 @@ import Yasb.Themes
 Item {
     id: volume
 
-    // Label placeholders: {level}, the volume as 30%, or mutedText while muted and noDeviceText without an output
-    // device; {device}, the output device's name. Empty shows only the icon
-    property string label: ""
-    property string mutedText: "mute"
-    property string noDeviceText: "No Device"
+    component PopupIcons: QtObject {
+        property string check
+        property string open
+        property string expand
+        property string collapse
+        property string device
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Label placeholders: {level}, the volume as 30%, or mutedText while muted and noDeviceText without an output
+        // device; {device}, the output device's name. Empty shows only the icon
+        property string label: ""
+        property string mutedText: "mute"
+        property string noDeviceText: "No Device"
+        // Percentage points per wheel step
+        property int scrollStep: 2
+        property bool invertWheel: false
+        // Windows' default sound when a slider is let go, to hear the new level
+        property bool beepOnRelease: true
+        property int popupWidth: 324
+        // The speaker on the bar: the first of icons at 0%, the rest spread over 1 to 100% from quietest to loudest, the
+        // last also drawn faint behind; mutedIcon while muted
+        property list<string> icons: ["\ue992", "\ue993", "\ue994", "\ue995"]
+        property string mutedIcon: "\ue74f"
+        property int iconSize: theme.bar.iconFont.pixelSize
+        // Volumes of the apps playing, under the master slider; appsExpanded opens them with the popup
+        property bool showApps: true
+        property bool appsExpanded: false
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // The faint full-volume waves behind the speaker's lit ones
+        property color iconTrackColor: theme.colors.textDisabled
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        // Popup icons; device is the speaker on each output device
+        readonly property PopupIcons popupIcons: PopupIcons {
+            check: "\ue73e"
+            open: "\ue76c"
+            expand: "\ue70d"
+            collapse: "\ue70e"
+            device: "\ue7f5"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // Each device's glyph, the mark on the device in use, and the arrow of the settings link
+        property int deviceIconSize: 14
+        property int checkIconSize: 12
+        property int footerIconSize: 10
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        property color popupTextColor: theme.colors.text
+        property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+        property color popupDividerColor: theme.colors.divider
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+        property color popupTertiaryTextColor: theme.colors.textTertiary
+        property color popupHoverColor: theme.colors.hover
+        property color popupSelectedColor: theme.colors.selected
+        property color popupCardColor: theme.colors.card
+        property color popupCardBorderColor: theme.colors.cardBorder
+        // Text and accent in the popup
+        property color accentColor: theme.colors.accent
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Percentage points per wheel step
-    property int scrollStep: 2
-    property bool invertWheel: false
-    // Windows' default sound when a slider is let go, to hear the new level
-    property bool beepOnRelease: true
-    property int popupWidth: 324
-    // The speaker on the bar: the first of icons at 0%, the rest spread over 1 to 100% from quietest to loudest, the
-    // last also drawn faint behind; mutedIcon while muted
-    property list<string> icons: ["\ue992", "\ue993", "\ue994", "\ue995"]
-    property string mutedIcon: "\ue74f"
-    property int iconSize: theme.bar.iconFont.pixelSize
-    // Volumes of the apps playing, under the master slider; appsExpanded opens them with the popup
-    property bool showApps: true
-    property bool appsExpanded: false
+    readonly property Settings settings: Settings {
+        theme: volume.theme
+    }
 
     readonly property bool dark: theme.dark
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // The faint full-volume waves behind the speaker's lit ones
-    property color iconTrackColor: theme.colors.textDisabled
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // Each device's glyph, the mark on the device in use, and the arrow of the settings link
-    property int deviceIconSize: 14
-    property int checkIconSize: 12
-    property int footerIconSize: 10
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    property color popupTextColor: theme.colors.text
-    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
-    property color popupDividerColor: theme.colors.divider
-    property color popupSecondaryTextColor: theme.colors.textSecondary
-    property color popupTertiaryTextColor: theme.colors.textTertiary
-    property color popupHoverColor: theme.colors.hover
-    property color popupSelectedColor: theme.colors.selected
-    property color popupCardColor: theme.colors.card
-    property color popupCardBorderColor: theme.colors.cardBorder
-    // Text and accent in the popup
-    property color accentColor: theme.colors.accent
     readonly property string edge: bar.edge
-    readonly property string text: format(label)
+
+    readonly property string text: format(settings.label)
 
     function format(template: string): string {
-        const level = !audio.available ? noDeviceText : audio.muted ? mutedText : `${audio.volume}%`
+        const level = !audio.available ? settings.noDeviceText : audio.muted ? settings.mutedText : `${audio.volume}%`
         return template.replace(/\{level\}/g, () => level).replace(/\{device\}/g, () => audio.deviceName)
     }
 
     function icon(level: int, muted: bool): string {
         if (muted)
-            return mutedIcon
-        if (level === 0 || icons.length < 2)
-            return icons[0] ?? ""
-        return icons[1 + Math.min(icons.length - 2, Math.floor(level * (icons.length - 1) / 100))]
+            return settings.mutedIcon
+        if (level === 0 || settings.icons.length < 2)
+            return settings.icons[0] ?? ""
+        return settings.icons[1 + Math.min(settings.icons.length - 2, Math.floor(level * (settings.icons.length - 1) / 100))]
     }
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const gap = popupGap
+        const gap = settings.popupGap
         let px = edge === "left" ? start.x + width + gap
             : edge === "right" ? start.x - popup.width - gap : start.x + (width - popup.width) / 2
         let py = edge === "top" ? start.y + height + gap
@@ -114,7 +143,7 @@ Item {
         else {
             audio.refreshApps()
             popup.devicesOpen = false
-            popup.appsOpen = appsExpanded
+            popup.appsOpen = settings.appsExpanded
             placePopup()
             popup.open()
         }
@@ -160,8 +189,8 @@ Item {
 
             Text {
                 visible: !audio.muted
-                text: volume.icons[volume.icons.length - 1] ?? ""
-                color: volume.iconTrackColor
+                text: volume.settings.icons[volume.settings.icons.length - 1] ?? ""
+                color: volume.settings.iconTrackColor
                 font: levelIcon.font
             }
 
@@ -169,11 +198,11 @@ Item {
                 id: levelIcon
                 objectName: "icon"
                 text: volume.icon(audio.volume, audio.muted)
-                color: volume.textColor
-                font.family: volume.iconFont.family
-                font.weight: volume.iconFont.weight
-                font.variableAxes: volume.iconFont.variableAxes
-                font.pixelSize: volume.iconSize
+                color: volume.settings.textColor
+                font.family: volume.settings.iconFont.family
+                font.weight: volume.settings.iconFont.weight
+                font.variableAxes: volume.settings.iconFont.variableAxes
+                font.pixelSize: volume.settings.iconSize
             }
         }
 
@@ -183,14 +212,14 @@ Item {
             visible: text !== ""
             text: volume.text
             textFormat: Text.PlainText
-            color: volume.textColor
-            font: volume.font
+            color: volume.settings.textColor
+            font: volume.settings.font
         }
         // Text {
         //     anchors.verticalCenter: parent.verticalCenter
         //     text: audio.available ? `${audio.volume}%` : "--"
-        //     color: volume.textColor
-        //     font: volume.font
+        //     color: volume.settings.textColor
+        //     font: volume.settings.font
         // }
     }
 
@@ -207,7 +236,7 @@ Item {
         onWheel: wheel => {
             const delta = wheel.angleDelta.y || wheel.angleDelta.x
             if (delta !== 0)
-                audio.setVolume(audio.volume + ((delta > 0) !== volume.invertWheel ? volume.scrollStep : -volume.scrollStep))
+                audio.setVolume(audio.volume + ((delta > 0) !== volume.settings.invertWheel ? volume.settings.scrollStep : -volume.settings.scrollStep))
         }
     }
 
@@ -216,6 +245,7 @@ Item {
 
         property string glyph
         property int iconSize: 14
+        property font iconFont: volume.settings.popupIconFont
         property bool checked: false
         property string tip
 
@@ -233,17 +263,17 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 4
-            color: area.containsMouse ? volume.popupHoverColor : button.checked ? volume.popupSelectedColor : "transparent"
+            color: area.containsMouse ? volume.settings.popupHoverColor : button.checked ? volume.settings.popupSelectedColor : "transparent"
         }
 
         Text {
             anchors.centerIn: parent
             text: button.glyph
-            color: volume.popupTextColor
+            color: volume.settings.popupTextColor
             opacity: button.checked || area.containsMouse ? 1 : 0.6
-            font.family: volume.iconFont.family
-            font.weight: volume.iconFont.weight
-            font.variableAxes: volume.iconFont.variableAxes
+            font.family: button.iconFont.family
+            font.weight: button.iconFont.weight
+            font.variableAxes: button.iconFont.variableAxes
             font.pixelSize: button.iconSize
         }
 
@@ -261,27 +291,27 @@ Item {
         property bool devicesOpen: false
         property bool appsOpen: false
         title: "Volume"
-        width: volume.popupWidth
+        width: volume.settings.popupWidth
         height: popupContent.implicitHeight
         anchor: volume
-        font: volume.popupFont
+        font: volume.settings.popupFont
         theme: volume.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: volume.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: volume.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: volume.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: volume.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: { if (!visible) reveal = 0 }
 
         Rectangle {
             id: surface
             anchors.fill: parent
-            radius: volume.popupRadius
-            color: volume.popupColor
+            radius: volume.settings.popupRadius
+            color: volume.settings.popupColor
             border.width: 1
-            border.color: volume.popupBorderColor
+            border.color: volume.settings.popupBorderColor
             // The sliders draw with the palette's accent
             // Active and inactive only, so disabled controls keep the style's dimmed colours
-            palette.active.accent: volume.accentColor
-            palette.inactive.accent: volume.accentColor
+            palette.active.accent: volume.settings.accentColor
+            palette.inactive.accent: volume.settings.accentColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: volume.edge === "bottom" ? Item.Bottom : Item.Top
@@ -304,12 +334,12 @@ Item {
                         text: audio.deviceName || "No output device"
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
-                        color: volume.popupTextColor
-                        font: volume.popupTitleFont
+                        color: volume.settings.popupTextColor
+                        font: volume.settings.popupTitleFont
                     }
                     IconButton {
                         visible: audio.devices.length > 1
-                        glyph: popup.devicesOpen ? "\ue70e" : "\ue70d"
+                        glyph: popup.devicesOpen ? volume.settings.popupIcons.collapse : volume.settings.popupIcons.expand
                         iconSize: 12
                         checked: popup.devicesOpen
                         tip: "Output devices"
@@ -322,7 +352,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.bottomMargin: 8
                     implicitHeight: 1
-                    color: volume.popupDividerColor
+                    color: volume.settings.popupDividerColor
                 }
 
                 Column {
@@ -343,7 +373,7 @@ Item {
                             width: parent.width
                             height: 34
                             radius: 4
-                            color: modelData.current ? volume.popupSelectedColor : deviceArea.containsMouse ? volume.popupHoverColor : "transparent"
+                            color: modelData.current ? volume.settings.popupSelectedColor : deviceArea.containsMouse ? volume.settings.popupHoverColor : "transparent"
                             Accessible.role: Accessible.RadioButton
                             Accessible.name: modelData.name
                             Accessible.checked: modelData.current
@@ -355,13 +385,13 @@ Item {
                             Text {
                                 x: 10
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: "\ue7f5"
-                                color: volume.popupTextColor
+                                text: volume.settings.popupIcons.device
+                                color: volume.settings.popupTextColor
                                 opacity: device.modelData.current ? 1 : 0.75
-                                font.family: volume.iconFont.family
-                                font.weight: volume.iconFont.weight
-                                font.variableAxes: volume.iconFont.variableAxes
-                                font.pixelSize: volume.deviceIconSize
+                                font.family: volume.settings.popupIconFont.family
+                                font.weight: volume.settings.popupIconFont.weight
+                                font.variableAxes: volume.settings.popupIconFont.variableAxes
+                                font.pixelSize: volume.settings.deviceIconSize
                             }
 
                             Text {
@@ -371,8 +401,8 @@ Item {
                                 text: device.modelData.name
                                 textFormat: Text.PlainText
                                 elide: Text.ElideRight
-                                color: device.modelData.current ? volume.popupTextColor : volume.popupSecondaryTextColor
-                                font: volume.popupFont
+                                color: device.modelData.current ? volume.settings.popupTextColor : volume.settings.popupSecondaryTextColor
+                                font: volume.settings.popupFont
                             }
 
                             Text {
@@ -380,12 +410,12 @@ Item {
                                 anchors.rightMargin: 10
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: device.modelData.current
-                                text: "\ue73e"
-                                color: volume.accentColor
-                                font.family: volume.iconFont.family
-                                font.weight: volume.iconFont.weight
-                                font.variableAxes: volume.iconFont.variableAxes
-                                font.pixelSize: volume.checkIconSize
+                                text: volume.settings.popupIcons.check
+                                color: volume.settings.accentColor
+                                font.family: volume.settings.popupIconFont.family
+                                font.weight: volume.settings.popupIconFont.weight
+                                font.variableAxes: volume.settings.popupIconFont.variableAxes
+                                font.pixelSize: volume.settings.checkIconSize
                             }
 
                             MouseArea {
@@ -413,6 +443,8 @@ Item {
                     IconButton {
                         glyph: volume.icon(audio.volume, audio.muted)
                         iconSize: 16
+                        // The bar's speaker icon, so the bar's icon font
+                        iconFont: volume.settings.iconFont
                         enabled: audio.available
                         tip: audio.muted ? "Unmute" : "Mute"
                         onClicked: audio.toggleMute()
@@ -426,7 +458,7 @@ Item {
                         enabled: audio.available
                         onMoved: audio.setVolume(Math.round(value))
                         onPressedChanged: {
-                            if (!pressed && volume.beepOnRelease)
+                            if (!pressed && volume.settings.beepOnRelease)
                                 audio.beep()
                         }
                         Accessible.name: "Volume"
@@ -435,12 +467,12 @@ Item {
                         Layout.preferredWidth: 28
                         horizontalAlignment: Text.AlignRight
                         text: audio.volume
-                        color: volume.popupTextColor
-                        font: volume.popupFont
+                        color: volume.settings.popupTextColor
+                        font: volume.settings.popupFont
                     }
                     IconButton {
-                        visible: volume.showApps && audio.apps.length > 0
-                        glyph: popup.appsOpen ? "\ue70e" : "\ue70d"
+                        visible: volume.settings.showApps && audio.apps.length > 0
+                        glyph: popup.appsOpen ? volume.settings.popupIcons.collapse : volume.settings.popupIcons.expand
                         iconSize: 12
                         checked: popup.appsOpen
                         tip: "App volumes"
@@ -454,12 +486,12 @@ Item {
                     Layout.leftMargin: 12
                     Layout.rightMargin: 12
                     Layout.bottomMargin: 12
-                    visible: popup.appsOpen && volume.showApps && audio.apps.length > 0
+                    visible: popup.appsOpen && volume.settings.showApps && audio.apps.length > 0
                     implicitHeight: apps.implicitHeight + 12
                     radius: 8
-                    color: volume.popupCardColor
+                    color: volume.settings.popupCardColor
                     border.width: 1
-                    border.color: volume.popupCardBorderColor
+                    border.color: volume.settings.popupCardBorderColor
 
                     Column {
                         id: apps
@@ -481,7 +513,7 @@ Item {
                                     Layout.preferredWidth: 36
                                     Layout.preferredHeight: 36
                                     radius: 6
-                                    color: iconArea.containsMouse ? volume.popupHoverColor : "transparent"
+                                    color: iconArea.containsMouse ? volume.settings.popupHoverColor : "transparent"
                                     Accessible.role: Accessible.Button
                                     Accessible.name: app.modelData.muted ? `Unmute ${app.modelData.name}` : `Mute ${app.modelData.name}`
                                     Accessible.onPressAction: audio.setAppMuted(app.modelData.key, !app.modelData.muted)
@@ -524,13 +556,13 @@ Item {
                                             text: app.modelData.name
                                             textFormat: Text.PlainText
                                             elide: Text.ElideRight
-                                            color: app.modelData.muted ? volume.popupTertiaryTextColor : volume.popupSecondaryTextColor
-                                            font: volume.popupSmallFont
+                                            color: app.modelData.muted ? volume.settings.popupTertiaryTextColor : volume.settings.popupSecondaryTextColor
+                                            font: volume.settings.popupSmallFont
                                         }
                                         Text {
                                             text: app.modelData.muted ? "Muted" : Math.round(appSlider.value)
-                                            color: volume.popupTertiaryTextColor
-                                            font: volume.popupSmallFont
+                                            color: volume.settings.popupTertiaryTextColor
+                                            font: volume.settings.popupSmallFont
                                         }
                                     }
                                     Slider {
@@ -544,7 +576,7 @@ Item {
                                         opacity: app.modelData.muted ? 0.5 : 1
                                         onMoved: audio.setAppVolume(app.modelData.key, Math.round(value))
                                         onPressedChanged: {
-                                            if (!pressed && volume.beepOnRelease)
+                                            if (!pressed && volume.settings.beepOnRelease)
                                                 audio.beep()
                                         }
                                         Accessible.name: `${app.modelData.name} volume`
@@ -561,9 +593,9 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: volume.popupRadius - 1
-                    bottomRightRadius: volume.popupRadius - 1
-                    color: footerArea.containsMouse ? Qt.tint(volume.popupSecondaryBackgroundColor, volume.popupHoverColor) : volume.popupSecondaryBackgroundColor
+                    bottomLeftRadius: volume.settings.popupRadius - 1
+                    bottomRightRadius: volume.settings.popupRadius - 1
+                    color: footerArea.containsMouse ? Qt.tint(volume.settings.popupSecondaryBackgroundColor, volume.settings.popupHoverColor) : volume.settings.popupSecondaryBackgroundColor
                     Accessible.role: Accessible.Link
                     Accessible.name: "Sound settings"
                     Accessible.onPressAction: {
@@ -574,7 +606,7 @@ Item {
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: volume.popupDividerColor
+                        color: volume.settings.popupDividerColor
                     }
 
                     Text {
@@ -582,21 +614,21 @@ Item {
                         anchors.leftMargin: 15
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Sound settings"
-                        color: footerArea.containsMouse ? volume.popupTextColor : volume.popupSecondaryTextColor
-                        font: volume.popupSmallFont
+                        color: footerArea.containsMouse ? volume.settings.popupTextColor : volume.settings.popupSecondaryTextColor
+                        font: volume.settings.popupSmallFont
                     }
 
                     Text {
                         anchors.right: parent.right
                         anchors.rightMargin: 14
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "\ue76c"
-                        color: volume.popupTextColor
+                        text: volume.settings.popupIcons.open
+                        color: volume.settings.popupTextColor
                         opacity: footerArea.containsMouse ? 1 : 0.75
-                        font.family: volume.iconFont.family
-                        font.weight: volume.iconFont.weight
-                        font.variableAxes: volume.iconFont.variableAxes
-                        font.pixelSize: volume.footerIconSize
+                        font.family: volume.settings.popupIconFont.family
+                        font.weight: volume.settings.popupIconFont.weight
+                        font.variableAxes: volume.settings.popupIconFont.variableAxes
+                        font.pixelSize: volume.settings.footerIconSize
                     }
 
                     MouseArea {

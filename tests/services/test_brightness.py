@@ -172,8 +172,9 @@ def test_the_bar_shows_the_level_and_hides_where_brightness_cant_be_controlled(
     widget, host, _engine, warnings = load_widget()
     icon, label = find_item(widget, "icon"), find_item(widget, "label")
     assert icon is not None and label is not None
-    widget.setProperty("icons", ["dim", "half", "bright"])
-    widget.setProperty("label", "{percent}%")
+    settings = widget.property("settings")
+    settings.setProperty("icons", ["dim", "half", "bright"])
+    settings.setProperty("label", "{percent}%")
     assert widget.property("implicitWidth") > 0
     assert (icon.property("text"), label.property("text")) == ("half", "40%")
     service.set_brightness(EXTERNAL, 100)
@@ -200,8 +201,9 @@ def test_auto_light_sets_each_level_once_when_day_and_night_change(
 
     monkeypatch.setattr(control_module, "is_night", is_night)
     widget, host, _engine, warnings = load_widget()
-    widget.setProperty("nightLevel", 30)
-    widget.setProperty("dayLevel", 90)
+    settings = widget.property("settings")
+    settings.setProperty("nightLevel", 30)
+    settings.setProperty("dayLevel", 90)
     for _ in range(2):
         QMetaObject.invokeMethod(widget, "applyAutoLight")
     night[0] = False

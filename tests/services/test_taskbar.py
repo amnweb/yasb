@@ -375,7 +375,7 @@ def widget(manager: Manager) -> Iterator[tuple[QQuickItem, list[str]]]:
     item.setParentItem(host.contentItem())
     item.setHeight(32)
     # The tests wait for animations, so they take the same time whatever the widget file sets
-    QQmlProperty.write(item, "animationDuration", 200)
+    QQmlProperty.write(item.property("settings"), "animationDuration", 200)
     host.show()
     yield item, warnings
     item.setParentItem(None)
@@ -402,7 +402,7 @@ def test_the_widget_shows_a_button_per_app_or_per_window(widget: tuple[QQuickIte
     wait(50)
     assert buttons.property("count") == 3
     assert [count.isVisible() for count in named(item, "count")] == [False, True, False]
-    QQmlProperty.write(item, "grouping", False)
+    QQmlProperty.write(item.property("settings"), "grouping", False)
     wait(50)
     assert buttons.property("count") == 4
     assert not warnings, warnings
@@ -413,7 +413,7 @@ def test_only_the_flashing_windows_preview_uses_the_attention_color(
 ) -> None:
     item, warnings = widget
     attention = QColor("#27c189")
-    assert QQmlProperty.write(item, "attentionColor", attention)
+    assert QQmlProperty.write(item.property("settings"), "attentionColor", attention)
     attention.setAlphaF(0.28)
     manager.open(12, "Calendar - Outlook", "outlook")
     preview = item.findChild(QQuickWindow, "previewWindow")

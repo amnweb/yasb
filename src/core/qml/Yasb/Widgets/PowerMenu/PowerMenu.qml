@@ -10,67 +10,101 @@ import Yasb.Themes
 Item {
     id: powerMenu
 
+    component PopupIcons: QtObject {
+        property string user
+        property string lock
+        property string signout
+        property string sleep
+        property string hibernate
+        property string restart
+        property string shutdown
+        property string forceRestart
+        property string forceShutdown
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // The glyph on the bar, drawn in iconFont and the text colour
+        property string icon: "\ue7e8"
+        property int iconSize: theme.bar.iconFont.pixelSize
+        // The buttons, in order, each with its action's icon from popupIcons. Actions: lock, signout, sleep, hibernate,
+        // restart, shutdown, force_restart, force_shutdown
+        property var buttons: [
+            { action: "lock", label: qsTr("Lock") },
+            { action: "signout", label: qsTr("Sign out") },
+            { action: "sleep", label: qsTr("Sleep") },
+            { action: "restart", label: qsTr("Restart") },
+            { action: "shutdown", label: qsTr("Shut down") }
+        ]
+        // Your picture, name, email and account type above the buttons
+        property bool showUser: true
+        property int avatarSize: 96
+        property bool showUptime: true
+        // How dark the screen gets behind the menu, 0 to 1; it is also blurred when the bar has a backdrop
+        property real dim: 0.4
+        // Fade in and out, in milliseconds
+        property int animationDuration: 200
+        // The icon on the bar takes the theme's text colour unless the widget file sets it
+        property color textColor: theme.colors.text
+        // Text and icons on the full-screen menu, which is always over a darkened screen
+        property color menuColor: "#ffffff"
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        // The user's name, email and account type, each button's glyph and text, and the uptime, in the theme's
+        // popup font family
+        property font userNameFont
+        userNameFont.family: theme.popup.font.family
+        userNameFont.pixelSize: 32
+        userNameFont.weight: 600
+        property font emailFont
+        emailFont.family: theme.popup.font.family
+        emailFont.pixelSize: 13
+        emailFont.weight: 600
+        property font accountTypeFont
+        accountTypeFont.family: theme.popup.font.family
+        accountTypeFont.pixelSize: 11
+        accountTypeFont.weight: 600
+        property int buttonIconSize: 24
+        property font buttonFont
+        buttonFont.family: theme.popup.font.family
+        buttonFont.pixelSize: 13
+        buttonFont.weight: 600
+        property font uptimeFont
+        uptimeFont.family: theme.popup.font.family
+        uptimeFont.pixelSize: 12
+        readonly property PopupIcons popupIcons: PopupIcons {
+            // In place of your picture while there is none
+            user: "\ue77b"
+            lock: "\ue72e"
+            signout: "\uf3b1"
+            sleep: "\ue708"
+            restart: "\ue777"
+            shutdown: "\ue7e8"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // The glyph on the bar, drawn in iconFont and the text colour
-    property string icon: "\ue7e8"
-    property int iconSize: theme.bar.iconFont.pixelSize
-    // The buttons, in order, each with a glyph from iconFont. Actions: lock, signout, sleep, hibernate, restart, shutdown, force_restart, force_shutdown
-    property var buttons: [
-        { action: "lock", label: qsTr("Lock"), icon: "\ue72e" },
-        { action: "signout", label: qsTr("Sign out"), icon: "\uf3b1" },
-        { action: "sleep", label: qsTr("Sleep"), icon: "\ue708" },
-        { action: "restart", label: qsTr("Restart"), icon: "\ue777" },
-        { action: "shutdown", label: qsTr("Shut down"), icon: "\ue7e8" }
-    ]
-    // Your picture, name, email and account type above the buttons
-    property bool showUser: true
-    property int avatarSize: 96
-    property bool showUptime: true
-    // How dark the screen gets behind the menu, 0 to 1; it is also blurred when the bar has a backdrop
-    property real dim: 0.4
-    // Fade in and out, in milliseconds
-    property int animationDuration: 200
+    readonly property Settings settings: Settings {
+        theme: powerMenu.theme
+    }
 
     readonly property bool dark: theme.dark
-    // The icon on the bar takes the theme's text colour unless the widget file sets it
-    property color textColor: theme.colors.text
-    // Text and icons on the full-screen menu, which is always over a darkened screen
-    property color menuColor: "#ffffff"
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    // The user's name, email and account type, each button's glyph and text, and the uptime, in the theme's
-    // popup font family
-    property font userNameFont
-    userNameFont.family: theme.popup.font.family
-    userNameFont.pixelSize: 32
-    userNameFont.weight: Font.DemiBold
-    property font emailFont
-    emailFont.family: theme.popup.font.family
-    emailFont.pixelSize: 13
-    emailFont.weight: Font.DemiBold
-    property font accountTypeFont
-    accountTypeFont.family: theme.popup.font.family
-    accountTypeFont.pixelSize: 11
-    accountTypeFont.weight: Font.DemiBold
-    property int buttonIconSize: 24
-    property font buttonFont
-    buttonFont.family: theme.popup.font.family
-    buttonFont.pixelSize: 13
-    buttonFont.weight: Font.DemiBold
-    property font uptimeFont
-    uptimeFont.family: theme.popup.font.family
-    uptimeFont.pixelSize: 12
 
     // Held so the garbage collector doesn't destroy the open menu
     property Window opened: null
 
-    implicitWidth: iconSize
-    implicitHeight: iconSize
+    implicitWidth: settings.iconSize
+    implicitHeight: settings.iconSize
     Accessible.role: Accessible.Button
     Accessible.name: qsTr("Power menu")
     Accessible.onPressAction: open()
@@ -82,6 +116,11 @@ Item {
         opened = overlay.createObject(null, {
             area: Qt.rect(screen.virtualX, screen.virtualY, screen.width, screen.height)
         })
+    }
+
+    // force_restart reads popupIcons.forceRestart
+    function buttonIcon(action: string): string {
+        return settings.popupIcons[action.replace(/_(\w)/g, (match, letter) => letter.toUpperCase())] ?? ""
     }
 
     function uptimeText(seconds: int): string {
@@ -101,12 +140,12 @@ Item {
 
     Text {
         anchors.centerIn: parent
-        text: powerMenu.icon
-        color: powerMenu.textColor
-        font.family: powerMenu.iconFont.family
-        font.weight: powerMenu.iconFont.weight
-        font.variableAxes: powerMenu.iconFont.variableAxes
-        font.pixelSize: powerMenu.iconSize
+        text: powerMenu.settings.icon
+        color: powerMenu.settings.textColor
+        font.family: powerMenu.settings.iconFont.family
+        font.weight: powerMenu.settings.iconFont.weight
+        font.variableAxes: powerMenu.settings.iconFont.variableAxes
+        font.pixelSize: powerMenu.settings.iconSize
     }
 
     MouseArea {
@@ -167,7 +206,7 @@ Item {
                 target: window
                 property: "reveal"
                 to: 1
-                duration: powerMenu.animationDuration
+                duration: powerMenu.settings.animationDuration
                 easing.type: Easing.OutCubic
             }
 
@@ -178,7 +217,7 @@ Item {
                     target: window
                     property: "reveal"
                     to: 0
-                    duration: powerMenu.animationDuration
+                    duration: powerMenu.settings.animationDuration
                     easing.type: Easing.InCubic
                 }
 
@@ -202,7 +241,7 @@ Item {
                 id: shade
 
                 anchors.fill: parent
-                color: Qt.alpha("#000000", powerMenu.dim)
+                color: Qt.alpha("#000000", powerMenu.settings.dim)
                 opacity: window.reveal
             }
 
@@ -225,31 +264,31 @@ Item {
 
                     Column {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        visible: powerMenu.showUser
+                        visible: powerMenu.settings.showUser
                         spacing: 6
 
                         Item {
                             id: avatar
 
                             anchors.horizontalCenter: parent.horizontalCenter
-                            width: powerMenu.avatarSize
-                            height: powerMenu.avatarSize
+                            width: powerMenu.settings.avatarSize
+                            height: powerMenu.settings.avatarSize
 
                             Rectangle {
                                 anchors.fill: parent
                                 radius: width / 2
-                                color: Qt.alpha(powerMenu.menuColor, 0.1)
-                                border.color: Qt.alpha(powerMenu.menuColor, 0.2)
+                                color: Qt.alpha(powerMenu.settings.menuColor, 0.1)
+                                border.color: Qt.alpha(powerMenu.settings.menuColor, 0.2)
                                 visible: picture.status !== Image.Ready
 
                                 Text {
                                     anchors.centerIn: parent
-                                    text: "\ue77b"
-                                    color: powerMenu.menuColor
-                                    font.family: powerMenu.iconFont.family
-                                    font.weight: powerMenu.iconFont.weight
-                                    font.variableAxes: powerMenu.iconFont.variableAxes
-                                    font.pixelSize: Math.round(powerMenu.avatarSize * 0.4)
+                                    text: powerMenu.settings.popupIcons.user
+                                    color: powerMenu.settings.menuColor
+                                    font.family: powerMenu.settings.popupIconFont.family
+                                    font.weight: powerMenu.settings.popupIconFont.weight
+                                    font.variableAxes: powerMenu.settings.popupIconFont.variableAxes
+                                    font.pixelSize: Math.round(powerMenu.settings.avatarSize * 0.4)
                                 }
                             }
 
@@ -269,7 +308,7 @@ Item {
 
                                     anchors.fill: parent
                                     source: power.avatar
-                                    sourceSize: Qt.size(powerMenu.avatarSize * 2, powerMenu.avatarSize * 2)
+                                    sourceSize: Qt.size(powerMenu.settings.avatarSize * 2, powerMenu.settings.avatarSize * 2)
                                     fillMode: Image.PreserveAspectCrop
                                     asynchronous: true
                                 }
@@ -293,16 +332,16 @@ Item {
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: power.userName
-                            color: powerMenu.menuColor
-                            font: powerMenu.userNameFont
+                            color: powerMenu.settings.menuColor
+                            font: powerMenu.settings.userNameFont
                         }
 
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             visible: text !== ""
                             text: power.email
-                            color: Qt.alpha(powerMenu.menuColor, 0.7)
-                            font: powerMenu.emailFont
+                            color: Qt.alpha(powerMenu.settings.menuColor, 0.7)
+                            font: powerMenu.settings.emailFont
                         }
 
                         Rectangle {
@@ -310,15 +349,15 @@ Item {
                             width: accountLabel.implicitWidth + 16
                             height: accountLabel.implicitHeight + 6
                             radius: height / 2
-                            color: Qt.alpha(powerMenu.menuColor, 0.12)
+                            color: Qt.alpha(powerMenu.settings.menuColor, 0.12)
 
                             Text {
                                 id: accountLabel
 
                                 anchors.centerIn: parent
                                 text: power.accountType
-                                color: Qt.alpha(powerMenu.menuColor, 0.85)
-                                font: powerMenu.accountTypeFont
+                                color: Qt.alpha(powerMenu.settings.menuColor, 0.85)
+                                font: powerMenu.settings.accountTypeFont
                             }
                         }
                     }
@@ -330,7 +369,7 @@ Item {
                         spacing: 16
 
                         Repeater {
-                            model: powerMenu.buttons
+                            model: powerMenu.settings.buttons
 
                             T.AbstractButton {
                                 id: button
@@ -358,19 +397,19 @@ Item {
                                         width: 88
                                         height: 88
                                         radius: 44
-                                        color: Qt.alpha(powerMenu.menuColor, button.pressed ? 0.24
+                                        color: Qt.alpha(powerMenu.settings.menuColor, button.pressed ? 0.24
                                             : button.hovered || button.visualFocus ? 0.18 : 0.08)
                                         border.width: button.visualFocus ? 2 : 1
-                                        border.color: Qt.alpha(powerMenu.menuColor, button.visualFocus ? 0.28 : 0.014)
+                                        border.color: Qt.alpha(powerMenu.settings.menuColor, button.visualFocus ? 0.28 : 0.014)
 
                                         Text {
                                             anchors.centerIn: parent
-                                            text: button.modelData.icon ?? ""
-                                            color: powerMenu.menuColor
-                                            font.family: powerMenu.iconFont.family
-                                            font.weight: powerMenu.iconFont.weight
-                                            font.variableAxes: powerMenu.iconFont.variableAxes
-                                            font.pixelSize: powerMenu.buttonIconSize
+                                            text: powerMenu.buttonIcon(button.modelData.action)
+                                            color: powerMenu.settings.menuColor
+                                            font.family: powerMenu.settings.popupIconFont.family
+                                            font.weight: powerMenu.settings.popupIconFont.weight
+                                            font.variableAxes: powerMenu.settings.popupIconFont.variableAxes
+                                            font.pixelSize: powerMenu.settings.buttonIconSize
                                         }
                                     }
 
@@ -379,8 +418,8 @@ Item {
                                         anchors.top: disc.bottom
                                         anchors.topMargin: 10
                                         text: button.text
-                                        color: powerMenu.menuColor
-                                        font: powerMenu.buttonFont
+                                        color: powerMenu.settings.menuColor
+                                        font: powerMenu.settings.buttonFont
                                     }
                                 }
                             }
@@ -392,11 +431,11 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: 48
-                    visible: powerMenu.showUptime
+                    visible: powerMenu.settings.showUptime
                     opacity: window.reveal
                     text: powerMenu.uptimeText(power.uptime)
-                    color: Qt.alpha(powerMenu.menuColor, 0.7)
-                    font: powerMenu.uptimeFont
+                    color: Qt.alpha(powerMenu.settings.menuColor, 0.7)
+                    font: powerMenu.settings.uptimeFont
                 }
             }
         }

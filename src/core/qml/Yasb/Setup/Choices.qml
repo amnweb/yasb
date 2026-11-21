@@ -5,6 +5,8 @@ QtObject {
     id: choices
 
     property bool backdropSupported: false
+    // YASB's widgets by name, each with its title and description
+    property var manifests: ({})
 
     // top or bottom: widgets aren't made for a vertical bar yet
     property string edge: "top"
@@ -24,41 +26,41 @@ QtObject {
     property bool updateCheck: true
     property bool autostart: false
 
-    // name, title, description, icon, position, on the bar by default
+    // name, icon, position, on the bar by default
     readonly property var offered: [
-        ["KomorebiWorkspaces", qsTr("Komorebi workspaces"), qsTr("Workspaces of the Komorebi tiling window manager"), "\uECA5", "left", false],
-        ["GlazewmWorkspaces", qsTr("GlazeWM workspaces"), qsTr("Workspaces of the GlazeWM tiling window manager"), "\uECA5", "left", false],
-        ["WindowsDesktops", qsTr("Virtual desktops"), qsTr("Your Windows virtual desktops"), "\uE7C4", "left", false],
-        ["Taskbar", qsTr("Taskbar"), qsTr("Your pinned and open apps, like the Windows taskbar"), "\uE90E", "left", false],
-        ["ActiveWindow", qsTr("Active window"), qsTr("The window you're working in"), "\uECAA", "left", true],
-        ["Clock", qsTr("Clock"), qsTr("The time and date"), "\uEC92", "center", true],
-        ["Weather", qsTr("Weather"), qsTr("The weather for your location"), "\uE753", "center", false],
-        ["Media", qsTr("Media"), qsTr("What's playing on your PC"), "\uE8D6", "right", true],
-        ["AudioVisualizer", qsTr("Audio visualizer"), qsTr("An animation that moves with the sound playing"), "\uE9E9", "right", false],
-        ["Cpu", qsTr("CPU"), qsTr("Your processor usage"), "\uEEA1", "right", false],
-        ["Memory", qsTr("Memory"), qsTr("Your memory usage"), "\uEEA0", "right", false],
-        ["Gpu", qsTr("GPU"), qsTr("Your graphics card usage"), "\uF211", "right", false],
-        ["NetworkTraffic", qsTr("Network traffic"), qsTr("Your download and upload speed"), "\uEDA3", "right", false],
-        ["Systray", qsTr("System tray"), qsTr("The tray icons of apps running in the background"), "\uE70E", "right", true],
-        ["Language", qsTr("Keyboard language"), qsTr("Your keyboard layout"), "\uE765", "right", false],
-        ["Bluetooth", qsTr("Bluetooth"), qsTr("Bluetooth and your paired devices"), "\uE702", "right", false],
-        ["Network", qsTr("Network"), qsTr("Your network connection"), "\uE701", "right", true],
-        ["Volume", qsTr("Volume"), qsTr("Your sound volume"), "\uE767", "right", true],
-        ["Microphone", qsTr("Microphone"), qsTr("Your microphone"), "\uE720", "right", false],
-        ["Brightness", qsTr("Brightness"), qsTr("Your screen brightness"), "\uE706", "right", false],
-        ["Battery", qsTr("Battery"), qsTr("Your battery level"), "\ueba6", "right", false],
-        ["PowerPlan", qsTr("Power plan"), qsTr("The Windows power plan"), "\uE945", "right", false],
-        ["Updates", qsTr("Updates"), qsTr("Available updates for Windows and your apps"), "\uE896", "right", false],
-        ["Github", qsTr("GitHub"), qsTr("Your GitHub notifications"), "\uE943", "right", false],
-        ["ServerMonitor", qsTr("Server monitor"), qsTr("Whether your servers and websites are online"), "\uf760", "right", false],
-        ["Obs", qsTr("OBS"), qsTr("Recording and streaming in OBS Studio"), "\uE7C8", "right", false],
-        ["Wallpapers", qsTr("Wallpapers"), qsTr("A gallery of your wallpapers"), "\uE91B", "right", false],
-        ["WindowSwitcher", qsTr("Window switcher"), qsTr("Your open windows in a row, to switch between them"), "\uf156", "right", false],
-        ["Launchpad", qsTr("Launchpad"), qsTr("All your apps in one grid, with your own groups"), "\ue8a9", "right", false],
-        ["QuickLaunch", qsTr("Quick Launch"), qsTr("A search launcher for your apps, files and more"), "\uE721", "right", false],
-        ["Dnd", qsTr("Do not disturb"), qsTr("Windows' do not disturb, off, priority only or alarms only"), "\uE708", "right", false],
-        ["Notifications", qsTr("Notifications"), qsTr("Your Windows notifications menu"), "\uE7E7", "right", true],
-        ["PowerMenu", qsTr("Power menu"), qsTr("A power menu to lock, sign out, sleep, restart or shut down"), "\uE7E8", "right", true]
+        ["KomorebiWorkspaces", "\uECA5", "left", false],
+        ["GlazewmWorkspaces", "\uECA5", "left", false],
+        ["WindowsDesktops", "\uE7C4", "left", false],
+        ["Taskbar", "\uE90E", "left", false],
+        ["ActiveWindow", "\uECAA", "left", true],
+        ["Clock", "\uEC92", "center", true],
+        ["Weather", "\uE753", "center", false],
+        ["Media", "\uE8D6", "right", true],
+        ["AudioVisualizer", "\uE9E9", "right", false],
+        ["Cpu", "\uEEA1", "right", false],
+        ["Memory", "\uEEA0", "right", false],
+        ["Gpu", "\uF211", "right", false],
+        ["NetworkTraffic", "\uEDA3", "right", false],
+        ["Systray", "\uE70E", "right", true],
+        ["Language", "\uE765", "right", false],
+        ["Bluetooth", "\uE702", "right", false],
+        ["Network", "\uE701", "right", true],
+        ["Volume", "\uE767", "right", true],
+        ["Microphone", "\uE720", "right", false],
+        ["Brightness", "\uE706", "right", false],
+        ["Battery", "\ueba6", "right", false],
+        ["PowerPlan", "\uE945", "right", false],
+        ["Updates", "\uE896", "right", false],
+        ["Github", "\uE943", "right", false],
+        ["ServerMonitor", "\uf760", "right", false],
+        ["Obs", "\uE7C8", "right", false],
+        ["Wallpapers", "\uE91B", "right", false],
+        ["WindowSwitcher", "\uf156", "right", false],
+        ["Launchpad", "\ue8a9", "right", false],
+        ["QuickLaunch", "\uE721", "right", false],
+        ["Dnd", "\uE708", "right", false],
+        ["Notifications", "\uE7E7", "right", true],
+        ["PowerMenu", "\uE7E8", "right", true]
     ]
 
     // A header row for each position, followed by its widgets
@@ -82,7 +84,7 @@ QtObject {
         const shown = new Set()
         for (let index = 0; index < widgets.count; index++)
             shown.add(widgets.get(index).name)
-        return offered.filter(widget => !shown.has(widget[0]))
+        return offered.filter(widget => !shown.has(widget[0])).map(widget => widgetRow(widget))
     }
 
     function addWidget(position: string, name: string): void {
@@ -102,7 +104,8 @@ QtObject {
     }
 
     function widgetRow(widget: var): var {
-        return { header: false, name: widget[0], title: widget[1], description: widget[2], icon: widget[3] }
+        const manifest = manifests[widget[0]]
+        return { header: false, name: widget[0], title: manifest.title, description: manifest.description, icon: widget[1] }
     }
 
     function toSetup(): var {
@@ -127,7 +130,7 @@ QtObject {
         for (const [position, heading] of positions) {
             widgets.append({ header: true, name: position, title: heading, description: "", icon: "" })
             for (const widget of offered) {
-                if (widget[4] === position && widget[5])
+                if (widget[2] === position && widget[3])
                     widgets.append(widgetRow(widget))
             }
         }

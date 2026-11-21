@@ -12,243 +12,290 @@ import Yasb.Themes
 Item {
     id: quickLaunch
 
+    component Provider: QtObject {
+        property bool enabled
+        property string prefix
+        property int priority
+        property var options
+    }
+
+    component PopupIcons: QtObject {
+        property string search
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Hotkey that opens the launcher, such as "alt+space"
+        property string hotkey: ""
+        // active, cursor or primary: which screen's widget opens on the hotkey
+        property string hotkeyScreen: "active"
+        // What each search provider does: on or off, the prefix typed before a space to use it ("*" for none),
+        // its order among the others, and its own options. Apps, colour, file search and GitHub notifications are on;
+        // turn another on with `settings.calculator.enabled: true`.
+        property Provider apps: Provider {
+            enabled: true
+            prefix: "*"
+            priority: 0
+            options: ({ show_recent: true, max_recent: 10, show_description: true })
+        }
+
+        property Provider bookmarks: Provider {
+            enabled: false
+            prefix: "*"
+            priority: 0
+            options: ({ browser: "all", profile: "Default" })
+        }
+
+        property Provider calculator: Provider {
+            enabled: false
+            prefix: "="
+            priority: 0
+        }
+
+        property Provider clipboardHistory: Provider {
+            enabled: false
+            prefix: "cb"
+            priority: 0
+            options: ({ max_items: 30, show_preview: true })
+        }
+
+        property Provider color: Provider {
+            enabled: true
+            prefix: "c:"
+            priority: 0
+        }
+
+        property Provider binance: Provider {
+            enabled: false
+            prefix: "crypto"
+            priority: 0
+            options: ({ pairs: ["BTC/USDT"], round: 2, open_url: false, domain: "api-gcp.binance.com" })
+        }
+
+        property Provider currency: Provider {
+            enabled: false
+            prefix: "$"
+            priority: 0
+        }
+
+        property Provider devTools: Provider {
+            enabled: false
+            prefix: "dev"
+            priority: 0
+        }
+
+        property Provider emoji: Provider {
+            enabled: false
+            prefix: ":"
+            priority: 0
+        }
+
+        property Provider fileSearch: Provider {
+            enabled: true
+            prefix: "/"
+            priority: 0
+            options: ({ backend: "disk", show_path: true, show_preview: false })
+        }
+
+        property Provider githubNotifications: Provider {
+            enabled: true
+            prefix: "gh"
+            priority: 0
+            options: ({ token: "env" })
+        }
+
+        property Provider hackerNews: Provider {
+            enabled: false
+            prefix: "hn"
+            priority: 0
+            options: ({ cache_ttl: 300, max_items: 30 })
+        }
+
+        property Provider ipInfo: Provider {
+            enabled: false
+            prefix: "ip"
+            priority: 0
+        }
+
+        property Provider killProcess: Provider {
+            enabled: false
+            prefix: "!"
+            priority: 0
+        }
+
+        property Provider portViewer: Provider {
+            enabled: false
+            prefix: "pv"
+            priority: 0
+            options: ({ tcp_listening_only: true, include_established: false })
+        }
+
+        property Provider windowsSettings: Provider {
+            enabled: false
+            prefix: "@"
+            priority: 0
+        }
+
+        property Provider snippets: Provider {
+            enabled: false
+            prefix: ";"
+            priority: 0
+            options: ({ type_delay: 200 })
+        }
+
+        property Provider ssh: Provider {
+            enabled: false
+            prefix: "ssh"
+            priority: 0
+            options: ({ ssh_config_path: "" })
+        }
+
+        property Provider systemCommands: Provider {
+            enabled: false
+            prefix: ">"
+            priority: 0
+        }
+
+        property Provider unitConverter: Provider {
+            enabled: false
+            prefix: "~"
+            priority: 0
+        }
+
+        property Provider vscode: Provider {
+            enabled: false
+            prefix: "vsc"
+            priority: 0
+            options: ({ state_storage_path: "" })
+        }
+
+        property Provider webSearch: Provider {
+            enabled: false
+            prefix: "?"
+            priority: 0
+            options: ({ engine: "google", custom_engines: [], remove_engines: [] })
+        }
+
+        property Provider windowSwitcher: Provider {
+            enabled: false
+            prefix: "win"
+            priority: 0
+        }
+
+        property Provider windowsTerminal: Provider {
+            enabled: false
+            prefix: "wt"
+            priority: 0
+        }
+
+        property Provider worldClock: Provider {
+            enabled: false
+            prefix: "tz"
+            priority: 0
+        }
+
+        property Provider wsl: Provider {
+            enabled: false
+            prefix: "wsl"
+            priority: 0
+            options: ({ show_online: true })
+        }
+
+        // The most results the launcher lists, and the most each provider looks for
+        property int maxResults: 50
+        // With nothing typed, list the providers that have a prefix instead of the apps
+        property bool homePage: false
+        property string placeholder: "Search applications..."
+        property bool rememberLastQuery: false
+        property bool showIcons: true
+        property int resultIconSize: 24
+        // The popup shows only the search bar until something is typed or a prefix is picked
+        property bool compactMode: false
+        // One line per result: the title on the left and the description on the right, in at most half the row
+        property bool compactText: false
+        property int popupWidth: 720
+        property int popupHeight: 480
+        // The glyph on the bar, drawn in iconFont and the text colour
+        property string icon: "\ue721"
+        property int iconSize: theme.bar.iconFont.pixelSize
+
+        property color textColor: theme.colors.text
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property color popupSecondaryTextColor: theme.colors.textTertiary
+        property real popupRadius: theme.popup.radius
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 14
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        // Bold text in the preview, the search field and its glyph, each group's heading in the results, and the
+        // colour's code under the picker's lens
+        property font popupStrongFont
+        popupStrongFont.family: theme.popup.font.family
+        popupStrongFont.pixelSize: 13
+        popupStrongFont.weight: 600
+        property font searchFont
+        searchFont.family: theme.popup.font.family
+        searchFont.pixelSize: 16
+        property int searchIconSize: 18
+        property font sectionFont
+        sectionFont.family: theme.popup.font.family
+        sectionFont.pixelSize: 12
+        sectionFont.weight: 600
+        property font colorCodeFont
+        colorCodeFont.family: theme.popup.font.family
+        colorCodeFont.pointSize: 9
+        colorCodeFont.weight: 700
+        readonly property PopupIcons popupIcons: PopupIcons {
+            search: "\ue721"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // Emoji shown in place of a result's icon
+        property font emojiFont
+        emojiFont.family: "Segoe UI Emoji"
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        // The right-click menu on a result: the theme's, unless set here
+        property int menuWidth: 200
+        property color menuColor: theme.menu.background
+        property color menuBorderColor: theme.menu.border
+        property color menuTextColor: theme.colors.text
+        property real menuRadius: theme.menu.radius
+        property font menuFont: theme.menu.font
+        // Milliseconds the right-click menu takes to fade in
+        property int menuOpenDuration: theme.menu.openDuration
+        // The icons in the text fields' right-click menu
+        property int menuIconSize: 16
+        property color popupDividerColor: theme.colors.divider
+        property color popupHoverColor: theme.colors.hover
+        property color popupSelectedColor: theme.colors.selected
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Hotkey that opens the launcher, such as "alt+space"
-    property string hotkey: ""
-    // active, cursor or primary: which screen's widget opens on the hotkey
-    property string hotkeyScreen: "active"
-    // What each search provider does: on or off, the prefix typed before a space to use it ("*" for none),
-    // its order among the others, and its own options. Apps, colour, file search and GitHub notifications are on;
-    // turn another on with `calculator.enabled: true`.
-    component Provider: QtObject {
-        property bool enabled: false
-        property string prefix: "*"
-        property int priority: 0
-        property var options: ({})
+    readonly property Settings settings: Settings {
+        theme: quickLaunch.theme
     }
-
-    property Provider apps: Provider {
-        enabled: true
-        options: ({ show_recent: true, max_recent: 10, show_description: true })
-    }
-
-    property Provider bookmarks: Provider {
-        enabled: false
-        options: ({ browser: "all", profile: "Default" })
-    }
-
-    property Provider calculator: Provider {
-        enabled: false
-        prefix: "="
-    }
-
-    property Provider clipboardHistory: Provider {
-        enabled: false
-        prefix: "cb"
-        options: ({ max_items: 30, show_preview: true })
-    }
-
-    property Provider color: Provider {
-        enabled: true
-        prefix: "c:"
-    }
-
-    property Provider binance: Provider {
-        enabled: false
-        prefix: "crypto"
-        options: ({ pairs: ["BTC/USDT"], round: 2, open_url: false, domain: "api-gcp.binance.com" })
-    }
-
-    property Provider currency: Provider {
-        enabled: false
-        prefix: "$"
-    }
-
-    property Provider devTools: Provider {
-        enabled: false
-        prefix: "dev"
-    }
-
-    property Provider emoji: Provider {
-        enabled: false
-        prefix: ":"
-    }
-
-    property Provider fileSearch: Provider {
-        enabled: true
-        prefix: "/"
-        options: ({ backend: "disk", show_path: true, show_preview: false })
-    }
-
-    property Provider githubNotifications: Provider {
-        enabled: true
-        prefix: "gh"
-        options: ({ token: "env" })
-    }
-
-    property Provider hackerNews: Provider {
-        enabled: false
-        prefix: "hn"
-        options: ({ cache_ttl: 300, max_items: 30 })
-    }
-
-    property Provider ipInfo: Provider {
-        enabled: false
-        prefix: "ip"
-    }
-
-    property Provider killProcess: Provider {
-        enabled: false
-        prefix: "!"
-    }
-
-    property Provider portViewer: Provider {
-        enabled: false
-        prefix: "pv"
-        options: ({ tcp_listening_only: true, include_established: false })
-    }
-
-    property Provider settings: Provider {
-        enabled: false
-        prefix: "@"
-    }
-
-    property Provider snippets: Provider {
-        enabled: false
-        prefix: ";"
-        options: ({ type_delay: 200 })
-    }
-
-    property Provider ssh: Provider {
-        enabled: false
-        prefix: "ssh"
-        options: ({ ssh_config_path: "" })
-    }
-
-    property Provider systemCommands: Provider {
-        enabled: false
-        prefix: ">"
-    }
-
-    property Provider unitConverter: Provider {
-        enabled: false
-        prefix: "~"
-    }
-
-    property Provider vscode: Provider {
-        enabled: false
-        prefix: "vsc"
-        options: ({ state_storage_path: "" })
-    }
-
-    property Provider webSearch: Provider {
-        enabled: false
-        prefix: "?"
-        options: ({ engine: "google", custom_engines: [], remove_engines: [] })
-    }
-
-    property Provider windowSwitcher: Provider {
-        enabled: false
-        prefix: "win"
-    }
-
-    property Provider windowsTerminal: Provider {
-        enabled: false
-        prefix: "wt"
-    }
-
-    property Provider worldClock: Provider {
-        enabled: false
-        prefix: "tz"
-    }
-
-    property Provider wsl: Provider {
-        enabled: false
-        prefix: "wsl"
-        options: ({ show_online: true })
-    }
-
-    // The most results the launcher lists, and the most each provider looks for
-    property int maxResults: 50
-    // With nothing typed, list the providers that have a prefix instead of the apps
-    property bool homePage: false
-    property string placeholder: "Search applications..."
-    property bool rememberLastQuery: false
-    property bool showIcons: true
-    property int resultIconSize: 24
-    // The popup shows only the search bar until something is typed or a prefix is picked
-    property bool compactMode: false
-    // One line per result: the title on the left and the description on the right, in at most half the row
-    property bool compactText: false
-    property int popupWidth: 720
-    property int popupHeight: 480
-    // The glyph on the bar, drawn in iconFont and the text colour
-    property string icon: "\ue721"
-    property int iconSize: theme.bar.iconFont.pixelSize
 
     readonly property bool dark: theme.dark
-    property color textColor: theme.colors.text
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property color popupSecondaryTextColor: theme.colors.textTertiary
-    property real popupRadius: theme.popup.radius
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 14
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    // Bold text in the preview, the search field and its glyph, each group's heading in the results, and the
-    // colour's code under the picker's lens
-    property font popupStrongFont
-    popupStrongFont.family: theme.popup.font.family
-    popupStrongFont.pixelSize: 13
-    popupStrongFont.weight: Font.DemiBold
-    property font searchFont
-    searchFont.family: theme.popup.font.family
-    searchFont.pixelSize: 16
-    property int searchIconSize: 18
-    property font sectionFont
-    sectionFont.family: theme.popup.font.family
-    sectionFont.pixelSize: 12
-    sectionFont.weight: Font.DemiBold
-    property font colorCodeFont
-    colorCodeFont.family: theme.popup.font.family
-    colorCodeFont.pointSize: 9
-    colorCodeFont.weight: Font.Bold
-    // Emoji shown in place of a result's icon
-    property font emojiFont
-    emojiFont.family: "Segoe UI Emoji"
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    // The right-click menu on a result: the theme's, unless set here
-    property int menuWidth: 200
-    property color menuColor: theme.menu.background
-    property color menuBorderColor: theme.menu.border
-    property color menuTextColor: theme.colors.text
-    property real menuRadius: theme.menu.radius
-    property font menuFont: theme.menu.font
-    // Milliseconds the right-click menu takes to fade in
-    property int menuOpenDuration: theme.menu.openDuration
-    // The icons in the text fields' right-click menu
-    property int menuIconSize: 16
-    property color popupDividerColor: theme.colors.divider
-    property color popupHoverColor: theme.colors.hover
-    property color popupSelectedColor: theme.colors.selected
-
     property string prefix: ""
     property bool previewShown: false
     // In compactMode, while nothing is typed and no prefix is picked
-    readonly property bool collapsed: compactMode && prefix === "" && field.text.trim() === ""
+    readonly property bool collapsed: settings.compactMode && prefix === "" && field.text.trim() === ""
 
     implicitWidth: label.width
     implicitHeight: label.height
@@ -263,8 +310,8 @@ Item {
     function open() {
         popup.x = Math.round(quickLaunch.Screen.virtualX + (quickLaunch.Screen.width - popup.width) / 2)
         // From the full height, so the search bar stays where it is when the results show
-        popup.y = Math.round(quickLaunch.Screen.virtualY + (quickLaunch.Screen.height - quickLaunch.popupHeight) / 3)
-        if (!rememberLastQuery) {
+        popup.y = Math.round(quickLaunch.Screen.virtualY + (quickLaunch.Screen.height - quickLaunch.settings.popupHeight) / 3)
+        if (!settings.rememberLastQuery) {
             prefix = ""
             field.text = ""
         }
@@ -321,8 +368,8 @@ Item {
 
     // An item of the text fields' right-click menu, its icon in menuIconSize
     component FieldMenuItem: MenuItem {
-        icon.width: quickLaunch.menuIconSize
-        icon.height: quickLaunch.menuIconSize
+        icon.width: quickLaunch.settings.menuIconSize
+        icon.height: quickLaunch.settings.menuIconSize
     }
 
     component SvgIcon: IconImage {
@@ -333,16 +380,16 @@ Item {
         id: label
 
         y: Math.round((parent.height - height) / 2)
-        width: quickLaunch.iconSize
-        height: quickLaunch.iconSize
+        width: quickLaunch.settings.iconSize
+        height: quickLaunch.settings.iconSize
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        text: quickLaunch.icon
-        color: quickLaunch.textColor
-        font.family: quickLaunch.iconFont.family
-        font.weight: quickLaunch.iconFont.weight
-        font.variableAxes: quickLaunch.iconFont.variableAxes
-        font.pixelSize: quickLaunch.iconSize
+        text: quickLaunch.settings.icon
+        color: quickLaunch.settings.textColor
+        font.family: quickLaunch.settings.iconFont.family
+        font.weight: quickLaunch.settings.iconFont.weight
+        font.variableAxes: quickLaunch.settings.iconFont.variableAxes
+        font.pixelSize: quickLaunch.settings.iconSize
     }
 
     MouseArea {
@@ -352,43 +399,43 @@ Item {
     }
 
     Hotkey {
-        keys: quickLaunch.hotkey
-        screen: quickLaunch.hotkeyScreen
+        keys: quickLaunch.settings.hotkey
+        screen: quickLaunch.settings.hotkeyScreen
         onActivated: quickLaunch.toggle()
     }
 
     QuickLaunchSearch {
         id: search
 
-        maxResults: quickLaunch.maxResults
-        homePage: quickLaunch.homePage
+        maxResults: quickLaunch.settings.maxResults
+        homePage: quickLaunch.settings.homePage
         providers: ({
-            apps: settingsOf(quickLaunch.apps),
-            bookmarks: settingsOf(quickLaunch.bookmarks),
-            calculator: settingsOf(quickLaunch.calculator),
-            clipboard_history: settingsOf(quickLaunch.clipboardHistory),
-            color: settingsOf(quickLaunch.color),
-            binance: settingsOf(quickLaunch.binance),
-            currency: settingsOf(quickLaunch.currency),
-            dev_tools: settingsOf(quickLaunch.devTools),
-            emoji: settingsOf(quickLaunch.emoji),
-            file_search: settingsOf(quickLaunch.fileSearch),
-            github_notifications: settingsOf(quickLaunch.githubNotifications),
-            hacker_news: settingsOf(quickLaunch.hackerNews),
-            ip_info: settingsOf(quickLaunch.ipInfo),
-            kill_process: settingsOf(quickLaunch.killProcess),
-            port_viewer: settingsOf(quickLaunch.portViewer),
-            settings: settingsOf(quickLaunch.settings),
-            snippets: settingsOf(quickLaunch.snippets),
-            ssh: settingsOf(quickLaunch.ssh),
-            system_commands: settingsOf(quickLaunch.systemCommands),
-            unit_converter: settingsOf(quickLaunch.unitConverter),
-            vscode: settingsOf(quickLaunch.vscode),
-            web_search: settingsOf(quickLaunch.webSearch),
-            window_switcher: settingsOf(quickLaunch.windowSwitcher),
-            windows_terminal: settingsOf(quickLaunch.windowsTerminal),
-            world_clock: settingsOf(quickLaunch.worldClock),
-            wsl: settingsOf(quickLaunch.wsl)
+            apps: settingsOf(quickLaunch.settings.apps),
+            bookmarks: settingsOf(quickLaunch.settings.bookmarks),
+            calculator: settingsOf(quickLaunch.settings.calculator),
+            clipboard_history: settingsOf(quickLaunch.settings.clipboardHistory),
+            color: settingsOf(quickLaunch.settings.color),
+            binance: settingsOf(quickLaunch.settings.binance),
+            currency: settingsOf(quickLaunch.settings.currency),
+            dev_tools: settingsOf(quickLaunch.settings.devTools),
+            emoji: settingsOf(quickLaunch.settings.emoji),
+            file_search: settingsOf(quickLaunch.settings.fileSearch),
+            github_notifications: settingsOf(quickLaunch.settings.githubNotifications),
+            hacker_news: settingsOf(quickLaunch.settings.hackerNews),
+            ip_info: settingsOf(quickLaunch.settings.ipInfo),
+            kill_process: settingsOf(quickLaunch.settings.killProcess),
+            port_viewer: settingsOf(quickLaunch.settings.portViewer),
+            settings: settingsOf(quickLaunch.settings.windowsSettings),
+            snippets: settingsOf(quickLaunch.settings.snippets),
+            ssh: settingsOf(quickLaunch.settings.ssh),
+            system_commands: settingsOf(quickLaunch.settings.systemCommands),
+            unit_converter: settingsOf(quickLaunch.settings.unitConverter),
+            vscode: settingsOf(quickLaunch.settings.vscode),
+            web_search: settingsOf(quickLaunch.settings.webSearch),
+            window_switcher: settingsOf(quickLaunch.settings.windowSwitcher),
+            windows_terminal: settingsOf(quickLaunch.settings.windowsTerminal),
+            world_clock: settingsOf(quickLaunch.settings.worldClock),
+            wsl: settingsOf(quickLaunch.settings.wsl)
         })
 
         function settingsOf(provider: Provider): var {
@@ -411,10 +458,10 @@ Item {
         property string prefix
 
         launcherSearch: search
-        frameColor: quickLaunch.popupBorderColor
-        labelColor: quickLaunch.popupColor
-        textColor: quickLaunch.popupTextColor
-        font: quickLaunch.colorCodeFont
+        frameColor: quickLaunch.settings.popupBorderColor
+        labelColor: quickLaunch.settings.popupColor
+        textColor: quickLaunch.settings.popupTextColor
+        font: quickLaunch.settings.colorCodeFont
         onPicked: color => quickLaunch.showQuery(prefix + color)
     }
 
@@ -426,15 +473,15 @@ Item {
         property real reveal: 0
 
         title: "Quick Launch"
-        width: quickLaunch.popupWidth
+        width: quickLaunch.settings.popupWidth
         // The search bar with its margins and the border
-        height: quickLaunch.collapsed ? searchBar.implicitHeight + 2 * 12 + 2 : quickLaunch.popupHeight
+        height: quickLaunch.collapsed ? searchBar.implicitHeight + 2 * 12 + 2 : quickLaunch.settings.popupHeight
         anchor: quickLaunch
-        font: quickLaunch.popupFont
+        font: quickLaunch.settings.popupFont
         theme: quickLaunch.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: quickLaunch.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: quickLaunch.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: quickLaunch.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: quickLaunch.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible) {
                 reveal = 0
@@ -446,10 +493,10 @@ Item {
             id: surface
 
             anchors.fill: parent
-            radius: quickLaunch.popupRadius
-            color: quickLaunch.popupColor
+            radius: quickLaunch.settings.popupRadius
+            color: quickLaunch.settings.popupColor
             border.width: 1
-            border.color: quickLaunch.popupBorderColor      
+            border.color: quickLaunch.settings.popupBorderColor      
             opacity: popup.reveal
             scale: 0.92 + popup.reveal * 0.08
 
@@ -504,7 +551,7 @@ Item {
                             bottomPadding: 3
                             background: Rectangle {
                                 radius: 4
-                                color: quickLaunch.popupSelectedColor
+                                color: quickLaunch.settings.popupSelectedColor
                             }
                         }
 
@@ -512,18 +559,18 @@ Item {
                             anchors.right: parent.right
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "\ue721"
-                            color: quickLaunch.popupTextColor
-                            font.family: quickLaunch.iconFont.family
-                            font.weight: quickLaunch.iconFont.weight
-                            font.variableAxes: quickLaunch.iconFont.variableAxes
-                            font.pixelSize: quickLaunch.searchIconSize
+                            text: quickLaunch.settings.popupIcons.search
+                            color: quickLaunch.settings.popupTextColor
+                            font.family: quickLaunch.settings.popupIconFont.family
+                            font.weight: quickLaunch.settings.popupIconFont.weight
+                            font.variableAxes: quickLaunch.settings.popupIconFont.variableAxes
+                            font.pixelSize: quickLaunch.settings.searchIconSize
                         }
 
                         placeholderText: quickLaunch.prefix
                             ? search.prefixes.find(p => p.prefix === quickLaunch.prefix)?.placeholder ?? ""
-                            : quickLaunch.placeholder
-                        font: quickLaunch.searchFont
+                            : quickLaunch.settings.placeholder
+                        font: quickLaunch.settings.searchFont
                         verticalAlignment: TextInput.AlignVCenter
 
                         onTextEdited: {
@@ -569,7 +616,7 @@ Item {
                     Layout.fillWidth: true
                     visible: !quickLaunch.collapsed
                     running: search.loading
-                    trackColor: quickLaunch.popupDividerColor
+                    trackColor: quickLaunch.settings.popupDividerColor
                 }
 
                 RowLayout {
@@ -611,14 +658,14 @@ Item {
                             required property string path
 
                             width: ListView.view.width
-                            height: separator ? 28 : Math.max(quickLaunch.showIcons ? quickLaunch.resultIconSize : 0, texts.implicitHeight) + 16
+                            height: separator ? 28 : Math.max(quickLaunch.settings.showIcons ? quickLaunch.settings.resultIconSize : 0, texts.implicitHeight) + 16
 
                             Rectangle {
                                 anchors.fill: parent
                                 radius: 6
                                 visible: !row.separator
-                                color: row.ListView.isCurrentItem ? quickLaunch.popupSelectedColor
-                                    : mouse.containsMouse ? quickLaunch.popupHoverColor : "transparent"
+                                color: row.ListView.isCurrentItem ? quickLaunch.settings.popupSelectedColor
+                                    : mouse.containsMouse ? quickLaunch.settings.popupHoverColor : "transparent"
                             }
 
                             Label {
@@ -628,8 +675,8 @@ Item {
                                 anchors.bottomMargin: 4
                                 visible: row.separator
                                 text: row.title
-                                color: quickLaunch.popupSecondaryTextColor
-                                font: quickLaunch.sectionFont
+                                color: quickLaunch.settings.popupSecondaryTextColor
+                                font: quickLaunch.settings.sectionFont
                             }
 
                             Item {
@@ -637,15 +684,15 @@ Item {
 
                                 x: 10
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: quickLaunch.resultIconSize
-                                height: quickLaunch.resultIconSize
-                                visible: quickLaunch.showIcons && !row.separator
+                                width: quickLaunch.settings.resultIconSize
+                                height: quickLaunch.settings.resultIconSize
+                                visible: quickLaunch.settings.showIcons && !row.separator
 
                                 Image {
                                     anchors.fill: parent
                                     visible: row.icon !== ""
                                     source: row.icon
-                                    sourceSize: Qt.size(quickLaunch.resultIconSize, quickLaunch.resultIconSize)
+                                    sourceSize: Qt.size(quickLaunch.settings.resultIconSize, quickLaunch.settings.resultIconSize)
                                     fillMode: Image.PreserveAspectFit
                                 }
 
@@ -653,8 +700,8 @@ Item {
                                     anchors.centerIn: parent
                                     visible: row.icon === ""
                                     text: row.iconText
-                                    font.family: quickLaunch.emojiFont.family
-                                    font.pixelSize: quickLaunch.resultIconSize * 0.75
+                                    font.family: quickLaunch.settings.emojiFont.family
+                                    font.pixelSize: quickLaunch.settings.resultIconSize * 0.75
                                 }
                             }
 
@@ -667,7 +714,7 @@ Item {
                                 anchors.rightMargin: 10
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: !row.separator
-                                columns: quickLaunch.compactText ? 2 : 1
+                                columns: quickLaunch.settings.compactText ? 2 : 1
                                 columnSpacing: 12
                                 rowSpacing: 2
 
@@ -679,15 +726,15 @@ Item {
                                 }
 
                                 Label {
-                                    Layout.fillWidth: !quickLaunch.compactText
-                                    Layout.preferredWidth: quickLaunch.compactText ? Math.min(implicitWidth, texts.width / 2) : -1
-                                    horizontalAlignment: quickLaunch.compactText ? Text.AlignRight : Text.AlignLeft
+                                    Layout.fillWidth: !quickLaunch.settings.compactText
+                                    Layout.preferredWidth: quickLaunch.settings.compactText ? Math.min(implicitWidth, texts.width / 2) : -1
+                                    horizontalAlignment: quickLaunch.settings.compactText ? Text.AlignRight : Text.AlignLeft
                                     visible: row.description !== ""
                                     text: row.description
                                     elide: Text.ElideRight
                                     textFormat: Text.PlainText
-                                    color: quickLaunch.popupSecondaryTextColor
-                                    font: quickLaunch.popupSmallFont
+                                    color: quickLaunch.settings.popupSecondaryTextColor
+                                    font: quickLaunch.settings.popupSmallFont
                                 }
                             }
 
@@ -728,17 +775,17 @@ Item {
                         Layout.fillHeight: true
                         Layout.preferredWidth: 1
                         visible: preview.visible
-                        color: quickLaunch.popupDividerColor
+                        color: quickLaunch.settings.popupDividerColor
                     }
 
                     Preview {
                         id: preview
 
                         Layout.fillHeight: true
-                        Layout.preferredWidth: Math.round(quickLaunch.popupWidth * 0.4)
-                        textColor: quickLaunch.popupSecondaryTextColor
-                        font: quickLaunch.popupSmallFont
-                        strongFont: quickLaunch.popupStrongFont
+                        Layout.preferredWidth: Math.round(quickLaunch.settings.popupWidth * 0.4)
+                        textColor: quickLaunch.settings.popupSecondaryTextColor
+                        font: quickLaunch.settings.popupSmallFont
+                        strongFont: quickLaunch.settings.popupStrongFont
                         editMenu: fieldMenu
                         content: list.currentIndex >= 0 ? search.preview(list.currentIndex) : ({})
                         forced: quickLaunch.previewShown
@@ -763,7 +810,7 @@ Item {
                 Label {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: field.text || quickLaunch.prefix ? "No results" : "Type to search..."
-                    color: quickLaunch.popupSecondaryTextColor
+                    color: quickLaunch.settings.popupSecondaryTextColor
                 }
             }
 
@@ -785,22 +832,22 @@ Item {
                 onAboutToShow: contentItem.Window.window?.raise()
                 // Fades in when it opens, in place of the style's growing from a third of its height
                 enter: Transition {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: quickLaunch.menuOpenDuration; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: quickLaunch.settings.menuOpenDuration; easing.type: Easing.OutCubic }
                 }
                 topInset: 0
                 leftInset: 0
                 rightInset: 0
                 bottomInset: 0
-                font: quickLaunch.menuFont
+                font: quickLaunch.settings.menuFont
                 // Active and inactive only, so disabled controls keep the style's dimmed colours
-                palette.active.text: quickLaunch.menuTextColor
-                palette.inactive.text: quickLaunch.menuTextColor
+                palette.active.text: quickLaunch.settings.menuTextColor
+                palette.inactive.text: quickLaunch.settings.menuTextColor
 
                 background: Rectangle {
-                    implicitWidth: quickLaunch.menuWidth
-                    radius: quickLaunch.menuRadius
-                    color: quickLaunch.menuColor
-                    border.color: quickLaunch.menuBorderColor
+                    implicitWidth: quickLaunch.settings.menuWidth
+                    radius: quickLaunch.settings.menuRadius
+                    color: quickLaunch.settings.menuColor
+                    border.color: quickLaunch.settings.menuBorderColor
                 }
 
                 FieldMenuItem {
@@ -858,22 +905,22 @@ Item {
                 popupType: Popup.Item
                 // Fades in when it opens, in place of the style's growing from a third of its height
                 enter: Transition {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: quickLaunch.menuOpenDuration; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: quickLaunch.settings.menuOpenDuration; easing.type: Easing.OutCubic }
                 }
                 topInset: 0
                 leftInset: 0
                 rightInset: 0
                 bottomInset: 0
-                font: quickLaunch.menuFont
+                font: quickLaunch.settings.menuFont
                 // Active and inactive only, so disabled controls keep the style's dimmed colours
-                palette.active.text: quickLaunch.menuTextColor
-                palette.inactive.text: quickLaunch.menuTextColor
+                palette.active.text: quickLaunch.settings.menuTextColor
+                palette.inactive.text: quickLaunch.settings.menuTextColor
 
                 background: Rectangle {
-                    implicitWidth: quickLaunch.menuWidth
-                    radius: quickLaunch.menuRadius
-                    color: quickLaunch.menuColor
-                    border.color: quickLaunch.menuBorderColor
+                    implicitWidth: quickLaunch.settings.menuWidth
+                    radius: quickLaunch.settings.menuRadius
+                    color: quickLaunch.settings.menuColor
+                    border.color: quickLaunch.settings.menuBorderColor
                 }
 
                 Instantiator {

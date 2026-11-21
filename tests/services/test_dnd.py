@@ -128,8 +128,9 @@ def test_the_bar_icon_follows_the_mode(events: Events):
     wait(10)
     icon = find_item(widget, "icon")
     assert icon is not None
+    settings = widget.property("settings")
     for name in ("offIcon", "priorityIcon", "alarmsIcon"):
-        widget.setProperty(name, name)
+        settings.setProperty(name, name)
     assert icon.property("text") == "offIcon"
     for mode, glyph in (("priority", "priorityIcon"), ("alarms", "alarmsIcon"), ("disabled", "offIcon")):
         events.emit_event("dnd_status_changed", mode)

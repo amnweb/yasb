@@ -86,7 +86,8 @@ def test_the_monitor_publishes_the_battery_status(api: FakeApi):
 
 def test_the_widget_fills_the_label_placeholders(api: FakeApi):
     _engine, _root, widget = create_widget()
-    widget.setProperty("label", "{percent}% {power}W {voltage}V {temperature} {health}% {chemistry} {nope}")
+    settings = widget.property("settings")
+    settings.setProperty("label", "{percent}% {power}W {voltage}V {temperature} {health}% {chemistry} {nope}")
     label = find_item(widget, "label")
     assert label is not None
     assert label.property("text") == "60% 12.3W 12.46V N/A 83.3% LiP {nope}"
@@ -95,7 +96,7 @@ def test_the_widget_fills_the_label_placeholders(api: FakeApi):
 
     widget.setProperty("showAlternate", True)
     assert label.property("text") == "60% | remaining: 2:30:00"
-    widget.setProperty("timeRemainingNatural", True)
+    settings.setProperty("timeRemainingNatural", True)
     assert label.property("text") == "60% | remaining: 2 hours"
 
 
@@ -114,6 +115,6 @@ def test_the_widget_hides_without_a_battery(api: FakeApi):
     _engine, _root, widget = create_widget()
     assert widget.property("visible") is False and widget.property("implicitWidth") == 0
 
-    widget.setProperty("hideUnsupported", False)
+    widget.property("settings").setProperty("hideUnsupported", False)
     assert widget.property("visible") is True
     assert item(widget, "label").property("text") == "Battery info not available"

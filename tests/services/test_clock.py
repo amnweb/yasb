@@ -49,14 +49,16 @@ def make_clock(engine: QQmlEngine) -> Iterator[MakeClock]:
     windows: list[QQuickWindow] = []
     clocks: list[QQuickItem] = []
 
-    def make(path: Path = CLOCK, window_y: int = 0, edge: str = "top", **properties: Any) -> QQuickItem:
+    def make(path: Path = CLOCK, window_y: int = 0, edge: str = "top", **settings: Any) -> QQuickItem:
         window = QQuickWindow()
         window.setGeometry(0, window_y, 400, 32)
         windows.append(window)
         component = QQmlComponent(engine, QUrl.fromLocalFile(str(path)))
-        initial: dict[str | None, Any] = {name: value for name, value in properties.items()}
-        clock = create_with_bar(component, initial, edge)
+        clock = create_with_bar(component, edge=edge)
         assert isinstance(clock, QQuickItem), [error.toString() for error in component.errors()]
+        group = clock.property("settings")
+        for name, value in settings.items():
+            group.setProperty(name, value)
         clock.setParentItem(window.contentItem())
         clock.setHeight(32)
         window.show()
@@ -121,7 +123,9 @@ def test_the_next_tick_lines_up_with_what_is_shown(make_clock: MakeClock, format
 def test_a_user_file_overrides_the_clock_settings(
     make_clock: MakeClock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    user_file = write_widget(tmp_path, "clock", "import Yasb.Widgets\n\nClock {\n    format: \"'custom'\"\n}\n")
+    user_file = write_widget(
+        tmp_path, "clock", "import Yasb.Widgets\n\nClock {\n    settings.format: \"'custom'\"\n}\n"
+    )
     monkeypatch.setattr(widget_files, "USER_WIDGETS_DIR", tmp_path)
 
     path = find_widget_file("clock")

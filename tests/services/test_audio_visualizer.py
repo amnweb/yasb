@@ -16,7 +16,7 @@ from core.services.audio_visualizer.levels import AudioLevels
 from core.services.audio_visualizer.spectrum import FFT_SIZE, SpectrumSource
 from core.widget_files import BUILTIN_WIDGETS_DIR
 from settings import QML_IMPORT_PATH
-from tests.support.bar import create_with_bar
+from tests.support.bar import make_bar
 from tests.support.qt import wait
 
 # A loud mix of a low and a high tone
@@ -160,7 +160,7 @@ def load_widget(**options: Any) -> tuple[QQuickItem, QQuickWindow, list[str], QQ
         engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "AudioVisualizer" / "AudioVisualizer.qml"))
     )
     # Set here rather than taken from the widget's defaults, which are free to change
-    initial: dict[str | None, Any] = {
+    initial: dict[str, Any] = {
         "graphHeight": 14,
         "hideIdle": False,
         "mirror": False,
@@ -173,8 +173,16 @@ def load_widget(**options: Any) -> tuple[QQuickItem, QQuickWindow, list[str], QQ
         "waveWidth": 80,
         **options,
     }
-    widget = create_with_bar(component, initial)
+    # Set on its settings while the widget is made, as a user's file sets them
+    bar = make_bar(engine)
+    widget = component.beginCreate(engine.rootContext())
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+    component.setInitialProperties(widget, {"bar": bar})
+    settings = widget.property("settings")
+    for name, value in initial.items():
+        settings.setProperty(name, value)
+    component.completeCreate()
+    bar.setParent(widget)
     window = QQuickWindow()
     widget.setParentItem(window.contentItem())
     wait(10)

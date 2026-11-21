@@ -13,33 +13,151 @@ import Yasb.Themes
 Item {
     id: weather
 
+    component PopupIcons: QtObject {
+        property string refresh
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Widgets with the same id show the same saved place; give a widget its own id for another place
+        property string locationId: "weather"
+        // metric or imperial
+        property string units: "metric"
+        // Days in the popup, 1 to 14
+        property int forecastDays: 7
+        // How often the forecast is fetched, in milliseconds, from 60000 to 86400000
+        property int updateInterval: 3600000
+        // Whether temperatures are rounded to whole degrees
+        property bool hideDecimal: false
+        // 24h or 12h
+        property string timeFormat: "24h"
+        // Label placeholders: {temp}, {feelslike}, {min_temp}, {max_temp}, {humidity}, {pressure}, {precipitation},
+        // {precipitation_probability}, {rain_chance}, {snow_chance}, {wind}, {wind_dir}, {cloud}, {uv}, {location},
+        // {condition_text}, {is_day}, {sunrise} and {sunset}; empty shows only the picture
+        property string label: "{temp}"
+        property string alternateLabel: "{location}: Min {min_temp}, Max {max_temp}"
+        property string noLocationLabel: qsTr("Set location")
+        // The place, the sky and today's temperatures when the pointer rests on the widget
+        property bool tooltip: true
+        // The picture, or glyph, in front of the label
+        property bool showIcon: true
+        property int iconSize: 18
+        // Pictures by condition in place of YASB's own SVGs, such as ({ sunnyDay: "sun.png", default: "sky.svg" });
+        // a condition left out keeps YASB's. The conditions: sunnyDay, clearNight, cloudyDay, cloudyNight, foggyDay,
+        // foggyNight, drizzleDay, drizzleNight, rainyDay, rainyNight, snowyDay, snowyNight, thunderstormDay,
+        // thunderstormNight and default
+        property var pictures: ({})
+        // Glyphs drawn in iconFont on the bar instead of the pictures, by the same conditions,
+        // such as ({ sunnyDay: "\ue30d", clearNight: "\ue32b", rainyDay: "\ue308", default: "\ue30d" })
+        property var glyphs: ({})
+        // Hotkey that opens the popup, such as "alt+shift+w"
+        property string hotkey: ""
+        property int popupWidth: 424
+        // Popup alignment relative to the widget on a horizontal bar: left, right or center
+        property string popupAlignment: "center"
+        property bool showHourly: true
+        // The narrowest an hour gets; the hours share out the rest of the width
+        property int hourWidth: 54
+        // Scroll the days when they exceed this height
+        property int maxListHeight: 320
+        // The days' temperature bars run from cold to warm across the week's coldest and warmest; the hourly graph is cold
+        property color coldColor: theme.dark ? "#2F7CF6" : "#0B3F9E"
+        property color warmColor: theme.dark ? "#8BE0FF" : "#3AA0F0"
+        // Chances of rain and snow
+        property color rainColor: theme.colors.textTertiary
+        property color errorColor: theme.colors.critical
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The mark of the temperature now on today's bar
+        property color markerColor: theme.dark ? "#202020" : "#F3F3F3"
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        readonly property PopupIcons popupIcons: PopupIcons {
+            refresh: "\ue72c"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // Glyphs in the popup, such as the refresh button
+        property int popupIconSize: 14
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        // The right-click menu of the place search: the theme's, unless set here
+        property int menuWidth: 200
+        property color menuColor: theme.menu.background
+        property color menuBorderColor: theme.menu.border
+        property color menuTextColor: theme.colors.text
+        property real menuRadius: theme.menu.radius
+        property font menuFont: theme.menu.font
+        // Milliseconds the right-click menu takes to fade in
+        property int menuOpenDuration: theme.menu.openDuration
+        // The icons in the text fields' right-click menu
+        property int menuIconSize: 16
+        property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+        property color popupCardColor: theme.colors.card
+        property color popupCardBorderColor: theme.colors.cardBorder
+        property color popupDividerColor: theme.colors.divider
+        property color popupTertiaryTextColor: theme.colors.textTertiary
+        property color popupHoverColor: theme.colors.hover
+        property color popupSelectedColor: theme.colors.selected
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        // The temperature now at the top; the sky, each day's name and temperatures and each hour's value; each
+        // reading's value; each hour's time, and the hour now
+        property font temperatureFont
+        temperatureFont.family: theme.popup.font.family
+        temperatureFont.pixelSize: 48
+        temperatureFont.weight: 300
+        property font forecastFont
+        forecastFont.family: theme.popup.font.family
+        forecastFont.pixelSize: 14
+        property font readingFont
+        readingFont.family: theme.popup.font.family
+        readingFont.pixelSize: 14
+        readingFont.weight: 600
+        property font hourFont
+        hourFont.family: theme.popup.font.family
+        hourFont.pixelSize: 12
+        property font nowFont
+        nowFont.family: theme.popup.font.family
+        nowFont.pixelSize: 12
+        nowFont.weight: 600
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Widgets with the same id show the same saved place; give a widget its own id for another place
-    property string locationId: "weather"
-    // metric or imperial
-    property string units: "metric"
-    // Days in the popup, 1 to 14
-    property int forecastDays: 7
-    // How often the forecast is fetched, in milliseconds, from 60000 to 86400000
-    property int updateInterval: 3600000
-    // Whether temperatures are rounded to whole degrees
-    property bool hideDecimal: false
-    // 24h or 12h
-    property string timeFormat: "24h"
-    // Label placeholders: {temp}, {feelslike}, {min_temp}, {max_temp}, {humidity}, {pressure}, {precipitation},
-    // {precipitation_probability}, {rain_chance}, {snow_chance}, {wind}, {wind_dir}, {cloud}, {uv}, {location},
-    // {condition_text}, {is_day}, {sunrise} and {sunset}; empty shows only the picture
-    property string label: "{temp}"
-    property string alternateLabel: "{location}: Min {min_temp}, Max {max_temp}"
-    property string noLocationLabel: qsTr("Set location")
-    // The place, the sky and today's temperatures when the pointer rests on the widget
-    property bool tooltip: true
-    // The picture, or glyph, in front of the label
-    property bool showIcon: true
-    property int iconSize: 18
-    // The picture for each condition; a widget file can point any of them at its own SVG or PNG
-    property var pictures: ({
+    readonly property Settings settings: Settings {
+        theme: weather.theme
+    }
+
+    property bool showAlternate: false
+
+    readonly property bool dark: theme.dark
+    readonly property string edge: bar.edge
+    // YASB's own picture for each condition, where settings.pictures has none
+    readonly property var builtinPictures: ({
         sunnyDay: Qt.resolvedUrl("icons/sunny-day.svg"),
         clearNight: Qt.resolvedUrl("icons/clear-night.svg"),
         cloudyDay: Qt.resolvedUrl("icons/cloudy-day.svg"),
@@ -56,110 +174,16 @@ Item {
         thunderstormNight: Qt.resolvedUrl("icons/thunderstorm.svg"),
         default: Qt.resolvedUrl("icons/sunny-day.svg")
     })
-    // Glyphs drawn in iconFont on the bar instead of the pictures, by the same conditions,
-    // such as ({ sunnyDay: "\ue30d", clearNight: "\ue32b", rainyDay: "\ue308", default: "\ue30d" })
-    property var glyphs: ({})
-    // Hotkey that opens the popup, such as "alt+shift+w"
-    property string hotkey: ""
-    property int popupWidth: 424
-    // Popup alignment relative to the widget on a horizontal bar: left, right or center
-    property string popupAlignment: "center"
-    property bool showHourly: true
-    // The narrowest an hour gets; the hours share out the rest of the width
-    property int hourWidth: 54
-    // Scroll the days when they exceed this height
-    property int maxListHeight: 320
-    // The days' temperature bars run from cold to warm across the week's coldest and warmest; the hourly graph is cold
-    property color coldColor: dark ? "#2F7CF6" : "#0B3F9E"
-    property color warmColor: dark ? "#8BE0FF" : "#3AA0F0"
-    // Chances of rain and snow
-    property color rainColor: weather.theme.colors.textTertiary
-    property color errorColor: weather.theme.colors.critical
-
-    property bool showAlternate: false
-
-    readonly property bool dark: theme.dark
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The mark of the temperature now on today's bar
-    property color markerColor: dark ? "#202020" : "#F3F3F3"
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property color popupSecondaryTextColor: theme.colors.textSecondary
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    // Glyphs in the popup, such as the refresh button
-    property int popupIconSize: 14
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    // The right-click menu of the place search: the theme's, unless set here
-    property int menuWidth: 200
-    property color menuColor: theme.menu.background
-    property color menuBorderColor: theme.menu.border
-    property color menuTextColor: theme.colors.text
-    property real menuRadius: theme.menu.radius
-    property font menuFont: theme.menu.font
-    // Milliseconds the right-click menu takes to fade in
-    property int menuOpenDuration: theme.menu.openDuration
-    // The icons in the text fields' right-click menu
-    property int menuIconSize: 16
-    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
-    property color popupCardColor: theme.colors.card
-    property color popupCardBorderColor: theme.colors.cardBorder
-    property color popupDividerColor: theme.colors.divider
-    property color popupTertiaryTextColor: theme.colors.textTertiary
-    property color popupHoverColor: theme.colors.hover
-    property color popupSelectedColor: theme.colors.selected
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // The temperature now at the top; the sky, each day's name and temperatures and each hour's value; each
-    // reading's value; each hour's time, and the hour now
-    property font temperatureFont
-    temperatureFont.family: theme.popup.font.family
-    temperatureFont.pixelSize: 48
-    temperatureFont.weight: Font.Light
-    property font forecastFont
-    forecastFont.family: theme.popup.font.family
-    forecastFont.pixelSize: 14
-    property font readingFont
-    readingFont.family: theme.popup.font.family
-    readingFont.pixelSize: 14
-    readingFont.weight: Font.DemiBold
-    property font hourFont
-    hourFont.family: theme.popup.font.family
-    hourFont.pixelSize: 12
-    property font nowFont
-    nowFont.family: theme.popup.font.family
-    nowFont.pixelSize: 12
-    nowFont.weight: Font.DemiBold
-    readonly property string edge: bar.edge
 
     readonly property var values: forecast.values
-    readonly property string glyph: glyphs[forecast.condition] ?? glyphs["default"] ?? ""
-    readonly property string text: forecast.hasLocation ? format(showAlternate ? alternateLabel : label) : noLocationLabel
+    readonly property string glyph: settings.glyphs[forecast.condition] ?? settings.glyphs["default"] ?? ""
+    readonly property string text: forecast.hasLocation ? format(showAlternate ? settings.alternateLabel : settings.label) : settings.noLocationLabel
     // When the forecast was fetched: the time today, the day and time before
     readonly property string updated: {
         const at = forecast.updated
         if (!(at instanceof Date) || isNaN(at))
             return ""
-        const time = Qt.formatTime(at, timeFormat === "12h" ? "h:mm AP" : "HH:mm")
+        const time = Qt.formatTime(at, settings.timeFormat === "12h" ? "h:mm AP" : "HH:mm")
         return at.toDateString() === new Date().toDateString() ? time
             : `${Qt.locale().dayName(at.getDay(), Locale.ShortFormat)} ${time}`
     }
@@ -175,7 +199,7 @@ Item {
 
     // A temperature as the popup shows it, without its unit: 12° or 12.4°
     function degrees(value: var): string {
-        return Number.isFinite(value) ? `${hideDecimal ? Math.round(value) : value}°` : "--"
+        return Number.isFinite(value) ? `${settings.hideDecimal ? Math.round(value) : value}°` : "--"
     }
 
     // A temperature in whole degrees, for the hours and days: 12°
@@ -184,7 +208,8 @@ Item {
     }
 
     function picture(condition: string): url {
-        return pictures[condition] ?? pictures["default"] ?? ""
+        return settings.pictures[condition] ?? builtinPictures[condition] ?? settings.pictures["default"]
+            ?? builtinPictures["default"]
     }
 
     function dayName(index: int, weekday: int, format: int): string {
@@ -214,13 +239,13 @@ Item {
     // A colour from coldColor at 0 to warmColor at 1, through the hues between them
     function warmth(position: real): color {
         const mix = (from, to) => from + (to - from) * position
-        return Qt.hsla(mix(coldColor.hslHue, warmColor.hslHue), mix(coldColor.hslSaturation, warmColor.hslSaturation),
-            mix(coldColor.hslLightness, warmColor.hslLightness), 1)
+        return Qt.hsla(mix(settings.coldColor.hslHue, settings.warmColor.hslHue), mix(settings.coldColor.hslSaturation, settings.warmColor.hslSaturation),
+            mix(settings.coldColor.hslLightness, settings.warmColor.hslLightness), 1)
     }
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const gap = popupGap
+        const gap = settings.popupGap
         const margin = 8
         const screen = weather.Screen
         let px
@@ -235,8 +260,8 @@ Item {
             py = start.y + (height - popup.height) / 2
             break
         default:
-            px = popupAlignment === "left" ? start.x
-                : popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
+            px = settings.popupAlignment === "left" ? start.x
+                : settings.popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
             py = edge === "bottom" ? start.y - popup.height - gap : start.y + height + gap
             break
         }
@@ -289,16 +314,16 @@ Item {
     WeatherForecast {
         id: forecast
 
-        locationId: weather.locationId
-        units: weather.units
-        forecastDays: weather.forecastDays
-        updateInterval: weather.updateInterval
-        hideDecimal: weather.hideDecimal
-        timeFormat: weather.timeFormat
+        locationId: weather.settings.locationId
+        units: weather.settings.units
+        forecastDays: weather.settings.forecastDays
+        updateInterval: weather.settings.updateInterval
+        hideDecimal: weather.settings.hideDecimal
+        timeFormat: weather.settings.timeFormat
     }
 
     Hotkey {
-        keys: weather.hotkey
+        keys: weather.settings.hotkey
         onActivated: weather.togglePopup()
     }
 
@@ -333,17 +358,17 @@ Item {
 
     // An item of the text fields' right-click menu, its icon in menuIconSize
     component FieldMenuItem: MenuItem {
-        icon.width: weather.menuIconSize
-        icon.height: weather.menuIconSize
+        icon.width: weather.settings.menuIconSize
+        icon.height: weather.settings.menuIconSize
     }
 
     component Glyph: Text {
         textFormat: Text.PlainText
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        font.family: weather.iconFont.family
-        font.weight: weather.iconFont.weight
-        font.variableAxes: weather.iconFont.variableAxes
+        font.family: weather.settings.iconFont.family
+        font.weight: weather.settings.iconFont.weight
+        font.variableAxes: weather.settings.iconFont.variableAxes
     }
 
     component Picture: Image {
@@ -369,14 +394,14 @@ Item {
             height: 9
             sourceSize: Qt.size(width, height)
             source: Qt.resolvedUrl("icons/drop.svg")
-            color: weather.rainColor
+            color: weather.settings.rainColor
         }
 
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: weather.chance(chanceRow.value)
-            color: weather.rainColor
-            font: weather.popupSmallFont
+            color: weather.settings.rainColor
+            font: weather.settings.popupSmallFont
         }
     }
 
@@ -386,15 +411,15 @@ Item {
 
         textFormat: Text.PlainText
         elide: Text.ElideRight
-        color: muted ? weather.popupTertiaryTextColor : weather.popupTextColor
-        font: weather.popupFont
+        color: muted ? weather.settings.popupTertiaryTextColor : weather.settings.popupTextColor
+        font: weather.settings.popupFont
     }
 
     // A line between the popup's parts
     component Divider: Rectangle {
         Layout.fillWidth: true
         implicitHeight: 1
-        color: weather.popupDividerColor
+        color: weather.settings.popupDividerColor
     }
 
     // A card, on the popup's 16px edge
@@ -403,9 +428,9 @@ Item {
         Layout.leftMargin: 16
         Layout.rightMargin: 16
         radius: 8
-        color: weather.popupCardColor
+        color: weather.settings.popupCardColor
         border.width: 1
-        border.color: weather.popupCardBorderColor
+        border.color: weather.settings.popupCardBorderColor
     }
 
     component Link: Text {
@@ -413,8 +438,8 @@ Item {
 
         signal clicked
 
-        color: linkArea.containsMouse ? weather.popupTextColor : weather.popupSecondaryTextColor
-        font: weather.popupSmallFont
+        color: linkArea.containsMouse ? weather.settings.popupTextColor : weather.settings.popupSecondaryTextColor
+        font: weather.settings.popupSmallFont
         Accessible.role: Accessible.Link
         Accessible.name: text
         Accessible.onPressAction: link.clicked()
@@ -439,9 +464,9 @@ Item {
         Picture {
             objectName: "picture"
             y: Math.round((parent.height - height) / 2)
-            width: weather.iconSize
-            height: weather.iconSize
-            visible: weather.showIcon && weather.glyph === ""
+            width: weather.settings.iconSize
+            height: weather.settings.iconSize
+            visible: weather.settings.showIcon && weather.glyph === ""
             condition: forecast.condition
             opacity: forecast.ready ? 1 : 0.55
         }
@@ -449,13 +474,13 @@ Item {
         Glyph {
             objectName: "glyph"
             y: Math.round((parent.height - height) / 2)
-            width: weather.iconSize
-            height: weather.iconSize
-            visible: weather.showIcon && weather.glyph !== ""
+            width: weather.settings.iconSize
+            height: weather.settings.iconSize
+            visible: weather.settings.showIcon && weather.glyph !== ""
             text: weather.glyph
-            color: weather.textColor
+            color: weather.settings.textColor
             opacity: forecast.ready ? 1 : 0.55
-            font.pixelSize: weather.iconSize
+            font.pixelSize: weather.settings.iconSize
         }
 
         Label {
@@ -464,8 +489,8 @@ Item {
             visible: text !== ""
             text: weather.text
             textFormat: Text.PlainText
-            color: weather.textColor
-            font: weather.font
+            color: weather.settings.textColor
+            font: weather.settings.font
         }
     }
 
@@ -487,7 +512,7 @@ Item {
     ToolTip {
         objectName: "tooltip"
         popupType: Popup.Window
-        visible: weather.tooltip && area.containsMouse && !popup.visible
+        visible: weather.settings.tooltip && area.containsMouse && !popup.visible
         delay: 400
         text: !forecast.hasLocation ? qsTr("Choose a location for the forecast")
             : forecast.ready ? [weather.values.location, weather.values.condition_text,
@@ -521,15 +546,15 @@ Item {
 
         objectName: "popup"
         title: qsTr("Weather")
-        width: weather.popupWidth
+        width: weather.settings.popupWidth
         // Never taller than the screen; the days scroll instead
         height: Math.min(popupContent.implicitHeight, weather.Screen.desktopAvailableHeight - 40)
         anchor: weather
-        font: weather.popupFont
+        font: weather.settings.popupFont
         theme: weather.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: weather.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: weather.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: weather.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: weather.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -540,10 +565,10 @@ Item {
             id: surface
 
             anchors.fill: parent
-            radius: weather.popupRadius
-            color: weather.popupColor
+            radius: weather.settings.popupRadius
+            color: weather.settings.popupColor
             border.width: 1
-            border.color: weather.popupBorderColor
+            border.color: weather.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: weather.edge === "bottom" ? Item.Bottom : Item.Top
@@ -568,7 +593,7 @@ Item {
                         PopupText {
                             width: parent.width
                             text: popup.picking ? qsTr("Choose a location") : forecast.location.name ?? ""
-                            font: weather.popupTitleFont
+                            font: weather.settings.popupTitleFont
                         }
 
                         PopupText {
@@ -576,7 +601,7 @@ Item {
                             visible: !popup.picking && text !== ""
                             text: forecast.location.region ?? ""
                             muted: true
-                            font: weather.popupSmallFont
+                            font: weather.settings.popupSmallFont
                         }
                     }
 
@@ -597,14 +622,17 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             radius: 4
-                            color: refreshArea.containsMouse ? weather.popupHoverColor : "transparent"
+                            color: refreshArea.containsMouse ? weather.settings.popupHoverColor : "transparent"
                         }
 
                         Glyph {
                             anchors.fill: parent
-                            text: "\ue72c"
-                            color: refreshArea.containsMouse ? weather.popupTextColor : weather.popupTertiaryTextColor
-                            font.pixelSize: weather.popupIconSize
+                            text: weather.settings.popupIcons.refresh
+                            color: refreshArea.containsMouse ? weather.settings.popupTextColor : weather.settings.popupTertiaryTextColor
+                            font.family: weather.settings.popupIconFont.family
+                            font.weight: weather.settings.popupIconFont.weight
+                            font.variableAxes: weather.settings.popupIconFont.variableAxes
+                            font.pixelSize: weather.settings.popupIconSize
                         }
 
                         MouseArea {
@@ -622,7 +650,7 @@ Item {
                 LoadingLine {
                     Layout.fillWidth: true
                     running: popup.picking ? forecast.searching : forecast.loading
-                    trackColor: weather.popupDividerColor
+                    trackColor: weather.settings.popupDividerColor
                 }
 
                 PopupText {
@@ -635,8 +663,8 @@ Item {
                     text: popup.error
                     wrapMode: Text.WordWrap
                     horizontalAlignment: Text.AlignHCenter
-                    color: weather.errorColor
-                    font: weather.popupSmallFont
+                    color: weather.settings.errorColor
+                    font: weather.settings.popupSmallFont
                 }
 
                 PopupText {
@@ -675,7 +703,7 @@ Item {
                         PopupText {
                             objectName: "temperature"
                             text: weather.degrees(forecast.current.temperature)
-                            font: weather.temperatureFont
+                            font: weather.settings.temperatureFont
                         }
 
                         Column {
@@ -685,15 +713,15 @@ Item {
                             PopupText {
                                 width: parent.width
                                 text: weather.values.condition_text
-                                font: weather.forecastFont
+                                font: weather.settings.forecastFont
                             }
 
                             PopupText {
                                 width: parent.width
                                 text: qsTr("High %1 · Low %2 · Feels %3").arg(weather.whole(popup.today.high))
                                     .arg(weather.whole(popup.today.low)).arg(weather.whole(forecast.current.feelsLike))
-                                color: weather.popupSecondaryTextColor
-                                font: weather.popupSmallFont
+                                color: weather.settings.popupSecondaryTextColor
+                                font: weather.settings.popupSmallFont
                             }
                         }
                     }
@@ -727,7 +755,7 @@ Item {
                                         width: parent.width
                                         horizontalAlignment: Text.AlignHCenter
                                         text: reading.modelData[1]
-                                        font: weather.readingFont
+                                        font: weather.settings.readingFont
                                     }
 
                                     PopupText {
@@ -735,7 +763,7 @@ Item {
                                         horizontalAlignment: Text.AlignHCenter
                                         text: reading.modelData[0]
                                         muted: true
-                                        font: weather.popupSmallFont
+                                        font: weather.settings.popupSmallFont
                                     }
                                 }
                             }
@@ -756,7 +784,7 @@ Item {
                         Layout.fillWidth: true
                         // The one part that shrinks, down to two days, when the screen is short
                         Layout.fillHeight: true
-                        Layout.preferredHeight: Math.min(contentHeight, weather.maxListHeight)
+                        Layout.preferredHeight: Math.min(contentHeight, weather.settings.maxListHeight)
                         Layout.minimumHeight: Math.min(contentHeight, 64)
                         // On the cards' edges, with each day's text inside like a card's
                         Layout.leftMargin: 16
@@ -783,7 +811,7 @@ Item {
                                     required property var modelData
                                     required property int index
                                     // A later day whose hours show; today's show without it being picked
-                                    readonly property bool selected: weather.showHourly && index > 0 && popup.day === index
+                                    readonly property bool selected: weather.settings.showHourly && index > 0 && popup.day === index
 
                                     width: dayColumn.width
                                     height: 32
@@ -798,8 +826,8 @@ Item {
                                     Rectangle {
                                         anchors.fill: parent
                                         radius: 4
-                                        color: dayRow.selected ? weather.popupSelectedColor
-                                            : dayArea.containsMouse && weather.showHourly ? weather.popupHoverColor : "transparent"
+                                        color: dayRow.selected ? weather.settings.popupSelectedColor
+                                            : dayArea.containsMouse && weather.settings.showHourly ? weather.settings.popupHoverColor : "transparent"
                                     }
 
                                     RowLayout {
@@ -811,7 +839,7 @@ Item {
                                         PopupText {
                                             Layout.preferredWidth: 52
                                             text: weather.dayName(dayRow.index, dayRow.modelData.weekday, Locale.ShortFormat)
-                                            font: weather.forecastFont
+                                            font: weather.settings.forecastFont
                                         }
 
                                         Picture {
@@ -834,8 +862,8 @@ Item {
                                             Layout.preferredWidth: 34
                                             horizontalAlignment: Text.AlignRight
                                             text: weather.whole(dayRow.modelData.low)
-                                            color: weather.popupSecondaryTextColor
-                                            font: weather.forecastFont
+                                            color: weather.settings.popupSecondaryTextColor
+                                            font: weather.settings.forecastFont
                                         }
 
                                         Item {
@@ -845,7 +873,7 @@ Item {
                                             Rectangle {
                                                 anchors.fill: parent
                                                 radius: 2
-                                                color: Qt.alpha(weather.popupTextColor, 0.1)
+                                                color: Qt.alpha(weather.settings.popupTextColor, 0.1)
                                             }
 
                                             Rectangle {
@@ -876,9 +904,9 @@ Item {
                                                 height: 8
                                                 radius: 4
                                                 visible: dayRow.index === 0 && Number.isFinite(forecast.current.temperature)
-                                                color: weather.markerColor
+                                                color: weather.settings.markerColor
                                                 border.width: 2
-                                                border.color: weather.popupTextColor
+                                                border.color: weather.settings.popupTextColor
                                             }
                                         }
 
@@ -886,7 +914,7 @@ Item {
                                             Layout.preferredWidth: 34
                                             horizontalAlignment: Text.AlignRight
                                             text: weather.whole(dayRow.modelData.high)
-                                            font: weather.forecastFont
+                                            font: weather.settings.forecastFont
                                         }
                                     }
 
@@ -895,9 +923,9 @@ Item {
 
                                         anchors.fill: parent
                                         hoverEnabled: true
-                                        cursorShape: weather.showHourly ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                        cursorShape: weather.settings.showHourly ? Qt.PointingHandCursor : Qt.ArrowCursor
                                         onClicked: {
-                                            if (weather.showHourly)
+                                            if (weather.settings.showHourly)
                                                 popup.day = dayRow.index
                                         }
                                     }
@@ -927,7 +955,7 @@ Item {
                         // As many whole hours as fit, sharing the width
                         readonly property real hourWidth: {
                             const width = hourlyFlick.width
-                            return width / Math.max(1, Math.floor(width / weather.hourWidth))
+                            return width / Math.max(1, Math.floor(width / weather.settings.hourWidth))
                         }
                         readonly property real contentWidth: hours.length * hourWidth
                         readonly property var temperatures: hours.map(hour => hour.temperature)
@@ -965,7 +993,7 @@ Item {
                         Layout.topMargin: 10
                         Layout.bottomMargin: 10
                         implicitHeight: metrics.height + 2 + 116
-                        visible: weather.showHourly && hours.length > 0
+                        visible: weather.settings.showHourly && hours.length > 0
 
                         Row {
                             id: metrics
@@ -985,7 +1013,7 @@ Item {
                                     width: metricText.implicitWidth + 20
                                     height: 26
                                     radius: 13
-                                    color: chosen ? weather.popupSelectedColor : metricArea.containsMouse ? weather.popupHoverColor : "transparent"
+                                    color: chosen ? weather.settings.popupSelectedColor : metricArea.containsMouse ? weather.settings.popupHoverColor : "transparent"
                                     Accessible.role: Accessible.RadioButton
                                     Accessible.name: modelData[1]
                                     Accessible.checked: chosen
@@ -996,8 +1024,8 @@ Item {
 
                                         anchors.centerIn: parent
                                         text: metricButton.modelData[1]
-                                        color: metricButton.chosen ? weather.popupTextColor : weather.popupSecondaryTextColor
-                                        font: weather.popupSmallFont
+                                        color: metricButton.chosen ? weather.settings.popupTextColor : weather.settings.popupSecondaryTextColor
+                                        font: weather.settings.popupSmallFont
                                     }
 
                                     MouseArea {
@@ -1039,8 +1067,8 @@ Item {
                                         y1: hourly.graphTop
                                         y2: hourly.fillBottom
 
-                                        GradientStop { position: 0; color: Qt.alpha(weather.coldColor, 0.45) }
-                                        GradientStop { position: 1; color: Qt.alpha(weather.coldColor, 0) }
+                                        GradientStop { position: 0; color: Qt.alpha(weather.settings.coldColor, 0.45) }
+                                        GradientStop { position: 1; color: Qt.alpha(weather.settings.coldColor, 0) }
                                     }
 
                                     PathSvg { path: hourly.area }
@@ -1048,7 +1076,7 @@ Item {
 
                                 ShapePath {
                                     fillColor: "transparent"
-                                    strokeColor: Qt.alpha(weather.coldColor, 0.75)
+                                    strokeColor: Qt.alpha(weather.settings.coldColor, 0.75)
                                     strokeWidth: 1.5
 
                                     PathSvg { path: hourly.line }
@@ -1078,7 +1106,7 @@ Item {
                                         y: hour.lineY - height - 3
                                         horizontalAlignment: Text.AlignHCenter
                                         text: hourly.chances ? weather.chance(hourly.values[hour.index]) : weather.whole(hour.modelData.temperature)
-                                        font: weather.forecastFont
+                                        font: weather.settings.forecastFont
                                     }
 
                                     Picture {
@@ -1111,7 +1139,7 @@ Item {
                                             visible: hourly.chances
                                             text: weather.whole(hour.modelData.temperature)
                                             muted: true
-                                            font: weather.popupSmallFont
+                                            font: weather.settings.popupSmallFont
                                         }
                                     }
 
@@ -1121,7 +1149,7 @@ Item {
                                         horizontalAlignment: Text.AlignHCenter
                                         text: hour.modelData.now ? qsTr("Now") : hour.modelData.timeText
                                         muted: !hour.modelData.now
-                                        font: hour.modelData.now ? weather.nowFont : weather.hourFont
+                                        font: hour.modelData.now ? weather.settings.nowFont : weather.settings.hourFont
                                     }
                                 }
                             }
@@ -1169,22 +1197,22 @@ Item {
                         onAboutToShow: contentItem.Window.window?.raise()
                         // Fades in when it opens, in place of the style's growing from a third of its height
                         enter: Transition {
-                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: weather.menuOpenDuration; easing.type: Easing.OutCubic }
+                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: weather.settings.menuOpenDuration; easing.type: Easing.OutCubic }
                         }
                         topInset: 0
                         leftInset: 0
                         rightInset: 0
                         bottomInset: 0
-                        font: weather.menuFont
+                        font: weather.settings.menuFont
                         // Active and inactive only, so disabled controls keep the style's dimmed colours
-                        palette.active.text: weather.menuTextColor
-                        palette.inactive.text: weather.menuTextColor
+                        palette.active.text: weather.settings.menuTextColor
+                        palette.inactive.text: weather.settings.menuTextColor
 
                         background: Rectangle {
-                            implicitWidth: weather.menuWidth
-                            radius: weather.menuRadius
-                            color: weather.menuColor
-                            border.color: weather.menuBorderColor
+                            implicitWidth: weather.settings.menuWidth
+                            radius: weather.settings.menuRadius
+                            color: weather.settings.menuColor
+                            border.color: weather.settings.menuBorderColor
                         }
 
                         FieldMenuItem {
@@ -1254,9 +1282,9 @@ Item {
                         Layout.topMargin: 12
                         placeholderText: qsTr("Search for a city")
                         // The popup follows the bar's theme, which can differ from the system's
-                        color: weather.popupTextColor
-                        placeholderTextColor: weather.popupTertiaryTextColor
-                        font: weather.popupFont
+                        color: weather.settings.popupTextColor
+                        placeholderTextColor: weather.settings.popupTertiaryTextColor
+                        font: weather.settings.popupFont
                         Accessible.name: qsTr("Search for a city")
                         onTextChanged: forecast.search(text)
                         Keys.onReturnPressed: {
@@ -1276,7 +1304,7 @@ Item {
                         wrapMode: Text.WordWrap
                         horizontalAlignment: Text.AlignHCenter
                         muted: true
-                        font: weather.popupSmallFont
+                        font: weather.settings.popupSmallFont
                     }
 
                     Flickable {
@@ -1320,7 +1348,7 @@ Item {
                                     Rectangle {
                                         anchors.fill: parent
                                         radius: 6
-                                        color: placeArea.containsMouse ? weather.popupHoverColor : "transparent"
+                                        color: placeArea.containsMouse ? weather.settings.popupHoverColor : "transparent"
                                     }
 
                                     Column {
@@ -1338,7 +1366,7 @@ Item {
                                             visible: text !== ""
                                             text: place.modelData.region
                                             muted: true
-                                            font: weather.popupSmallFont
+                                            font: weather.settings.popupSmallFont
                                         }
                                     }
 
@@ -1364,9 +1392,9 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: weather.popupRadius - 1
-                    bottomRightRadius: weather.popupRadius - 1
-                    color: weather.popupSecondaryBackgroundColor
+                    bottomLeftRadius: weather.settings.popupRadius - 1
+                    bottomRightRadius: weather.settings.popupRadius - 1
+                    color: weather.settings.popupSecondaryBackgroundColor
 
                     Divider { width: parent.width }
 
@@ -1392,7 +1420,7 @@ Item {
                         visible: !popup.picking && weather.updated !== ""
                         text: qsTr("Updated %1").arg(weather.updated)
                         muted: true
-                        font: weather.popupSmallFont
+                        font: weather.settings.popupSmallFont
                     }
                 }
             }

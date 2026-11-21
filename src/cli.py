@@ -320,6 +320,38 @@ class CLIHandler:
             help="Tail yasb process logs (cancel with Ctrl-C)",
             add_help=False,
         )
+        addons_parser = subparsers.add_parser(
+            "addons",
+            help="Copy YASB's widgets to change them, and update, list and remove your addons",
+            prog="yasbc addons",
+        )
+        addons_commands = addons_parser.add_subparsers(dest="addons_command")
+        copy_parser = addons_commands.add_parser(
+            "copy",
+            help="Copy a widget's settings to change them, or the whole widget with --full",
+            prog="yasbc addons copy",
+        )
+        copy_parser.add_argument("name", help="The widget, such as clock")
+        copy_parser.add_argument("--full", action="store_true", help="Copy the whole widget, not only its settings")
+        copy_parser.add_argument("--force", action="store_true", help="Replace your copy if you have one")
+        update_parser = addons_commands.add_parser(
+            "update",
+            help="Update your copies of YASB's widgets",
+            prog="yasbc addons update",
+        )
+        update_parser.add_argument("name", nargs="?", help="Only this widget")
+        remove_parser = addons_commands.add_parser(
+            "remove",
+            help="Delete a widget from your widgets folder",
+            prog="yasbc addons remove",
+        )
+        remove_parser.add_argument("name", help="The widget, such as clock")
+        remove_parser.add_argument("-y", "--yes", action="store_true", help="Delete without asking")
+        addons_commands.add_parser(
+            "list",
+            help="List the widgets in your widgets folder",
+            prog="yasbc addons list",
+        )
         # No arguments and no -h of its own, everything after `cloud` falls through as
         # unrecognised and is handed to core.cloud.cli, which has its own parser.
         subparsers.add_parser(
@@ -384,6 +416,20 @@ class CLIHandler:
             from core.cloud.cli import run as run_cloud
 
             sys.exit(run_cloud(passthrough))
+        elif args.command == "addons":
+            from core.cli.addons import CLIAddonsHandler
+
+            addons = CLIAddonsHandler()
+            if args.addons_command == "copy":
+                sys.exit(addons.copy(args.name, full=args.full, force=args.force))
+            if args.addons_command == "update":
+                sys.exit(addons.update(args.name))
+            if args.addons_command == "remove":
+                sys.exit(addons.remove(args.name, yes=args.yes))
+            if args.addons_command == "list":
+                sys.exit(addons.list())
+            addons_parser.print_help()
+            sys.exit(0)
         elif args.command == "reload":
             if is_process_running("yasb.exe"):
                 if not args.silent:
@@ -604,6 +650,7 @@ class CLIHandler:
                   log                       Tail yasb process logs (cancel with Ctrl-C)
                   reset                     Restore default config files and clear cache
                   cloud                     Back up and restore your config with YASB Cloud
+                  addons                    Copy YASB's widgets, and update, list and remove your addons
                   config-dir                Open config directory in file explorer
                   help                      Print this message
 

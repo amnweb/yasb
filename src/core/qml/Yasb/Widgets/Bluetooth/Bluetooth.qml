@@ -11,119 +11,144 @@ import Yasb.Themes
 Item {
     id: bluetooth
 
+    component PopupIcons: QtObject {
+        property var devices
+        property list<string> battery
+        property string refresh
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Label placeholders: {device_name} and {device_count}; empty shows only the icon
+        property string label: ""
+        property string alternateLabel: "{device_name}"
+        property string noDeviceLabel: "No devices connected"
+        property string deviceSeparator: ", "
+        // Longest label in characters, 0 for no limit
+        property int maxLength: 0
+        // Names to show instead of the devices' own, such as ({ "WH-1000XM4": "Headphones" })
+        property var deviceAliases: ({})
+        // The connected devices when the pointer rests on the widget
+        property bool tooltip: true
+        property int iconSize: theme.bar.iconFont.pixelSize
+        property string offIcon: "\ue702"
+        property string onIcon: "\ue702"
+        property string connectedIcon: "\ue702"
+        property int popupWidth: 344
+        // Popup alignment relative to the widget on a horizontal bar: left, right or center
+        property string popupAlignment: "center"
+        // Scroll the device list when it exceeds this height
+        property int maxListHeight: 320
+        property color errorColor: theme.colors.critical
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        property color accentColor: theme.colors.accent
+        // The bar icon while Bluetooth is off, on, and connected to a device
+        property color offColor: textColor
+        property color onColor: textColor
+        property color connectedColor: accentColor
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+        property color popupDividerColor: theme.colors.divider
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+        property color popupTertiaryTextColor: theme.colors.textTertiary
+        property color popupHoverColor: theme.colors.hover
+        property color popupCardColor: theme.colors.card
+        property color popupCardBorderColor: theme.colors.cardBorder
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        readonly property PopupIcons popupIcons: PopupIcons {
+            // Each kind of device
+            devices: ({
+                headphones: "\ue7f6",
+                headset: "\ue95b",
+                speaker: "\ue7f5",
+                phone: "\ue8ea",
+                tablet: "\ue70a",
+                laptop: "\ue7f8",
+                computer: "\ue950",
+                keyboard: "\ue765",
+                mouse: "\ue962",
+                controller: "\ue7fc",
+                watch: "\ue918",
+                camera: "\ue722",
+                generic: "\ue702"
+            })
+            // For up to 10, 30, 60, 90 and 100 percent
+            battery: ["\ueba0", "\ueba2", "\ueba5", "\ueba8", "\uebaa"]
+            refresh: "\ue72c"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // Each device's icon, its battery glyph, and the glyph that looks for devices
+        property int deviceIconSize: 20
+        property int batteryIconSize: 16
+        property int popupIconSize: 14
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Label placeholders: {device_name} and {device_count}; empty shows only the icon
-    property string label: ""
-    property string alternateLabel: "{device_name}"
-    property string noDeviceLabel: "No devices connected"
-    property string deviceSeparator: ", "
-    // Longest label in characters, 0 for no limit
-    property int maxLength: 0
-    // Names to show instead of the devices' own, such as ({ "WH-1000XM4": "Headphones" })
-    property var deviceAliases: ({})
-    // The connected devices when the pointer rests on the widget
-    property bool tooltip: true
-    property int iconSize: theme.bar.iconFont.pixelSize
-    property string offIcon: "\ue702"
-    property string onIcon: "\ue702"
-    property string connectedIcon: "\ue702"
-    // Popup glyphs for each kind of device
-    property var deviceIcons: ({
-        headphones: "\ue7f6",
-        headset: "\ue95b",
-        speaker: "\ue7f5",
-        phone: "\ue8ea",
-        tablet: "\ue70a",
-        laptop: "\ue7f8",
-        computer: "\ue950",
-        keyboard: "\ue765",
-        mouse: "\ue962",
-        controller: "\ue7fc",
-        watch: "\ue918",
-        camera: "\ue722",
-        generic: "\ue702"
-    })
-    // Battery glyphs for up to 10, 30, 60, 90 and 100 percent
-    property list<string> batteryIcons: ["\ueba0", "\ueba2", "\ueba5", "\ueba8", "\uebaa"]
-    property int popupWidth: 344
-    // Popup alignment relative to the widget on a horizontal bar: left, right or center
-    property string popupAlignment: "center"
-    // Scroll the device list when it exceeds this height
-    property int maxListHeight: 320
-    property color errorColor: bluetooth.theme.colors.critical
+    readonly property Settings settings: Settings {
+        theme: bluetooth.theme
+    }
 
     property bool showAlternate: false
 
     readonly property bool dark: theme.dark
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // The bar icon, by state for example: !radioOn ? "#808080" : names.length > 0 ? accentColor : textColor
-    property color iconColor: !radioOn ? textColor : names.length > 0 ? theme.colors.accent : textColor
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    property color accentColor: theme.colors.accent
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
-    property color popupDividerColor: theme.colors.divider
-    property color popupSecondaryTextColor: theme.colors.textSecondary
-    property color popupTertiaryTextColor: theme.colors.textTertiary
-    property color popupHoverColor: theme.colors.hover
-    property color popupCardColor: theme.colors.card
-    property color popupCardBorderColor: theme.colors.cardBorder
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // Each device's icon, its battery glyph, and the glyph that looks for devices
-    property int deviceIconSize: 20
-    property int batteryIconSize: 16
-    property int popupIconSize: 14
     readonly property string edge: bar.edge
 
     // Whether Bluetooth is on, and the names of the connected devices
     readonly property bool radioOn: monitor.radioOn
-    readonly property list<string> names: monitor.connected.map(name => bluetooth.deviceAliases[name.trim()] ?? name)
-    readonly property string text: format(showAlternate ? alternateLabel : label)
+    readonly property list<string> names: monitor.connected.map(name => bluetooth.settings.deviceAliases[name.trim()] ?? name)
+    readonly property color iconColor: !radioOn ? settings.offColor
+        : names.length > 0 ? settings.connectedColor : settings.onColor
+    readonly property string text: format(showAlternate ? settings.alternateLabel : settings.label)
 
     function format(template: string): string {
         if (template === "")
             return ""
         const values = {
-            device_name: names.length > 0 ? names.join(deviceSeparator) : noDeviceLabel,
+            device_name: names.length > 0 ? names.join(settings.deviceSeparator) : settings.noDeviceLabel,
             device_count: String(names.length)
         }
         const text = template.replace(/\{(\w+)\}/g, (match, key) => values[key] ?? match)
-        return maxLength > 0 && text.length > maxLength ? text.slice(0, maxLength) + "..." : text
+        return settings.maxLength > 0 && text.length > settings.maxLength ? text.slice(0, settings.maxLength) + "..." : text
     }
 
     function batteryIcon(percent: int): string {
         const ceilings = [10, 30, 60, 90]
         const band = ceilings.findIndex(ceiling => percent <= ceiling)
-        return batteryIcons[Math.min(band < 0 ? 4 : band, batteryIcons.length - 1)] ?? ""
+        return settings.popupIcons.battery[Math.min(band < 0 ? 4 : band, settings.popupIcons.battery.length - 1)] ?? ""
     }
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const gap = popupGap
+        const gap = settings.popupGap
         const margin = 8
         let px
         let py
@@ -137,8 +162,8 @@ Item {
             py = start.y + (height - popup.height) / 2
             break
         default:
-            px = popupAlignment === "left" ? start.x
-                : popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
+            px = settings.popupAlignment === "left" ? start.x
+                : settings.popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
             py = edge === "bottom" ? start.y - popup.height - gap : start.y + height + gap
             break
         }
@@ -212,12 +237,16 @@ Item {
     }
 
     component Glyph: Text {
+        id: glyph
+
+        property font iconFont: bluetooth.settings.iconFont
+
         textFormat: Text.PlainText
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        font.family: bluetooth.iconFont.family
-        font.weight: bluetooth.iconFont.weight
-        font.variableAxes: bluetooth.iconFont.variableAxes
+        font.family: glyph.iconFont.family
+        font.weight: glyph.iconFont.weight
+        font.variableAxes: glyph.iconFont.variableAxes
     }
 
     component SectionTitle: Text {
@@ -225,8 +254,8 @@ Item {
         topPadding: 6
         bottomPadding: 4
         textFormat: Text.PlainText
-        color: bluetooth.popupSecondaryTextColor
-        font: bluetooth.popupSmallFont
+        color: bluetooth.settings.popupSecondaryTextColor
+        font: bluetooth.settings.popupSmallFont
     }
 
     component DeviceRow: Item {
@@ -274,9 +303,9 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 8
-            color: device.expanded ? bluetooth.popupCardColor : headerArea.containsMouse ? bluetooth.popupHoverColor : "transparent"
+            color: device.expanded ? bluetooth.settings.popupCardColor : headerArea.containsMouse ? bluetooth.settings.popupHoverColor : "transparent"
             border.width: device.expanded ? 1 : 0
-            border.color: bluetooth.popupCardBorderColor
+            border.color: bluetooth.settings.popupCardBorderColor
         }
 
         ColumnLayout {
@@ -298,9 +327,10 @@ Item {
                     Glyph {
                         Layout.preferredWidth: 20
                         Layout.preferredHeight: 20
-                        text: bluetooth.deviceIcons[device.kind] ?? bluetooth.deviceIcons.generic ?? ""
-                        color: bluetooth.popupTextColor
-                        font.pixelSize: bluetooth.deviceIconSize
+                        text: bluetooth.settings.popupIcons.devices[device.kind] ?? bluetooth.settings.popupIcons.devices.generic ?? ""
+                        color: bluetooth.settings.popupTextColor
+                        iconFont: bluetooth.settings.popupIconFont
+                        font.pixelSize: bluetooth.settings.deviceIconSize
                     }
 
                     Column {
@@ -311,8 +341,8 @@ Item {
                             text: device.name
                             textFormat: Text.PlainText
                             elide: Text.ElideRight
-                            color: bluetooth.popupTextColor
-                            font: bluetooth.popupFont
+                            color: bluetooth.settings.popupTextColor
+                            font: bluetooth.settings.popupFont
                         }
 
                         Text {
@@ -320,8 +350,8 @@ Item {
                             text: device.statusText
                             textFormat: Text.PlainText
                             elide: Text.ElideRight
-                            color: bluetooth.popupSecondaryTextColor
-                            font: bluetooth.popupSmallFont
+                            color: bluetooth.settings.popupSecondaryTextColor
+                            font: bluetooth.settings.popupSmallFont
                         }
                     }
 
@@ -329,15 +359,16 @@ Item {
                         objectName: "battery"
                         visible: device.battery >= 0
                         text: `${device.battery}%`
-                        color: bluetooth.popupSecondaryTextColor
-                        font: bluetooth.popupSmallFont
+                        color: bluetooth.settings.popupSecondaryTextColor
+                        font: bluetooth.settings.popupSmallFont
                     }
 
                     Glyph {
                         visible: device.battery >= 0
                         text: bluetooth.batteryIcon(device.battery)
-                        color: bluetooth.popupTextColor
-                        font.pixelSize: bluetooth.batteryIconSize
+                        color: bluetooth.settings.popupTextColor
+                        iconFont: bluetooth.settings.popupIconFont
+                        font.pixelSize: bluetooth.settings.batteryIconSize
                     }
                 }
 
@@ -378,11 +409,11 @@ Item {
         Glyph {
             objectName: "icon"
             y: Math.round((parent.height - height) / 2)
-            width: bluetooth.iconSize
-            height: bluetooth.iconSize
-            text: !bluetooth.radioOn ? bluetooth.offIcon : bluetooth.names.length > 0 ? bluetooth.connectedIcon : bluetooth.onIcon
+            width: bluetooth.settings.iconSize
+            height: bluetooth.settings.iconSize
+            text: !bluetooth.radioOn ? bluetooth.settings.offIcon : bluetooth.names.length > 0 ? bluetooth.settings.connectedIcon : bluetooth.settings.onIcon
             color: bluetooth.iconColor
-            font.pixelSize: bluetooth.iconSize
+            font.pixelSize: bluetooth.settings.iconSize
         }
 
         Label {
@@ -391,8 +422,8 @@ Item {
             visible: text !== ""
             text: bluetooth.text
             textFormat: Text.PlainText
-            color: bluetooth.textColor
-            font: bluetooth.font
+            color: bluetooth.settings.textColor
+            font: bluetooth.settings.font
         }
     }
 
@@ -414,11 +445,11 @@ Item {
     ToolTip {
         objectName: "tooltip"
         popupType: Popup.Window
-        visible: bluetooth.tooltip && area.containsMouse && !popup.visible
+        visible: bluetooth.settings.tooltip && area.containsMouse && !popup.visible
         delay: 400
         text: bluetooth.names.length > 0
             ? [qsTr("Connected devices"), ...bluetooth.names.map(name => `\u2022 ${name}`)].join("\n")
-            : bluetooth.noDeviceLabel
+            : bluetooth.settings.noDeviceLabel
         // Away from the bar's edge
         y: bluetooth.edge === "bottom" ? -implicitHeight - 6 : bluetooth.height + 6
     }
@@ -432,14 +463,14 @@ Item {
 
         objectName: "popup"
         title: "Bluetooth"
-        width: bluetooth.popupWidth
+        width: bluetooth.settings.popupWidth
         height: popupContent.implicitHeight
         anchor: bluetooth
-        font: bluetooth.popupFont
+        font: bluetooth.settings.popupFont
         theme: bluetooth.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: bluetooth.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: bluetooth.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: bluetooth.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: bluetooth.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -449,10 +480,10 @@ Item {
             id: surface
 
             anchors.fill: parent
-            radius: bluetooth.popupRadius
-            color: bluetooth.popupColor
+            radius: bluetooth.settings.popupRadius
+            color: bluetooth.settings.popupColor
             border.width: 1
-            border.color: bluetooth.popupBorderColor
+            border.color: bluetooth.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: bluetooth.edge === "bottom" ? Item.Bottom : Item.Top
@@ -473,8 +504,8 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: qsTr("Bluetooth")
-                        font: bluetooth.popupTitleFont
-                        color: bluetooth.popupTextColor
+                        font: bluetooth.settings.popupTitleFont
+                        color: bluetooth.settings.popupTextColor
                     }
 
                     Switch {
@@ -493,7 +524,7 @@ Item {
                 LoadingLine {
                     Layout.fillWidth: true
                     running: monitor.busy || monitor.pending !== ""
-                    trackColor: bluetooth.popupDividerColor
+                    trackColor: bluetooth.settings.popupDividerColor
                 }
 
                 Text {
@@ -507,8 +538,8 @@ Item {
                     textFormat: Text.PlainText
                     wrapMode: Text.WordWrap
                     horizontalAlignment: Text.AlignHCenter
-                    color: bluetooth.errorColor
-                    font: bluetooth.popupSmallFont
+                    color: bluetooth.settings.errorColor
+                    font: bluetooth.settings.popupSmallFont
                 }
 
                 Text {
@@ -520,8 +551,8 @@ Item {
                     text: !monitor.radioOn ? qsTr("Bluetooth is turned off")
                         : monitor.busy ? qsTr("Looking for devices...") : qsTr("No devices found")
                     horizontalAlignment: Text.AlignHCenter
-                    color: bluetooth.popupTertiaryTextColor
-                    font: bluetooth.popupFont
+                    color: bluetooth.settings.popupTertiaryTextColor
+                    font: bluetooth.settings.popupFont
                 }
 
                 Flickable {
@@ -529,7 +560,7 @@ Item {
 
                     objectName: "devices"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(contentHeight, bluetooth.maxListHeight)
+                    Layout.preferredHeight: Math.min(contentHeight, bluetooth.settings.maxListHeight)
                     Layout.margins: 6
                     visible: monitor.radioOn && monitor.devices.count + monitor.nearby.count > 0
                     clip: true
@@ -573,14 +604,14 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 44
-                    bottomLeftRadius: bluetooth.popupRadius - 1
-                    bottomRightRadius: bluetooth.popupRadius - 1
-                    color: bluetooth.popupSecondaryBackgroundColor
+                    bottomLeftRadius: bluetooth.settings.popupRadius - 1
+                    bottomRightRadius: bluetooth.settings.popupRadius - 1
+                    color: bluetooth.settings.popupSecondaryBackgroundColor
 
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: bluetooth.popupDividerColor
+                        color: bluetooth.settings.popupDividerColor
                     }
 
                     Text {
@@ -588,8 +619,8 @@ Item {
                         anchors.leftMargin: 15
                         anchors.verticalCenter: parent.verticalCenter
                         text: qsTr("More Bluetooth settings")
-                        color: settingsArea.containsMouse ? bluetooth.popupTextColor : bluetooth.popupSecondaryTextColor
-                        font: bluetooth.popupSmallFont
+                        color: settingsArea.containsMouse ? bluetooth.settings.popupTextColor : bluetooth.settings.popupSecondaryTextColor
+                        font: bluetooth.settings.popupSmallFont
                         Accessible.role: Accessible.Link
                         Accessible.name: text
                         Accessible.onPressAction: bluetooth.openSettings()
@@ -624,14 +655,15 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             radius: 4
-                            color: scanArea.containsMouse ? bluetooth.popupHoverColor : "transparent"
+                            color: scanArea.containsMouse ? bluetooth.settings.popupHoverColor : "transparent"
                         }
 
                         Glyph {
                             anchors.fill: parent
-                            text: "\ue72c"
-                            color: bluetooth.popupTextColor
-                            font.pixelSize: bluetooth.popupIconSize
+                            text: bluetooth.settings.popupIcons.refresh
+                            color: bluetooth.settings.popupTextColor
+                            iconFont: bluetooth.settings.popupIconFont
+                            font.pixelSize: bluetooth.settings.popupIconSize
                         }
 
                         MouseArea {

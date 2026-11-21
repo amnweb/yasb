@@ -67,8 +67,9 @@ def load_widget() -> tuple[QQuickItem, QQuickWindow, QQmlEngine, list[str]]:
 
     engine.warnings.connect(collect)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "PowerMenu" / "PowerMenu.qml")))
-    widget = create_with_bar(component, {"animationDuration": 10})
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+    widget.property("settings").setProperty("animationDuration", 10)
     host = QQuickWindow()
     widget.setParentItem(host.contentItem())
     return widget, host, engine, warnings
@@ -145,7 +146,7 @@ def test_escape_closes_the_menu_without_running_anything(operations: FakeOperati
 
 def test_a_custom_button_list_replaces_the_default(operations: FakeOperations):
     widget, host, _engine, warnings = load_widget()
-    widget.setProperty("buttons", [{"action": "hibernate", "label": "Hibernate"}])
+    widget.property("settings").setProperty("buttons", [{"action": "hibernate", "label": "Hibernate"}])
     window = open_menu(widget)
     assert find_item(window.contentItem(), "power-lock") is None  # type: ignore[arg-type]
     assert find_item(window.contentItem(), "power-hibernate") is not None  # type: ignore[arg-type]

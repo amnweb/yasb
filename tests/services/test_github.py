@@ -335,7 +335,8 @@ def test_qml_widget_shows_every_state_without_warnings(github: GitHub, monkeypat
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Github" / "Github.qml")))
     widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
-    QQmlProperty.write(widget, "token", TOKEN)
+    settings = widget.property("settings")
+    QQmlProperty.write(settings, "token", TOKEN)
     host = QQuickWindow()
     try:
         widget.setParentItem(host.contentItem())
@@ -345,7 +346,7 @@ def test_qml_widget_shows_every_state_without_warnings(github: GitHub, monkeypat
         until(settled(service))
         label = find_item(widget, "label")
         assert label is not None and label.property("text") == ""
-        widget.setProperty("label", "{count} unread {x}")
+        settings.setProperty("label", "{count} unread {x}")
         assert label.property("text") == "2 unread {x}"
         QMetaObject.invokeMethod(widget, "togglePopup")
         wait(50)
@@ -357,7 +358,7 @@ def test_qml_widget_shows_every_state_without_warnings(github: GitHub, monkeypat
         service.refresh()
         until(settled(service))
         # Without the token the popup's sign-in is used, of which there is none
-        QQmlProperty.write(widget, "token", "")
+        QQmlProperty.write(settings, "token", "")
         service.refresh()
         wait(50)
         assert service.property("needsSignIn")

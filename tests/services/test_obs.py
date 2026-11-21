@@ -192,8 +192,9 @@ def test_the_widget_shows_a_recording(obs: FakeObs):
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Obs" / "Obs.qml")))
     item = create_with_bar(component)
     assert isinstance(item, QQuickItem), [error.toString() for error in component.errors()]
-    QQmlProperty.write(item, "host", "127.0.0.1")
-    QQmlProperty.write(item, "port", obs.port)
+    settings = item.property("settings")
+    QQmlProperty.write(settings, "host", "127.0.0.1")
+    QQmlProperty.write(settings, "port", obs.port)
     # An item counts as visible only in a window, as on a bar
     host = QQuickWindow()
     item.setParentItem(host.contentItem())

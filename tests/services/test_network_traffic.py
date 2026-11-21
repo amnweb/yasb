@@ -26,7 +26,7 @@ from core.services.network_traffic.monitor import EMPTY_DATA, EMPTY_HISTORY, Net
 from core.services.network_traffic.usage import Session
 from core.widget_files import BUILTIN_WIDGETS_DIR, find_widget_file
 from settings import QML_IMPORT_PATH
-from tests.support.bar import create_with_bar
+from tests.support.bar import make_bar
 from tests.support.network import FakeWatcher, connection
 from tests.support.qt import find_item, wait
 
@@ -216,8 +216,16 @@ def widget(samplers: dict[str, FakeSampler], sampler: FakeSampler) -> Iterator[C
         component = QQmlComponent(
             engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "NetworkTraffic/NetworkTraffic.qml"))
         )
-        item = create_with_bar(component, cast(dict[str | None, Any], properties))
+        # Set on its settings while the widget is made, as a user's file sets them
+        bar = make_bar(engine)
+        item = component.beginCreate(engine.rootContext())
         assert isinstance(item, QQuickItem), [error.toString() for error in component.errors()]
+        component.setInitialProperties(item, {"bar": bar})
+        settings = item.property("settings")
+        for name, value in properties.items():
+            settings.setProperty(name, value)
+        component.completeCreate()
+        bar.setParent(item)
         created.append(item)
         host = QQuickWindow()
         host.setGeometry(0, 0, 600, 40)
@@ -250,13 +258,13 @@ def test_bar_label_is_optional_and_session_label_can_be_overridden(
     item = widget()
     label = find_item(item, "label")
     assert label is not None and label.property("text") == ""
-    item.setProperty("label", "My traffic")
+    item.property("settings").setProperty("label", "My traffic")
     assert label.property("text") == "My traffic"
     item.setProperty("showAlternate", True)
     assert label.property("text") == "↓ 2.0 KiB  ↑ 1.0 KiB"
-    item.setProperty("alternateLabel", "My session")
+    item.property("settings").setProperty("alternateLabel", "My session")
     assert label.property("text") == "My session"
-    item.setProperty(
+    item.property("settings").setProperty(
         "alternateLabel", "{download_speed} {upload_speed} {session_time} {today_downloaded} {today_uploaded} {x}"
     )
     assert label.property("text") == "2.0 Mbps 1.0 Mbps 2m 1.0 GiB 1.0 MiB {x}"
@@ -264,7 +272,9 @@ def test_bar_label_is_optional_and_session_label_can_be_overridden(
     ten_days_ago = {"stamp": STAMP - 10 * 86400 * 1000, "downloaded": 1024**3, "uploaded": 0}
     sampler.history = {**HISTORY, "daily": [ten_days_ago, POINT]}
     sampler.historyChanged.emit()
-    item.setProperty("alternateLabel", "{week_downloaded} {month_downloaded} {month_uploaded} {network} {adapter} {ip}")
+    item.property("settings").setProperty(
+        "alternateLabel", "{week_downloaded} {month_downloaded} {month_uploaded} {network} {adapter} {ip}"
+    )
     assert label.property("text") == "1.0 GiB 2.0 GiB 1.0 MiB Home Ethernet 192.0.2.10"
 
 
@@ -295,10 +305,10 @@ def test_popup_switches_history_period_and_keeps_live_data_when_history_is_unava
     assert status is not None and status.property("text") == "Ethernet · 192.0.2.10 ·"
     assert panel.property("downloadText") == "2.0 Mbps"
     assert panel.property("uploadText") == "1.0 Mbps"
-    item.setProperty("speedUnit", "bytes")
+    item.property("settings").setProperty("speedUnit", "bytes")
     assert panel.property("downloadText") == "244.1 KiB/s"
     assert panel.property("uploadText") == "122.1 KiB/s"
-    item.setProperty("speedUnit", "bits")
+    item.property("settings").setProperty("speedUnit", "bits")
     for period in (0, 1, 2):
         panel.setProperty("period", period)
         points = panel.property("points")

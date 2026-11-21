@@ -149,7 +149,7 @@ def test_the_widget_shows_the_level(service: FakeAudioService):
 
     label = find_item(widget, "label")
     assert label is not None and label.property("text") == ""
-    widget.setProperty("label", "{level} on {device} {x}")
+    widget.property("settings").setProperty("label", "{level} on {device} {x}")
     assert label.property("text") == "30% on Speakers {x}"
     service.volume.muted = True
     for listener in service.listeners:

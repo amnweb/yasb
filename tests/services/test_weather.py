@@ -440,7 +440,7 @@ def widget(api: WeatherApi) -> Iterator[tuple[QQuickItem, list[str]]]:
 
 def test_the_bar_label_fills_its_placeholders(widget: tuple[QQuickItem, list[str]]):
     item, warnings = widget
-    item.setProperty("label", "{temp} in {location}, {unknown}")
+    item.property("settings").setProperty("label", "{temp} in {location}, {unknown}")
     label = find_item(item, "label")
     assert label is not None
     until(lambda: label.property("text") == "Set location")

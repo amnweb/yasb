@@ -12,66 +12,87 @@ import Yasb.Themes
 Item {
     id: memory
 
-    // Label placeholders: {virtual_mem_percent} and {swap_mem_percent} in %; sizes such as 8.0G: {virtual_mem_used}
-    // {virtual_mem_free} (the same as {virtual_mem_avail}) {virtual_mem_total} {virtual_mem_cached} {swap_mem_used}
-    // {swap_mem_free} {swap_mem_total}, and {virtual_mem_outof} for used / total. :.0f after a name sets the decimals,
-    // as {virtual_mem_percent:.0f}. Right-click shows the alternate label.
-    property string label: "{virtual_mem_percent:.0f}%"
-    property string alternateLabel: "{virtual_mem_free}/{virtual_mem_total}"
-    property int updateInterval: 5000
-    property color graphColor: theme.colors.accent
-    // Square grid lines behind the graph
-    property bool graphGrid: true
-    // The glyph in front of the text, drawn in iconFont and the text colour; "" for none
-    property string icon: "\ueea0"
-    property int iconSize: theme.bar.iconFont.pixelSize
-    property int popupWidth: 400
+    component PopupIcons: QtObject {
+        property string pin
+        property string unpin
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Label placeholders: {virtual_mem_percent} and {swap_mem_percent} in %; sizes such as 8.0G: {virtual_mem_used}
+        // {virtual_mem_free} (the same as {virtual_mem_avail}) {virtual_mem_total} {virtual_mem_cached} {swap_mem_used}
+        // {swap_mem_free} {swap_mem_total}, and {virtual_mem_outof} for used / total. :.0f after a name sets the decimals,
+        // as {virtual_mem_percent:.0f}. Right-click shows the alternate label.
+        property string label: "{virtual_mem_percent:.0f}%"
+        property string alternateLabel: "{virtual_mem_free}/{virtual_mem_total}"
+        property int updateInterval: 5000
+        property color graphColor: theme.colors.accent
+        // Square grid lines behind the graph
+        property bool graphGrid: true
+        // The glyph in front of the text, drawn in iconFont and the text colour; "" for none
+        property string icon: "\ueea0"
+        property int iconSize: theme.bar.iconFont.pixelSize
+        property int popupWidth: 400
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        property color popupDividerColor: theme.colors.divider
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+        property color popupTertiaryTextColor: theme.colors.textTertiary
+        property color popupCardColor: theme.colors.card
+        property color popupCardBorderColor: theme.colors.cardBorder
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        readonly property PopupIcons popupIcons: PopupIcons {
+            pin: "\ue840"
+            unpin: "\ue77a"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // The pin glyph, and each stat's value under its name
+        property int popupIconSize: 14
+        property font valueFont
+        valueFont.family: theme.popup.font.family
+        valueFont.pixelSize: 20
+        valueFont.weight: 700
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
+    readonly property Settings settings: Settings {
+        theme: memory.theme
+    }
 
     property bool showAlternate: false
-    readonly property string text: format(showAlternate ? alternateLabel : label)
+    readonly property string text: format(showAlternate ? settings.alternateLabel : settings.label)
     property list<real> history: []
 
     readonly property bool dark: theme.dark
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    property color popupDividerColor: theme.colors.divider
-    property color popupSecondaryTextColor: theme.colors.textSecondary
-    property color popupTertiaryTextColor: theme.colors.textTertiary
-    property color popupCardColor: theme.colors.card
-    property color popupCardBorderColor: theme.colors.cardBorder
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // The pin glyph, and each stat's value under its name
-    property int popupIconSize: 14
-    property font valueFont
-    valueFont.family: theme.popup.font.family
-    valueFont.pixelSize: 20
-    valueFont.weight: Font.Bold
     readonly property string edge: bar.edge
 
     function spline(points: var): string {
@@ -148,10 +169,10 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + popupGap
-            : edge === "right" ? start.x - popup.width - popupGap : start.x + (width - popup.width) / 2
-        let py = edge === "top" ? start.y + height + popupGap
-            : edge === "bottom" ? start.y - popup.height - popupGap : start.y + (height - popup.height) / 2
+        let px = edge === "left" ? start.x + width + settings.popupGap
+            : edge === "right" ? start.x - popup.width - settings.popupGap : start.x + (width - popup.width) / 2
+        let py = edge === "top" ? start.y + height + settings.popupGap
+            : edge === "bottom" ? start.y - popup.height - settings.popupGap : start.y + (height - popup.height) / 2
         const screen = memory.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - popup.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - popup.height - 8))
@@ -176,7 +197,7 @@ Item {
     MemoryMonitor {
         id: monitor
 
-        updateInterval: memory.updateInterval
+        updateInterval: memory.settings.updateInterval
         onDataChanged: memory.history = [...memory.history, monitor.data.virtual.percent].slice(-60)
     }
 
@@ -198,13 +219,13 @@ Item {
 
         Text {
             anchors.verticalCenter: parent.verticalCenter
-            visible: memory.icon !== ""
-            text: memory.icon
-            color: memory.textColor
-            font.family: memory.iconFont.family
-            font.weight: memory.iconFont.weight
-            font.variableAxes: memory.iconFont.variableAxes
-            font.pixelSize: memory.iconSize
+            visible: memory.settings.icon !== ""
+            text: memory.settings.icon
+            color: memory.settings.textColor
+            font.family: memory.settings.iconFont.family
+            font.weight: memory.settings.iconFont.weight
+            font.variableAxes: memory.settings.iconFont.variableAxes
+            font.pixelSize: memory.settings.iconSize
         }
 
         Label {
@@ -213,8 +234,8 @@ Item {
             visible: text !== ""
             text: memory.text
             textFormat: Text.PlainText
-            color: memory.textColor
-            font: memory.font
+            color: memory.settings.textColor
+            font: memory.settings.font
         }
     }
 
@@ -246,14 +267,14 @@ Item {
         }
         objectName: "menu"
         title: "Memory"
-        width: memory.popupWidth
+        width: memory.settings.popupWidth
         height: popupContent.implicitHeight
         anchor: memory
-        font: memory.popupFont
+        font: memory.settings.popupFont
         theme: memory.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: memory.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: memory.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: memory.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: memory.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible) {
                 reveal = 0
@@ -264,10 +285,10 @@ Item {
         Rectangle {
             id: surface
             anchors.fill: parent
-            radius: memory.popupRadius
-            color: memory.popupColor
+            radius: memory.settings.popupRadius
+            color: memory.settings.popupColor
             border.width: 1
-            border.color: memory.popupBorderColor
+            border.color: memory.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: memory.edge === "bottom" ? Item.Bottom : Item.Top
@@ -287,8 +308,8 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: "Memory usage"
-                        font: memory.popupTitleFont
-                        color: memory.popupTextColor
+                        font: memory.settings.popupTitleFont
+                        color: memory.settings.popupTextColor
 
                         MouseArea {
                             property point grab
@@ -315,13 +336,13 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            text: popup.pinned ? "\ue77a" : "\ue840"
-                            color: memory.popupTextColor
+                            text: popup.pinned ? memory.settings.popupIcons.unpin : memory.settings.popupIcons.pin
+                            color: memory.settings.popupTextColor
                             opacity: popup.pinned ? 1 : 0.6
-                            font.family: memory.iconFont.family
-                            font.weight: memory.iconFont.weight
-                            font.variableAxes: memory.iconFont.variableAxes
-                            font.pixelSize: memory.popupIconSize
+                            font.family: memory.settings.popupIconFont.family
+                            font.weight: memory.settings.popupIconFont.weight
+                            font.variableAxes: memory.settings.popupIconFont.variableAxes
+                            font.pixelSize: memory.settings.popupIconSize
                         }
 
                         MouseArea {
@@ -335,15 +356,15 @@ Item {
                     Layout.fillWidth: true
                     Layout.bottomMargin: 8
                     implicitHeight: 1
-                    color: memory.popupDividerColor
+                    color: memory.settings.popupDividerColor
                 }
 
                 Text {
                     leftPadding: 14
                     bottomPadding: 4
                     text: "Utilization"
-                    color: memory.popupTertiaryTextColor
-                    font: memory.popupSmallFont
+                    color: memory.settings.popupTertiaryTextColor
+                    font: memory.settings.popupSmallFont
                 }
 
                 Item {
@@ -354,7 +375,7 @@ Item {
                         1 + (height - 2) * (1 - Math.max(0, Math.min(value, 100)) / 100)))
                     readonly property string line: memory.spline(points)
                     readonly property string grid: {
-                        if (!memory.graphGrid || width <= 0 || height <= 0)
+                        if (!memory.settings.graphGrid || width <= 0 || height <= 0)
                             return ""
                         const lines = [`M 0 0.5 L ${width} 0.5`, `M 0.5 0 L 0.5 ${height}`]
                         for (let y = height - 0.5; y > 0; y -= 16)
@@ -373,7 +394,7 @@ Item {
 
                         ShapePath {
                             fillColor: "transparent"
-                            strokeColor: Qt.alpha(memory.popupTextColor, 0.05)
+                            strokeColor: Qt.alpha(memory.settings.popupTextColor, 0.05)
                             strokeWidth: 1
 
                             PathSvg {
@@ -393,12 +414,12 @@ Item {
 
                                 GradientStop {
                                     position: 0
-                                    color: Qt.alpha(memory.graphColor, 100 / 255)
+                                    color: Qt.alpha(memory.settings.graphColor, 100 / 255)
                                 }
 
                                 GradientStop {
                                     position: 1
-                                    color: Qt.alpha(memory.graphColor, 10 / 255)
+                                    color: Qt.alpha(memory.settings.graphColor, 10 / 255)
                                 }
                             }
 
@@ -409,7 +430,7 @@ Item {
 
                         ShapePath {
                             fillColor: "transparent"
-                            strokeColor: memory.graphColor
+                            strokeColor: memory.settings.graphColor
                             strokeWidth: 2
                             capStyle: ShapePath.FlatCap
                             joinStyle: ShapePath.BevelJoin
@@ -441,9 +462,9 @@ Item {
                             Layout.fillWidth: true
                             implicitHeight: values.implicitHeight + 16
                             radius: 8
-                            color: memory.popupCardColor
+                            color: memory.settings.popupCardColor
                             border.width: 1
-                            border.color: memory.popupCardBorderColor
+                            border.color: memory.settings.popupCardBorderColor
 
                             ColumnLayout {
                                 id: values
@@ -461,8 +482,8 @@ Item {
                                     bottomPadding: 2
                                     horizontalAlignment: stat.alignment
                                     text: popup.stats[stat.index][0]
-                                    color: memory.popupSecondaryTextColor
-                                    font: memory.popupFont
+                                    color: memory.settings.popupSecondaryTextColor
+                                    font: memory.settings.popupFont
                                 }
 
                                 Text {
@@ -472,8 +493,8 @@ Item {
                                     bottomPadding: 12
                                     horizontalAlignment: stat.alignment
                                     text: popup.stats[stat.index][1]
-                                    color: memory.popupTextColor
-                                    font: memory.valueFont
+                                    color: memory.settings.popupTextColor
+                                    font: memory.settings.valueFont
                                 }
                             }
                         }

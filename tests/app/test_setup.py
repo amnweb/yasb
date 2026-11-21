@@ -24,7 +24,7 @@ from core.setup import (
 )
 from core.theme_files import THEME_QML
 from core.validation.config import YasbConfig
-from core.widget_files import BUILTIN_WIDGETS_DIR
+from core.widget_files import builtin_manifests
 from settings import QML_IMPORT_PATH
 from tests.support.qt import wait
 
@@ -151,9 +151,9 @@ def test_the_setup_window_starts_with_choices_yasb_loads(qapp: QGuiApplication, 
 
 def test_every_widget_the_setup_offers_is_built_in():
     text = (Path(QML_IMPORT_PATH) / "Yasb" / "Setup" / "Choices.qml").read_text(encoding="utf-8")
-    offered = re.findall(r'^\s*\["(\w+)", qsTr', text, flags=re.MULTILINE)
+    offered = re.findall(r'^\s*\["(\w+)", "', text, flags=re.MULTILINE)
     assert len(offered) > 20
-    assert [name for name in offered if not (BUILTIN_WIDGETS_DIR / name / f"{name}.qml").is_file()] == []
+    assert [name for name in offered if name not in builtin_manifests()] == []
 
 
 def test_the_theme_the_setup_copies_sets_every_default_as_it_is():

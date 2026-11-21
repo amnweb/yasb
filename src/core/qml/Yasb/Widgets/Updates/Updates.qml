@@ -12,100 +12,127 @@ Item {
     // Not updates: the id would hide AvailableUpdates' updates property
     id: updatesWidget
 
+    component PopupIcons: QtObject {
+        property string refresh
+        property string upToDate
+        property string restart
+        property string skip
+        property string update
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Which sources are checked; winget and Scoop are left out where they are not installed
+        property bool windowsUpdate: true
+        property bool winget: true
+        property bool scoop: true
+        // How often Windows Update is checked, in milliseconds, from 1800000 to 604800000
+        property int windowsInterval: 86400000
+        // How often winget and Scoop are checked, in milliseconds, from 600000 to 604800000
+        property int packageInterval: 14400000
+        // Updates to leave out, by a name or id they contain, in any case, such as ["Microsoft.Edge", "Defender"]
+        property list<string> exclude: []
+        // Label placeholders: {count}, {windows}, {winget} and {scoop}
+        property string label: ""
+        // The glyph in front of the label, in the icon font
+        property string icon: "\ue896"
+        // Hides the widget while there is nothing to update and no restart waiting
+        property bool hideWhenNone: true
+        property bool tooltip: true
+        // Hotkey that opens the popup, such as "alt+shift+u"
+        property string hotkey: ""
+        property int popupWidth: 364
+        // Popup alignment relative to the widget on a horizontal bar: left, right or center
+        property string popupAlignment: "center"
+        // The updates scroll when they exceed this height
+        property int maxListHeight: 420
+        property color accentColor: theme.colors.accent
+        property color cautionColor: theme.colors.warning
+        property color criticalColor: theme.colors.critical
+        property color successColor: theme.colors.success
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property int iconSize: theme.bar.iconFont.pixelSize
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+        property color popupCardColor: theme.colors.card
+        property color popupCardBorderColor: theme.colors.cardBorder
+        property color popupDividerColor: theme.colors.divider
+        property color popupTertiaryTextColor: theme.colors.textTertiary
+        property color popupHoverColor: theme.colors.hover
+        property color popupControlColor: theme.colors.control
+        property color popupControlHoverColor: theme.colors.controlHover
+        property color popupControlPressedColor: theme.colors.controlPressed
+        property color popupControlBorderColor: theme.colors.controlBorder
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        readonly property PopupIcons popupIcons: PopupIcons {
+            refresh: "\ue72c"
+            upToDate: "\ue930"
+            restart: "\ue777"
+            skip: "\ued1a"
+            update: "\ue896"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // Glyphs: the popup's buttons and warnings, and the one shown when everything is up to date
+        property int popupIconSize: 14
+        property int statusIconSize: 28
+        // The message when everything is up to date, each source's name and count, each update's name, and each
+        // skipped update's name
+        property font statusFont
+        statusFont.family: theme.popup.font.family
+        statusFont.pixelSize: 14
+        property font sectionFont
+        sectionFont.family: theme.popup.font.family
+        sectionFont.pixelSize: 14
+        sectionFont.weight: 600
+        property font countFont
+        countFont.family: theme.popup.font.family
+        countFont.pixelSize: 11
+        countFont.weight: 600
+        property font updateNameFont
+        updateNameFont.family: theme.popup.font.family
+        updateNameFont.pixelSize: 13
+        updateNameFont.weight: 600
+        property font skippedNameFont
+        skippedNameFont.family: theme.popup.font.family
+        skippedNameFont.pixelSize: 14
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Which sources are checked; winget and Scoop are left out where they are not installed
-    property bool windowsUpdate: true
-    property bool winget: true
-    property bool scoop: true
-    // How often Windows Update is checked, in milliseconds, from 1800000 to 604800000
-    property int windowsInterval: 86400000
-    // How often winget and Scoop are checked, in milliseconds, from 600000 to 604800000
-    property int packageInterval: 14400000
-    // Updates to leave out, by a name or id they contain, in any case, such as ["Microsoft.Edge", "Defender"]
-    property list<string> exclude: []
-    // Label placeholders: {count}, {windows}, {winget} and {scoop}
-    property string label: ""
-    // The glyph in front of the label, in the icon font
-    property string icon: "\ue896"
-    // Hides the widget while there is nothing to update and no restart waiting
-    property bool hideWhenNone: true
-    property bool tooltip: true
-    // Hotkey that opens the popup, such as "alt+shift+u"
-    property string hotkey: ""
-    property int popupWidth: 364
-    // Popup alignment relative to the widget on a horizontal bar: left, right or center
-    property string popupAlignment: "center"
-    // The updates scroll when they exceed this height
-    property int maxListHeight: 420
-    property color accentColor: updatesWidget.theme.colors.accent
-    property color cautionColor: updatesWidget.theme.colors.warning
-    property color criticalColor: updatesWidget.theme.colors.critical
-    property color successColor: updatesWidget.theme.colors.success
+    readonly property Settings settings: Settings {
+        theme: updatesWidget.theme
+    }
 
     readonly property bool dark: theme.dark
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property int iconSize: theme.bar.iconFont.pixelSize
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property color popupSecondaryTextColor: theme.colors.textSecondary
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
-    property color popupCardColor: theme.colors.card
-    property color popupCardBorderColor: theme.colors.cardBorder
-    property color popupDividerColor: theme.colors.divider
-    property color popupTertiaryTextColor: theme.colors.textTertiary
-    property color popupHoverColor: theme.colors.hover
-    property color popupControlColor: theme.colors.control
-    property color popupControlHoverColor: theme.colors.controlHover
-    property color popupControlPressedColor: theme.colors.controlPressed
-    property color popupControlBorderColor: theme.colors.controlBorder
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // Glyphs: the popup's buttons and warnings, and the one shown when everything is up to date
-    property int popupIconSize: 14
-    property int statusIconSize: 28
-    // The message when everything is up to date, each source's name and count, each update's name, and each
-    // skipped update's name
-    property font statusFont
-    statusFont.family: theme.popup.font.family
-    statusFont.pixelSize: 14
-    property font sectionFont
-    sectionFont.family: theme.popup.font.family
-    sectionFont.pixelSize: 14
-    sectionFont.weight: Font.DemiBold
-    property font countFont
-    countFont.family: theme.popup.font.family
-    countFont.pixelSize: 11
-    countFont.weight: Font.DemiBold
-    property font updateNameFont
-    updateNameFont.family: theme.popup.font.family
-    updateNameFont.pixelSize: 13
-    updateNameFont.weight: Font.DemiBold
-    property font skippedNameFont
-    skippedNameFont.family: theme.popup.font.family
-    skippedNameFont.pixelSize: 14
     readonly property string edge: bar.edge
 
     // The updates of each source by its id
@@ -115,7 +142,7 @@ Item {
             found[update.source] = (found[update.source] ?? 0) + 1
         return found
     }
-    readonly property string text: label.replace(/\{(\w+)\}/g,
+    readonly property string text: settings.label.replace(/\{(\w+)\}/g,
         (match, key) => key === "count" ? String(available.count) : String(bySource[key] ?? match))
     // When a source was last checked: the time today, the day and time before
     readonly property string checked: {
@@ -129,7 +156,7 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const gap = popupGap
+        const gap = settings.popupGap
         const margin = 8
         const screen = updatesWidget.Screen
         let px
@@ -144,8 +171,8 @@ Item {
             py = start.y + (height - popup.height) / 2
             break
         default:
-            px = popupAlignment === "left" ? start.x
-                : popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
+            px = settings.popupAlignment === "left" ? start.x
+                : settings.popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
             py = edge === "bottom" ? start.y - popup.height - gap : start.y + height + gap
             break
         }
@@ -166,7 +193,7 @@ Item {
     }
 
     // A hidden widget takes no room on the bar, as its slot keeps the size it asks for
-    readonly property bool shown: !hideWhenNone || available.count > 0 || available.restartRequired
+    readonly property bool shown: !settings.hideWhenNone || available.count > 0 || available.restartRequired
 
     implicitWidth: shown ? row.implicitWidth : 0
     implicitHeight: shown ? row.implicitHeight : 0
@@ -183,16 +210,16 @@ Item {
     AvailableUpdates {
         id: available
 
-        windowsUpdate: updatesWidget.windowsUpdate
-        winget: updatesWidget.winget
-        scoop: updatesWidget.scoop
-        windowsInterval: updatesWidget.windowsInterval
-        packageInterval: updatesWidget.packageInterval
-        exclude: updatesWidget.exclude
+        windowsUpdate: updatesWidget.settings.windowsUpdate
+        winget: updatesWidget.settings.winget
+        scoop: updatesWidget.settings.scoop
+        windowsInterval: updatesWidget.settings.windowsInterval
+        packageInterval: updatesWidget.settings.packageInterval
+        exclude: updatesWidget.settings.exclude
     }
 
     Hotkey {
-        keys: updatesWidget.hotkey
+        keys: updatesWidget.settings.hotkey
         onActivated: updatesWidget.togglePopup()
     }
 
@@ -226,12 +253,16 @@ Item {
     }
 
     component Glyph: Text {
+        id: glyph
+
+        property font iconFont: updatesWidget.settings.iconFont
+
         textFormat: Text.PlainText
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        font.family: updatesWidget.iconFont.family
-        font.weight: updatesWidget.iconFont.weight
-        font.variableAxes: updatesWidget.iconFont.variableAxes
+        font.family: glyph.iconFont.family
+        font.weight: glyph.iconFont.weight
+        font.variableAxes: glyph.iconFont.variableAxes
     }
 
     // Text in the popup: plain, in its ink or muted colour, cut short with an ellipsis rather than widening a row
@@ -241,15 +272,15 @@ Item {
         Layout.minimumWidth: 0
         textFormat: Text.PlainText
         elide: Text.ElideRight
-        color: muted ? updatesWidget.popupTertiaryTextColor : updatesWidget.popupTextColor
-        font: updatesWidget.popupFont
+        color: muted ? updatesWidget.settings.popupTertiaryTextColor : updatesWidget.settings.popupTextColor
+        font: updatesWidget.settings.popupFont
     }
 
     // A line between the popup's parts
     component Divider: Rectangle {
         Layout.fillWidth: true
         implicitHeight: 1
-        color: updatesWidget.popupDividerColor
+        color: updatesWidget.settings.popupDividerColor
     }
 
     // A card holding a source's updates
@@ -258,16 +289,16 @@ Item {
         Layout.leftMargin: 12
         Layout.rightMargin: 12
         radius: 8
-        color: updatesWidget.popupCardColor
+        color: updatesWidget.settings.popupCardColor
         border.width: 1
-        border.color: updatesWidget.popupCardBorderColor
+        border.color: updatesWidget.settings.popupCardBorderColor
     }
 
     // The line above a row in a card, after its first
     component RowSeparator: Rectangle {
         width: parent.width
         height: 1
-        color: updatesWidget.popupDividerColor
+        color: updatesWidget.settings.popupDividerColor
     }
 
     component Link: Text {
@@ -275,8 +306,8 @@ Item {
 
         signal clicked
 
-        color: linkArea.containsMouse ? updatesWidget.popupTextColor : updatesWidget.popupSecondaryTextColor
-        font: updatesWidget.popupSmallFont
+        color: linkArea.containsMouse ? updatesWidget.settings.popupTextColor : updatesWidget.settings.popupSecondaryTextColor
+        font: updatesWidget.settings.popupSmallFont
         Accessible.role: Accessible.Link
         Accessible.name: text
         Accessible.onPressAction: link.clicked()
@@ -302,9 +333,9 @@ Item {
         implicitWidth: buttonText.implicitWidth + 20
         implicitHeight: 26
         radius: 4
-        color: buttonArea.pressed ? updatesWidget.popupControlPressedColor : buttonArea.containsMouse ? updatesWidget.popupControlHoverColor : updatesWidget.popupControlColor
+        color: buttonArea.pressed ? updatesWidget.settings.popupControlPressedColor : buttonArea.containsMouse ? updatesWidget.settings.popupControlHoverColor : updatesWidget.settings.popupControlColor
         border.width: 1
-        border.color: updatesWidget.popupControlBorderColor
+        border.color: updatesWidget.settings.popupControlBorderColor
         Accessible.role: Accessible.Button
         Accessible.name: text
         Accessible.onPressAction: button.clicked()
@@ -315,8 +346,8 @@ Item {
             anchors.centerIn: parent
             text: button.text
             textFormat: Text.PlainText
-            color: updatesWidget.popupTextColor
-            font: updatesWidget.popupSmallFont
+            color: updatesWidget.settings.popupTextColor
+            font: updatesWidget.settings.popupSmallFont
         }
 
         MouseArea {
@@ -335,7 +366,7 @@ Item {
 
         property string glyph
         property string tip
-        property color tint: updatesWidget.popupSecondaryTextColor
+        property color tint: updatesWidget.settings.popupSecondaryTextColor
         signal clicked
 
         implicitWidth: 26
@@ -350,14 +381,15 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 4
-            color: actionArea.containsMouse ? updatesWidget.popupHoverColor : "transparent"
+            color: actionArea.containsMouse ? updatesWidget.settings.popupHoverColor : "transparent"
         }
 
         Glyph {
             anchors.fill: parent
             text: action.glyph
             color: action.tint
-            font.pixelSize: updatesWidget.popupIconSize
+            iconFont: updatesWidget.settings.popupIconFont
+            font.pixelSize: updatesWidget.settings.popupIconSize
         }
 
         MouseArea {
@@ -379,10 +411,10 @@ Item {
         Glyph {
             objectName: "icon"
             anchors.verticalCenter: parent.verticalCenter
-            visible: updatesWidget.icon !== ""
-            text: updatesWidget.icon
-            color: updatesWidget.textColor
-            font.pixelSize: updatesWidget.iconSize
+            visible: updatesWidget.settings.icon !== ""
+            text: updatesWidget.settings.icon
+            color: updatesWidget.settings.textColor
+            font.pixelSize: updatesWidget.settings.iconSize
         }
 
         Label {
@@ -393,8 +425,8 @@ Item {
             visible: text !== ""
             text: updatesWidget.text
             textFormat: Text.PlainText
-            color: updatesWidget.textColor
-            font: updatesWidget.font
+            color: updatesWidget.settings.textColor
+            font: updatesWidget.settings.font
         }
     }
 
@@ -416,7 +448,7 @@ Item {
     ToolTip {
         objectName: "tooltip"
         popupType: Popup.Window
-        visible: updatesWidget.tooltip && area.containsMouse && !popup.visible
+        visible: updatesWidget.settings.tooltip && area.containsMouse && !popup.visible
         delay: 400
         text: available.count === 0 ? qsTr("Everything is up to date")
             : [qsTr("%n update(s)", "", available.count),
@@ -453,15 +485,15 @@ Item {
 
         objectName: "popup"
         title: qsTr("Updates")
-        width: updatesWidget.popupWidth
+        width: updatesWidget.settings.popupWidth
         // Never taller than the screen
         height: Math.min(popupContent.implicitHeight, updatesWidget.Screen.desktopAvailableHeight - 40)
         anchor: updatesWidget
-        font: updatesWidget.popupFont
+        font: updatesWidget.settings.popupFont
         theme: updatesWidget.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: updatesWidget.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: updatesWidget.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: updatesWidget.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: updatesWidget.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -471,10 +503,10 @@ Item {
             id: surface
 
             anchors.fill: parent
-            radius: updatesWidget.popupRadius
-            color: updatesWidget.popupColor
+            radius: updatesWidget.settings.popupRadius
+            color: updatesWidget.settings.popupColor
             border.width: 1
-            border.color: updatesWidget.popupBorderColor
+            border.color: updatesWidget.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: updatesWidget.edge === "bottom" ? Item.Bottom : Item.Top
@@ -503,7 +535,7 @@ Item {
                         PopupText {
                             width: parent.width
                             text: popup.showSkipped ? qsTr("Skipped versions") : qsTr("Updates")
-                            font: updatesWidget.popupTitleFont
+                            font: updatesWidget.settings.popupTitleFont
                         }
 
                         PopupText {
@@ -512,7 +544,7 @@ Item {
                             visible: !popup.showSkipped && text !== ""
                             text: popup.subtitle
                             muted: true
-                            font: updatesWidget.popupSmallFont
+                            font: updatesWidget.settings.popupSmallFont
                         }
                     }
 
@@ -533,14 +565,15 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             radius: 4
-                            color: refreshArea.containsMouse ? updatesWidget.popupHoverColor : "transparent"
+                            color: refreshArea.containsMouse ? updatesWidget.settings.popupHoverColor : "transparent"
                         }
 
                         Glyph {
                             anchors.fill: parent
-                            text: "\ue72c"
-                            color: refreshArea.containsMouse ? updatesWidget.popupTextColor : updatesWidget.popupTertiaryTextColor
-                            font.pixelSize: updatesWidget.popupIconSize
+                            text: updatesWidget.settings.popupIcons.refresh
+                            color: refreshArea.containsMouse ? updatesWidget.settings.popupTextColor : updatesWidget.settings.popupTertiaryTextColor
+                            iconFont: updatesWidget.settings.popupIconFont
+                            font.pixelSize: updatesWidget.settings.popupIconSize
                         }
 
                         MouseArea {
@@ -558,7 +591,7 @@ Item {
                 LoadingLine {
                     Layout.fillWidth: true
                     running: available.checking || available.sources.some(source => source.installing)
-                    trackColor: updatesWidget.popupDividerColor
+                    trackColor: updatesWidget.settings.popupDividerColor
                 }
 
                 // Nothing to update
@@ -572,9 +605,10 @@ Item {
 
                     Glyph {
                         Layout.alignment: Qt.AlignHCenter
-                        text: "\ue930"
-                        color: updatesWidget.successColor
-                        font.pixelSize: updatesWidget.statusIconSize
+                        text: updatesWidget.settings.popupIcons.upToDate
+                        color: updatesWidget.settings.successColor
+                        iconFont: updatesWidget.settings.popupIconFont
+                        font.pixelSize: updatesWidget.settings.statusIconSize
                     }
 
                     PopupText {
@@ -582,7 +616,7 @@ Item {
                         Layout.topMargin: 8
                         text: available.checking && updatesWidget.checked === "" ? qsTr("Checking for updates...")
                             : qsTr("Everything is up to date")
-                        font: updatesWidget.statusFont
+                        font: updatesWidget.settings.statusFont
                     }
 
                     PopupText {
@@ -590,7 +624,7 @@ Item {
                         visible: updatesWidget.checked !== ""
                         text: qsTr("Checked %1").arg(updatesWidget.checked)
                         muted: true
-                        font: updatesWidget.popupSmallFont
+                        font: updatesWidget.settings.popupSmallFont
                     }
                 }
 
@@ -600,7 +634,7 @@ Item {
 
                     objectName: "sources"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(contentHeight, updatesWidget.maxListHeight)
+                    Layout.preferredHeight: Math.min(contentHeight, updatesWidget.settings.maxListHeight)
                     visible: !popup.showSkipped && popup.shownSources.length > 0
                     clip: true
                     contentHeight: sourceColumn.implicitHeight
@@ -644,7 +678,7 @@ Item {
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: implicitWidth
                                         text: section.modelData.name
-                                        font: updatesWidget.sectionFont
+                                        font: updatesWidget.settings.sectionFont
                                     }
 
                                     Rectangle {
@@ -652,7 +686,7 @@ Item {
                                         implicitWidth: Math.max(implicitHeight, countText.implicitWidth + 12)
                                         implicitHeight: 18
                                         radius: 9
-                                        color: Qt.alpha(updatesWidget.popupTextColor, 0.08)
+                                        color: Qt.alpha(updatesWidget.settings.popupTextColor, 0.08)
 
                                         Text {
                                             id: countText
@@ -660,8 +694,8 @@ Item {
                                             anchors.centerIn: parent
                                             text: String(section.modelData.count)
                                             textFormat: Text.PlainText
-                                            color: updatesWidget.popupSecondaryTextColor
-                                            font: updatesWidget.countFont
+                                            color: updatesWidget.settings.popupSecondaryTextColor
+                                            font: updatesWidget.settings.countFont
                                         }
                                     }
 
@@ -671,7 +705,7 @@ Item {
                                         visible: section.modelData.installing
                                         text: qsTr("Updating...")
                                         muted: true
-                                        font: updatesWidget.popupSmallFont
+                                        font: updatesWidget.settings.popupSmallFont
                                     }
 
                                     SmallButton {
@@ -703,8 +737,8 @@ Item {
                                                 Layout.fillWidth: true
                                                 text: section.modelData.error
                                                 wrapMode: Text.WordWrap
-                                                color: updatesWidget.criticalColor
-                                                font: updatesWidget.popupSmallFont
+                                                color: updatesWidget.settings.criticalColor
+                                                font: updatesWidget.settings.popupSmallFont
                                             }
 
                                             Link {
@@ -732,17 +766,18 @@ Item {
                                                 spacing: 8
 
                                                 Glyph {
-                                                    text: "\ue777"
-                                                    color: updatesWidget.cautionColor
-                                                    font.pixelSize: updatesWidget.popupIconSize
+                                                    text: updatesWidget.settings.popupIcons.restart
+                                                    color: updatesWidget.settings.cautionColor
+                                                    iconFont: updatesWidget.settings.popupIconFont
+                                                    font.pixelSize: updatesWidget.settings.popupIconSize
                                                 }
 
                                                 PopupText {
                                                     Layout.fillWidth: true
                                                     text: qsTr("Restart your PC to finish installing Windows updates")
                                                     wrapMode: Text.WordWrap
-                                                    color: updatesWidget.popupSecondaryTextColor
-                                                    font: updatesWidget.popupSmallFont
+                                                    color: updatesWidget.settings.popupSecondaryTextColor
+                                                    font: updatesWidget.settings.popupSmallFont
                                                 }
                                             }
                                         }
@@ -772,7 +807,7 @@ Item {
                                                     anchors.fill: parent
                                                     anchors.margins: 3
                                                     radius: 4
-                                                    color: rowHover.hovered ? updatesWidget.popupHoverColor : "transparent"
+                                                    color: rowHover.hovered ? updatesWidget.settings.popupHoverColor : "transparent"
                                                 }
 
                                                 // Stays hovered over the row's buttons too; a MouseArea would lose the hover to them
@@ -798,7 +833,7 @@ Item {
                                                         PopupText {
                                                             width: parent.width
                                                             text: updateRow.modelData.name
-                                                            font: updatesWidget.updateNameFont
+                                                            font: updatesWidget.settings.updateNameFont
                                                         }
 
                                                         // The installed version, then the new one in the accent colour
@@ -809,13 +844,13 @@ Item {
                                                             PopupText {
                                                                 text: `${updateRow.modelData.installedVersion || qsTr("Unknown")} · `
                                                                 muted: true
-                                                                font: updatesWidget.popupSmallFont
+                                                                font: updatesWidget.settings.popupSmallFont
                                                             }
 
                                                             PopupText {
                                                                 text: updateRow.modelData.availableVersion
                                                                 muted: true
-                                                                font: updatesWidget.popupSmallFont
+                                                                font: updatesWidget.settings.popupSmallFont
                                                             }
                                                         }
 
@@ -824,22 +859,22 @@ Item {
                                                             visible: !updateRow.packaged && text !== ""
                                                             text: updateRow.details
                                                             muted: true
-                                                            font: updatesWidget.popupSmallFont
+                                                            font: updatesWidget.settings.popupSmallFont
                                                         }
                                                     }
 
                                                     RowAction {
                                                         visible: updateRow.packaged && rowHover.hovered
-                                                        glyph: "\ued1a"
+                                                        glyph: updatesWidget.settings.popupIcons.skip
                                                         tip: qsTr("Skip this version")
                                                         onClicked: available.skip(updateRow.modelData.source, updateRow.modelData.id)
                                                     }
 
                                                     RowAction {
                                                         visible: updateRow.packaged && rowHover.hovered && !section.modelData.installing
-                                                        glyph: "\ue896"
+                                                        glyph: updatesWidget.settings.popupIcons.update
                                                         tip: qsTr("Update")
-                                                        tint: updatesWidget.accentColor
+                                                        tint: updatesWidget.settings.accentColor
                                                         onClicked: available.install(updateRow.modelData.source, [updateRow.modelData.id])
                                                     }
                                                 }
@@ -860,7 +895,7 @@ Item {
 
                     objectName: "skipped"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(contentHeight, updatesWidget.maxListHeight)
+                    Layout.preferredHeight: Math.min(contentHeight, updatesWidget.settings.maxListHeight)
                     visible: popup.showSkipped
                     clip: true
                     contentHeight: skippedColumn.implicitHeight
@@ -925,14 +960,14 @@ Item {
                                                 PopupText {
                                                     width: parent.width
                                                     text: skippedRow.modelData.name
-                                                    font: updatesWidget.skippedNameFont
+                                                    font: updatesWidget.settings.skippedNameFont
                                                 }
 
                                                 PopupText {
                                                     width: parent.width
                                                     text: [skippedRow.modelData.version, skippedRow.modelData.source].filter(part => part).join(" · ")
                                                     muted: true
-                                                    font: updatesWidget.popupSmallFont
+                                                    font: updatesWidget.settings.popupSmallFont
                                                 }
                                             }
 
@@ -955,9 +990,9 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: updatesWidget.popupRadius - 1
-                    bottomRightRadius: updatesWidget.popupRadius - 1
-                    color: updatesWidget.popupSecondaryBackgroundColor
+                    bottomLeftRadius: updatesWidget.settings.popupRadius - 1
+                    bottomRightRadius: updatesWidget.settings.popupRadius - 1
+                    color: updatesWidget.settings.popupSecondaryBackgroundColor
 
                     Divider { width: parent.width }
 
@@ -978,7 +1013,7 @@ Item {
                         visible: !popup.showSkipped && updatesWidget.checked !== "" && popup.shownSources.length > 0
                         text: qsTr("Checked %1").arg(updatesWidget.checked)
                         muted: true
-                        font: updatesWidget.popupSmallFont
+                        font: updatesWidget.settings.popupSmallFont
                     }
                 }
             }

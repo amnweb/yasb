@@ -161,7 +161,7 @@ def test_the_label_formats_placeholders_and_toggles(windows: Windows):
     assert label.property("text") == "en-US"
     widget.setProperty("showAlternate", True)
     assert label.property("text") == "English (United States)"
-    widget.setProperty("alternateLabel", "{lang[iso_language_code]} {lang[missing]}")
+    widget.property("settings").setProperty("alternateLabel", "{lang[iso_language_code]} {lang[missing]}")
     assert label.property("text") == "eng {lang[missing]}"
     assert not warnings
     sip.delete(widget)

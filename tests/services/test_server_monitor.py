@@ -252,7 +252,7 @@ def test_qml_widgets_share_checks_and_offline_toasts(
     path = find_widget_file("ServerMonitor")
     assert path is not None
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(path)))
-    options: dict[str | None, Any] = {
+    options: dict[str, Any] = {
         "servers": [
             {"name": "Invalid port", "url": "http://localhost:invalid"},
             {"name": "Local server", "url": f"http://localhost:{http_port}"},
@@ -261,11 +261,18 @@ def test_qml_widgets_share_checks_and_offline_toasts(
         "notifyOffline": True,
         "timeout": 1,
     }
-    first = create_with_bar(component, options)
-    second = create_with_bar(component, options)
-    assert isinstance(first, QQuickItem) and isinstance(second, QQuickItem), [
-        error.toString() for error in component.errors()
-    ]
+
+    def create() -> QQuickItem:
+        widget = create_with_bar(component)
+        assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+        # Before the widget configures its checks, which it leaves to Qt.callLater
+        settings = widget.property("settings")
+        for name, value in options.items():
+            settings.setProperty(name, value)
+        return widget
+
+    first = create()
+    second = create()
     try:
         for _ in range(100):
             if check_started.is_set():

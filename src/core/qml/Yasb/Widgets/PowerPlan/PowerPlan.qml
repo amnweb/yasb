@@ -11,62 +11,82 @@ import Yasb.Themes
 Item {
     id: powerPlan
 
+    component PopupIcons: QtObject {
+        property string check
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Both labels can use {active_plan}.
+        property string label: "{active_plan}"
+        property string alternateLabel: qsTr("Power Plan")
+        property string icon: "\ue945"
+        property int iconSize: theme.bar.iconFont.pixelSize
+        property bool tooltip: true
+        property string hotkey: ""
+        property string alternateHotkey: ""
+        property int popupWidth: 284
+        property string popupAlignment: "center"
+        property int maxListHeight: 320
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        property color errorColor: theme.colors.critical
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        property color popupDividerColor: theme.colors.divider
+        property color popupHoverColor: theme.colors.hover
+        property color popupSelectedColor: theme.colors.selected
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        readonly property PopupIcons popupIcons: PopupIcons {
+            check: "\ue73e"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // The mark on the plan in use
+        property int checkIconSize: 14
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Both labels can use {active_plan}.
-    property string label: "{active_plan}"
-    property string alternateLabel: qsTr("Power Plan")
+    readonly property Settings settings: Settings {
+        theme: powerPlan.theme
+    }
+
     property bool showAlternate: false
-    property string icon: "\ue945"
-    property int iconSize: theme.bar.iconFont.pixelSize
-    property bool tooltip: true
-    property string hotkey: ""
-    property string alternateHotkey: ""
-    property int popupWidth: 284
-    property string popupAlignment: "center"
-    property int maxListHeight: 320
 
     readonly property bool dark: theme.dark
     readonly property string edge: bar.edge
     readonly property string activePlan: PowerPlans.plans.find(plan => plan.id === PowerPlans.activeId)?.name ?? ""
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    property color errorColor: powerPlan.theme.colors.critical
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property color popupSecondaryTextColor: theme.colors.textSecondary
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    property color popupDividerColor: theme.colors.divider
-    property color popupHoverColor: theme.colors.hover
-    property color popupSelectedColor: theme.colors.selected
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // The mark on the plan in use
-    property int checkIconSize: 14
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
         const screen = powerPlan.Screen
-        const gap = popupGap
+        const gap = settings.popupGap
         const margin = 8
         let px
         let py
@@ -80,8 +100,8 @@ Item {
             py = start.y + (height - popup.height) / 2
             break
         default:
-            px = popupAlignment === "left" ? start.x
-                : popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
+            px = settings.popupAlignment === "left" ? start.x
+                : settings.popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
             py = edge === "bottom" ? start.y - popup.height - gap : start.y + height + gap
             break
         }
@@ -112,8 +132,8 @@ Item {
     Keys.onSpacePressed: togglePopup()
     Component.onDestruction: popup.hide()
 
-    Hotkey { keys: powerPlan.hotkey; onActivated: powerPlan.togglePopup() }
-    Hotkey { keys: powerPlan.alternateHotkey; onActivated: powerPlan.showAlternate = !powerPlan.showAlternate }
+    Hotkey { keys: powerPlan.settings.hotkey; onActivated: powerPlan.togglePopup() }
+    Hotkey { keys: powerPlan.settings.alternateHotkey; onActivated: powerPlan.showAlternate = !powerPlan.showAlternate }
 
     Connections {
         target: powerPlan.Window.window
@@ -126,9 +146,9 @@ Item {
         textFormat: Text.PlainText
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        font.family: powerPlan.iconFont.family
-        font.weight: powerPlan.iconFont.weight
-        font.variableAxes: powerPlan.iconFont.variableAxes
+        font.family: powerPlan.settings.iconFont.family
+        font.weight: powerPlan.settings.iconFont.weight
+        font.variableAxes: powerPlan.settings.iconFont.variableAxes
     }
 
     Row {
@@ -140,20 +160,20 @@ Item {
             objectName: "icon"
             anchors.verticalCenter: parent.verticalCenter
             visible: text !== ""
-            text: powerPlan.icon
-            color: powerPlan.textColor
-            font.pixelSize: powerPlan.iconSize
+            text: powerPlan.settings.icon
+            color: powerPlan.settings.textColor
+            font.pixelSize: powerPlan.settings.iconSize
         }
 
         Label {
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
             visible: text !== ""
-            text: (powerPlan.showAlternate ? powerPlan.alternateLabel : powerPlan.label)
+            text: (powerPlan.showAlternate ? powerPlan.settings.alternateLabel : powerPlan.settings.label)
                 .replace(/\{active_plan\}/g, () => powerPlan.activePlan)
             textFormat: Text.PlainText
-            color: powerPlan.textColor
-            font: powerPlan.font
+            color: powerPlan.settings.textColor
+            font: powerPlan.settings.font
         }
     }
 
@@ -174,7 +194,7 @@ Item {
     ToolTip {
         objectName: "tooltip"
         popupType: Popup.Window
-        visible: powerPlan.tooltip && area.containsMouse && !popup.visible
+        visible: powerPlan.settings.tooltip && area.containsMouse && !popup.visible
         delay: 400
         text: powerPlan.Accessible.name
         y: powerPlan.edge === "bottom" ? -implicitHeight - 6 : powerPlan.height + 6
@@ -187,14 +207,14 @@ Item {
 
         objectName: "popup"
         title: qsTr("Power Plans")
-        width: Math.min(powerPlan.popupWidth, powerPlan.Screen.width - 32)
+        width: Math.min(powerPlan.settings.popupWidth, powerPlan.Screen.width - 32)
         height: Math.min(popupContent.implicitHeight, powerPlan.Screen.desktopAvailableHeight - 40)
         anchor: powerPlan
-        font: powerPlan.popupFont
+        font: powerPlan.settings.popupFont
         theme: powerPlan.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: powerPlan.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: powerPlan.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: powerPlan.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: powerPlan.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -203,10 +223,10 @@ Item {
         Rectangle {
             id: surface
             anchors.fill: parent
-            radius: powerPlan.popupRadius
-            color: powerPlan.popupColor
+            radius: powerPlan.settings.popupRadius
+            color: powerPlan.settings.popupColor
             border.width: 1
-            border.color: powerPlan.popupBorderColor
+            border.color: powerPlan.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: powerPlan.edge === "bottom" ? Item.Bottom : powerPlan.edge === "left" ? Item.Left
@@ -225,15 +245,15 @@ Item {
                     Layout.topMargin: 12
                     Layout.bottomMargin: 10
                     text: popup.title
-                    font: powerPlan.popupTitleFont
+                    font: powerPlan.settings.popupTitleFont
                     textFormat: Text.PlainText
-                    color: powerPlan.popupTextColor
+                    color: powerPlan.settings.popupTextColor
                 }
 
                 LoadingLine {
                     Layout.fillWidth: true
                     running: PowerPlans.loading
-                    trackColor: powerPlan.popupDividerColor
+                    trackColor: powerPlan.settings.popupDividerColor
                 }
 
                 Text {
@@ -244,14 +264,14 @@ Item {
                     text: PowerPlans.error || (PowerPlans.loading ? qsTr("Reading power plans...") : qsTr("No power plans found"))
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
-                    color: PowerPlans.error ? powerPlan.errorColor : powerPlan.popupSecondaryTextColor
-                    font: powerPlan.popupSmallFont
+                    color: PowerPlans.error ? powerPlan.settings.errorColor : powerPlan.settings.popupSecondaryTextColor
+                    font: powerPlan.settings.popupSmallFont
                 }
 
                 Flickable {
                     id: list
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(contentHeight, powerPlan.maxListHeight)
+                    Layout.preferredHeight: Math.min(contentHeight, powerPlan.settings.maxListHeight)
                     visible: PowerPlans.plans.length > 0
                     clip: true
                     contentHeight: rows.implicitHeight
@@ -291,8 +311,8 @@ Item {
 
                                 background: Rectangle {
                                     radius: 6
-                                    color: planRow.hovered || planRow.visualFocus ? powerPlan.popupHoverColor
-                                        : planRow.selected ? powerPlan.popupSelectedColor : "transparent"
+                                    color: planRow.hovered || planRow.visualFocus ? powerPlan.settings.popupHoverColor
+                                        : planRow.selected ? powerPlan.settings.popupSelectedColor : "transparent"
                                 }
 
                                 contentItem: RowLayout {
@@ -303,16 +323,19 @@ Item {
                                         text: planRow.modelData.name
                                         textFormat: Text.PlainText
                                         elide: Text.ElideRight
-                                        color: powerPlan.popupTextColor
-                                        font: powerPlan.popupFont
+                                        color: powerPlan.settings.popupTextColor
+                                        font: powerPlan.settings.popupFont
                                     }
 
                                     Glyph {
                                         Layout.preferredWidth: 16
-                                        text: "\ue73e"
+                                        text: powerPlan.settings.popupIcons.check
                                         opacity: planRow.selected ? 1 : 0
-                                        color: powerPlan.popupTextColor
-                                        font.pixelSize: powerPlan.checkIconSize
+                                        color: powerPlan.settings.popupTextColor
+                                        font.family: powerPlan.settings.popupIconFont.family
+                                        font.weight: powerPlan.settings.popupIconFont.weight
+                                        font.variableAxes: powerPlan.settings.popupIconFont.variableAxes
+                                        font.pixelSize: powerPlan.settings.checkIconSize
                                     }
                                 }
                             }

@@ -12,105 +12,113 @@ import Yasb.Themes
 Item {
     id: windowsDesktops
 
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Button text can be {name} or {index}
+        property string label: "{name}"
+        property string activeLabel: "{name}"
+        // For desktops other than the active one that have windows open, empty to use label
+        property string populatedLabel: ""
+        // What each mouse button does on a desktop's button. Actions: activate_workspace, toggle_context_menu,
+        // move_window_here, delete_workspace, create_desktop, switch_desktop N, move_window_to N,
+        // delete_desktop or delete_desktop N, rename_desktop or rename_desktop N, next_desktop, prev_desktop and do_nothing.
+        // Without N, delete_desktop deletes the current desktop, and rename_desktop renames the clicked one, or the
+        // current one from a hotkey
+        property string leftClick: "activate_workspace"
+        property string middleClick: "do_nothing"
+        property string rightClick: "toggle_context_menu"
+        // Scroll over the widget to switch desktops: down for the next one, up for the previous one
+        property bool scrollSwitching: true
+        property bool reverseScroll: false
+        // The popup that renames a desktop
+        property int popupWidth: 304
+        // Global hotkeys, with the actions that need no button. Set to [] for none
+        property var hotkeys: []
+        // Example below, with the default hotkeys for switching and moving windows.
+        // property var hotkeys: [
+        //     { hotkey: "alt+1", action: "switch_desktop 1" },
+        //     { hotkey: "alt+2", action: "switch_desktop 2" },
+        //     { hotkey: "alt+3", action: "switch_desktop 3" },
+        //     { hotkey: "alt+4", action: "switch_desktop 4" },
+        //     { hotkey: "alt+5", action: "switch_desktop 5" },
+        //     { hotkey: "alt+6", action: "switch_desktop 6" },
+        //     { hotkey: "alt+7", action: "switch_desktop 7" },
+        //     { hotkey: "alt+8", action: "switch_desktop 8" },
+        //     { hotkey: "alt+9", action: "switch_desktop 9" },
+        //     { hotkey: "alt+shift+1", action: "move_window_to 1" },
+        //     { hotkey: "alt+shift+2", action: "move_window_to 2" },
+        //     { hotkey: "alt+shift+3", action: "move_window_to 3" },
+        //     { hotkey: "alt+shift+4", action: "move_window_to 4" },
+        //     { hotkey: "alt+shift+5", action: "move_window_to 5" },
+        //     { hotkey: "alt+shift+6", action: "move_window_to 6" },
+        //     { hotkey: "alt+shift+7", action: "move_window_to 7" },
+        //     { hotkey: "alt+shift+8", action: "move_window_to 8" },
+        //     { hotkey: "alt+shift+9", action: "move_window_to 9" },
+        //     { hotkey: "alt+pagedown", action: "next_desktop" },
+        //     { hotkey: "alt+pageup", action: "prev_desktop" },
+        //     { hotkey: "alt+shift+n", action: "create_desktop" },
+        //     { hotkey: "alt+shift+d", action: "delete_desktop" },
+        //     { hotkey: "alt+shift+r", action: "rename_desktop" }
+        // ]
+        // active, cursor or primary: which screen's widget runs a hotkey when several bars have one
+        property string hotkeyScreen: "active"
+        property int spacing: 4
+        property int buttonPadding: 8
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        property color popupDividerColor: theme.colors.divider
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        // The right-click menu: its width, and a look that is the theme's unless set here
+        property int menuWidth: 260
+        property color menuColor: theme.menu.background
+        property color menuBorderColor: theme.menu.border
+        property color menuTextColor: theme.colors.text
+        property real menuRadius: theme.menu.radius
+        property font menuFont: theme.menu.font
+        // Milliseconds the right-click menu takes to fade in
+        property int menuOpenDuration: theme.menu.openDuration
+        // The icons in the text fields' right-click menu
+        property int menuIconSize: 16
+        // Glyphs in the right-click menu take the theme's icon font, each part unless the widget file sets it
+        property font menuIconFont
+        menuIconFont.family: theme.bar.iconFont.family
+        menuIconFont.weight: theme.bar.iconFont.weight
+        menuIconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The background of the active desktop's button and of a hovered one, and how strongly desktops without windows
+        // are dimmed
+        property color activeBackground: theme.colors.selected
+        property color hoverColor: theme.colors.hover
+        property real emptyOpacity: 0.5
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Button text can be {name} or {index}
-    property string label: "{name}"
-    property string activeLabel: "{name}"
-    // For desktops other than the active one that have windows open, empty to use label
-    property string populatedLabel: ""
-    // What each mouse button does on a desktop's button. Actions: activate_workspace, toggle_context_menu,
-    // move_window_here, delete_workspace, create_desktop, switch_desktop N, move_window_to N,
-    // delete_desktop or delete_desktop N, rename_desktop or rename_desktop N, next_desktop, prev_desktop and do_nothing.
-    // Without N, delete_desktop deletes the current desktop, and rename_desktop renames the clicked one, or the
-    // current one from a hotkey
-    property string leftClick: "activate_workspace"
-    property string middleClick: "do_nothing"
-    property string rightClick: "toggle_context_menu"
-    // Scroll over the widget to switch desktops: down for the next one, up for the previous one
-    property bool scrollSwitching: true
-    property bool reverseScroll: false
-    // The popup that renames a desktop
-    property int popupWidth: 304
-    // Global hotkeys, with the actions that need no button. Set to [] for none
-    property var hotkeys: []
-    // Example below, with the default hotkeys for switching and moving windows.
-    // property var hotkeys: [
-    //     { hotkey: "alt+1", action: "switch_desktop 1" },
-    //     { hotkey: "alt+2", action: "switch_desktop 2" },
-    //     { hotkey: "alt+3", action: "switch_desktop 3" },
-    //     { hotkey: "alt+4", action: "switch_desktop 4" },
-    //     { hotkey: "alt+5", action: "switch_desktop 5" },
-    //     { hotkey: "alt+6", action: "switch_desktop 6" },
-    //     { hotkey: "alt+7", action: "switch_desktop 7" },
-    //     { hotkey: "alt+8", action: "switch_desktop 8" },
-    //     { hotkey: "alt+9", action: "switch_desktop 9" },
-    //     { hotkey: "alt+shift+1", action: "move_window_to 1" },
-    //     { hotkey: "alt+shift+2", action: "move_window_to 2" },
-    //     { hotkey: "alt+shift+3", action: "move_window_to 3" },
-    //     { hotkey: "alt+shift+4", action: "move_window_to 4" },
-    //     { hotkey: "alt+shift+5", action: "move_window_to 5" },
-    //     { hotkey: "alt+shift+6", action: "move_window_to 6" },
-    //     { hotkey: "alt+shift+7", action: "move_window_to 7" },
-    //     { hotkey: "alt+shift+8", action: "move_window_to 8" },
-    //     { hotkey: "alt+shift+9", action: "move_window_to 9" },
-    //     { hotkey: "alt+pagedown", action: "next_desktop" },
-    //     { hotkey: "alt+pageup", action: "prev_desktop" },
-    //     { hotkey: "alt+shift+n", action: "create_desktop" },
-    //     { hotkey: "alt+shift+d", action: "delete_desktop" },
-    //     { hotkey: "alt+shift+r", action: "rename_desktop" }
-    // ]
-    // active, cursor or primary: which screen's widget runs a hotkey when several bars have one
-    property string hotkeyScreen: "active"
-    property int spacing: 4
-    property int buttonPadding: 8
+    readonly property Settings settings: Settings {
+        theme: windowsDesktops.theme
+    }
 
     readonly property bool dark: theme.dark
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    property color popupDividerColor: theme.colors.divider
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // The right-click menu: its width, and a look that is the theme's unless set here
-    property int menuWidth: 260
-    property color menuColor: theme.menu.background
-    property color menuBorderColor: theme.menu.border
-    property color menuTextColor: theme.colors.text
-    property real menuRadius: theme.menu.radius
-    property font menuFont: theme.menu.font
-    // Milliseconds the right-click menu takes to fade in
-    property int menuOpenDuration: theme.menu.openDuration
-    // The icons in the text fields' right-click menu
-    property int menuIconSize: 16
-    // Glyphs in the right-click menu take the theme's icon font, each part unless the widget file sets it
-    property font menuIconFont
-    menuIconFont.family: theme.bar.iconFont.family
-    menuIconFont.weight: theme.bar.iconFont.weight
-    menuIconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The background of the active desktop's button and of a hovered one, and how strongly desktops without windows
-    // are dimmed
-    property color activeBackground: theme.colors.selected
-    property color hoverColor: theme.colors.hover
-    property real emptyOpacity: 0.5
-    property color popupSecondaryTextColor: theme.colors.textSecondary
     readonly property string edge: bar.edge
 
     readonly property alias service: virtualDesktops
@@ -122,8 +130,8 @@ Item {
     implicitHeight: row.implicitHeight
 
     function labelFor(desktop: var): string {
-        const format = desktop.number === virtualDesktops.current ? activeLabel
-            : desktop.populated && populatedLabel !== "" ? populatedLabel : label
+        const format = desktop.number === virtualDesktops.current ? settings.activeLabel
+            : desktop.populated && settings.populatedLabel !== "" ? settings.populatedLabel : settings.label
         return format.replace(/\{index\}/g, desktop.number).replace(/\{name\}/g, desktop.name || desktop.number)
     }
 
@@ -199,10 +207,10 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + popupGap
-            : edge === "right" ? start.x - renamePopup.width - popupGap : start.x + (width - renamePopup.width) / 2
-        let py = edge === "top" ? start.y + height + popupGap
-            : edge === "bottom" ? start.y - renamePopup.height - popupGap : start.y + (height - renamePopup.height) / 2
+        let px = edge === "left" ? start.x + width + settings.popupGap
+            : edge === "right" ? start.x - renamePopup.width - settings.popupGap : start.x + (width - renamePopup.width) / 2
+        let py = edge === "top" ? start.y + height + settings.popupGap
+            : edge === "bottom" ? start.y - renamePopup.height - settings.popupGap : start.y + (height - renamePopup.height) / 2
         const screen = windowsDesktops.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - renamePopup.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - renamePopup.height - 8))
@@ -220,19 +228,19 @@ Item {
     }
 
     Instantiator {
-        model: windowsDesktops.hotkeys
+        model: windowsDesktops.settings.hotkeys
 
         delegate: Hotkey {
             required property var modelData
 
             keys: modelData.hotkey ?? ""
-            screen: windowsDesktops.hotkeyScreen
+            screen: windowsDesktops.settings.hotkeyScreen
             onActivated: windowsDesktops.run(modelData.action ?? "", 0)
         }
     }
 
     WheelHandler {
-        enabled: windowsDesktops.scrollSwitching
+        enabled: windowsDesktops.settings.scrollSwitching
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: event => {
             windowsDesktops.scrolled += event.angleDelta.y
@@ -240,14 +248,14 @@ Item {
                 return
             const up = windowsDesktops.scrolled > 0
             windowsDesktops.scrolled = 0
-            virtualDesktops.step(up !== windowsDesktops.reverseScroll ? -1 : 1)
+            virtualDesktops.step(up !== windowsDesktops.settings.reverseScroll ? -1 : 1)
         }
     }
 
     Row {
         id: row
 
-        spacing: windowsDesktops.spacing
+        spacing: windowsDesktops.settings.spacing
 
         Repeater {
             id: desktopButtons
@@ -262,19 +270,19 @@ Item {
                 readonly property string caption: captionLabel.text
 
                 objectName: `desktop-${modelData.number}`
-                width: Math.ceil(captionLabel.implicitWidth) + 2 * windowsDesktops.buttonPadding
+                width: Math.ceil(captionLabel.implicitWidth) + 2 * windowsDesktops.settings.buttonPadding
                 height: Math.max(windowsDesktops.height, Math.ceil(captionLabel.implicitHeight) + 8)
                 Accessible.role: Accessible.Button
                 Accessible.name: `Desktop ${modelData.name || modelData.number}`
-                Accessible.onPressAction: windowsDesktops.run(windowsDesktops.leftClick, modelData.number)
+                Accessible.onPressAction: windowsDesktops.run(windowsDesktops.settings.leftClick, modelData.number)
 
                 Rectangle {
                     y: Math.round((parent.height - height) / 2)
                     width: parent.width
                     height: Math.round(Math.min(parent.height, captionLabel.implicitHeight + 8))
                     radius: 4
-                    color: button.active ? windowsDesktops.activeBackground
-                        : area.containsMouse ? windowsDesktops.hoverColor : "transparent"
+                    color: button.active ? windowsDesktops.settings.activeBackground
+                        : area.containsMouse ? windowsDesktops.settings.hoverColor : "transparent"
                 }
 
                 Label {
@@ -283,9 +291,9 @@ Item {
                     anchors.centerIn: parent
                     text: windowsDesktops.labelFor(button.modelData)
                     textFormat: Text.PlainText
-                    color: windowsDesktops.textColor
-                    font: windowsDesktops.font
-                    opacity: button.active || button.modelData.populated ? 1 : windowsDesktops.emptyOpacity
+                    color: windowsDesktops.settings.textColor
+                    font: windowsDesktops.settings.font
+                    opacity: button.active || button.modelData.populated ? 1 : windowsDesktops.settings.emptyOpacity
                 }
 
                 MouseArea {
@@ -295,8 +303,8 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-                    onClicked: mouse => windowsDesktops.run(mouse.button === Qt.LeftButton ? windowsDesktops.leftClick
-                        : mouse.button === Qt.MiddleButton ? windowsDesktops.middleClick : windowsDesktops.rightClick,
+                    onClicked: mouse => windowsDesktops.run(mouse.button === Qt.LeftButton ? windowsDesktops.settings.leftClick
+                        : mouse.button === Qt.MiddleButton ? windowsDesktops.settings.middleClick : windowsDesktops.settings.rightClick,
                         button.modelData.number)
                 }
             }
@@ -394,9 +402,9 @@ Item {
                     x: actionItem.mirrored ? actionItem.width - width - 10 : 10
                     anchors.verticalCenter: parent.verticalCenter
                     text: actionItem.glyph
-                    font.family: windowsDesktops.menuIconFont.family
-                    font.weight: windowsDesktops.menuIconFont.weight
-                    font.variableAxes: windowsDesktops.menuIconFont.variableAxes
+                    font.family: windowsDesktops.settings.menuIconFont.family
+                    font.weight: windowsDesktops.settings.menuIconFont.weight
+                    font.variableAxes: windowsDesktops.settings.menuIconFont.variableAxes
                     font.pixelSize: actionItem.iconSize
                     color: actionItem.palette.text
                     Accessible.ignored: true
@@ -409,20 +417,20 @@ Item {
                 leftInset: 0
                 rightInset: 0
                 bottomInset: 0
-                font: windowsDesktops.menuFont
+                font: windowsDesktops.settings.menuFont
                 // Active and inactive only, so disabled controls keep the style's dimmed colours
-                palette.active.text: windowsDesktops.menuTextColor
-                palette.inactive.text: windowsDesktops.menuTextColor
+                palette.active.text: windowsDesktops.settings.menuTextColor
+                palette.inactive.text: windowsDesktops.settings.menuTextColor
                 // Fades in when it opens, in place of the style's growing from a third of its height
                 enter: Transition {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: windowsDesktops.menuOpenDuration; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: windowsDesktops.settings.menuOpenDuration; easing.type: Easing.OutCubic }
                 }
 
                 background: Rectangle {
-                    implicitWidth: windowsDesktops.menuWidth
-                    radius: windowsDesktops.menuRadius
-                    color: windowsDesktops.menuColor
-                    border.color: windowsDesktops.menuBorderColor
+                    implicitWidth: windowsDesktops.settings.menuWidth
+                    radius: windowsDesktops.settings.menuRadius
+                    color: windowsDesktops.settings.menuColor
+                    border.color: windowsDesktops.settings.menuBorderColor
                 }
             }
 
@@ -534,8 +542,8 @@ Item {
 
     // An item of the text fields' right-click menu, its icon in menuIconSize
     component FieldMenuItem: MenuItem {
-        icon.width: windowsDesktops.menuIconSize
-        icon.height: windowsDesktops.menuIconSize
+        icon.width: windowsDesktops.settings.menuIconSize
+        icon.height: windowsDesktops.settings.menuIconSize
     }
 
     BackdropPopup {
@@ -551,24 +559,24 @@ Item {
         }
 
         title: qsTr("Rename desktop")
-        width: windowsDesktops.popupWidth
+        width: windowsDesktops.settings.popupWidth
         height: popupContent.implicitHeight
         anchor: windowsDesktops
-        font: windowsDesktops.popupFont
+        font: windowsDesktops.settings.popupFont
         theme: windowsDesktops.theme
         backdropItem: surface
-        enter: NumberAnimation { target: renamePopup; property: "reveal"; to: 1; duration: windowsDesktops.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: renamePopup; property: "reveal"; to: 0; duration: windowsDesktops.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: renamePopup; property: "reveal"; to: 1; duration: windowsDesktops.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: renamePopup; property: "reveal"; to: 0; duration: windowsDesktops.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: { if (!visible) reveal = 0 }
 
         Rectangle {
             id: surface
 
             anchors.fill: parent
-            radius: windowsDesktops.popupRadius
-            color: windowsDesktops.popupColor
+            radius: windowsDesktops.settings.popupRadius
+            color: windowsDesktops.settings.popupColor
             border.width: 1
-            border.color: windowsDesktops.popupBorderColor
+            border.color: windowsDesktops.settings.popupBorderColor
             opacity: renamePopup.reveal
             scale: 0.85 + renamePopup.reveal * 0.15
             transformOrigin: windowsDesktops.edge === "bottom" ? Item.Bottom : Item.Top
@@ -586,15 +594,15 @@ Item {
 
                     Text {
                         text: qsTr("Rename desktop")
-                        font: windowsDesktops.popupTitleFont
-                        color: windowsDesktops.popupTextColor
+                        font: windowsDesktops.settings.popupTitleFont
+                        color: windowsDesktops.settings.popupTextColor
                     }
 
                     Text {
                         Layout.fillWidth: true
                         text: qsTr("Enter a new name for this desktop.")
-                        color: windowsDesktops.popupSecondaryTextColor
-                        font: windowsDesktops.popupSmallFont
+                        color: windowsDesktops.settings.popupSecondaryTextColor
+                        font: windowsDesktops.settings.popupSmallFont
                         wrapMode: Text.Wrap
                     }
 
@@ -614,22 +622,22 @@ Item {
                         onAboutToShow: contentItem.Window.window?.raise()
                         // Fades in when it opens, in place of the style's growing from a third of its height
                         enter: Transition {
-                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: windowsDesktops.menuOpenDuration; easing.type: Easing.OutCubic }
+                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: windowsDesktops.settings.menuOpenDuration; easing.type: Easing.OutCubic }
                         }
                         topInset: 0
                         leftInset: 0
                         rightInset: 0
                         bottomInset: 0
-                        font: windowsDesktops.menuFont
+                        font: windowsDesktops.settings.menuFont
                         // Active and inactive only, so disabled controls keep the style's dimmed colours
-                        palette.active.text: windowsDesktops.menuTextColor
-                        palette.inactive.text: windowsDesktops.menuTextColor
+                        palette.active.text: windowsDesktops.settings.menuTextColor
+                        palette.inactive.text: windowsDesktops.settings.menuTextColor
 
                         background: Rectangle {
-                            implicitWidth: windowsDesktops.menuWidth
-                            radius: windowsDesktops.menuRadius
-                            color: windowsDesktops.menuColor
-                            border.color: windowsDesktops.menuBorderColor
+                            implicitWidth: windowsDesktops.settings.menuWidth
+                            radius: windowsDesktops.settings.menuRadius
+                            color: windowsDesktops.settings.menuColor
+                            border.color: windowsDesktops.settings.menuBorderColor
                         }
 
                         FieldMenuItem {
@@ -701,7 +709,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 1
-                    color: windowsDesktops.popupDividerColor
+                    color: windowsDesktops.settings.popupDividerColor
                 }
 
                 RowLayout {
