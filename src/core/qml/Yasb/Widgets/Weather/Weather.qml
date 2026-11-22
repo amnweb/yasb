@@ -972,8 +972,9 @@ Item {
                         readonly property var points: values.map((value, index) => Qt.point(
                             (index + 0.5) * hourWidth,
                             graphBottom - (high > low ? (value - low) / (high - low) : 0.5) * (graphBottom - graphTop)))
-                        // Carried on level past the first and last hour, so it always meets both edges
-                        readonly property string line: points.length < 2 ? ""
+                        // Carried on level past the first and last hour, so it always meets both edges. Empty while
+                        // the popup is hidden: Shape keeps no geometry once the popup's scene graph is released
+                        readonly property string line: !popup.visible || points.length < 2 ? ""
                             : `M 0 ${points[0].y} L ${weather.spline(points).slice(2)} L ${contentWidth} ${points[points.length - 1].y}`
                         readonly property string area: line === "" ? ""
                             : `${line} L ${contentWidth} ${fillBottom} L 0 ${fillBottom} Z`

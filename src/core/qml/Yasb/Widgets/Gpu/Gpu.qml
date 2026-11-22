@@ -383,7 +383,8 @@ Item {
                         1 + (height - 2) * (1 - Math.max(0, Math.min(value, 100)) / 100)))
                     readonly property string line: gpu.spline(points)
                     readonly property string grid: {
-                        if (!gpu.settings.graphGrid || width <= 0 || height <= 0)
+                        // Empty while hidden: Shape keeps no geometry once the popup's scene graph is released
+                        if (!popup.visible || !gpu.settings.graphGrid || width <= 0 || height <= 0)
                             return ""
                         const lines = [`M 0 0.5 L ${width} 0.5`, `M 0.5 0 L 0.5 ${height}`]
                         for (let y = height - 0.5; y > 0; y -= 16)
@@ -468,7 +469,8 @@ Item {
                         1 + (height - 2) * (1 - Math.max(0, Math.min(value, 100)) / 100)))
                     readonly property string line: gpu.spline(points)
                     readonly property string grid: {
-                        if (!gpu.settings.graphGrid || width <= 0 || height <= 0)
+                        // Empty while hidden: Shape keeps no geometry once the popup's scene graph is released
+                        if (!popup.visible || !gpu.settings.graphGrid || width <= 0 || height <= 0)
                             return ""
                         const lines = [`M 0 0.5 L ${width} 0.5`, `M 0.5 0 L 0.5 ${height}`]
                         for (let y = height - 0.5; y > 0; y -= 16)
