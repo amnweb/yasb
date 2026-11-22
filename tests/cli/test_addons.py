@@ -1,5 +1,8 @@
+import hashlib
+import io
 import json
 import re
+import zipfile
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -11,9 +14,10 @@ from PyQt6.QtQml import QQmlComponent, QQmlEngine, QQmlError
 
 from core import widget_files
 from core.bar.revisions import Revisions
-from core.cli.addons import CLIAddonsHandler, builtin_widgets, settings_copy
+from core.cli import addons
+from core.cli.addons import ADDONS_RAW, CLIAddonsHandler, builtin_widgets, settings_copy
 from core.qml_types import register_qml_types
-from core.theme_files import load_theme
+from core.theme_files import config_qml_file, load_theme
 from settings import QML_IMPORT_PATH, SERVICE_API_VERSION
 
 WIDGET = """pragma ComponentBehavior: Bound
@@ -66,7 +70,36 @@ WITH_SETTINGS = [widget for widget in builtin_widgets() if settings_copy(widget,
 @pytest.fixture
 def user_widgets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(widget_files, "USER_WIDGETS_DIR", tmp_path)
+    monkeypatch.setattr(addons, "DEFAULT_CONFIG_DIRECTORY", str(tmp_path))
     return tmp_path
+
+
+@pytest.fixture
+def repository(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, bytes]]:
+    """The addons repository's files by URL."""
+    files: dict[str, bytes] = {}
+    monkeypatch.setattr(addons, "_download", files.__getitem__)
+    addons.addons_index.cache_clear()
+    yield files
+    addons.addons_index.cache_clear()
+
+
+def _publish(repository: dict[str, bytes], addon_id: str, kind: str, versions: dict[int, int]) -> None:
+    """Puts each version of the addon, with its YASB API, in the repository, and index.json listing them."""
+    login, name = addon_id.split(".")
+    entries: list[dict[str, int | str]] = []
+    for version, api in versions.items():
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            archive.writestr(f"{name.capitalize()}.qml", f"// v{version}\n")
+            archive.writestr("manifest.json", json.dumps({"id": addon_id, "version": version, "yasbApi": api}))
+        data = buffer.getvalue()
+        repository[f"{ADDONS_RAW}/{kind}s/{login}/{name}/{version}/{name}.zip"] = data
+        entries.append({"version": version, "yasbApi": api, "sha256": hashlib.sha256(data).hexdigest()})
+    entry = {"id": addon_id, "type": kind, "author": login, "title": name, "description": f"A {kind}"}
+    index = {"addons": [{**entry, "versions": entries}]}
+    repository[f"{ADDONS_RAW}/index.json"] = json.dumps(index).encode()
+    addons.addons_index.cache_clear()
 
 
 @pytest.fixture
@@ -220,15 +253,19 @@ def test_list_shows_the_config_folders_widgets_one_line_each(user_widgets: Path,
     assert handler.list() == 0
     lines = capsys.readouterr().out.splitlines()
     assert [line.split() for line in lines] == [
-        ["amnweb.clock", "-", "custom"],
-        ["amnweb.note", "v2", "yasb-addons"],
-        ["Clock", "v1", "YASB"],
+        ["Name", "Id", "Version", "Source"],
+        ["-" * len(lines[0])],
+        ["amnweb.clock", "amnweb.clock", "-", "custom"],
+        ["Note", "amnweb.note", "2", addons.ADDONS_REPOSITORY],
+        ["Clock", "Clock", "1", "YASB"],
     ]
 
     manifest = user_widgets / "Clock" / "manifest.json"
     manifest.write_text(manifest.read_text(encoding="utf-8").replace('"version": 1', '"version": 0'))
     handler.list()
-    assert capsys.readouterr().out.splitlines()[2].endswith("warning: copy of v0, YASB's Clock is v1")
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0].endswith("Warning")
+    assert lines[4].endswith("copy of v0, YASB's Clock is v1")
 
 
 def test_update_refreshes_a_settings_copy_and_keeps_the_users_settings(
@@ -252,6 +289,67 @@ def test_update_refreshes_a_settings_copy_and_keeps_the_users_settings(
     assert lines[-3:] == ["    }", "    visible: false", "}"]
     assert not any("gone" in line for line in lines)
     assert json.loads(manifest.read_text(encoding="utf-8"))["version"] == 1
+
+
+def test_install_takes_the_newest_version_for_this_api_and_update_lists_before_it_changes_anything(
+    user_widgets: Path, repository: dict[str, bytes], capsys: pytest.CaptureFixture[str]
+):
+    api = SERVICE_API_VERSION[0]
+    _publish(repository, "someone.note", "widget", {1: api, 2: api, 3: api + 1})
+    handler = CLIAddonsHandler()
+    assert handler.install("someone.note") == 0
+    note = user_widgets / "someone.note" / "Note.qml"
+    assert note.read_text(encoding="utf-8") == "// v2\n"
+    assert handler.install("someone.note") == 1
+    assert handler.install("someone.note", version=3, force=True) == 1
+    assert handler.install("someone.note", version=1, force=True) == 0
+    assert note.read_text(encoding="utf-8") == "// v1\n"
+    _publish(repository, "someone.note", "widget", {1: api, 2: api, 4: api})
+    capsys.readouterr()
+    assert handler.update() == 0
+    assert ["someone.note", "someone.note", "1", "4", addons.ADDONS_REPOSITORY] in [
+        line.split() for line in capsys.readouterr().out.splitlines()
+    ]
+    assert note.read_text(encoding="utf-8") == "// v1\n"
+    assert handler.update(everything=True) == 0
+    assert note.read_text(encoding="utf-8") == "// v4\n"
+
+
+def test_search_lists_yasbs_widgets_and_the_addons_this_yasb_can_install(
+    repository: dict[str, bytes], capsys: pytest.CaptureFixture[str]
+):
+    api = SERVICE_API_VERSION[0]
+    handler = CLIAddonsHandler()
+    _publish(repository, "someone.note", "widget", {1: api + 1})
+    assert handler.search("note") == 0
+    assert capsys.readouterr().out == "No widgets or addons match 'note'.\n"
+    _publish(repository, "someone.note", "widget", {1: api, 2: api})
+    assert handler.search("SOMEONE") == 0
+    assert capsys.readouterr().out.splitlines()[2].split() == [
+        "note",
+        "someone.note",
+        "widget",
+        "2",
+        addons.ADDONS_REPOSITORY,
+        "A",
+        "widget",
+    ]
+    assert handler.search("time and date") == 0
+    assert capsys.readouterr().out.splitlines()[2].split()[:5] == ["Clock", "Clock", "widget", "1", "YASB"]
+
+
+def test_a_theme_gets_its_own_folder_and_a_download_that_does_not_match_changes_nothing(
+    user_widgets: Path, repository: dict[str, bytes]
+):
+    _publish(repository, "someone.nord", "theme", {1: SERVICE_API_VERSION[0]})
+    handler = CLIAddonsHandler()
+    assert handler.install("someone.nord") == 0
+    themes = user_widgets / "themes"
+    assert config_qml_file("someone.nord", themes) == (themes / "someone.nord" / "Nord.qml").resolve()
+    url = next(url for url in repository if url.endswith(".zip"))
+    repository[url] += b"\0"
+    assert handler.install("someone.nord", force=True) == 1
+    assert (themes / "someone.nord" / "Nord.qml").is_file()
 
 
 def test_remove_deletes_the_widgets_folder(user_widgets: Path):

@@ -58,7 +58,12 @@ def builtin_manifest(widget_name: str) -> dict[str, Any] | None:
 
 def manifest(widget_name: str) -> dict[str, Any] | None:
     """The manifest in the user's folder of the widget, None without one; raises ValueError for one that can't be read."""
-    path = USER_WIDGETS_DIR / widget_name / MANIFEST
+    return folder_manifest(USER_WIDGETS_DIR / widget_name)
+
+
+def folder_manifest(folder: Path) -> dict[str, Any] | None:
+    """The manifest in a widget's, theme's or layout's folder, None without one, raises ValueError for one that can't be read."""
+    path = folder / MANIFEST
     if not path.is_file():
         return None
     try:

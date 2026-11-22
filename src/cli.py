@@ -119,8 +119,24 @@ YASBC = Command(
         Command("cloud", "Back up and restore your config with YASB Cloud", passthrough=True),
         Command(
             "addons",
-            "Copy YASB's widgets, and update, list and remove your addons",
+            "Copy YASB's widgets, install addons, and update, list and remove them",
             commands=(
+                Command(
+                    "search",
+                    "Search YASB's widgets and the addons repository",
+                    arguments=(
+                        Argument("text", "Look for this in the name, id, description, author or type", optional=True),
+                    ),
+                ),
+                Command(
+                    "install",
+                    "Install a widget, theme or layout from the addons repository",
+                    arguments=(Argument("id", "The addon, such as amnweb.clock"),),
+                    options=(
+                        Option(("--version",), "Install this version, not the newest", value="VERSION", value_type=int),
+                        Option(("--force",), "Replace the addon if you have it"),
+                    ),
+                ),
                 Command(
                     "copy",
                     "Copy a widget's settings to change them, or the whole widget with --full",
@@ -132,8 +148,9 @@ YASBC = Command(
                 ),
                 Command(
                     "update",
-                    "Update your copies of YASB's widgets",
-                    arguments=(Argument("name", "Only this widget", optional=True),),
+                    "List updates for your copies of YASB's widgets and your addons, or update them",
+                    arguments=(Argument("id", "Update this widget, theme or layout", optional=True),),
+                    options=(Option(("--all",), "Update all of them"),),
                 ),
                 Command(
                     "remove",
@@ -281,10 +298,14 @@ class CLIHandler:
             sys.exit(print_help(YASBC, args.help_path))
         elif args.command == "addons":
             addons = CLIAddonsHandler()
+            if args.addons_command == "search":
+                sys.exit(addons.search(args.text))
+            if args.addons_command == "install":
+                sys.exit(addons.install(args.id, version=args.version, force=args.force))
             if args.addons_command == "copy":
                 sys.exit(addons.copy(args.name, full=args.full, force=args.force))
             if args.addons_command == "update":
-                sys.exit(addons.update(args.name))
+                sys.exit(addons.update(args.id, everything=args.all))
             if args.addons_command == "remove":
                 sys.exit(addons.remove(args.name, yes=args.yes))
             if args.addons_command == "list":

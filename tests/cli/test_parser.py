@@ -12,7 +12,7 @@ from core.cloud import cli as cloud_cli
     ("root", "argv", "expected"),
     [
         (cli.YASBC, ["addons", "copy", "clock", "--full"], {"addons_command": "copy", "name": "clock", "full": True}),
-        (cli.YASBC, ["addons", "update"], {"addons_command": "update", "name": None}),
+        (cli.YASBC, ["addons", "update"], {"addons_command": "update", "id": None, "all": False}),
         (cli.YASBC, ["show-bar", "-s", "DP1"], {"command": "show-bar", "screen": "DP1"}),
         (cli.YASBC, ["set-channel", "preview"], {"command": "set-channel", "target_channel": "preview"}),
         (cli.YASBC, ["help", "addons", "copy"], {"command": "help", "help_path": ["addons", "copy"]}),
