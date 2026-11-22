@@ -27,6 +27,8 @@ ALLOWED_PREFIXES = (
     # Same shape: a process-table lookup over core.utils.win32 and nothing else. Used to
     # tell whether the bar is running before a restore stops it.
     "core.utils.process",
+    # The argparse subclass every yasbc command uses; stdlib only.
+    "core.cli.parser",
     "settings",
 )
 """Everything else in the tree is off limits - bar, widgets, setup, validation, events."""

@@ -183,7 +183,7 @@ SetupPage {
             checkedCount = 0
             search.clear()
             candidates.clear()
-            for (const [name, title, description, icon] of page.choices.available())
+            for (const { name, title, description, icon } of page.choices.available())
                 candidates.append({ name, title, description, glyph: icon, picked: false })
             candidateList.positionViewAtBeginning()
             open()

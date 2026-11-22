@@ -18,6 +18,7 @@ Window {
 
     readonly property Choices choices: Choices {
         backdropSupported: window.setup.backdropSupported
+        manifests: window.setup.manifests
         autostart: window.setup.canAutostart
     }
     readonly property bool lastPage: pages.currentIndex === pages.count - 1

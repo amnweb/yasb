@@ -180,7 +180,8 @@ def test_the_widget_searches_without_qml_warnings(qapp: QGuiApplication):
     component = QQmlComponent(engine)
     # The way a user turns providers on: a widget file of their own that overrides the built-in defaults
     component.setData(
-        b"import Yasb.Widgets\nQuickLaunch { homePage: true; calculator.enabled: true; webSearch.enabled: true; webSearch.prefix: '??' }",
+        b"import Yasb.Widgets\nQuickLaunch { settings { homePage: true; calculator.enabled: true; "
+        b"webSearch { enabled: true; prefix: '??' } } }",
         QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "QuickLaunch" / "User.qml")),
     )
     widget = create_with_bar(component)

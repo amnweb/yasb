@@ -4,6 +4,7 @@ from PyQt6.QtCore import QObject, QUrl
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 
 from core.bar.revisions import Revisions, path_key
+from core.widget_files import file_name
 from settings import DEFAULT_CONFIG_DIRECTORY, SCRIPT_PATH
 
 USER_THEMES_DIR = Path(DEFAULT_CONFIG_DIRECTORY) / "themes"
@@ -16,15 +17,22 @@ class ThemeError(Exception):
 
 
 def config_qml_file(name: str, folder: Path) -> Path:
-    """The file config.yaml names: a .qml path, relative to the config folder, or name.qml in folder, in any case.
-    A file that is not there keeps the path it would have."""
-    path = Path(DEFAULT_CONFIG_DIRECTORY) / name if Path(name).suffix.lower() == ".qml" else folder / f"{name}.qml"
+    """The file config.yaml names, in any case: a .qml path, relative to the config folder; for an addon such as
+    amnweb.nord, Nord.qml in folder/amnweb.nord; or name.qml in folder. A file that is not there keeps the path it
+    would have."""
+    if Path(name).suffix.lower() == ".qml":
+        path = Path(DEFAULT_CONFIG_DIRECTORY) / name
+    elif "." in name:
+        path = folder / name / file_name(name)
+    else:
+        path = folder / f"{name}.qml"
     # QML refuses a path whose case differs from the file's; resolving gives the name as it is on disk
     return path.resolve() if path.is_file() else path
 
 
 def find_theme_file(theme: str) -> Path | None:
-    """A .qml path, relative to the config folder, or a name found in the themes folder as name.qml, in any case."""
+    """A .qml path, relative to the config folder, or a name found in the themes folder as name.qml or as an addon's
+    folder, in any case."""
     path = config_qml_file(theme, USER_THEMES_DIR)
     return path if path.is_file() else None
 

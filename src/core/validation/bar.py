@@ -5,8 +5,10 @@ from pydantic import Field, StringConstraints, field_validator, model_validator
 from core.validation.base_model import CustomBaseModel
 
 NAME_PATTERN = r"^[A-Za-z][A-Za-z0-9_-]*$"
+# A widget's name may have a namespace in front, such as amnweb.clock.
+WIDGET_NAME_PATTERN = r"^([A-Za-z][A-Za-z0-9_-]*\.)?[A-Za-z][A-Za-z0-9_-]*$"
 
-type WidgetName = Annotated[str, StringConstraints(pattern=NAME_PATTERN)]
+type WidgetName = Annotated[str, StringConstraints(pattern=WIDGET_NAME_PATTERN)]
 type SlotName = Annotated[str, StringConstraints(pattern=NAME_PATTERN)]
 type AutoHide = Literal["never", "always", "maximized"]
 

@@ -11,86 +11,113 @@ import Yasb.Themes
 Item {
     id: obs
 
+    component PopupIcons: QtObject {
+        property string record
+        property string paused
+        property string stream
+        property string virtualCam
+        property string studioMode
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // obs-websocket's server, in OBS under Tools > WebSocket Server Settings
+        property string host: "localhost"
+        property int port: 4455
+        // Its password; it can come from an environment variable, such as Environment.value("OBS_PASSWORD")
+        property string password: ""
+        // Hides the widget while OBS is not running or its server is off
+        property bool hideWhenDisconnected: true
+        // Hides the widget while nothing is recorded or streamed
+        property bool hideWhenIdle: false
+        property bool blinkingIcon: true
+        property bool showRecordTime: true
+        property bool showStreamTime: true
+        property bool showSceneName: false
+        // Shows a glyph on the bar while the virtual camera or studio mode is on
+        property bool showVirtualCam: false
+        property bool showStudioMode: false
+        property bool tooltip: true
+        // Glyphs on the bar; icon is OBS's record glyph, shown while idle
+        property string icon: "\ue7c8"
+        property string pausedIcon: "\ue769"
+        property string streamIcon: "\ue93e"
+        property string virtualCamIcon: "\ue714"
+        property string studioModeIcon: "\ue7f4"
+        // Hotkeys, such as "alt+shift+r"
+        property string hotkey: ""
+        property string recordHotkey: ""
+        property string pauseHotkey: ""
+        property string streamHotkey: ""
+        property string virtualCamHotkey: ""
+        property string studioModeHotkey: ""
+        property int popupWidth: 284
+        // Popup alignment relative to the widget on a horizontal bar: left, right or center
+        property string popupAlignment: "center"
+        property color liveColor: "#E81123"
+        property color pausedColor: "#FFB900"
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property int iconSize: theme.bar.iconFont.pixelSize
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The text of a button that starts or stops something
+        property color strongTextColor: "#ffffff"
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+        property color popupCardColor: theme.colors.card
+        property color popupCardBorderColor: theme.colors.cardBorder
+        property color popupDividerColor: theme.colors.divider
+        property color popupTertiaryTextColor: theme.colors.textTertiary
+        property color popupControlColor: theme.colors.control
+        property color popupControlHoverColor: theme.colors.controlHover
+        property color popupControlPressedColor: theme.colors.controlPressed
+        property color popupControlBorderColor: theme.colors.controlBorder
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        readonly property PopupIcons popupIcons: PopupIcons {
+            record: "\ue7c8"
+            paused: "\ue769"
+            stream: "\ue93e"
+            virtualCam: "\ue714"
+            studioMode: "\ue7f4"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // The glyphs beside the recording, streaming and other rows
+        property int popupIconSize: 15
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // obs-websocket's server, in OBS under Tools > WebSocket Server Settings
-    property string host: "localhost"
-    property int port: 4455
-    // Its password; it can come from an environment variable, such as Environment.value("OBS_PASSWORD")
-    property string password: ""
-    // Hides the widget while OBS is not running or its server is off
-    property bool hideWhenDisconnected: true
-    // Hides the widget while nothing is recorded or streamed
-    property bool hideWhenIdle: false
-    property bool blinkingIcon: true
-    property bool showRecordTime: true
-    property bool showStreamTime: true
-    property bool showSceneName: false
-    // Shows a glyph on the bar while the virtual camera or studio mode is on
-    property bool showVirtualCam: false
-    property bool showStudioMode: false
-    property bool tooltip: true
-    // Glyphs on the bar and in the popup; icon is OBS's record glyph, shown while idle
-    property string icon: "\ue7c8"
-    property string pausedIcon: "\ue769"
-    property string streamIcon: "\ue93e"
-    property string virtualCamIcon: "\ue714"
-    property string studioModeIcon: "\ue7f4"
-    // Hotkeys, such as "alt+shift+r"
-    property string hotkey: ""
-    property string recordHotkey: ""
-    property string pauseHotkey: ""
-    property string streamHotkey: ""
-    property string virtualCamHotkey: ""
-    property string studioModeHotkey: ""
-    property int popupWidth: 284
-    // Popup alignment relative to the widget on a horizontal bar: left, right or center
-    property string popupAlignment: "center"
-    property color liveColor: "#E81123"
-    property color pausedColor: "#FFB900"
+    readonly property Settings settings: Settings {
+        theme: obs.theme
+    }
 
     readonly property bool dark: theme.dark
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property int iconSize: theme.bar.iconFont.pixelSize
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The text of a button that starts or stops something
-    property color strongTextColor: "#ffffff"
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
-    property color popupCardColor: theme.colors.card
-    property color popupCardBorderColor: theme.colors.cardBorder
-    property color popupDividerColor: theme.colors.divider
-    property color popupTertiaryTextColor: theme.colors.textTertiary
-    property color popupControlColor: theme.colors.control
-    property color popupControlHoverColor: theme.colors.controlHover
-    property color popupControlPressedColor: theme.colors.controlPressed
-    property color popupControlBorderColor: theme.colors.controlBorder
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // The glyphs beside the recording, streaming and other rows
-    property int popupIconSize: 15
     readonly property string edge: bar.edge
 
     readonly property bool recording: studio.recording.active
@@ -108,7 +135,7 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const gap = popupGap
+        const gap = settings.popupGap
         const margin = 8
         const screen = obs.Screen
         let px
@@ -123,8 +150,8 @@ Item {
             py = start.y + (height - popup.height) / 2
             break
         default:
-            px = popupAlignment === "left" ? start.x
-                : popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
+            px = settings.popupAlignment === "left" ? start.x
+                : settings.popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
             py = edge === "bottom" ? start.y - popup.height - gap : start.y + height + gap
             break
         }
@@ -144,7 +171,7 @@ Item {
     }
 
     // A hidden widget takes no room on the bar, as its slot keeps the size it asks for
-    readonly property bool shown: !(hideWhenDisconnected && !studio.connected) && !(hideWhenIdle && !recording && !streaming)
+    readonly property bool shown: !(settings.hideWhenDisconnected && !studio.connected) && !(settings.hideWhenIdle && !recording && !streaming)
 
     implicitWidth: shown ? row.implicitWidth : 0
     implicitHeight: shown ? row.implicitHeight : 0
@@ -161,38 +188,38 @@ Item {
     ObsStudio {
         id: studio
 
-        host: obs.host
-        port: obs.port
-        password: obs.password
+        host: obs.settings.host
+        port: obs.settings.port
+        password: obs.settings.password
     }
 
     Hotkey {
-        keys: obs.hotkey
+        keys: obs.settings.hotkey
         onActivated: obs.togglePopup()
     }
 
     Hotkey {
-        keys: obs.recordHotkey
+        keys: obs.settings.recordHotkey
         onActivated: studio.toggleRecord()
     }
 
     Hotkey {
-        keys: obs.pauseHotkey
+        keys: obs.settings.pauseHotkey
         onActivated: studio.toggleRecordPause()
     }
 
     Hotkey {
-        keys: obs.streamHotkey
+        keys: obs.settings.streamHotkey
         onActivated: studio.toggleStream()
     }
 
     Hotkey {
-        keys: obs.virtualCamHotkey
+        keys: obs.settings.virtualCamHotkey
         onActivated: studio.toggleVirtualCam()
     }
 
     Hotkey {
-        keys: obs.studioModeHotkey
+        keys: obs.settings.studioModeHotkey
         onActivated: studio.toggleStudioMode()
     }
 
@@ -226,12 +253,16 @@ Item {
     }
 
     component Glyph: Text {
+        id: glyph
+
+        property font iconFont: obs.settings.iconFont
+
         textFormat: Text.PlainText
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        font.family: obs.iconFont.family
-        font.weight: obs.iconFont.weight
-        font.variableAxes: obs.iconFont.variableAxes
+        font.family: glyph.iconFont.family
+        font.weight: glyph.iconFont.weight
+        font.variableAxes: glyph.iconFont.variableAxes
     }
 
     // The red dot of a recording; it blinks while it records, unless blinkingIcon is off
@@ -243,7 +274,7 @@ Item {
         implicitWidth: 9
         implicitHeight: 9
         radius: 4.5
-        color: obs.liveColor
+        color: obs.settings.liveColor
 
         SequentialAnimation on opacity {
             running: dot.blinking
@@ -264,8 +295,8 @@ Item {
         Layout.minimumWidth: 0
         textFormat: Text.PlainText
         elide: Text.ElideRight
-        color: muted ? obs.popupTertiaryTextColor : obs.popupTextColor
-        font: obs.popupFont
+        color: muted ? obs.settings.popupTertiaryTextColor : obs.settings.popupTextColor
+        font: obs.settings.popupFont
     }
 
     component Card: Rectangle {
@@ -273,16 +304,16 @@ Item {
         Layout.leftMargin: 12
         Layout.rightMargin: 12
         radius: 8
-        color: obs.popupCardColor
+        color: obs.settings.popupCardColor
         border.width: 1
-        border.color: obs.popupCardBorderColor
+        border.color: obs.settings.popupCardBorderColor
     }
 
     // The line above a row in a card, after its first
     component RowSeparator: Rectangle {
         Layout.fillWidth: true
         implicitHeight: 1
-        color: obs.popupDividerColor
+        color: obs.settings.popupDividerColor
     }
 
     // A small framed button; a strong one is filled in the live colour
@@ -296,10 +327,10 @@ Item {
         implicitWidth: buttonText.implicitWidth + 20
         implicitHeight: 26
         radius: 4
-        color: strong ? Qt.darker(obs.liveColor, buttonArea.pressed ? 1.2 : buttonArea.containsMouse ? 1.1 : 1)
-            : buttonArea.pressed ? obs.popupControlPressedColor : buttonArea.containsMouse ? obs.popupControlHoverColor : obs.popupControlColor
+        color: strong ? Qt.darker(obs.settings.liveColor, buttonArea.pressed ? 1.2 : buttonArea.containsMouse ? 1.1 : 1)
+            : buttonArea.pressed ? obs.settings.popupControlPressedColor : buttonArea.containsMouse ? obs.settings.popupControlHoverColor : obs.settings.popupControlColor
         border.width: 1
-        border.color: strong ? "transparent" : obs.popupControlBorderColor
+        border.color: strong ? "transparent" : obs.settings.popupControlBorderColor
         Accessible.role: Accessible.Button
         Accessible.name: text
         Accessible.onPressAction: button.clicked()
@@ -310,8 +341,8 @@ Item {
             anchors.centerIn: parent
             text: button.text
             textFormat: Text.PlainText
-            color: button.strong ? obs.strongTextColor : obs.popupTextColor
-            font: obs.popupSmallFont
+            color: button.strong ? obs.settings.strongTextColor : obs.settings.popupTextColor
+            font: obs.settings.popupSmallFont
         }
 
         MouseArea {
@@ -335,10 +366,10 @@ Item {
             objectName: "idle"
             anchors.verticalCenter: parent.verticalCenter
             visible: !obs.recording && !obs.streaming
-            text: obs.icon
-            color: obs.textColor
+            text: obs.settings.icon
+            color: obs.settings.textColor
             opacity: studio.connected ? 1 : 0.4
-            font.pixelSize: obs.iconSize
+            font.pixelSize: obs.settings.iconSize
         }
 
         Row {
@@ -350,24 +381,24 @@ Item {
             RecordDot {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: !obs.paused
-                blinking: obs.blinkingIcon && obs.recording && !obs.paused
+                blinking: obs.settings.blinkingIcon && obs.recording && !obs.paused
             }
 
             Glyph {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: obs.paused
-                text: obs.pausedIcon
-                color: obs.pausedColor
+                text: obs.settings.pausedIcon
+                color: obs.settings.pausedColor
                 font.pixelSize: sceneLabel.font.pixelSize
             }
 
             Label {
                 anchors.verticalCenter: parent.verticalCenter
-                visible: obs.showRecordTime
+                visible: obs.settings.showRecordTime
                 text: obs.clock(studio.recording.duration)
                 textFormat: Text.PlainText
-                color: obs.textColor
-                font: obs.font
+                color: obs.settings.textColor
+                font: obs.settings.font
                 opacity: obs.paused ? 0.7 : 1
             }
         }
@@ -380,35 +411,35 @@ Item {
 
             Glyph {
                 anchors.verticalCenter: parent.verticalCenter
-                text: obs.streamIcon
-                color: obs.liveColor
-                font.pixelSize: obs.iconSize
+                text: obs.settings.streamIcon
+                color: obs.settings.liveColor
+                font.pixelSize: obs.settings.iconSize
             }
 
             Label {
                 anchors.verticalCenter: parent.verticalCenter
-                visible: obs.showStreamTime
+                visible: obs.settings.showStreamTime
                 text: obs.clock(studio.streaming.duration)
                 textFormat: Text.PlainText
-                color: obs.textColor
-                font: obs.font
+                color: obs.settings.textColor
+                font: obs.settings.font
             }
         }
 
         Glyph {
             anchors.verticalCenter: parent.verticalCenter
-            visible: obs.showVirtualCam && studio.virtualCam
-            text: obs.virtualCamIcon
-            color: obs.textColor
-            font.pixelSize: obs.iconSize
+            visible: obs.settings.showVirtualCam && studio.virtualCam
+            text: obs.settings.virtualCamIcon
+            color: obs.settings.textColor
+            font.pixelSize: obs.settings.iconSize
         }
 
         Glyph {
             anchors.verticalCenter: parent.verticalCenter
-            visible: obs.showStudioMode && studio.studioMode
-            text: obs.studioModeIcon
-            color: obs.textColor
-            font.pixelSize: obs.iconSize
+            visible: obs.settings.showStudioMode && studio.studioMode
+            text: obs.settings.studioModeIcon
+            color: obs.settings.textColor
+            font.pixelSize: obs.settings.iconSize
         }
 
         Label {
@@ -416,11 +447,11 @@ Item {
 
             objectName: "scene"
             anchors.verticalCenter: parent.verticalCenter
-            visible: obs.showSceneName && studio.scene !== ""
+            visible: obs.settings.showSceneName && studio.scene !== ""
             text: studio.scene
             textFormat: Text.PlainText
-            color: obs.textColor
-            font: obs.font
+            color: obs.settings.textColor
+            font: obs.settings.font
             opacity: 0.7
         }
     }
@@ -436,7 +467,7 @@ Item {
 
     ToolTip {
         popupType: Popup.Window
-        visible: obs.tooltip && area.containsMouse && !popup.visible
+        visible: obs.settings.tooltip && area.containsMouse && !popup.visible
         delay: 400
         text: !studio.connected ? qsTr("OBS is not connected")
             : [obs.recording ? (obs.paused ? qsTr("Recording paused") : qsTr("Recording")) : qsTr("Not recording"),
@@ -453,14 +484,14 @@ Item {
 
         objectName: "popup"
         title: qsTr("OBS Studio")
-        width: obs.popupWidth
+        width: obs.settings.popupWidth
         height: popupContent.implicitHeight
         anchor: obs
-        font: obs.popupFont
+        font: obs.settings.popupFont
         theme: obs.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: obs.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: obs.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: obs.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: obs.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -470,10 +501,10 @@ Item {
             id: surface
 
             anchors.fill: parent
-            radius: obs.popupRadius
-            color: obs.popupColor
+            radius: obs.settings.popupRadius
+            color: obs.settings.popupColor
             border.width: 1
-            border.color: obs.popupBorderColor
+            border.color: obs.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: obs.edge === "bottom" ? Item.Bottom : Item.Top
@@ -497,7 +528,7 @@ Item {
                     PopupText {
                         Layout.fillWidth: true
                         text: qsTr("OBS Studio")
-                        font: obs.popupTitleFont
+                        font: obs.settings.popupTitleFont
                     }
 
                     PopupText {
@@ -506,14 +537,14 @@ Item {
                         text: studio.connected ? (studio.scene !== "" ? qsTr("Scene: %1").arg(studio.scene) : "")
                             : qsTr("Not connected")
                         muted: true
-                        font: obs.popupSmallFont
+                        font: obs.settings.popupSmallFont
                     }
                 }
 
                 Rectangle {
                     Layout.fillWidth: true
                     implicitHeight: 1
-                    color: obs.popupDividerColor
+                    color: obs.settings.popupDividerColor
                 }
 
                 // OBS is not running, its server is off, or the password is wrong
@@ -527,8 +558,8 @@ Item {
                     wrapMode: Text.WordWrap
                     elide: Text.ElideNone
                     muted: studio.error === ""
-                    color: studio.error !== "" ? obs.liveColor : obs.popupTertiaryTextColor
-                    font: obs.popupSmallFont
+                    color: studio.error !== "" ? obs.settings.liveColor : obs.settings.popupTertiaryTextColor
+                    font: obs.settings.popupSmallFont
                 }
 
                 // Recording and streaming
@@ -562,9 +593,10 @@ Item {
                                 Glyph {
                                     anchors.centerIn: parent
                                     visible: !obs.recording || obs.paused
-                                    text: obs.paused ? obs.pausedIcon : obs.icon
-                                    color: obs.paused ? obs.pausedColor : obs.popupTertiaryTextColor
-                                    font.pixelSize: obs.popupIconSize
+                                    text: obs.paused ? obs.settings.popupIcons.paused : obs.settings.popupIcons.record
+                                    color: obs.paused ? obs.settings.pausedColor : obs.settings.popupTertiaryTextColor
+                                    iconFont: obs.settings.popupIconFont
+                                    font.pixelSize: obs.settings.popupIconSize
                                 }
                             }
 
@@ -584,7 +616,7 @@ Item {
                                     visible: obs.recording
                                     text: obs.clock(studio.recording.duration)
                                     muted: true
-                                    font: obs.popupSmallFont
+                                    font: obs.settings.popupSmallFont
                                 }
                             }
 
@@ -611,9 +643,10 @@ Item {
 
                             Glyph {
                                 Layout.preferredWidth: 16
-                                text: obs.streamIcon
-                                color: obs.streaming ? obs.liveColor : obs.popupTertiaryTextColor
-                                font.pixelSize: obs.popupIconSize
+                                text: obs.settings.popupIcons.stream
+                                color: obs.streaming ? obs.settings.liveColor : obs.settings.popupTertiaryTextColor
+                                iconFont: obs.settings.popupIconFont
+                                font.pixelSize: obs.settings.popupIconSize
                             }
 
                             ColumnLayout {
@@ -636,7 +669,7 @@ Item {
                                             ? qsTr("%1 dropped frames").arg(studio.streaming.skippedFrames) : ""]
                                         .filter(part => part).join(" · ")
                                     muted: true
-                                    font: obs.popupSmallFont
+                                    font: obs.settings.popupSmallFont
                                 }
                             }
 
@@ -671,9 +704,10 @@ Item {
 
                             Glyph {
                                 Layout.preferredWidth: 16
-                                text: obs.virtualCamIcon
-                                color: obs.popupTertiaryTextColor
-                                font.pixelSize: obs.popupIconSize
+                                text: obs.settings.popupIcons.virtualCam
+                                color: obs.settings.popupTertiaryTextColor
+                                iconFont: obs.settings.popupIconFont
+                                font.pixelSize: obs.settings.popupIconSize
                             }
 
                             PopupText {
@@ -704,9 +738,10 @@ Item {
 
                             Glyph {
                                 Layout.preferredWidth: 16
-                                text: obs.studioModeIcon
-                                color: obs.popupTertiaryTextColor
-                                font.pixelSize: obs.popupIconSize
+                                text: obs.settings.popupIcons.studioMode
+                                color: obs.settings.popupTertiaryTextColor
+                                iconFont: obs.settings.popupIconFont
+                                font.pixelSize: obs.settings.popupIconSize
                             }
 
                             PopupText {
@@ -735,22 +770,22 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: obs.popupRadius - 1
-                    bottomRightRadius: obs.popupRadius - 1
-                    color: obs.popupSecondaryBackgroundColor
+                    bottomLeftRadius: obs.settings.popupRadius - 1
+                    bottomRightRadius: obs.settings.popupRadius - 1
+                    color: obs.settings.popupSecondaryBackgroundColor
 
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: obs.popupDividerColor
+                        color: obs.settings.popupDividerColor
                     }
 
                     PopupText {
                         x: 16
                         anchors.verticalCenter: parent.verticalCenter
-                        text: `${obs.host}:${obs.port}`
+                        text: `${obs.settings.host}:${obs.settings.port}`
                         muted: true
-                        font: obs.popupSmallFont
+                        font: obs.settings.popupSmallFont
                     }
 
                     PopupText {
@@ -759,7 +794,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: studio.connected ? qsTr("Connected") : qsTr("Not connected")
                         muted: true
-                        font: obs.popupSmallFont
+                        font: obs.settings.popupSmallFont
                     }
                 }
             }

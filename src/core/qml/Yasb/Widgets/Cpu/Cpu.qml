@@ -12,67 +12,88 @@ import Yasb.Themes
 Item {
     id: cpu
 
-    // Label placeholders: {info[percent][total]} and {info[percent][core]} (every core, space-separated) in %,
-    // {info[freq][current]} and {info[freq][max]} (base) in MHz, {info[cores][physical]} {info[cores][total]}.
-    // :.2f after a name gives two decimals, as {info[freq][current]:.2f}. Right-click shows the alternate label.
-    property string label: "{info[percent][total]:.0f}%"
-    property string alternateLabel: "CPU: {info[percent][total]}% | freq: {info[freq][current]:.2f} MHz"
-    property int updateInterval: 2000
-    property color graphColor: theme.colors.accent
-    // Square grid lines behind the graph
-    property bool graphGrid: true
-    // The glyph in front of the text, drawn in iconFont and the text colour; "" for none
-    property string icon: "\ueea1"
-    property int iconSize: theme.bar.iconFont.pixelSize
-    // Hotkey that opens the popup, such as "alt+shift+c"
-    property string hotkey: ""
-    property int popupWidth: 400
+    component PopupIcons: QtObject {
+        property string pin
+        property string unpin
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Label placeholders: {info[percent][total]} and {info[percent][core]} (every core, space-separated) in %,
+        // {info[freq][current]} and {info[freq][max]} (base) in MHz, {info[cores][physical]} {info[cores][total]}.
+        // :.2f after a name gives two decimals, as {info[freq][current]:.2f}. Right-click shows the alternate label.
+        property string label: "{info[percent][total]:.0f}%"
+        property string alternateLabel: "CPU: {info[percent][total]}% | freq: {info[freq][current]:.2f} MHz"
+        property int updateInterval: 2000
+        property color graphColor: theme.colors.accent
+        // Square grid lines behind the graph
+        property bool graphGrid: true
+        // The glyph in front of the text, drawn in iconFont and the text colour; "" for none
+        property string icon: "\ueea1"
+        property int iconSize: theme.bar.iconFont.pixelSize
+        // Hotkey that opens the popup, such as "alt+shift+c"
+        property string hotkey: ""
+        property int popupWidth: 400
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        property color popupDividerColor: theme.colors.divider
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+        property color popupTertiaryTextColor: theme.colors.textTertiary
+        property color popupCardColor: theme.colors.card
+        property color popupCardBorderColor: theme.colors.cardBorder
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        readonly property PopupIcons popupIcons: PopupIcons {
+            pin: "\ue840"
+            unpin: "\ue77a"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // The pin glyph, and each stat's value under its name
+        property int popupIconSize: 14
+        property font valueFont
+        valueFont.family: theme.popup.font.family
+        valueFont.pixelSize: 20
+        valueFont.weight: 700
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
+    readonly property Settings settings: Settings {
+        theme: cpu.theme
+    }
 
     property bool showAlternate: false
-    readonly property string text: format(showAlternate ? alternateLabel : label)
+    readonly property string text: format(showAlternate ? settings.alternateLabel : settings.label)
     property list<real> history: []
 
     readonly property bool dark: theme.dark
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    property color popupDividerColor: theme.colors.divider
-    property color popupSecondaryTextColor: theme.colors.textSecondary
-    property color popupTertiaryTextColor: theme.colors.textTertiary
-    property color popupCardColor: theme.colors.card
-    property color popupCardBorderColor: theme.colors.cardBorder
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // The pin glyph, and each stat's value under its name
-    property int popupIconSize: 14
-    property font valueFont
-    valueFont.family: theme.popup.font.family
-    valueFont.pixelSize: 20
-    valueFont.weight: Font.Bold
     readonly property string edge: bar.edge
 
     function format(template: string): string {
@@ -107,10 +128,10 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + popupGap
-            : edge === "right" ? start.x - popup.width - popupGap : start.x + (width - popup.width) / 2
-        let py = edge === "top" ? start.y + height + popupGap
-            : edge === "bottom" ? start.y - popup.height - popupGap : start.y + (height - popup.height) / 2
+        let px = edge === "left" ? start.x + width + settings.popupGap
+            : edge === "right" ? start.x - popup.width - settings.popupGap : start.x + (width - popup.width) / 2
+        let py = edge === "top" ? start.y + height + settings.popupGap
+            : edge === "bottom" ? start.y - popup.height - settings.popupGap : start.y + (height - popup.height) / 2
         const screen = cpu.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - popup.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - popup.height - 8))
@@ -135,7 +156,7 @@ Item {
     CpuMonitor {
         id: monitor
 
-        updateInterval: cpu.updateInterval
+        updateInterval: cpu.settings.updateInterval
         onDataChanged: cpu.history = [...cpu.history, monitor.data.percent.total].slice(-60)
     }
 
@@ -157,13 +178,13 @@ Item {
 
         Text {
             anchors.verticalCenter: parent.verticalCenter
-            visible: cpu.icon !== ""
-            text: cpu.icon
-            color: cpu.textColor
-            font.family: cpu.iconFont.family
-            font.weight: cpu.iconFont.weight
-            font.variableAxes: cpu.iconFont.variableAxes
-            font.pixelSize: cpu.iconSize
+            visible: cpu.settings.icon !== ""
+            text: cpu.settings.icon
+            color: cpu.settings.textColor
+            font.family: cpu.settings.iconFont.family
+            font.weight: cpu.settings.iconFont.weight
+            font.variableAxes: cpu.settings.iconFont.variableAxes
+            font.pixelSize: cpu.settings.iconSize
         }
 
         Label {
@@ -172,8 +193,8 @@ Item {
             visible: text !== ""
             text: cpu.text
             textFormat: Text.PlainText
-            color: cpu.textColor
-            font: cpu.font
+            color: cpu.settings.textColor
+            font: cpu.settings.font
         }
     }
 
@@ -190,7 +211,7 @@ Item {
     }
 
     Hotkey {
-        keys: cpu.hotkey
+        keys: cpu.settings.hotkey
         onActivated: cpu.togglePopup()
     }
 
@@ -208,14 +229,14 @@ Item {
         }
         objectName: "menu"
         title: "CPU"
-        width: cpu.popupWidth
+        width: cpu.settings.popupWidth
         height: popupContent.implicitHeight
         anchor: cpu
-        font: cpu.popupFont
+        font: cpu.settings.popupFont
         theme: cpu.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: cpu.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: cpu.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: cpu.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: cpu.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible) {
                 reveal = 0
@@ -226,10 +247,10 @@ Item {
         Rectangle {
             id: surface
             anchors.fill: parent
-            radius: cpu.popupRadius
-            color: cpu.popupColor
+            radius: cpu.settings.popupRadius
+            color: cpu.settings.popupColor
             border.width: 1
-            border.color: cpu.popupBorderColor
+            border.color: cpu.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: cpu.edge === "bottom" ? Item.Bottom : Item.Top
@@ -249,8 +270,8 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: "CPU usage"
-                        font: cpu.popupTitleFont
-                        color: cpu.popupTextColor
+                        font: cpu.settings.popupTitleFont
+                        color: cpu.settings.popupTextColor
 
                         MouseArea {
                             property point grab
@@ -277,13 +298,13 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            text: popup.pinned ? "\ue77a" : "\ue840"
-                            color: cpu.popupTextColor
+                            text: popup.pinned ? cpu.settings.popupIcons.unpin : cpu.settings.popupIcons.pin
+                            color: cpu.settings.popupTextColor
                             opacity: popup.pinned ? 1 : 0.6
-                            font.family: cpu.iconFont.family
-                            font.weight: cpu.iconFont.weight
-                            font.variableAxes: cpu.iconFont.variableAxes
-                            font.pixelSize: cpu.popupIconSize
+                            font.family: cpu.settings.popupIconFont.family
+                            font.weight: cpu.settings.popupIconFont.weight
+                            font.variableAxes: cpu.settings.popupIconFont.variableAxes
+                            font.pixelSize: cpu.settings.popupIconSize
                         }
 
                         MouseArea {
@@ -297,15 +318,15 @@ Item {
                     Layout.fillWidth: true
                     Layout.bottomMargin: 8
                     implicitHeight: 1
-                    color: cpu.popupDividerColor
+                    color: cpu.settings.popupDividerColor
                 }
 
                 Text {
                     leftPadding: 14
                     bottomPadding: 4
                     text: "Utilization"
-                    color: cpu.popupTertiaryTextColor
-                    font: cpu.popupSmallFont
+                    color: cpu.settings.popupTertiaryTextColor
+                    font: cpu.settings.popupSmallFont
                 }
 
                 Item {
@@ -316,7 +337,8 @@ Item {
                         1 + (height - 2) * (1 - Math.max(0, Math.min(value, 100)) / 100)))
                     readonly property string line: cpu.spline(points)
                     readonly property string grid: {
-                        if (!cpu.graphGrid || width <= 0 || height <= 0)
+                        // Empty while hidden: Shape keeps no geometry once the popup's scene graph is released
+                        if (!popup.visible || !cpu.settings.graphGrid || width <= 0 || height <= 0)
                             return ""
                         const lines = [`M 0 0.5 L ${width} 0.5`, `M 0.5 0 L 0.5 ${height}`]
                         for (let y = height - 0.5; y > 0; y -= 16)
@@ -335,7 +357,7 @@ Item {
 
                         ShapePath {
                             fillColor: "transparent"
-                            strokeColor: Qt.alpha(cpu.popupTextColor, 0.05)
+                            strokeColor: Qt.alpha(cpu.settings.popupTextColor, 0.05)
                             strokeWidth: 1
 
                             PathSvg {
@@ -355,12 +377,12 @@ Item {
 
                                 GradientStop {
                                     position: 0
-                                    color: Qt.alpha(cpu.graphColor, 100 / 255)
+                                    color: Qt.alpha(cpu.settings.graphColor, 100 / 255)
                                 }
 
                                 GradientStop {
                                     position: 1
-                                    color: Qt.alpha(cpu.graphColor, 10 / 255)
+                                    color: Qt.alpha(cpu.settings.graphColor, 10 / 255)
                                 }
                             }
 
@@ -371,7 +393,7 @@ Item {
 
                         ShapePath {
                             fillColor: "transparent"
-                            strokeColor: cpu.graphColor
+                            strokeColor: cpu.settings.graphColor
                             strokeWidth: 2
                             capStyle: ShapePath.FlatCap
                             joinStyle: ShapePath.BevelJoin
@@ -403,9 +425,9 @@ Item {
                             Layout.fillWidth: true
                             implicitHeight: values.implicitHeight + 16
                             radius: 8
-                            color: cpu.popupCardColor
+                            color: cpu.settings.popupCardColor
                             border.width: 1
-                            border.color: cpu.popupCardBorderColor
+                            border.color: cpu.settings.popupCardBorderColor
 
                             ColumnLayout {
                                 id: values
@@ -423,8 +445,8 @@ Item {
                                     bottomPadding: 2
                                     horizontalAlignment: stat.alignment
                                     text: popup.stats[stat.index][0]
-                                    color: cpu.popupSecondaryTextColor
-                                    font: cpu.popupFont
+                                    color: cpu.settings.popupSecondaryTextColor
+                                    font: cpu.settings.popupFont
                                 }
 
                                 Text {
@@ -434,8 +456,8 @@ Item {
                                     bottomPadding: 12
                                     horizontalAlignment: stat.alignment
                                     text: popup.stats[stat.index][1]
-                                    color: cpu.popupTextColor
-                                    font: cpu.valueFont
+                                    color: cpu.settings.popupTextColor
+                                    font: cpu.settings.valueFont
                                 }
                             }
                         }

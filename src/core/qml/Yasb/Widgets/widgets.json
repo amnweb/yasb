@@ -1,0 +1,235 @@
+{
+  "widgets": [
+    {
+      "id": "ActiveWindow",
+      "title": "Active window",
+      "description": "The window you're working in",
+      "version": 1,
+      "released": "2026-11-20"
+    },
+    {
+      "id": "AudioVisualizer",
+      "title": "Audio visualizer",
+      "description": "An animation that moves with the sound playing",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Battery",
+      "title": "Battery",
+      "description": "Your battery level",
+      "version": 1,
+      "released": "2026-11-20"
+    },
+    {
+      "id": "Bluetooth",
+      "title": "Bluetooth",
+      "description": "Bluetooth and your paired devices",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Brightness",
+      "title": "Brightness",
+      "description": "Your screen brightness",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Clock",
+      "title": "Clock",
+      "description": "The time and date",
+      "version": 1,
+      "released": "2026-11-20"
+    },
+    {
+      "id": "Cpu",
+      "title": "CPU",
+      "description": "Your processor usage",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Dnd",
+      "title": "Do not disturb",
+      "description": "Windows' do not disturb, off, priority only or alarms only",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Gpu",
+      "title": "GPU",
+      "description": "Your graphics card usage",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Language",
+      "title": "Keyboard language",
+      "description": "Your keyboard layout",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Memory",
+      "title": "Memory",
+      "description": "Your memory usage",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Microphone",
+      "title": "Microphone",
+      "description": "Your microphone",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Media",
+      "title": "Media",
+      "description": "What's playing on your PC",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Network",
+      "title": "Network",
+      "description": "Your network connection",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Notifications",
+      "title": "Notifications",
+      "description": "Your Windows notifications menu",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "NetworkTraffic",
+      "title": "Network traffic",
+      "description": "Your download and upload speed",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Obs",
+      "title": "OBS",
+      "description": "Recording and streaming in OBS Studio",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "PowerMenu",
+      "title": "Power menu",
+      "description": "A power menu to lock, sign out, sleep, restart or shut down",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "PowerPlan",
+      "title": "Power plan",
+      "description": "The Windows power plan",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Github",
+      "title": "GitHub",
+      "description": "Your GitHub notifications",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "GlazewmWorkspaces",
+      "title": "GlazeWM workspaces",
+      "description": "Workspaces of the GlazeWM tiling window manager",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "KomorebiWorkspaces",
+      "title": "Komorebi workspaces",
+      "description": "Workspaces of the Komorebi tiling window manager",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Launchpad",
+      "title": "Launchpad",
+      "description": "All your apps in one grid, with your own groups",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "QuickLaunch",
+      "title": "Quick Launch",
+      "description": "A search launcher for your apps, files and more",
+      "version": 1,
+      "released": "2026-11-20"
+    },
+    {
+      "id": "ServerMonitor",
+      "title": "Server monitor",
+      "description": "Whether your servers and websites are online",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Systray",
+      "title": "System tray",
+      "description": "The tray icons of apps running in the background",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Taskbar",
+      "title": "Taskbar",
+      "description": "Your pinned and open apps, like the Windows taskbar",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Updates",
+      "title": "Updates",
+      "description": "Available updates for Windows and your apps",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Volume",
+      "title": "Volume",
+      "description": "Your sound volume",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Wallpapers",
+      "title": "Wallpapers",
+      "description": "A gallery of your wallpapers",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "Weather",
+      "title": "Weather",
+      "description": "The weather for your location",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "WindowSwitcher",
+      "title": "Window switcher",
+      "description": "Your open windows in a row, to switch between them",
+      "version": 1,
+      "released": "2026-11-21"
+    },
+    {
+      "id": "WindowsDesktops",
+      "title": "Virtual desktops",
+      "description": "Your Windows virtual desktops",
+      "version": 1,
+      "released": "2026-11-21"
+    }
+  ]
+}

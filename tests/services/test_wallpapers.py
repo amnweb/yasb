@@ -263,8 +263,11 @@ def load_widget(folder: Path) -> tuple[QQuickItem, QQuickWindow, QQmlEngine, lis
 
     engine.warnings.connect(collect)
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Wallpapers" / "Wallpapers.qml")))
-    widget = create_with_bar(component, {"folders": [str(folder)], "animationDuration": 10})
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+    settings = widget.property("settings")
+    settings.setProperty("folders", [str(folder)])
+    settings.setProperty("animationDuration", 10)
     host = QQuickWindow()
     widget.setParentItem(host.contentItem())
     return widget, host, engine, warnings

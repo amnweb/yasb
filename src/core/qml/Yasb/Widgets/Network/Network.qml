@@ -11,115 +11,137 @@ import Yasb.Themes
 Item {
     id: network
 
-    // Label placeholders: {name}, {signal}, {ip}; {signal} and {ip} are empty without a value. An empty label shows
-    // only the icon.
-    property string label: ""
-    property string alternateLabel: "{name}"
-    // How often to read the signal bars of Wi-Fi without location access and of mobile, in ms (500 to 60000). With
-    // location access, Windows reports each change of the exact Wi-Fi signal.
-    property int signalInterval: 1000
-    // Hide the widget while the internet goes through a cable
-    property bool hideIfEthernet: false
-    property int iconSize: theme.bar.iconFont.pixelSize
-    // Wi-Fi and mobile signal glyphs, weakest first; the strongest forms a faint background.
-    property list<string> wifiIcons: ["\ue872", "\ue873", "\ue874", "\ue701"]
-    property list<string> mobileIcons: ["\ue86c", "\ue86d", "\ue86e", "\ue86f", "\ue870"]
-    // Networks in the popup, with and without a password
-    property list<string> securedIcons: ["\ue670", "\ue671", "\ue672", "\ue673"]
-    property list<string> openIcons: ["\uec3c", "\uec3d", "\uec3e", "\uec3f"]
-    property string ethernetIcon: "\ue839"
-    // Other connections, such as a VPN adapter
-    property string otherIcon: "\ue968"
-    property string disconnectedIcon: "\uf384"
-    // Shown small over the icon while the connection has no internet
-    property string noInternetIcon: "\ue7ba"
-    // Windows' caution colors, so the badge stands out from the icon
-    property color noInternetColor: network.theme.colors.warning
-    property int popupWidth: 344
-    // Popup alignment relative to the widget on a horizontal bar: left, right, or center.
-    property string popupAlignment: "center"
-    // Scroll the network list when it exceeds this height.
-    property int maxListHeight: 320
-    property color errorColor: network.theme.colors.critical
-    // Text for each Wi-Fi error code
-    property var errorTexts: ({
-            accessDenied: "Location services are turned off",
-            scanFailed: "Could not search for networks",
-            radioDenied: "Could not turn Wi-Fi on or off",
-            connectFailed: "Could not connect",
-            invalidCredential: "Wrong password",
-            networkNotAvailable: "Network not available",
-            timeout: "The connection timed out",
-            accessRevoked: "Access to Wi-Fi was revoked",
-            unsupportedAuthenticationProtocol: "This network's security is not supported"
-        })
+    component PopupIcons: QtObject {
+        property string refresh
+        property string wifi
+        property list<string> secured
+        property list<string> unsecured
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Label placeholders: {name}, {signal}, {ip}; {signal} and {ip} are empty without a value. An empty label shows
+        // only the icon.
+        property string label: ""
+        property string alternateLabel: "{name}"
+        // How often to read the signal bars of Wi-Fi without location access and of mobile, in ms (500 to 60000). With
+        // location access, Windows reports each change of the exact Wi-Fi signal.
+        property int signalInterval: 1000
+        // Hide the widget while the internet goes through a cable
+        property bool hideIfEthernet: false
+        property int iconSize: theme.bar.iconFont.pixelSize
+        // Wi-Fi and mobile signal glyphs, weakest first; the strongest forms a faint background.
+        property list<string> wifiIcons: ["\ue872", "\ue873", "\ue874", "\ue701"]
+        property list<string> mobileIcons: ["\ue86c", "\ue86d", "\ue86e", "\ue86f", "\ue870"]
+        property string ethernetIcon: "\ue839"
+        // Other connections, such as a VPN adapter
+        property string otherIcon: "\ue968"
+        property string disconnectedIcon: "\uf384"
+        // Shown small over the icon while the connection has no internet
+        property string noInternetIcon: "\ue7ba"
+        // Windows' caution colors, so the badge stands out from the icon
+        property color noInternetColor: theme.colors.warning
+        property int popupWidth: 344
+        // Popup alignment relative to the widget on a horizontal bar: left, right, or center.
+        property string popupAlignment: "center"
+        // Scroll the network list when it exceeds this height.
+        property int maxListHeight: 320
+        property color errorColor: theme.colors.critical
+        // Text for each Wi-Fi error code
+        property var errorTexts: ({
+                accessDenied: "Location services are turned off",
+                scanFailed: "Could not search for networks",
+                radioDenied: "Could not turn Wi-Fi on or off",
+                connectFailed: "Could not connect",
+                invalidCredential: "Wrong password",
+                networkNotAvailable: "Network not available",
+                timeout: "The connection timed out",
+                accessRevoked: "Access to Wi-Fi was revoked",
+                unsupportedAuthenticationProtocol: "This network's security is not supported"
+            })
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        // The Wi-Fi heading
+        property font popupStrongFont
+        popupStrongFont.family: theme.popup.font.family
+        popupStrongFont.pixelSize: 13
+        popupStrongFont.weight: 600
+        readonly property PopupIcons popupIcons: PopupIcons {
+            refresh: "\ue72c"
+            wifi: "\ue701"
+            // Wi-Fi networks in the list, with and without a password, weakest signal first
+            secured: ["\ue670", "\ue671", "\ue672", "\ue673"]
+            unsecured: ["\uec3c", "\uec3d", "\uec3e", "\uec3f"]
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // The Wi-Fi glyph beside it, and the refresh glyph
+        property int wifiIconSize: 20
+        property int popupIconSize: 14
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        // The right-click menu on a network: the theme's, unless set here
+        property int menuWidth: 200
+        property color menuColor: theme.menu.background
+        property color menuBorderColor: theme.menu.border
+        property color menuTextColor: theme.colors.text
+        property real menuRadius: theme.menu.radius
+        property font menuFont: theme.menu.font
+        // Milliseconds the right-click menu takes to fade in
+        property int menuOpenDuration: theme.menu.openDuration
+        // The icons in the text fields' right-click menu
+        property int menuIconSize: 16
+        property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+        property color popupDividerColor: theme.colors.divider
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+        property color popupTertiaryTextColor: theme.colors.textTertiary
+        property color popupHoverColor: theme.colors.hover
+        property color popupCardColor: theme.colors.card
+        property color popupCardBorderColor: theme.colors.cardBorder
+    }
 
     required property BarBase bar
     readonly property Theme theme: bar.theme
+    readonly property Settings settings: Settings {
+        theme: network.theme
+    }
 
     property bool showAlternate: false
 
     readonly property bool dark: theme.dark
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // The Wi-Fi heading
-    property font popupStrongFont
-    popupStrongFont.family: theme.popup.font.family
-    popupStrongFont.pixelSize: 13
-    popupStrongFont.weight: Font.DemiBold
-    // The Wi-Fi glyph beside it, and the refresh glyph
-    property int wifiIconSize: 20
-    property int popupIconSize: 14
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    // The right-click menu on a network: the theme's, unless set here
-    property int menuWidth: 200
-    property color menuColor: theme.menu.background
-    property color menuBorderColor: theme.menu.border
-    property color menuTextColor: theme.colors.text
-    property real menuRadius: theme.menu.radius
-    property font menuFont: theme.menu.font
-    // Milliseconds the right-click menu takes to fade in
-    property int menuOpenDuration: theme.menu.openDuration
-    // The icons in the text fields' right-click menu
-    property int menuIconSize: 16
-    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
-    property color popupDividerColor: theme.colors.divider
-    property color popupSecondaryTextColor: theme.colors.textSecondary
-    property color popupTertiaryTextColor: theme.colors.textTertiary
-    property color popupHoverColor: theme.colors.hover
-    property color popupCardColor: theme.colors.card
-    property color popupCardBorderColor: theme.colors.cardBorder
     readonly property string edge: bar.edge
 
     // The connection Windows uses for internet; kind is wifi, ethernet, mobile, other or none.
     readonly property var primary: connections.primary
     readonly property bool ethernet: primary.kind === "ethernet"
     readonly property bool online: primary.connectivity === "internet"
-    readonly property bool shown: !(hideIfEthernet && ethernet)
+    readonly property bool shown: !(settings.hideIfEthernet && ethernet)
     readonly property string connectionName: {
         if (primary.kind === "wifi")
             return primary.ssid || primary.name
@@ -128,15 +150,15 @@ Item {
         return primary.mobileType ? `${name} (${primary.mobileType})` : name
     }
     // Empty for Wi-Fi and mobile, which show their signal bars
-    readonly property string connectionIcon: ethernet ? ethernetIcon : primary.kind === "none" ? disconnectedIcon
-        : primary.kind === "wifi" || primary.kind === "mobile" ? "" : otherIcon
-    readonly property list<string> signalIcons: primary.kind === "mobile" ? mobileIcons : wifiIcons
+    readonly property string connectionIcon: ethernet ? settings.ethernetIcon : primary.kind === "none" ? settings.disconnectedIcon
+        : primary.kind === "wifi" || primary.kind === "mobile" ? "" : settings.otherIcon
+    readonly property list<string> signalIcons: primary.kind === "mobile" ? settings.mobileIcons : settings.wifiIcons
     readonly property string connectionStatus: {
         const status = primary.connectivity === "internet" ? "Connected"
             : primary.connectivity === "constrained" ? "Sign-in required" : "No internet"
         return primary.metered ? `${status}, metered` : status
     }
-    readonly property string text: format(showAlternate ? alternateLabel : label)
+    readonly property string text: format(showAlternate ? settings.alternateLabel : settings.label)
 
     // Map strength from 0 to 100 to an index into a list of count glyphs, or -1 for none: with 4 glyphs, 25 is the
     // first, matching one of Windows' 4 Wi-Fi bars, and with 5 glyphs 20, one of its 5 mobile bars.
@@ -155,7 +177,7 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        const gap = popupGap
+        const gap = settings.popupGap
         const margin = 8
         let px
         let py
@@ -169,8 +191,8 @@ Item {
             py = start.y + (height - popup.height) / 2
             break
         default:
-            px = popupAlignment === "left" ? start.x
-                : popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
+            px = settings.popupAlignment === "left" ? start.x
+                : settings.popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
             py = edge === "bottom" ? start.y - popup.height - gap : start.y + height + gap
             break
         }
@@ -212,7 +234,7 @@ Item {
     NetworkConnections {
         id: connections
 
-        signalInterval: network.signalInterval
+        signalInterval: network.settings.signalInterval
     }
 
     WifiNetworks {
@@ -252,15 +274,15 @@ Item {
 
     // An item of the text fields' right-click menu, its icon in menuIconSize
     component FieldMenuItem: MenuItem {
-        icon.width: network.menuIconSize
-        icon.height: network.menuIconSize
+        icon.width: network.settings.menuIconSize
+        icon.height: network.settings.menuIconSize
     }
 
     component Glyph: Text {
         textFormat: Text.PlainText
-        font.family: network.iconFont.family
-        font.weight: network.iconFont.weight
-        font.variableAxes: network.iconFont.variableAxes
+        font.family: network.settings.iconFont.family
+        font.weight: network.settings.iconFont.weight
+        font.variableAxes: network.settings.iconFont.variableAxes
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
     }
@@ -274,6 +296,7 @@ Item {
         property string glyph: ""
         property string badge: ""
         property int size: 16
+        property font iconFont: network.settings.iconFont
         property color color
         property color badgeColor: color
 
@@ -285,6 +308,9 @@ Item {
             text: signal.glyph || (signal.icons[signal.icons.length - 1] ?? "")
             color: signal.color
             opacity: signal.glyph ? 1 : 0.3
+            font.family: signal.iconFont.family
+            font.weight: signal.iconFont.weight
+            font.variableAxes: signal.iconFont.variableAxes
             font.pixelSize: signal.size
         }
 
@@ -293,6 +319,9 @@ Item {
             visible: !signal.glyph
             text: signal.icons[network.level(signal.strength, signal.icons.length)] ?? ""
             color: signal.color
+            font.family: signal.iconFont.family
+            font.weight: signal.iconFont.weight
+            font.variableAxes: signal.iconFont.variableAxes
             font.pixelSize: signal.size
         }
 
@@ -305,6 +334,9 @@ Item {
             visible: signal.badge !== ""
             text: signal.badge
             color: signal.badgeColor
+            font.family: signal.iconFont.family
+            font.weight: signal.iconFont.weight
+            font.variableAxes: signal.iconFont.variableAxes
             font.pixelSize: Math.round(signal.size / 2)
         }
     }
@@ -315,8 +347,8 @@ Item {
 
         required property string page
 
-        color: linkArea.containsMouse ? network.popupTextColor : network.popupSecondaryTextColor
-        font: network.popupSmallFont
+        color: linkArea.containsMouse ? network.settings.popupTextColor : network.settings.popupSecondaryTextColor
+        font: network.settings.popupSmallFont
         Accessible.role: Accessible.Link
         Accessible.name: text
         Accessible.onPressAction: linkArea.clicked(null)
@@ -344,13 +376,13 @@ Item {
         SignalIcon {
             objectName: "icon"
             y: Math.round((parent.height - height) / 2)
-            size: network.iconSize
+            size: network.settings.iconSize
             icons: network.signalIcons
             strength: network.primary.signal
             glyph: network.connectionIcon
-            badge: network.primary.kind !== "none" && !network.online ? network.noInternetIcon : ""
-            color: network.textColor
-            badgeColor: network.noInternetColor
+            badge: network.primary.kind !== "none" && !network.online ? network.settings.noInternetIcon : ""
+            color: network.settings.textColor
+            badgeColor: network.settings.noInternetColor
         }
 
         Label {
@@ -359,8 +391,8 @@ Item {
             visible: text !== ""
             text: network.text
             textFormat: Text.PlainText
-            color: network.textColor
-            font: network.font
+            color: network.settings.textColor
+            font: network.settings.font
         }
     }
 
@@ -385,14 +417,14 @@ Item {
 
         objectName: "popup"
         title: "Network"
-        width: network.popupWidth
+        width: network.settings.popupWidth
         height: popupContent.implicitHeight
         anchor: network
-        font: network.popupFont
+        font: network.settings.popupFont
         theme: network.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: network.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: network.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: network.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: network.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -402,10 +434,10 @@ Item {
             id: surface
 
             anchors.fill: parent
-            radius: network.popupRadius
-            color: network.popupColor
+            radius: network.settings.popupRadius
+            color: network.settings.popupColor
             border.width: 1
-            border.color: network.popupBorderColor
+            border.color: network.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: network.edge === "bottom" ? Item.Bottom : Item.Top
@@ -423,14 +455,14 @@ Item {
                     Layout.topMargin: 12
                     Layout.bottomMargin: 10
                     text: "Network"
-                    color: network.popupTextColor
-                    font: network.popupTitleFont
+                    color: network.settings.popupTextColor
+                    font: network.settings.popupTitleFont
                 }
 
                 LoadingLine {
                     Layout.fillWidth: true
                     running: wifi.scanning || wifi.connecting
-                    trackColor: network.popupDividerColor
+                    trackColor: network.settings.popupDividerColor
                 }
 
                 // The internet connection when it is not Wi-Fi, such as Ethernet, mobile or a VPN, above the Wi-Fi
@@ -453,7 +485,7 @@ Item {
                         icons: network.signalIcons
                         strength: network.primary.signal
                         glyph: network.connectionIcon
-                        color: network.popupTextColor
+                        color: network.settings.popupTextColor
                     }
 
                     Text {
@@ -461,24 +493,24 @@ Item {
                         text: network.connectionName
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
-                        color: network.popupTextColor
-                        font: network.popupFont
+                        color: network.settings.popupTextColor
+                        font: network.settings.popupFont
                     }
 
                     Column {
                         Text {
                             anchors.right: parent.right
                             text: network.connectionStatus
-                            color: network.popupSecondaryTextColor
-                            font: network.popupSmallFont
+                            color: network.settings.popupSecondaryTextColor
+                            font: network.settings.popupSmallFont
                         }
 
                         Text {
                             anchors.right: parent.right
                             visible: text !== ""
                             text: network.primary.ipAddress
-                            color: network.popupTertiaryTextColor
-                            font: network.popupSmallFont
+                            color: network.settings.popupTertiaryTextColor
+                            font: network.settings.popupSmallFont
                         }
                     }
                 }
@@ -491,7 +523,7 @@ Item {
                     Layout.rightMargin: 16
                     implicitHeight: 1
                     visible: connectionRow.visible && wifi.available
-                    color: network.popupDividerColor
+                    color: network.settings.popupDividerColor
                 }
 
                 // Wi-Fi heading with the switch, shown when the PC has a Wi-Fi adapter.
@@ -507,10 +539,13 @@ Item {
                     Glyph {
                         Layout.preferredWidth: 20
                         Layout.preferredHeight: 20
-                        text: network.wifiIcons[network.wifiIcons.length - 1] ?? ""
-                        color: network.popupTextColor
+                        text: network.settings.popupIcons.wifi
+                        color: network.settings.popupTextColor
                         opacity: wifi.enabled ? 1 : 0.5
-                        font.pixelSize: network.wifiIconSize
+                        font.family: network.settings.popupIconFont.family
+                        font.weight: network.settings.popupIconFont.weight
+                        font.variableAxes: network.settings.popupIconFont.variableAxes
+                        font.pixelSize: network.settings.wifiIconSize
                     }
 
                     Column {
@@ -518,15 +553,15 @@ Item {
 
                         Text {
                             text: "Wi-Fi"
-                            color: network.popupTextColor
-                            font: network.popupStrongFont
+                            color: network.settings.popupTextColor
+                            font: network.settings.popupStrongFont
                         }
 
                         Text {
                             visible: !wifi.enabled
                             text: "Off"
-                            color: network.popupSecondaryTextColor
-                            font: network.popupSmallFont
+                            color: network.settings.popupSecondaryTextColor
+                            font: network.settings.popupSmallFont
                         }
                     }
 
@@ -545,14 +580,17 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             radius: 4
-                            color: refreshArea.containsMouse && !wifi.scanning ? network.popupHoverColor : "transparent"
+                            color: refreshArea.containsMouse && !wifi.scanning ? network.settings.popupHoverColor : "transparent"
                         }
 
                         Glyph {
                             anchors.fill: parent
-                            text: "\ue72c"
-                            color: network.popupTextColor
-                            font.pixelSize: network.popupIconSize
+                            text: network.settings.popupIcons.refresh
+                            color: network.settings.popupTextColor
+                            font.family: network.settings.popupIconFont.family
+                            font.weight: network.settings.popupIconFont.weight
+                            font.variableAxes: network.settings.popupIconFont.variableAxes
+                            font.pixelSize: network.settings.popupIconSize
                         }
 
                         MouseArea {
@@ -583,8 +621,8 @@ Item {
                     visible: wifi.available && wifi.enabled && list.count === 0 && wifi.error === ""
                     text: wifi.scanning ? "Looking for networks..." : "No networks found"
                     horizontalAlignment: Text.AlignHCenter
-                    color: network.popupTertiaryTextColor
-                    font: network.popupFont
+                    color: network.settings.popupTertiaryTextColor
+                    font: network.settings.popupFont
                 }
 
                 ListView {
@@ -592,7 +630,7 @@ Item {
 
                     objectName: "networks"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(contentHeight, network.maxListHeight)
+                    Layout.preferredHeight: Math.min(contentHeight, network.settings.maxListHeight)
                     Layout.margins: 6
                     visible: wifi.available && wifi.enabled && count > 0
                     clip: true
@@ -665,9 +703,9 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             radius: 8
-                            color: wifiNetwork.expanded ? network.popupCardColor : headerArea.containsMouse ? network.popupHoverColor : "transparent"
+                            color: wifiNetwork.expanded ? network.settings.popupCardColor : headerArea.containsMouse ? network.settings.popupHoverColor : "transparent"
                             border.width: wifiNetwork.expanded ? 1 : 0
-                            border.color: network.popupCardBorderColor
+                            border.color: network.settings.popupCardBorderColor
                         }
 
                         ColumnLayout {
@@ -688,9 +726,10 @@ Item {
 
                                     SignalIcon {
                                         size: 20
-                                        icons: wifiNetwork.secured ? network.securedIcons : network.openIcons
+                                        icons: wifiNetwork.secured ? network.settings.popupIcons.secured : network.settings.popupIcons.unsecured
+                                        iconFont: network.settings.popupIconFont
                                         strength: wifiNetwork.quality
-                                        color: network.popupTextColor
+                                        color: network.settings.popupTextColor
                                     }
 
                                     Text {
@@ -698,24 +737,24 @@ Item {
                                         text: wifiNetwork.name
                                         textFormat: Text.PlainText
                                         elide: Text.ElideRight
-                                        color: wifiNetwork.hidden ? network.popupSecondaryTextColor : network.popupTextColor
-                                        font: network.popupFont
+                                        color: wifiNetwork.hidden ? network.settings.popupSecondaryTextColor : network.settings.popupTextColor
+                                        font: network.settings.popupFont
                                     }
 
                                     Column {
                                         Text {
                                             anchors.right: parent.right
                                             text: wifiNetwork.statusText
-                                            color: network.popupSecondaryTextColor
-                                            font: network.popupSmallFont
+                                            color: network.settings.popupSecondaryTextColor
+                                            font: network.settings.popupSmallFont
                                         }
 
                                         Text {
                                             anchors.right: parent.right
                                             text: wifiNetwork.ipAddress ? `${wifiNetwork.quality}%, ${wifiNetwork.ipAddress}`
                                                 : `${wifiNetwork.quality}%`
-                                            color: network.popupTertiaryTextColor
-                                            font: network.popupSmallFont
+                                            color: network.settings.popupTertiaryTextColor
+                                            font: network.settings.popupSmallFont
                                         }
                                     }
                                 }
@@ -824,14 +863,14 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 44
-                    bottomLeftRadius: network.popupRadius - 1
-                    bottomRightRadius: network.popupRadius - 1
-                    color: network.popupSecondaryBackgroundColor
+                    bottomLeftRadius: network.settings.popupRadius - 1
+                    bottomRightRadius: network.settings.popupRadius - 1
+                    color: network.settings.popupSecondaryBackgroundColor
 
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: network.popupDividerColor
+                        color: network.settings.popupDividerColor
                     }
 
                     SettingsLink {
@@ -862,7 +901,7 @@ Item {
                         anchors.rightMargin: 15
                         visible: footer.showsError
                         text: {
-                            const message = network.errorTexts[wifi.error] ?? wifi.error
+                            const message = network.settings.errorTexts[wifi.error] ?? wifi.error
                             return footer.link ? `${message}. Open settings` : message
                         }
                         textFormat: Text.PlainText
@@ -870,9 +909,9 @@ Item {
                         maximumLineCount: 2
                         elide: Text.ElideRight
                         horizontalAlignment: Text.AlignHCenter
-                        color: network.errorColor
-                        font.family: network.popupSmallFont.family
-                        font.pixelSize: network.popupSmallFont.pixelSize
+                        color: network.settings.errorColor
+                        font.family: network.settings.popupSmallFont.family
+                        font.pixelSize: network.settings.popupSmallFont.pixelSize
                         font.underline: footer.link !== "" && errorArea.containsMouse
                         Accessible.role: footer.link ? Accessible.Link : Accessible.StaticText
                         Accessible.name: text
@@ -911,22 +950,22 @@ Item {
                 onAboutToShow: contentItem.Window.window?.raise()
                 // Fades in when it opens, in place of the style's growing from a third of its height
                 enter: Transition {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: network.menuOpenDuration; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: network.settings.menuOpenDuration; easing.type: Easing.OutCubic }
                 }
                 topInset: 0
                 leftInset: 0
                 rightInset: 0
                 bottomInset: 0
-                font: network.menuFont
+                font: network.settings.menuFont
                 // Active and inactive only, so disabled controls keep the style's dimmed colours
-                palette.active.text: network.menuTextColor
-                palette.inactive.text: network.menuTextColor
+                palette.active.text: network.settings.menuTextColor
+                palette.inactive.text: network.settings.menuTextColor
 
                 background: Rectangle {
-                    implicitWidth: network.menuWidth
-                    radius: network.menuRadius
-                    color: network.menuColor
-                    border.color: network.menuBorderColor
+                    implicitWidth: network.settings.menuWidth
+                    radius: network.settings.menuRadius
+                    color: network.settings.menuColor
+                    border.color: network.settings.menuBorderColor
                 }
 
                 FieldMenuItem {
@@ -991,22 +1030,22 @@ Item {
                 popupType: Popup.Item
                 // Fades in when it opens, in place of the style's growing from a third of its height
                 enter: Transition {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: network.menuOpenDuration; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: network.settings.menuOpenDuration; easing.type: Easing.OutCubic }
                 }
                 topInset: 0
                 leftInset: 0
                 rightInset: 0
                 bottomInset: 0
-                font: network.menuFont
+                font: network.settings.menuFont
                 // Active and inactive only, so disabled controls keep the style's dimmed colours
-                palette.active.text: network.menuTextColor
-                palette.inactive.text: network.menuTextColor
+                palette.active.text: network.settings.menuTextColor
+                palette.inactive.text: network.settings.menuTextColor
 
                 background: Rectangle {
-                    implicitWidth: network.menuWidth
-                    radius: network.menuRadius
-                    color: network.menuColor
-                    border.color: network.menuBorderColor
+                    implicitWidth: network.settings.menuWidth
+                    radius: network.settings.menuRadius
+                    color: network.settings.menuColor
+                    border.color: network.settings.menuBorderColor
                 }
 
                 MenuItem {

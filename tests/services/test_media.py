@@ -247,10 +247,11 @@ def test_the_widget_shows_the_title_and_finds_the_players_audio(service: MediaSe
     widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
     wait(10)
-    widget.setProperty("showArtist", False)
+    settings = widget.property("settings")
+    settings.setProperty("showArtist", False)
     assert widget.property("label") == "Song"
 
-    widget.setProperty("showArtist", True)
+    settings.setProperty("showArtist", True)
     assert widget.property("label") == "Song - Band"
 
     [audio_output] = [child for child in widget.children() if isinstance(child, output_module.AudioOutput)]
@@ -268,8 +269,9 @@ def test_the_widget_takes_no_space_without_a_player(service: MediaService, monke
     engine.addImportPath(QML_IMPORT_PATH)
     engine.addImageProvider(MEDIA_ART_PROVIDER, MediaArtProvider())
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(BUILTIN_WIDGETS_DIR / "Media" / "Media.qml")))
-    widget = create_with_bar(component, {"hideEmpty": True})
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+    widget.property("settings").setProperty("hideEmpty", True)
     wait(10)
     # So the bar leaves no gap where it would be
     assert not widget.property("shown") and widget.property("implicitWidth") == 0

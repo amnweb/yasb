@@ -10,70 +10,78 @@ import Yasb.Themes
 Item {
     id: systray
 
-    // Chevron glyph shown when the button has no label; rotated to point away from the bar edge.
-    property string chevronIcon: "\ue972"
-    // Button label; empty shows the chevron.
-    property string labelCollapsed: ""
-    property string labelExpanded: ""
-    // Button side relative to pinned icons: left or right (top or bottom on a vertical bar).
-    property string labelPosition: "left"
-    property int iconSize: theme.bar.iconFont.pixelSize
-    // Modifier used to pin or unpin an icon: ctrl, alt, or shift.
-    property string pinModifier: "alt"
-    property int iconsPerRow: 5
-    // Popup alignment relative to the button: left, right, or center.
-    property string popupAlignment: "center"
-    // Windows' own battery, volume and network icons
-    property bool showBattery: false
-    property bool showVolume: false
-    property bool showNetwork: false
-    // Process names without .exe, matched case-insensitively (for example, ["discord"]).
-    property list<string> hideIcons: []
-    property bool tooltip: true
-    // Use the Explorer hook instead of the legacy tray window; the first widget sets this for all bars.
-    property bool useHook: true
-    property color hoveredColor: theme.colors.hover
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Chevron glyph shown when the button has no label; rotated to point away from the bar edge.
+        property string chevronIcon: "\ue972"
+        // Button label; empty shows the chevron.
+        property string labelCollapsed: ""
+        property string labelExpanded: ""
+        // Button side relative to pinned icons: left or right (top or bottom on a vertical bar).
+        property string labelPosition: "left"
+        property int iconSize: theme.bar.iconFont.pixelSize
+        // Modifier used to pin or unpin an icon: ctrl, alt, or shift.
+        property string pinModifier: "alt"
+        property int iconsPerRow: 5
+        // Popup alignment relative to the button: left, right, or center.
+        property string popupAlignment: "center"
+        // Windows' own battery, volume and network icons
+        property bool showBattery: false
+        property bool showVolume: false
+        property bool showNetwork: false
+        // Process names without .exe, matched case-insensitively (for example, ["discord"]).
+        property list<string> hideIcons: []
+        property bool tooltip: true
+        // Use the Explorer hook instead of the legacy tray window; the first widget sets this for all bars.
+        property bool useHook: true
+        property color hoveredColor: theme.colors.hover
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        // The right-click menu: the theme's, unless set here
+        property color menuColor: theme.menu.background
+        property color menuBorderColor: theme.menu.border
+        property color menuTextColor: theme.colors.text
+        property real menuRadius: theme.menu.radius
+        property font menuFont: theme.menu.font
+        // Milliseconds the right-click menu takes to fade in
+        property int menuOpenDuration: theme.menu.openDuration
+        property color popupTextColor: theme.colors.text
+        property color popupTertiaryTextColor: theme.colors.textTertiary
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
+    readonly property Settings settings: Settings {
+        theme: systray.theme
+    }
 
     readonly property bool dark: theme.dark
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    // The right-click menu: the theme's, unless set here
-    property color menuColor: theme.menu.background
-    property color menuBorderColor: theme.menu.border
-    property color menuTextColor: theme.colors.text
-    property real menuRadius: theme.menu.radius
-    property font menuFont: theme.menu.font
-    // Milliseconds the right-click menu takes to fade in
-    property int menuOpenDuration: theme.menu.openDuration
-    property color popupTextColor: theme.colors.text
-    property color popupTertiaryTextColor: theme.colors.textTertiary
     readonly property string edge: bar.edge
     readonly property bool vertical: bar.vertical
 
     readonly property int pinKey: {
-        switch (pinModifier.toLowerCase()) {
+        switch (settings.pinModifier.toLowerCase()) {
         case "ctrl":
             return Qt.ControlModifier
         case "shift":
@@ -94,7 +102,7 @@ Item {
     function placePopup() {
         const button = toggle.mapToGlobal(0, 0)
         const start = mapToGlobal(0, 0)
-        const gap = popupGap
+        const gap = settings.popupGap
         const margin = 8
         let x
         let y
@@ -125,7 +133,7 @@ Item {
 
     // Where the popup starts along a horizontal bar, by popupAlignment
     function alignedPopupX(buttonX: real): real {
-        switch (popupAlignment) {
+        switch (settings.popupAlignment) {
         case "left":
             return buttonX
         case "center":
@@ -198,11 +206,11 @@ Item {
         id: tray
 
         screenName: systray.bar.screenName
-        showBattery: systray.showBattery
-        showVolume: systray.showVolume
-        showNetwork: systray.showNetwork
-        hideIcons: systray.hideIcons
-        useHook: systray.useHook
+        showBattery: systray.settings.showBattery
+        showVolume: systray.settings.showVolume
+        showNetwork: systray.settings.showNetwork
+        hideIcons: systray.settings.hideIcons
+        useHook: systray.settings.useHook
 
         // Close the popup when the menu ends unless the popup has focus.
         onMenuOpenChanged: {
@@ -265,8 +273,8 @@ Item {
         }
 
         objectName: "trayIcon"
-        implicitWidth: systray.iconSize + 2 * padding
-        implicitHeight: systray.iconSize + 2 * padding
+        implicitWidth: systray.settings.iconSize + 2 * padding
+        implicitHeight: systray.settings.iconSize + 2 * padding
         opacity: Drag.active ? 0.3 : 1
         Accessible.role: Accessible.Button
         Accessible.name: tip
@@ -278,8 +286,8 @@ Item {
         Drag.keys: [systray.mimeType]
         Drag.mimeData: ({ [systray.mimeType]: String(button.iconId) })
         Drag.imageSource: button.source
-        Drag.imageSourceSize: Qt.size(systray.iconSize, systray.iconSize)
-        Drag.hotSpot: Qt.point(systray.iconSize / 2, systray.iconSize / 2)
+        Drag.imageSourceSize: Qt.size(systray.settings.iconSize, systray.settings.iconSize)
+        Drag.hotSpot: Qt.point(systray.settings.iconSize / 2, systray.settings.iconSize / 2)
         Drag.onDragStarted: {
             systray.dragging = true
             if (opensPopup && !popup.visible)
@@ -292,17 +300,17 @@ Item {
             radius: 4
             color: {
                 if (button.dragOver)
-                    return Qt.alpha(systray.popupTextColor, 0.16)
+                    return Qt.alpha(systray.settings.popupTextColor, 0.16)
                 if (hover.hovered && !systray.dragging)
-                    return systray.hoveredColor
+                    return systray.settings.hoveredColor
                 return "transparent"
             }
         }
 
         Image {
             anchors.centerIn: parent
-            width: systray.iconSize
-            height: systray.iconSize
+            width: systray.settings.iconSize
+            height: systray.settings.iconSize
             sourceSize: Qt.size(width, height)
             source: button.source
             smooth: true
@@ -336,7 +344,7 @@ Item {
 
         ToolTip {
             popupType: Popup.Window
-            visible: systray.tooltip && hover.hovered && !systray.dragging && button.tip !== ""
+            visible: systray.settings.tooltip && hover.hovered && !systray.dragging && button.tip !== ""
             delay: 400
             text: button.tip
             // Away from the bar's edge
@@ -348,8 +356,8 @@ Item {
     Item {
         id: layout
 
-        readonly property Item first: systray.labelPosition === "right" ? pinnedDrop : toggle
-        readonly property Item second: systray.labelPosition === "right" ? toggle : pinnedDrop
+        readonly property Item first: systray.settings.labelPosition === "right" ? pinnedDrop : toggle
+        readonly property Item second: systray.settings.labelPosition === "right" ? toggle : pinnedDrop
 
         function xOf(item: Item): real {
             if (systray.vertical)
@@ -372,15 +380,15 @@ Item {
         Item {
             id: toggle
 
-            readonly property string label: popup.visible ? systray.labelExpanded : systray.labelCollapsed
+            readonly property string label: popup.visible ? systray.settings.labelExpanded : systray.settings.labelCollapsed
             readonly property bool showsLabel: label !== ""
 
             x: layout.xOf(toggle)
             y: layout.yOf(toggle)
             width: implicitWidth
             height: implicitHeight
-            implicitWidth: Math.max(systray.iconSize, showsLabel ? labelText.implicitWidth : 0) + 8
-            implicitHeight: Math.max(systray.iconSize, showsLabel ? labelText.implicitHeight : 0) + 8
+            implicitWidth: Math.max(systray.settings.iconSize, showsLabel ? labelText.implicitWidth : 0) + 8
+            implicitHeight: Math.max(systray.settings.iconSize, showsLabel ? labelText.implicitHeight : 0) + 8
             Accessible.role: Accessible.Button
             Accessible.name: popup.visible ? "Hide more icons" : "Show more icons"
             Accessible.onPressAction: systray.togglePopup()
@@ -388,7 +396,7 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: 4
-                color: toggleHover.hovered ? systray.hoveredColor : "transparent"
+                color: toggleHover.hovered ? systray.settings.hoveredColor : "transparent"
             }
 
             Label {
@@ -398,19 +406,19 @@ Item {
                 visible: toggle.showsLabel
                 text: toggle.label
                 textFormat: Text.PlainText
-                color: systray.textColor
-                font: systray.font
+                color: systray.settings.textColor
+                font: systray.settings.font
             }
 
             Text {
                 anchors.centerIn: parent
                 visible: !toggle.showsLabel
-                text: systray.chevronIcon
-                color: systray.textColor
-                font.family: systray.iconFont.family
-                font.weight: systray.iconFont.weight
-                font.variableAxes: systray.iconFont.variableAxes
-                font.pixelSize: systray.iconSize
+                text: systray.settings.chevronIcon
+                color: systray.settings.textColor
+                font.family: systray.settings.iconFont.family
+                font.weight: systray.settings.iconFont.weight
+                font.variableAxes: systray.settings.iconFont.variableAxes
+                font.pixelSize: systray.settings.iconSize
                 // Point away from the bar edge while closed, and toward it while open.
                 rotation: {
                     const away = { top: 0, bottom: 180, left: -90, right: 90 }[systray.edge]
@@ -445,7 +453,7 @@ Item {
 
             readonly property bool empty: pinnedRepeater.count === 0
             // Keep an empty drop target available during a drag.
-            readonly property int emptySize: systray.dragging ? systray.iconSize + 8 : 0
+            readonly property int emptySize: systray.dragging ? systray.settings.iconSize + 8 : 0
 
             x: layout.xOf(pinnedDrop)
             y: layout.yOf(pinnedDrop)
@@ -460,7 +468,7 @@ Item {
                 anchors.fill: parent
                 radius: 4
                 visible: pinnedDrop.empty && systray.dragging
-                color: Qt.alpha(systray.textColor, pinnedDrop.containsDrag ? 0.16 : 0.08)
+                color: Qt.alpha(systray.settings.textColor, pinnedDrop.containsDrag ? 0.16 : 0.08)
             }
 
             Flow {
@@ -529,19 +537,19 @@ Item {
                 popupType: Popup.Item
                 // Fades in when it opens, in place of the style's growing from a third of its height
                 enter: Transition {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: systray.menuOpenDuration; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: systray.settings.menuOpenDuration; easing.type: Easing.OutCubic }
                 }
                 onClosed: menuWindow.close()
-                font: systray.menuFont
+                font: systray.settings.menuFont
                 // Active and inactive only, so disabled controls keep the style's dimmed colours
-                palette.active.text: systray.menuTextColor
-                palette.inactive.text: systray.menuTextColor
+                palette.active.text: systray.settings.menuTextColor
+                palette.inactive.text: systray.settings.menuTextColor
 
                 background: Rectangle {
                     implicitWidth: 180
-                    radius: systray.menuRadius
-                    color: systray.menuColor
-                    border.color: systray.menuBorderColor
+                    radius: systray.settings.menuRadius
+                    color: systray.settings.menuColor
+                    border.color: systray.settings.menuBorderColor
                 }
 
                 MenuItem {
@@ -557,8 +565,8 @@ Item {
 
         property real reveal: 0
         readonly property int iconCount: unpinnedRepeater.count
-        readonly property int cell: systray.iconSize + 20
-        readonly property int columns: Math.max(1, Math.min(systray.iconsPerRow, iconCount))
+        readonly property int cell: systray.settings.iconSize + 20
+        readonly property int columns: Math.max(1, Math.min(systray.settings.iconsPerRow, iconCount))
         readonly property int rows: Math.max(1, Math.ceil(iconCount / columns))
         // Wide enough for "No icons" while there are none
         readonly property int gridWidth: iconCount > 0 ? columns * cell : 120
@@ -570,13 +578,13 @@ Item {
         width: gridWidth + frame
         height: rows * cell + frame
         anchor: toggle
-        font: systray.popupFont
+        font: systray.settings.popupFont
         theme: systray.theme
         backdropItem: surface
         // Keep the popup open during a drag or while an icon's app shows its menu.
         pinned: systray.dragging || tray.menuOpen
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: systray.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: systray.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: systray.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: systray.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -586,10 +594,10 @@ Item {
             id: surface
 
             anchors.fill: parent
-            radius: systray.popupRadius
-            color: systray.popupColor
+            radius: systray.settings.popupRadius
+            color: systray.settings.popupColor
             border.width: 1
-            border.color: systray.popupBorderColor
+            border.color: systray.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: systray.edge === "bottom" ? Item.Bottom : Item.Top
@@ -606,8 +614,8 @@ Item {
                     anchors.centerIn: parent
                     visible: popup.iconCount === 0
                     text: systray.dragging ? "Drop here" : "No icons"
-                    color: systray.popupTertiaryTextColor
-                    font: systray.popupSmallFont
+                    color: systray.settings.popupTertiaryTextColor
+                    font: systray.settings.popupSmallFont
                 }
 
                 Grid {

@@ -11,72 +11,81 @@ import Yasb.Themes
 Item {
     id: serverMonitor
 
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Accepts URL strings or entries such as { name: "Router", url: "http://192.168.1.1" }.
+        property var servers: []
+        // Seconds between checks and timeout per network operation.
+        property int updateInterval: 300
+        property int timeout: 5
+        property bool sslCheck: true
+        property bool sslVerify: true
+        // Warn when fewer than this many days remain before certificate expiry.
+        property int sslWarning: 30
+        property bool notifyOffline: false
+        property bool notifySsl: false
+        property string label: ""
+        property string alternateLabel: "{online}/{offline} of {total}"
+        property string icon: "\uf760"
+        property int iconSize: theme.bar.iconFont.pixelSize
+        property bool tooltip: true
+        property string hotkey: ""
+        property string alternateHotkey: ""
+        property int popupWidth: 404
+        property string popupAlignment: "center"
+        property int maxListHeight: 360
+        property color onlineColor: theme.colors.success
+        property color offlineColor: theme.colors.critical
+        property color warningColor: theme.colors.warning
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property color popupTextColor: theme.colors.text
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+        property color popupDividerColor: theme.colors.divider
+        property color popupTertiaryTextColor: theme.colors.textTertiary
+        property color popupHoverColor: theme.colors.hover
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        // Each server's name
+        property font popupStrongFont
+        popupStrongFont.family: theme.popup.font.family
+        popupStrongFont.pixelSize: 13
+        popupStrongFont.weight: 600
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Accepts URL strings or entries such as { name: "Router", url: "http://192.168.1.1" }.
-    property var servers: []
-    // Seconds between checks and timeout per network operation.
-    property int updateInterval: 300
-    property int timeout: 5
-    property bool sslCheck: true
-    property bool sslVerify: true
-    // Warn when fewer than this many days remain before certificate expiry.
-    property int sslWarning: 30
-    property bool notifyOffline: false
-    property bool notifySsl: false
-    property string label: ""
-    property string alternateLabel: "{online}/{offline} of {total}"
+    readonly property Settings settings: Settings {
+        theme: serverMonitor.theme
+    }
+
     property bool showAlternate: false
-    property string icon: "\uf760"
-    property int iconSize: theme.bar.iconFont.pixelSize
-    property bool tooltip: true
-    property string hotkey: ""
-    property string alternateHotkey: ""
-    property int popupWidth: 404
-    property string popupAlignment: "center"
-    property int maxListHeight: 360
-    property color onlineColor: serverMonitor.theme.colors.success
-    property color offlineColor: serverMonitor.theme.colors.critical
-    property color warningColor: serverMonitor.theme.colors.warning
 
     readonly property bool dark: theme.dark
     readonly property string edge: bar.edge
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property color popupTextColor: theme.colors.text
-    property color popupSecondaryTextColor: theme.colors.textSecondary
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
-    property color popupDividerColor: theme.colors.divider
-    property color popupTertiaryTextColor: theme.colors.textTertiary
-    property color popupHoverColor: theme.colors.hover
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // Each server's name
-    property font popupStrongFont
-    popupStrongFont.family: theme.popup.font.family
-    popupStrongFont.pixelSize: 13
-    popupStrongFont.weight: Font.DemiBold
 
     readonly property var results: monitor.results
     readonly property int offlineCount: results.filter(server => server.status === "Offline").length
@@ -94,8 +103,8 @@ Item {
     }
     readonly property string placeholder: monitor.error || (monitor.loading ? qsTr("Checking servers...")
         : monitor.configured ? qsTr("Waiting for the first check...") : qsTr("No servers configured"))
-    readonly property var checkSettings: [servers ?? [], sslVerify, sslCheck, timeout, updateInterval,
-        sslWarning, notifyOffline, notifySsl]
+    readonly property var checkSettings: [settings.servers ?? [], settings.sslVerify, settings.sslCheck, settings.timeout, settings.updateInterval,
+        settings.sslWarning, settings.notifyOffline, settings.notifySsl]
 
     function configureMonitor() {
         monitor.configure(...checkSettings)
@@ -106,7 +115,7 @@ Item {
     Component.onDestruction: popup.hide()
 
     function warning(server: var): bool {
-        return typeof server.ssl === "number" && server.ssl < sslWarning
+        return typeof server.ssl === "number" && server.ssl < settings.sslWarning
     }
 
     function labelText(template: string): string {
@@ -128,7 +137,7 @@ Item {
     function placePopup() {
         const start = mapToGlobal(0, 0)
         const screen = serverMonitor.Screen
-        const gap = popupGap
+        const gap = settings.popupGap
         const margin = 8
         let px
         let py
@@ -142,8 +151,8 @@ Item {
             py = start.y + (height - popup.height) / 2
             break
         default:
-            px = popupAlignment === "left" ? start.x
-                : popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
+            px = settings.popupAlignment === "left" ? start.x
+                : settings.popupAlignment === "right" ? start.x + width - popup.width : start.x + (width - popup.width) / 2
             py = edge === "bottom" ? start.y - popup.height - gap : start.y + height + gap
             break
         }
@@ -178,8 +187,8 @@ Item {
         objectName: "monitor"
     }
 
-    Hotkey { keys: serverMonitor.hotkey; onActivated: serverMonitor.togglePopup() }
-    Hotkey { keys: serverMonitor.alternateHotkey; onActivated: serverMonitor.showAlternate = !serverMonitor.showAlternate }
+    Hotkey { keys: serverMonitor.settings.hotkey; onActivated: serverMonitor.togglePopup() }
+    Hotkey { keys: serverMonitor.settings.alternateHotkey; onActivated: serverMonitor.showAlternate = !serverMonitor.showAlternate }
 
     Connections {
         target: serverMonitor.Window.window
@@ -190,7 +199,7 @@ Item {
 
     component StatusMark: Rectangle {
         property bool ring: false
-        property color ink: serverMonitor.textColor
+        property color ink: serverMonitor.settings.textColor
         implicitWidth: 12
         implicitHeight: 12
         radius: width / 2
@@ -207,24 +216,24 @@ Item {
         Text {
             objectName: "icon"
             anchors.verticalCenter: parent.verticalCenter
-            visible: serverMonitor.icon !== ""
-            text: serverMonitor.icon
+            visible: serverMonitor.settings.icon !== ""
+            text: serverMonitor.settings.icon
             textFormat: Text.PlainText
-            color: serverMonitor.offlineCount > 0 ? serverMonitor.offlineColor : serverMonitor.hasWarning ? serverMonitor.warningColor
-                : serverMonitor.results.length ? serverMonitor.onlineColor : serverMonitor.textColor
-            font.family: serverMonitor.iconFont.family
-            font.weight: serverMonitor.iconFont.weight
-            font.variableAxes: serverMonitor.iconFont.variableAxes
-            font.pixelSize: serverMonitor.iconSize
+            color: serverMonitor.offlineCount > 0 ? serverMonitor.settings.offlineColor : serverMonitor.hasWarning ? serverMonitor.settings.warningColor
+                : serverMonitor.results.length ? serverMonitor.settings.onlineColor : serverMonitor.settings.textColor
+            font.family: serverMonitor.settings.iconFont.family
+            font.weight: serverMonitor.settings.iconFont.weight
+            font.variableAxes: serverMonitor.settings.iconFont.variableAxes
+            font.pixelSize: serverMonitor.settings.iconSize
         }
         Label {
             objectName: "label"
             anchors.verticalCenter: parent.verticalCenter
-            text: serverMonitor.labelText(serverMonitor.showAlternate ? serverMonitor.alternateLabel : serverMonitor.label)
+            text: serverMonitor.labelText(serverMonitor.showAlternate ? serverMonitor.settings.alternateLabel : serverMonitor.settings.label)
             visible: text !== ""
             textFormat: Text.PlainText
-            color: serverMonitor.textColor
-            font: serverMonitor.font
+            color: serverMonitor.settings.textColor
+            font: serverMonitor.settings.font
         }
     }
 
@@ -245,7 +254,7 @@ Item {
     ToolTip {
         objectName: "tooltip"
         popupType: Popup.Window
-        visible: serverMonitor.tooltip && mouse.containsMouse && !popup.visible
+        visible: serverMonitor.settings.tooltip && mouse.containsMouse && !popup.visible
         delay: 400
         text: serverMonitor.summary || serverMonitor.placeholder
         y: serverMonitor.edge === "bottom" ? -implicitHeight - 6 : serverMonitor.height + 6
@@ -259,13 +268,13 @@ Item {
         objectName: "menu"
         title: qsTr("Server Monitor")
         anchor: serverMonitor
-        font: serverMonitor.popupFont
+        font: serverMonitor.settings.popupFont
         theme: serverMonitor.theme
         backdropItem: panel
-        width: Math.min(Math.max(244, serverMonitor.popupWidth), serverMonitor.Screen.width - 32)
+        width: Math.min(Math.max(244, serverMonitor.settings.popupWidth), serverMonitor.Screen.width - 32)
         height: Math.min(popupContent.implicitHeight, serverMonitor.Screen.desktopAvailableHeight - 40)
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: serverMonitor.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: serverMonitor.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: serverMonitor.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: serverMonitor.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: {
             if (!visible)
                 reveal = 0
@@ -276,10 +285,10 @@ Item {
         Rectangle {
             id: panel
             anchors.fill: parent
-            radius: serverMonitor.popupRadius
-            color: serverMonitor.popupColor
+            radius: serverMonitor.settings.popupRadius
+            color: serverMonitor.settings.popupColor
             border.width: 1
-            border.color: serverMonitor.popupBorderColor
+            border.color: serverMonitor.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: serverMonitor.edge === "bottom" ? Item.Bottom : serverMonitor.edge === "left" ? Item.Left
@@ -287,8 +296,8 @@ Item {
             clip: true
 
             component PopupText: Text {
-                color: serverMonitor.popupTextColor
-                font: serverMonitor.popupFont
+                color: serverMonitor.settings.popupTextColor
+                font: serverMonitor.settings.popupFont
                 textFormat: Text.PlainText
             }
 
@@ -308,20 +317,20 @@ Item {
                     PopupText {
                         Layout.fillWidth: true
                         text: qsTr("Server Monitor")
-                        font: serverMonitor.popupTitleFont
+                        font: serverMonitor.settings.popupTitleFont
                     }
                     PopupText {
                         objectName: "summary"
                         text: serverMonitor.summary
-                        font: serverMonitor.popupSmallFont
-                        color: serverMonitor.popupTertiaryTextColor
+                        font: serverMonitor.settings.popupSmallFont
+                        color: serverMonitor.settings.popupTertiaryTextColor
                     }
                 }
 
                 LoadingLine {
                     Layout.fillWidth: true
                     running: monitor.loading
-                    trackColor: serverMonitor.popupDividerColor
+                    trackColor: serverMonitor.settings.popupDividerColor
                 }
 
                 PopupText {
@@ -330,14 +339,14 @@ Item {
                     visible: !serverMonitor.results.length || !!monitor.error
                     text: serverMonitor.placeholder
                     wrapMode: Text.Wrap
-                    font: serverMonitor.popupSmallFont
-                    color: monitor.error ? serverMonitor.offlineColor : serverMonitor.popupSecondaryTextColor
+                    font: serverMonitor.settings.popupSmallFont
+                    color: monitor.error ? serverMonitor.settings.offlineColor : serverMonitor.settings.popupSecondaryTextColor
                 }
 
                 Flickable {
                     id: list
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(contentHeight, serverMonitor.maxListHeight,
+                    Layout.preferredHeight: Math.min(contentHeight, serverMonitor.settings.maxListHeight,
                         Math.max(80, serverMonitor.Screen.desktopAvailableHeight - 124))
                     visible: serverMonitor.results.length > 0
                     clip: true
@@ -381,7 +390,7 @@ Item {
 
                                 background: Rectangle {
                                     color: serverRow.hovered || serverRow.visualFocus
-                                        ? serverMonitor.popupHoverColor : "transparent"
+                                        ? serverMonitor.settings.popupHoverColor : "transparent"
                                 }
 
                                 Rectangle {
@@ -391,7 +400,7 @@ Item {
                                     anchors.rightMargin: 16
                                     height: 1
                                     visible: serverRow.index > 0
-                                    color: serverMonitor.popupDividerColor
+                                    color: serverMonitor.settings.popupDividerColor
                                 }
 
                                 contentItem: ColumnLayout {
@@ -401,20 +410,20 @@ Item {
                                         PopupText {
                                             Layout.fillWidth: true
                                             text: serverRow.modelData.name
-                                            font: serverMonitor.popupStrongFont
+                                            font: serverMonitor.settings.popupStrongFont
                                             elide: Text.ElideRight
                                         }
                                         StatusMark {
                                             ring: serverRow.offline || serverRow.hasWarning
-                                            ink: serverRow.offline ? serverMonitor.offlineColor
-                                                : serverRow.hasWarning ? serverMonitor.warningColor : serverMonitor.onlineColor
+                                            ink: serverRow.offline ? serverMonitor.settings.offlineColor
+                                                : serverRow.hasWarning ? serverMonitor.settings.warningColor : serverMonitor.settings.onlineColor
                                         }
                                     }
                                     PopupText {
                                         Layout.fillWidth: true
                                         text: serverMonitor.details(serverRow.modelData)
-                                        font: serverMonitor.popupSmallFont
-                                        color: serverMonitor.popupSecondaryTextColor
+                                        font: serverMonitor.settings.popupSmallFont
+                                        color: serverMonitor.settings.popupSecondaryTextColor
                                         wrapMode: Text.Wrap
                                     }
                                 }
@@ -429,14 +438,14 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: serverMonitor.popupRadius - 1
-                    bottomRightRadius: serverMonitor.popupRadius - 1
-                    color: serverMonitor.popupSecondaryBackgroundColor
+                    bottomLeftRadius: serverMonitor.settings.popupRadius - 1
+                    bottomRightRadius: serverMonitor.settings.popupRadius - 1
+                    color: serverMonitor.settings.popupSecondaryBackgroundColor
 
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: serverMonitor.popupDividerColor
+                        color: serverMonitor.settings.popupDividerColor
                     }
 
                     RowLayout {
@@ -460,14 +469,14 @@ Item {
                             }
                             contentItem: PopupText {
                                 text: refreshButton.text
-                                color: !refreshButton.enabled ? serverMonitor.popupTertiaryTextColor
-                                    : refreshButton.hovered || refreshButton.visualFocus ? serverMonitor.popupTextColor : serverMonitor.popupSecondaryTextColor
-                                font: serverMonitor.popupSmallFont
+                                color: !refreshButton.enabled ? serverMonitor.settings.popupTertiaryTextColor
+                                    : refreshButton.hovered || refreshButton.visualFocus ? serverMonitor.settings.popupTextColor : serverMonitor.settings.popupSecondaryTextColor
+                                font: serverMonitor.settings.popupSmallFont
                             }
                             background: Rectangle {
                                 radius: 4
                                 color: refreshButton.hovered || refreshButton.visualFocus
-                                    ? serverMonitor.popupHoverColor : "transparent"
+                                    ? serverMonitor.settings.popupHoverColor : "transparent"
                             }
                         }
 
@@ -476,8 +485,8 @@ Item {
                             Layout.fillWidth: true
                             horizontalAlignment: Text.AlignRight
                             text: serverMonitor.checked ? qsTr("Checked at %1").arg(serverMonitor.checked) : ""
-                            color: serverMonitor.popupTertiaryTextColor
-                            font: serverMonitor.popupSmallFont
+                            color: serverMonitor.settings.popupTertiaryTextColor
+                            font: serverMonitor.settings.popupSmallFont
                         }
                     }
                 }

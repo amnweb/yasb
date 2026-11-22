@@ -220,6 +220,7 @@ class BarManager(QObject):
                 self.bars.append(BarWindow(self.engine, name, screen, bar, self.revisions))
 
         widget_files.report_undefined_widgets(self.config)
+        widget_files.report_outdated_widgets(self.config)
         self._report_widget_errors()
         self.hotkeys.restart(self.bars)
 

@@ -17,6 +17,7 @@ from typing import Any, cast
 
 from PyQt6.QtCore import QCoreApplication, QTimer
 
+from core.cli.parser import Argument, Command, Option, build, print_help
 from core.cloud import logs
 from core.cloud.api import ApiClient, ApiError, Call, approve_uri
 from core.cloud.constants import (
@@ -503,40 +504,66 @@ def cmd_save(wanted: str, folder: str) -> int:
     return 0
 
 
-def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="yasbc cloud", description="Back up and restore your YASB configuration.")
-    # `metavar` and `title`, or argparse prints the whole brace-delimited command list twice
-    # and sizes every description column to its width.
-    commands = parser.add_subparsers(dest="action", metavar="<command>", title="commands")
-
-    commands.add_parser("auth", help="Sign in through your browser")
-    commands.add_parser("logout", help="Sign out on this machine")
-    commands.add_parser("status", help="Show the signed-in account, plan and usage")
-    listing = commands.add_parser("list", help="List your backups")
-    listing.add_argument("-s", "--search", default="", help="Only backups whose note or PC name contains this")
-    listing.add_argument("-p", "--page", type=int, default=1, help=f"Which page to show, {PAGE_SIZE} per page")
-
-    backup = commands.add_parser("backup", help="Back up the configuration directory now")
-    backup.add_argument("-n", "--note", default="", help="Label for this backup")
-
-    restore = commands.add_parser("restore", help="Replace the configuration with a backup")
-    restore.add_argument("backup", help="Backup id from `yasbc cloud list`, or `latest`")
-    restore.add_argument("-y", "--yes", action="store_true", help="Skip the confirmation")
-
-    save = commands.add_parser("save", help="Save a backup to a folder without restoring it")
-    save.add_argument("backup", help="Backup id from `yasbc cloud list`, or `latest`")
-    save.add_argument("folder", help="Where to write it")
-
-    delete = commands.add_parser("delete", help="Delete a backup from YASB Cloud")
-    delete.add_argument("backup", help="Backup id from `yasbc cloud list`, or `latest`")
-    delete.add_argument("-y", "--yes", action="store_true", help="Skip the confirmation")
-
-    share = commands.add_parser("share", help="Publish a backup and print its link")
-    share.add_argument("backup", help="Backup id from `yasbc cloud list`, or `latest`")
-
-    unshare = commands.add_parser("unshare", help="Stop sharing a backup")
-    unshare.add_argument("backup", help="Backup id from `yasbc cloud list`, or `latest`")
-    return parser
+CLOUD = Command(
+    "yasbc cloud",
+    "Back up and restore your YASB configuration",
+    commands=(
+        Command("auth", "Sign in through your browser"),
+        Command("logout", "Sign out on this machine"),
+        Command("status", "Show the signed-in account, plan and usage"),
+        Command(
+            "list",
+            "List your backups",
+            options=(
+                Option(
+                    ("-s", "--search"), "Only backups whose note or PC name contains this", value="SEARCH", default=""
+                ),
+                Option(
+                    ("-p", "--page"),
+                    f"Which page to show, {PAGE_SIZE} per page",
+                    value="PAGE",
+                    value_type=int,
+                    default=1,
+                ),
+            ),
+        ),
+        Command(
+            "backup",
+            "Back up the configuration directory now",
+            options=(Option(("-n", "--note"), "Label for this backup", value="NOTE", default=""),),
+        ),
+        Command(
+            "restore",
+            "Replace the configuration with a backup",
+            arguments=(Argument("backup", "Backup id from `yasbc cloud list`, or `latest`"),),
+            options=(Option(("-y", "--yes"), "Skip the confirmation"),),
+        ),
+        Command(
+            "save",
+            "Save a backup to a folder without restoring it",
+            arguments=(
+                Argument("backup", "Backup id from `yasbc cloud list`, or `latest`"),
+                Argument("folder", "Where to write it"),
+            ),
+        ),
+        Command(
+            "delete",
+            "Delete a backup from YASB Cloud",
+            arguments=(Argument("backup", "Backup id from `yasbc cloud list`, or `latest`"),),
+            options=(Option(("-y", "--yes"), "Skip the confirmation"),),
+        ),
+        Command(
+            "share",
+            "Publish a backup and print its link",
+            arguments=(Argument("backup", "Backup id from `yasbc cloud list`, or `latest`"),),
+        ),
+        Command(
+            "unshare",
+            "Stop sharing a backup",
+            arguments=(Argument("backup", "Backup id from `yasbc cloud list`, or `latest`"),),
+        ),
+    ),
+)
 
 
 def run(argv: list[str]) -> int:
@@ -545,14 +572,12 @@ def run(argv: list[str]) -> int:
         if isinstance(stream, io.TextIOWrapper):
             stream.reconfigure(encoding="utf-8", errors="replace")
 
-    parser = _parser()
-    args = parser.parse_args(argv)
-    if args.action is None:
-        parser.print_help()
-        return 0
+    args = build(CLOUD).parse_args(argv)
+    if args.command in (None, "help"):
+        return print_help(CLOUD, args.help_path if args.command == "help" else [])
 
     # Each entry reads its own arguments off the namespace, so adding a command is one line
-    # here and one in _parser rather than a branch in the middle of the error handling.
+    # here and one in CLOUD rather than a branch in the middle of the error handling.
     actions: dict[str, Callable[[argparse.Namespace], int]] = {
         "auth": lambda a: cmd_auth(),
         "logout": lambda a: cmd_logout(),
@@ -572,7 +597,7 @@ def run(argv: list[str]) -> int:
     try:
         # argparse has already refused anything not in this table, so the fallback is
         # unreachable rather than a silent success for a name nobody handled.
-        action = actions.get(args.action)
+        action = actions.get(args.command)
         return action(args) if action else 0
     except _Failed as exc:
         print(str(exc), file=sys.stderr)

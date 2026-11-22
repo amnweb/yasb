@@ -66,6 +66,8 @@ QtObject {
         property int closeDuration
         // Only its family is used: each widget sets the sizes and weights of its own popup text
         property font font
+        // Icons in popups; each widget sets their sizes
+        property font iconFont
     }
 
     // Right-click menus
@@ -123,6 +125,7 @@ QtObject {
         openDuration: 180
         closeDuration: 140
         font.family: "Segoe UI"
+        iconFont.family: "Segoe Fluent Icons"
     }
 
     readonly property Menu menu: Menu {

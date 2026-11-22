@@ -34,6 +34,7 @@ Window {
     required property real radius
     required property font titleFont
     required property font iconFont
+    required property string closeIcon
     required property color closeColor
     required property color closeTextColor
     required property color attentionColor
@@ -514,7 +515,7 @@ Window {
 
                         Text {
                             anchors.centerIn: parent
-                            text: "\ue8bb"
+                            text: previewWindow.closeIcon
                             color: closeButton.hovered ? previewWindow.closeTextColor : previewWindow.secondaryTextColor
                             font: previewWindow.iconFont
                         }

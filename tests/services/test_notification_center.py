@@ -170,14 +170,16 @@ def test_the_widget_shows_waiting_notifications_and_groups_by_app(events: Events
     engine.addImportPath(QML_IMPORT_PATH)
     path = BUILTIN_WIDGETS_DIR / "Notifications" / "Notifications.qml"
     component = QQmlComponent(engine, QUrl.fromLocalFile(str(path)))
-    widget = create_with_bar(component, {"hideEmpty": True})
+    widget = create_with_bar(component)
     assert isinstance(widget, QQuickItem), [error.toString() for error in component.errors()]
+    settings = widget.property("settings")
+    settings.setProperty("hideEmpty", True)
     # In a window like on a bar, where Qt keeps the items' visibility up to date
     window = QQuickWindow()
     widget.setParentItem(window.contentItem())
     # Hidden with nothing to show, and taking no space so the bar leaves no gap
     assert not widget.property("shown") and widget.property("implicitWidth") == 0
-    widget.setProperty("hideEmpty", False)
+    settings.setProperty("hideEmpty", False)
     events.emit_event("WindowsNotificationsChanged", [item(4), item(5, aumid="Contoso.Chat", app_name="Chat"), item(6)])
     wait(10)
     dot = widget.findChild(QQuickItem, "dot")
@@ -190,7 +192,7 @@ def test_the_widget_shows_waiting_notifications_and_groups_by_app(events: Events
     events.emit_event("WindowsNotificationsChanged", [])
     wait(10)
     assert not dot.property("visible")
-    widget.setProperty("hideEmpty", True)
+    settings.setProperty("hideEmpty", True)
     assert not widget.property("shown") and widget.property("implicitWidth") == 0
     sip.delete(widget)
     sip.delete(window)

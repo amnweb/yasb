@@ -639,37 +639,39 @@ def test_network_is_discovered_as_a_builtin_qml_widget():
 
 def test_the_widget_fills_the_label_placeholders(fake_watcher: FakeWatcher, make_widget: Callable[[], QQuickItem]):
     widget = make_widget()
+    settings = widget.property("settings")
     label = item(widget, "label")
-    widget.setProperty("label", "")
+    settings.setProperty("label", "")
     assert label.property("visible") is False
-    widget.setProperty("label", "{name} {signal}% {ip} {nope}")
+    settings.setProperty("label", "{name} {signal}% {ip} {nope}")
     assert label.property("text") == "Home 75% 192.168.0.10 {nope}"
     widget.setProperty("showAlternate", True)
     assert label.property("text") == "Home"
 
     fake_watcher.change(DISCONNECTED)
     assert label.property("text") == "Disconnected"
-    widget.setProperty("alternateLabel", "{signal}{ip}")
+    settings.setProperty("alternateLabel", "{signal}{ip}")
     assert label.property("visible") is False
-    assert item(widget, "icon").property("glyph") == widget.property("disconnectedIcon")
+    assert item(widget, "icon").property("glyph") == settings.property("disconnectedIcon")
 
 
 def test_the_widget_shows_ethernet_a_vpn_and_mobile(fake_watcher: FakeWatcher, make_widget: Callable[[], QQuickItem]):
     fake_watcher.connection = ETHERNET
     widget = make_widget()
+    settings = widget.property("settings")
     # A cable has no signal, so a signal label leaves only the icon.
-    widget.setProperty("label", "{signal}")
+    settings.setProperty("label", "{signal}")
     assert item(widget, "label").property("visible") is False
     widget.setProperty("showAlternate", True)
     assert item(widget, "label").property("text") == "Network 2"
-    assert item(widget, "icon").property("glyph") == widget.property("ethernetIcon")
+    assert item(widget, "icon").property("glyph") == settings.property("ethernetIcon")
 
-    widget.setProperty("hideIfEthernet", True)
+    settings.setProperty("hideIfEthernet", True)
     assert widget.property("visible") is False and widget.property("implicitWidth") == 0
     fake_watcher.change(connection("other", "CloudflareWARP", ipAddress="172.16.0.2"))
     assert widget.property("visible") is True
     assert item(widget, "label").property("text") == "CloudflareWARP"
-    assert item(widget, "icon").property("glyph") == widget.property("otherIcon")
+    assert item(widget, "icon").property("glyph") == settings.property("otherIcon")
 
     # Mobile shows its signal bars and is named as Windows names it.
     fake_watcher.change(MOBILE)
@@ -686,4 +688,4 @@ def test_the_widget_marks_a_connection_without_internet(
     widget = make_widget()
     assert item(widget, "icon").property("badge") == ""
     fake_watcher.change({**HOME, "connectivity": "constrained"})
-    assert item(widget, "icon").property("badge") == widget.property("noInternetIcon")
+    assert item(widget, "icon").property("badge") == widget.property("settings").property("noInternetIcon")

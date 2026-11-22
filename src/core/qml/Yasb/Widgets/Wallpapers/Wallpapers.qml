@@ -10,34 +10,67 @@ import Yasb.Themes
 Item {
     id: wallpapers
 
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Folders searched for wallpapers, subfolders included; empty for your Pictures folder
+        property list<string> folders: []
+        // Transition before a wallpaper is set on every screen: circle, slide_top, diamond, split or "" for none
+        property string animation: ""
+        // Commands run through cmd.exe, out of sight, once a wallpaper is set, after its transition. {image} becomes
+        // the image's path, so 'matugen image "{image}"' themes the bar from it. A command still running from the last
+        // wallpaper is not run again.
+        property list<string> runAfter: []
+        property string icon: "\ue7aa"
+        property int iconSize: theme.bar.iconFont.pixelSize
+        // Hotkey that opens the gallery, such as "alt+w", and its screen: active, cursor or primary
+        property string hotkey: ""
+        property string hotkeyScreen: "active"
+
+        property int thumbnailWidth: 200
+        // landscape or portrait
+        property string orientation: "portrait"
+        property real selectedScale: 1.4
+        property int spacing: 6
+        property int cornerRadius: 0
+        property color accentColor: theme.colors.accent
+        property int animationDuration: 120
+        // How long the thumbnails take to fan out from behind the current wallpaper when the gallery opens
+        property int openDuration: 450
+        property real slideSpeed: 8
+        property color textColor: theme.colors.text
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // A thumbnail still loading, and the gallery's message while there are none
+        property color placeholderColor: Qt.alpha("#808080", 0.3)
+        property color galleryTextColor: "#ffffff"
+        // The popup: the theme's, unless set here
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        // The right-click menu: its width, and a look that is the theme's unless set here
+        property int menuWidth: 200
+        property color menuColor: theme.menu.background
+        property color menuBorderColor: theme.menu.border
+        property color menuTextColor: theme.colors.text
+        property real menuRadius: theme.menu.radius
+        property font menuFont: theme.menu.font
+        // Milliseconds the right-click menu takes to fade in
+        property int menuOpenDuration: theme.menu.openDuration
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Folders searched for wallpapers, subfolders included; empty for your Pictures folder
-    property list<string> folders: []
-    // Transition before a wallpaper is set on every screen: circle, slide_top, diamond, split or "" for none
-    property string animation: ""
-    // Commands run through cmd.exe, out of sight, once a wallpaper is set, after its transition. {image} becomes
-    // the image's path, so 'matugen image "{image}"' themes the bar from it. A command still running from the last
-    // wallpaper is not run again.
-    property list<string> runAfter: []
-    property string icon: "\ue7aa"
-    property int iconSize: theme.bar.iconFont.pixelSize
-    // Hotkey that opens the gallery, such as "alt+w", and its screen: active, cursor or primary
-    property string hotkey: ""
-    property string hotkeyScreen: "active"
+    readonly property Settings settings: Settings {
+        theme: wallpapers.theme
+    }
 
-    property int thumbnailWidth: 200
-    // landscape or portrait
-    property string orientation: "portrait"
-    readonly property int thumbnailHeight: Math.round(orientation === "portrait" ? thumbnailWidth * 16 / 9 : thumbnailWidth * 9 / 16)
-    property real selectedScale: 1.4
-    property int spacing: 6
-    property int cornerRadius: 0
-    property color accentColor: theme.colors.accent
-    property int animationDuration: 120
-    // How long the thumbnails take to fan out from behind the current wallpaper when the gallery opens
-    property int openDuration: 450
-    property real slideSpeed: 8
+    readonly property bool dark: theme.dark
+    readonly property int thumbnailHeight: Math.round(settings.orientation === "portrait" ? settings.thumbnailWidth * 16 / 9 : settings.thumbnailWidth * 9 / 16)
+
     // One thumbnail: gets modelData ({path, name}) and index; PathView.itemScale is 1 at the sides, selectedScale in the centre
     property Component thumbnail: Component {
         Item {
@@ -47,25 +80,25 @@ Item {
             required property int index
             // itemScale is a PathAttribute of the carousel's path; Qt attaches it by name, which qmllint can't see
             readonly property real growth: Number.isFinite(PathView.itemScale) ? PathView.itemScale : 1 // qmllint disable missing-property
-            readonly property real nearness: Math.max(0, Math.min(1, (growth - 1) / Math.max(0.01, wallpapers.selectedScale - 1)))
+            readonly property real nearness: Math.max(0, Math.min(1, (growth - 1) / Math.max(0.01, wallpapers.settings.selectedScale - 1)))
             readonly property real pixelRatio: Screen.devicePixelRatio || 1
 
-            width: wallpapers.thumbnailWidth
+            width: wallpapers.settings.thumbnailWidth
             height: wallpapers.thumbnailHeight
             scale: growth
             z: growth
 
             Rectangle {
                 anchors.fill: parent
-                radius: wallpapers.cornerRadius
-                color: wallpapers.placeholderColor
+                radius: wallpapers.settings.cornerRadius
+                color: wallpapers.settings.placeholderColor
                 visible: picture.status !== Image.Ready
             }
 
             WallpaperThumbnail {
                 id: made
 
-                readonly property real ratio: card.pixelRatio * wallpapers.selectedScale
+                readonly property real ratio: card.pixelRatio * wallpapers.settings.selectedScale
 
                 path: card.modelData.path
                 size: Qt.size(Math.round(card.width * made.ratio), Math.round(card.height * made.ratio))
@@ -102,51 +135,27 @@ Item {
                     PathRectangle {
                         width: card.width
                         height: card.height
-                        radius: wallpapers.cornerRadius
+                        radius: wallpapers.settings.cornerRadius
                     }
                 }
             }
 
             Rectangle {
                 anchors.fill: parent
-                radius: wallpapers.cornerRadius
+                radius: wallpapers.settings.cornerRadius
                 color: Qt.alpha("#000000", 0.45 * (1 - card.nearness))
             }
 
             Rectangle {
                 anchors.fill: parent
-                radius: wallpapers.cornerRadius
+                radius: wallpapers.settings.cornerRadius
                 color: "transparent"
                 border.width: 2
-                border.color: wallpapers.accentColor
+                border.color: wallpapers.settings.accentColor
                 opacity: card.nearness
             }
         }
     }
-
-    readonly property bool dark: theme.dark
-    property color textColor: theme.colors.text
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // A thumbnail still loading, and the gallery's message while there are none
-    property color placeholderColor: Qt.alpha("#808080", 0.3)
-    property color galleryTextColor: "#ffffff"
-    // The popup: the theme's, unless set here
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    // The right-click menu: its width, and a look that is the theme's unless set here
-    property int menuWidth: 200
-    property color menuColor: theme.menu.background
-    property color menuBorderColor: theme.menu.border
-    property color menuTextColor: theme.colors.text
-    property real menuRadius: theme.menu.radius
-    property font menuFont: theme.menu.font
-    // Milliseconds the right-click menu takes to fade in
-    property int menuOpenDuration: theme.menu.openDuration
 
     // Held so the garbage collector doesn't destroy the open gallery
     property Gallery opened: null
@@ -167,7 +176,7 @@ Item {
         }
         library.refresh()
         const screen = wallpapers.Screen
-        const height = Math.round(wallpapers.thumbnailHeight * wallpapers.selectedScale) + 48
+        const height = Math.round(wallpapers.thumbnailHeight * wallpapers.settings.selectedScale) + 48
         opened = gallery.createObject(null, {
             screenName: screen.name,
             area: Qt.rect(screen.virtualX, screen.virtualY + Math.round((screen.height - height) / 2), screen.width, height)
@@ -177,12 +186,12 @@ Item {
     WallpaperLibrary {
         id: library
 
-        folders: wallpapers.folders
-        animation: wallpapers.animation
+        folders: wallpapers.settings.folders
+        animation: wallpapers.settings.animation
         onWallpaperSet: path => {
             for (let i = 0; i < runAfterCommands.count; i++) {
                 const process = runAfterCommands.objectAt(i) as Process
-                process.command = wallpapers.runAfter[i].split("{image}").join(path)
+                process.command = wallpapers.settings.runAfter[i].split("{image}").join(path)
                 process.run()
             }
         }
@@ -191,15 +200,15 @@ Item {
     Instantiator {
         id: runAfterCommands
 
-        model: wallpapers.runAfter
+        model: wallpapers.settings.runAfter
 
         // A process for each command in runAfter
         delegate: Process {}
     }
 
     Hotkey {
-        keys: wallpapers.hotkey
-        screen: wallpapers.hotkeyScreen
+        keys: wallpapers.settings.hotkey
+        screen: wallpapers.settings.hotkeyScreen
         onActivated: wallpapers.toggleGallery()
     }
 
@@ -207,16 +216,16 @@ Item {
         id: label
 
         y: Math.round((parent.height - height) / 2)
-        width: wallpapers.iconSize
-        height: wallpapers.iconSize
+        width: wallpapers.settings.iconSize
+        height: wallpapers.settings.iconSize
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        text: wallpapers.icon
-        color: wallpapers.textColor
-        font.family: wallpapers.iconFont.family
-        font.weight: wallpapers.iconFont.weight
-        font.variableAxes: wallpapers.iconFont.variableAxes
-        font.pixelSize: wallpapers.iconSize
+        text: wallpapers.settings.icon
+        color: wallpapers.settings.textColor
+        font.family: wallpapers.settings.iconFont.family
+        font.weight: wallpapers.settings.iconFont.weight
+        font.variableAxes: wallpapers.settings.iconFont.variableAxes
+        font.pixelSize: wallpapers.settings.iconSize
     }
 
     MouseArea {
@@ -347,7 +356,7 @@ Item {
             target: window
             property: "reveal"
             to: 1
-            duration: wallpapers.animationDuration
+            duration: wallpapers.settings.animationDuration
         }
 
         NumberAnimation {
@@ -356,7 +365,7 @@ Item {
             target: window
             property: "spread"
             to: 1
-            duration: wallpapers.openDuration
+            duration: wallpapers.settings.openDuration
             easing.type: Easing.OutCubic
         }
 
@@ -368,7 +377,7 @@ Item {
                     target: window
                     property: "spread"
                     to: 0
-                    duration: wallpapers.animationDuration * 2
+                    duration: wallpapers.settings.animationDuration * 2
                     easing.type: Easing.InCubic
                 }
 
@@ -376,7 +385,7 @@ Item {
                     target: window
                     property: "reveal"
                     to: 0
-                    duration: wallpapers.animationDuration * 2
+                    duration: wallpapers.settings.animationDuration * 2
                     easing.type: Easing.InQuad
                 }
             }
@@ -399,8 +408,8 @@ Item {
             PathView {
                 id: carousel
 
-                readonly property real step: wallpapers.thumbnailWidth + wallpapers.spacing
-                readonly property real near: wallpapers.thumbnailWidth * (wallpapers.selectedScale + 1) / 2 + wallpapers.spacing
+                readonly property real step: wallpapers.settings.thumbnailWidth + wallpapers.settings.spacing
+                readonly property real near: wallpapers.settings.thumbnailWidth * (wallpapers.settings.selectedScale + 1) / 2 + wallpapers.settings.spacing
                 readonly property int fits: 2 * Math.ceil(Math.max(0, width / 2 - near) / step) + 5
                 readonly property real side: Math.max(0, 0.5 - 1 / Math.max(1, pathItemCount))
                 readonly property real reach: Math.max(0, pathItemCount / 2 - 1) * step
@@ -416,7 +425,7 @@ Item {
                     enabled: window.sliding
 
                     SmoothedAnimation {
-                        velocity: wallpapers.slideSpeed
+                        velocity: wallpapers.settings.slideSpeed
                     }
                 }
 
@@ -467,7 +476,7 @@ Item {
                     PathAttribute { name: "itemScale"; value: 1 }
                     PathLine { x: carousel.width / 2; y: carousel.height / 2 }
                     PathPercent { value: 0.5 }
-                    PathAttribute { name: "itemScale"; value: wallpapers.selectedScale }
+                    PathAttribute { name: "itemScale"; value: wallpapers.settings.selectedScale }
                     PathLine { x: carousel.width / 2 + carousel.near * carousel.open; y: carousel.height / 2 }
                     PathPercent { value: 1 - carousel.side }
                     PathAttribute { name: "itemScale"; value: 1 }
@@ -526,8 +535,8 @@ Item {
                 anchors.centerIn: parent
                 visible: carousel.count === 0
                 text: library.scanning ? qsTr("Looking for wallpapers...") : qsTr("No wallpapers found")
-                color: wallpapers.galleryTextColor
-                font: wallpapers.popupFont
+                color: wallpapers.settings.galleryTextColor
+                font: wallpapers.settings.popupFont
             }
         }
 
@@ -603,10 +612,10 @@ Item {
                 Menu {
                     id: menu
 
-                    font: wallpapers.menuFont
+                    font: wallpapers.settings.menuFont
                     // Active and inactive only, so disabled controls keep the style's dimmed colours
-                    palette.active.text: wallpapers.menuTextColor
-                    palette.inactive.text: wallpapers.menuTextColor
+                    palette.active.text: wallpapers.settings.menuTextColor
+                    palette.inactive.text: wallpapers.settings.menuTextColor
                     topInset: 0
                     leftInset: 0
                     rightInset: 0
@@ -614,7 +623,7 @@ Item {
                     popupType: Popup.Item
                     // Fades in when it opens, in place of the style's growing from a third of its height
                     enter: Transition {
-                        NumberAnimation { property: "opacity"; from: 0; to: 1; duration: wallpapers.menuOpenDuration; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "opacity"; from: 0; to: 1; duration: wallpapers.settings.menuOpenDuration; easing.type: Easing.OutCubic }
                     }
                     onClosed: {
                         // Used, or closed with Escape: the gallery gets the focus back
@@ -626,10 +635,10 @@ Item {
                     }
 
                     background: Rectangle {
-                        implicitWidth: wallpapers.menuWidth
-                        radius: wallpapers.menuRadius
-                        color: wallpapers.menuColor
-                        border.color: wallpapers.menuBorderColor
+                        implicitWidth: wallpapers.settings.menuWidth
+                        radius: wallpapers.settings.menuRadius
+                        color: wallpapers.settings.menuColor
+                        border.color: wallpapers.settings.menuBorderColor
                     }
 
                     MenuItem {

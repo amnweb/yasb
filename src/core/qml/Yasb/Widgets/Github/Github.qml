@@ -12,87 +12,111 @@ import Yasb.Themes
 Item {
     id: github
 
-    // Label placeholder: {count}, the number of unread notifications. Empty shows only the logo
-    property string label: ""
+    component PopupIcons: QtObject {
+        property string markRead
+        property string refresh
+        property string open
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Label placeholder: {count}, the number of unread notifications. Empty shows only the logo
+        property string label: ""
+        // A personal access token; empty signs in from the popup instead. Environment.value("NAME") reads one from an
+        // environment variable, such as one in YASB's .env file, to keep it out of this file
+        property string token: ""
+        // How often the notifications are fetched, in milliseconds, from 60000 to 3600000
+        property int updateInterval: 300000
+        // The most notifications fetched, up to 100
+        property int maxNotifications: 50
+        property bool onlyUnread: false
+        // Only notifications for these reasons, such as ["mention", "review_requested"]; empty shows every reason
+        property list<string> reasonFilters: []
+        // Whether each issue and pull request shows its comment count, which takes a request more for each
+        property bool showCommentCount: true
+        property bool hideEmpty: false
+        property int popupWidth: 424
+        property int popupHeight: 624
+        // The glyph on the bar, drawn in iconFont and the text colour; "" shows the GitHub logo
+        property string icon: ""
+        property int iconSize: theme.bar.iconFont.pixelSize
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The dot on the bar while there is something unread, and on each unread notification
+        property color badgeColor: "#ff4545"
+        property color unreadColor: "#58a6ff"
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        readonly property PopupIcons popupIcons: PopupIcons {
+            markRead: "\ue73e"
+            refresh: "\ue72c"
+            open: "\ue76c"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // The arrow of the link to GitHub
+        property int footerIconSize: 10
+        // Each notification's title, read and unread
+        property font notificationFont
+        notificationFont.family: theme.popup.font.family
+        notificationFont.pixelSize: 14
+        property font unreadNotificationFont
+        unreadNotificationFont.family: theme.popup.font.family
+        unreadNotificationFont.pixelSize: 14
+        unreadNotificationFont.weight: 600
+        // Signing in: the prompt, and the code to enter on GitHub
+        property font signInFont
+        signInFont.family: theme.popup.font.family
+        signInFont.pixelSize: 15
+        property font codeFont
+        codeFont.family: "Consolas"
+        codeFont.pixelSize: 24
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        property color popupTextColor: theme.colors.text
+        property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+        property color popupDividerColor: theme.colors.divider
+        property color popupHoverColor: theme.colors.hover
+        property color popupSelectedColor: theme.colors.selected
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // A personal access token; empty signs in from the popup instead. Environment.value("NAME") reads one from an
-    // environment variable, such as one in YASB's .env file, to keep it out of this file
-    property string token: ""
-    // How often the notifications are fetched, in milliseconds, from 60000 to 3600000
-    property int updateInterval: 300000
-    // The most notifications fetched, up to 100
-    property int maxNotifications: 50
-    property bool onlyUnread: false
-    // Only notifications for these reasons, such as ["mention", "review_requested"]; empty shows every reason
-    property list<string> reasonFilters: []
-    // Whether each issue and pull request shows its comment count, which takes a request more for each
-    property bool showCommentCount: true
-    property bool hideEmpty: false
-    property int popupWidth: 424
-    property int popupHeight: 624
-    // The logo on the bar, drawn in the text colour; thicker when the icon font is bold
-    property url icon: Qt.resolvedUrl(iconFont.weight >= Font.DemiBold ? "icons/github-bold.svg" : "icons/github.svg")
-    property int iconSize: theme.bar.iconFont.pixelSize
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The dot on the bar while there is something unread, and on each unread notification
-    property color badgeColor: "#ff4545"
-    property color unreadColor: "#58a6ff"
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // The arrow of the link to GitHub
-    property int footerIconSize: 10
-    // Each notification's title, read and unread
-    property font notificationFont
-    notificationFont.family: theme.popup.font.family
-    notificationFont.pixelSize: 14
-    property font unreadNotificationFont
-    unreadNotificationFont.family: theme.popup.font.family
-    unreadNotificationFont.pixelSize: 14
-    unreadNotificationFont.weight: Font.DemiBold
-    // Signing in: the prompt, and the code to enter on GitHub
-    property font signInFont
-    signInFont.family: theme.popup.font.family
-    signInFont.pixelSize: 15
-    property font codeFont
-    codeFont.family: "Consolas"
-    codeFont.pixelSize: 24
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    property color popupTextColor: theme.colors.text
-    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
-    property color popupDividerColor: theme.colors.divider
-    property color popupHoverColor: theme.colors.hover
-    property color popupSelectedColor: theme.colors.selected
+    readonly property Settings settings: Settings {
+        theme: github.theme
+    }
+
     readonly property bool dark: theme.dark
-    property color popupSecondaryTextColor: theme.colors.textSecondary
     readonly property color errorColor: dark ? "#ff9991" : "#b42318"
     readonly property string edge: bar.edge
     property real now: Date.now()
 
-    readonly property bool shown: !hideEmpty || monitor.needsSignIn || monitor.unreadCount > 0 || monitor.error !== ""
-    readonly property string text: format(label)
+    readonly property bool shown: !settings.hideEmpty || monitor.needsSignIn || monitor.unreadCount > 0 || monitor.error !== ""
+    readonly property string text: format(settings.label)
 
     implicitWidth: shown ? content.implicitWidth : 0
     implicitHeight: shown ? content.implicitHeight : 0
@@ -106,10 +130,10 @@ Item {
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + popupGap
-            : edge === "right" ? start.x - popup.width - popupGap : start.x + (width - popup.width) / 2
-        let py = edge === "top" ? start.y + height + popupGap
-            : edge === "bottom" ? start.y - popup.height - popupGap : start.y + (height - popup.height) / 2
+        let px = edge === "left" ? start.x + width + settings.popupGap
+            : edge === "right" ? start.x - popup.width - settings.popupGap : start.x + (width - popup.width) / 2
+        let py = edge === "top" ? start.y + height + settings.popupGap
+            : edge === "bottom" ? start.y - popup.height - settings.popupGap : start.y + (height - popup.height) / 2
         const screen = github.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - popup.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - popup.height - 8))
@@ -145,12 +169,12 @@ Item {
     GitHubNotifications {
         id: monitor
 
-        token: github.token
-        updateInterval: github.updateInterval
-        maxNotifications: github.maxNotifications
-        onlyUnread: github.onlyUnread
-        reasonFilters: github.reasonFilters
-        showCommentCount: github.showCommentCount
+        token: github.settings.token
+        updateInterval: github.settings.updateInterval
+        maxNotifications: github.settings.maxNotifications
+        onlyUnread: github.settings.onlyUnread
+        reasonFilters: github.settings.reasonFilters
+        showCommentCount: github.settings.showCommentCount
     }
 
     Connections {
@@ -181,14 +205,30 @@ Item {
 
         Item {
             y: Math.round((parent.height - height) / 2)
-            implicitWidth: github.iconSize
-            implicitHeight: github.iconSize
+            implicitWidth: github.settings.iconSize
+            implicitHeight: github.settings.iconSize
 
+            // The GitHub logo while no glyph is set, thicker when the icon font is bold
             SvgIcon {
                 anchors.fill: parent
-                source: github.icon
-                color: github.textColor
+                visible: github.settings.icon === ""
+                source: github.settings.icon === "" ? Qt.resolvedUrl(github.settings.iconFont.weight >= Font.DemiBold ? "icons/github-bold.svg"
+                    : "icons/github.svg") : ""
+                color: github.settings.textColor
                 opacity: monitor.needsSignIn ? 0.55 : 1
+            }
+
+            Text {
+                anchors.centerIn: parent
+                visible: github.settings.icon !== ""
+                text: github.settings.icon
+                textFormat: Text.PlainText
+                color: github.settings.textColor
+                opacity: monitor.needsSignIn ? 0.55 : 1
+                font.family: github.settings.iconFont.family
+                font.weight: github.settings.iconFont.weight
+                font.variableAxes: github.settings.iconFont.variableAxes
+                font.pixelSize: github.settings.iconSize
             }
 
             Rectangle {
@@ -198,7 +238,7 @@ Item {
                 height: 6
                 radius: 3
                 visible: monitor.unreadCount > 0
-                color: github.badgeColor
+                color: github.settings.badgeColor
             }
         }
 
@@ -208,8 +248,8 @@ Item {
             visible: text !== ""
             text: github.text
             textFormat: Text.PlainText
-            color: github.textColor
-            font: github.font
+            color: github.settings.textColor
+            font: github.settings.font
         }
     }
 
@@ -235,9 +275,9 @@ Item {
         rightPadding: 10
         topPadding: 4
         bottomPadding: 4
-        color: checked || chipArea.containsMouse ? github.popupTextColor : github.popupSecondaryTextColor
+        color: checked || chipArea.containsMouse ? github.settings.popupTextColor : github.settings.popupSecondaryTextColor
         opacity: enabled ? 1 : 0.4
-        font: github.popupSmallFont
+        font: github.settings.popupSmallFont
         Accessible.role: Accessible.RadioButton
         Accessible.checked: checked
         Accessible.onPressAction: chip.clicked()
@@ -246,7 +286,7 @@ Item {
             anchors.fill: parent
             z: -1
             radius: height / 2
-            color: chip.checked ? github.popupSelectedColor : chipArea.containsMouse ? github.popupHoverColor : "transparent"
+            color: chip.checked ? github.settings.popupSelectedColor : chipArea.containsMouse ? github.settings.popupHoverColor : "transparent"
         }
 
         MouseArea {
@@ -281,17 +321,17 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 4
-            color: area.containsMouse ? github.popupHoverColor : button.checked ? github.popupSelectedColor : "transparent"
+            color: area.containsMouse ? github.settings.popupHoverColor : button.checked ? github.settings.popupSelectedColor : "transparent"
         }
 
         Text {
             anchors.centerIn: parent
             text: button.glyph
-            color: github.popupTextColor
+            color: github.settings.popupTextColor
             opacity: button.checked || area.containsMouse ? 1 : 0.6
-            font.family: github.iconFont.family
-            font.weight: github.iconFont.weight
-            font.variableAxes: github.iconFont.variableAxes
+            font.family: github.settings.popupIconFont.family
+            font.weight: github.settings.popupIconFont.weight
+            font.variableAxes: github.settings.popupIconFont.variableAxes
             font.pixelSize: button.iconSize
         }
 
@@ -308,23 +348,23 @@ Item {
         property real reveal: 0
         readonly property bool needsSignIn: monitor.needsSignIn || monitor.authBusy
         title: "GitHub notifications"
-        width: github.popupWidth
-        height: Math.min(github.popupHeight, github.Screen.height - 40)
+        width: github.settings.popupWidth
+        height: Math.min(github.settings.popupHeight, github.Screen.height - 40)
         anchor: github
-        font: github.popupFont
+        font: github.settings.popupFont
         theme: github.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: github.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: github.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: github.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: github.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: { if (!visible) reveal = 0 }
 
         Rectangle {
             id: surface
             anchors.fill: parent
-            radius: github.popupRadius
-            color: github.popupColor
+            radius: github.settings.popupRadius
+            color: github.settings.popupColor
             border.width: 1
-            border.color: github.popupBorderColor
+            border.color: github.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: github.edge === "bottom" ? Item.Bottom : Item.Top
@@ -339,8 +379,8 @@ Item {
                 Text {
                     Layout.rightMargin: 10
                     text: "GitHub"
-                    color: github.popupTextColor
-                    font: github.popupTitleFont
+                    color: github.settings.popupTextColor
+                    font: github.settings.popupTitleFont
                 }
                 FilterChip {
                     text: "All"
@@ -358,13 +398,13 @@ Item {
                 }
                 Item { Layout.fillWidth: true }
                 IconButton {
-                    glyph: "\ue73e"
+                    glyph: github.settings.popupIcons.markRead
                     tip: "Mark all as read"
                     enabled: monitor.unreadCount > 0 && !popup.needsSignIn
                     onClicked: monitor.markAllRead()
                 }
                 IconButton {
-                    glyph: "\ue72c"
+                    glyph: github.settings.popupIcons.refresh
                     tip: "Refresh"
                     enabled: !monitor.loading && !popup.needsSignIn
                     onClicked: monitor.refresh()
@@ -376,7 +416,7 @@ Item {
                 y: toolbar.y + toolbar.height + 10
                 width: parent.width
                 height: 1
-                color: github.popupDividerColor
+                color: github.settings.popupDividerColor
             }
 
             Rectangle {
@@ -386,9 +426,9 @@ Item {
                 anchors.bottom: parent.bottom
                 anchors.margins: 1
                 height: 40
-                bottomLeftRadius: github.popupRadius - 1
-                bottomRightRadius: github.popupRadius - 1
-                color: footerArea.containsMouse ? Qt.tint(github.popupSecondaryBackgroundColor, github.popupHoverColor) : github.popupSecondaryBackgroundColor
+                bottomLeftRadius: github.settings.popupRadius - 1
+                bottomRightRadius: github.settings.popupRadius - 1
+                color: footerArea.containsMouse ? Qt.tint(github.settings.popupSecondaryBackgroundColor, github.settings.popupHoverColor) : github.settings.popupSecondaryBackgroundColor
                 Accessible.role: Accessible.Link
                 Accessible.name: "Open notifications on GitHub"
                 Accessible.onPressAction: {
@@ -399,7 +439,7 @@ Item {
                 Rectangle {
                     width: parent.width
                     height: 1
-                    color: github.popupDividerColor
+                    color: github.settings.popupDividerColor
                 }
 
                 Text {
@@ -407,21 +447,21 @@ Item {
                     anchors.leftMargin: 15
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Open notifications on GitHub"
-                    color: footerArea.containsMouse ? github.popupTextColor : github.popupSecondaryTextColor
-                    font: github.popupSmallFont
+                    color: footerArea.containsMouse ? github.settings.popupTextColor : github.settings.popupSecondaryTextColor
+                    font: github.settings.popupSmallFont
                 }
 
                 Text {
                     anchors.right: parent.right
                     anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "\ue76c"
-                    color: github.popupTextColor
+                    text: github.settings.popupIcons.open
+                    color: github.settings.popupTextColor
                     opacity: footerArea.containsMouse ? 1 : 0.75
-                    font.family: github.iconFont.family
-                    font.weight: github.iconFont.weight
-                    font.variableAxes: github.iconFont.variableAxes
-                    font.pixelSize: github.footerIconSize
+                    font.family: github.settings.popupIconFont.family
+                    font.weight: github.settings.popupIconFont.weight
+                    font.variableAxes: github.settings.popupIconFont.variableAxes
+                    font.pixelSize: github.settings.footerIconSize
                 }
 
                 MouseArea {
@@ -449,7 +489,7 @@ Item {
                 maximumLineCount: 3
                 elide: Text.ElideRight
                 color: github.errorColor
-                font: github.popupSmallFont
+                font: github.settings.popupSmallFont
             }
 
             ListView {
@@ -481,7 +521,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: 6
-                        color: github.popupTextColor
+                        color: github.settings.popupTextColor
                         opacity: rowMouse.containsMouse ? 0.07 : 0
                     }
                     Image {
@@ -494,8 +534,8 @@ Item {
                         x: 38; y: 9; width: parent.width - 56
                         text: row.modelData.title
                         textFormat: Text.PlainText
-                        color: github.popupTextColor
-                        font: row.modelData.unread ? github.unreadNotificationFont : github.notificationFont
+                        color: github.settings.popupTextColor
+                        font: row.modelData.unread ? github.settings.unreadNotificationFont : github.settings.notificationFont
                         wrapMode: Text.Wrap
                         maximumLineCount: 2
                         elide: Text.ElideRight
@@ -506,8 +546,8 @@ Item {
                         width: timestampLabel.x - x - 8
                         text: row.modelData.details ?? ""
                         textFormat: Text.PlainText
-                        color: github.popupSecondaryTextColor
-                        font: github.popupSmallFont
+                        color: github.settings.popupSecondaryTextColor
+                        font: github.settings.popupSmallFont
                         elide: Text.ElideRight
                     }
                     Text {
@@ -515,14 +555,14 @@ Item {
                         anchors.right: parent.right; anchors.rightMargin: 12
                         y: detailsText.y
                         text: github.age(row.modelData.updated_at)
-                        color: github.popupSecondaryTextColor
-                        font: github.popupSmallFont
+                        color: github.settings.popupSecondaryTextColor
+                        font: github.settings.popupSmallFont
                     }
                     Rectangle {
                         x: parent.width - 11; y: 16
                         width: 5; height: 5; radius: 3
                         visible: row.modelData.unread
-                        color: github.unreadColor
+                        color: github.settings.unreadColor
                     }
                     MouseArea {
                         id: rowMouse
@@ -542,8 +582,8 @@ Item {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: monitor.authCode ? monitor.authCode : monitor.authBusy ? "Connecting to GitHub..." : "Sign in to GitHub"
-                    color: github.popupTextColor
-                    font: monitor.authCode ? github.codeFont : github.signInFont
+                    color: github.settings.popupTextColor
+                    font: monitor.authCode ? github.settings.codeFont : github.settings.signInFont
                 }
                 Text {
                     width: parent.width
@@ -552,8 +592,8 @@ Item {
                     textFormat: Text.PlainText
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
-                    color: github.popupSecondaryTextColor
-                    font: github.popupSmallFont
+                    color: github.settings.popupSecondaryTextColor
+                    font: github.settings.popupSmallFont
                 }
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -583,8 +623,8 @@ Item {
                         : monitor.onlyUnread ? "No unread notifications" : "No notifications"
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
-                    color: github.popupSecondaryTextColor
-                    font: github.popupFont
+                    color: github.settings.popupSecondaryTextColor
+                    font: github.settings.popupFont
                 }
                 Text {
                     width: parent.width
@@ -594,7 +634,7 @@ Item {
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
                     color: github.errorColor
-                    font: github.popupSmallFont
+                    font: github.settings.popupSmallFont
                 }
             }
         }

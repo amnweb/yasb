@@ -1,44 +1,50 @@
-"""
-YASB CLI
-
-NOTE: Avoid importing heavy libraries directly to avoid slowing down the startup time.
-
-To check the startup time, use the following commands (from venv):
-python -X importtime src/cli.py 2> import_times.log
-pip install tuna
-tuna import_times.log
-"""
-
-import argparse
-import ctypes
-import datetime
 import os
-import subprocess
 import sys
-import textwrap
-import time
-import winreg
-from typing import Any
+lazy import datetime
+lazy import shutil
+lazy import subprocess
+lazy import tempfile
+lazy import textwrap
+lazy import time
+lazy import winreg
+lazy from collections.abc import Callable
+lazy from pathlib import Path
+lazy from typing import NoReturn
+lazy from urllib.error import URLError
+lazy from urllib.request import urlopen
 
-from core.cli.pipe import CLI_SERVER_PIPE_NAME, LOG_SERVER_PIPE_NAME, read_message, write_message
-from core.utils.process import is_process_running
-from core.utils.win32.autostart import (
+lazy from PyQt6.QtGui import QGuiApplication
+
+from core.cli.parser import Argument, Command, Option, build, print_help
+from settings import (
+    APP_NAME,
+    BUILD_VERSION,
+    CLI_VERSION,
+    DEFAULT_CONFIG_DIRECTORY,
+    RELEASE_CHANNEL,
+    SCRIPT_PATH,
+)
+lazy from core.app.update.service import ReleaseInfo, get_update_service
+lazy from core.cli.addons import CLIAddonsHandler
+lazy from core.cli.pipe import CLI_SERVER_PIPE_NAME, LOG_SERVER_PIPE_NAME, read_message, write_message
+lazy from core.cloud.cli import run as run_cloud
+lazy from core.utils.process import is_process_running
+lazy from core.utils.system import app_data_path, get_architecture
+lazy from core.utils.win32.autostart import (
     AUTOSTART_FILE,
     EXE_PATH,
     disable_autostart,
     enable_autostart,
     is_autostart_enabled,
 )
-from core.utils.win32.bindings.advapi32 import get_current_user_sid
-from core.utils.win32.bindings.kernel32 import CloseHandle, CreateFile, GetLastError, ReadFile, WriteFile
-from core.utils.win32.bindings.ole32 import create_dispatch
-from core.utils.win32.bindings.shell32 import IsUserAnAdmin
-from core.utils.win32.constants import (
-    ERROR_NO_MORE_ITEMS,
+lazy from core.utils.win32.bindings.advapi32 import get_current_user_sid
+lazy from core.utils.win32.bindings.kernel32 import CloseHandle, CreateFile, GetLastError, ReadFile, WriteFile
+lazy from core.utils.win32.bindings.ole32 import create_dispatch
+lazy from core.utils.win32.bindings.shell32 import IsUserAnAdmin
+lazy from core.utils.win32.constants import (
     GENERIC_READ,
     GENERIC_WRITE,
     INVALID_HANDLE_VALUE,
-    MAX_GUID_CHARS,
     MINIDUMP_WITH_DATA_SEGS,
     MINIDUMP_WITH_FULL_MEMORY_INFO,
     MINIDUMP_WITH_HANDLE_DATA,
@@ -48,45 +54,144 @@ from core.utils.win32.constants import (
     MINIDUMP_WITH_UNLOADED_MODULES,
     OPEN_EXISTING,
 )
-from core.utils.win32.registry_keys import WER_LOCAL_DUMPS_KEY
-from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL, SCRIPT_PATH
+lazy from core.utils.win32.registry_keys import WER_LOCAL_DUMPS_KEY
 
-YASB_VERSION = BUILD_VERSION
-YASB_CLI_VERSION = CLI_VERSION
-YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
+YASBC = Command(
+    "yasbc",
+    "The command-line interface for YASB Reborn",
+    options=(
+        Option(("-v", "--version"), "Print version"),
+        Option(("-c", "--config"), "Print config directory path"),
+    ),
+    commands=(
+        Command("start", "Start the application", options=(Option(("-s", "--silent"), "Silence print messages"),)),
+        Command(
+            "stop",
+            "Stop the application",
+            options=(
+                Option(("-s", "--silent"), "Silence print messages"),
+                Option(("-f", "--force"), "Force stop the application"),
+            ),
+        ),
+        Command("reload", "Reload the application", options=(Option(("-s", "--silent"), "Silence print messages"),)),
+        Command(
+            "enable-autostart",
+            "Enable autostart on system boot",
+            options=(Option(("--task",), "Enable autostart as a scheduled task"),),
+        ),
+        Command(
+            "disable-autostart",
+            "Disable autostart on system boot",
+            options=(Option(("--task",), "Disable autostart as a scheduled task"),),
+        ),
+        Command("enable-crash-dumps", "Enable crash dumps for troubleshooting"),
+        Command("disable-crash-dumps", "Disable crash dumps"),
+        Command("monitor-information", "Show information about connected monitors"),
+        Command(
+            "show-bar",
+            "Show the bar on all or a specific screen",
+            options=(Option(("-s", "--screen"), "Screen name (optional)", value="SCREEN"),),
+        ),
+        Command(
+            "hide-bar",
+            "Hide the bar on all or a specific screen",
+            options=(Option(("-s", "--screen"), "Screen name (optional)", value="SCREEN"),),
+        ),
+        Command(
+            "toggle-bar",
+            "Toggle the bar on all or a specific screen",
+            options=(Option(("-s", "--screen"), "Screen name (optional)", value="SCREEN"),),
+        ),
+        Command(
+            "set-channel",
+            "Switch release channels",
+            arguments=(
+                Argument(
+                    "target_channel",
+                    "'stable' for tested releases or 'preview' for the latest updates",
+                    choices=("stable", "preview"),
+                ),
+            ),
+        ),
+        Command("update", "Update the application"),
+        Command("log", "Tail yasb process logs (cancel with Ctrl-C)"),
+        Command("reset", "Restore default config files and clear cache"),
+        Command("cloud", "Back up and restore your config with YASB Cloud", passthrough=True),
+        Command(
+            "addons",
+            "Copy YASB's widgets, install addons, and update, list and remove them",
+            commands=(
+                Command(
+                    "search",
+                    "Search YASB's widgets and the addons repository",
+                    arguments=(
+                        Argument("text", "Look for this in the name, id, description, author or type", optional=True),
+                    ),
+                ),
+                Command(
+                    "install",
+                    "Install a widget, theme or layout from the addons repository",
+                    arguments=(Argument("id", "The addon, such as amnweb.clock"),),
+                    options=(
+                        Option(("--version",), "Install this version, not the newest", value="VERSION", value_type=int),
+                        Option(("--force",), "Replace the addon if you have it"),
+                    ),
+                ),
+                Command(
+                    "copy",
+                    "Copy a widget's settings to change them, or the whole widget with --full",
+                    arguments=(Argument("name", "The widget, such as clock"),),
+                    options=(
+                        Option(("--full",), "Copy the whole widget, not only its settings"),
+                        Option(("--force",), "Replace your copy if you have one"),
+                    ),
+                ),
+                Command(
+                    "update",
+                    "List updates for your copies of YASB's widgets and your addons, or update them",
+                    arguments=(Argument("id", "Update this widget, theme or layout", optional=True),),
+                    options=(Option(("--all",), "Update all of them"),),
+                ),
+                Command(
+                    "remove",
+                    "Delete a widget from your widgets folder",
+                    arguments=(Argument("name", "The widget, such as clock"),),
+                    options=(Option(("-y", "--yes"), "Delete without asking"),),
+                ),
+                Command("list", "List the widgets in your widgets folder"),
+            ),
+        ),
+        Command("config-dir", "Open config directory in file explorer"),
+    ),
+)
+
+
+def _stop_yasb() -> None:
+    if is_process_running("yasb.exe"):
+        subprocess.run(["taskkill", "/f", "/im", "yasb.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
+
+
+def _as_admin(action: Callable[[], object]) -> None:
+    try:
+        admin = IsUserAnAdmin()
+    except BaseException:
+        admin = False
+    if admin:
+        action()
+    else:
+        print("Please run this command as an administrator.")
 
 
 class Format:
     reset = "\033[0m"
-    green = "\033[92m"
     yellow = "\033[93m"
-    red = "\033[91m"
-    red_bg = "\033[41m"
-    gray = "\033[90m"
-    blue = "\033[94m"
     cyan = "\033[96m"
     magenta = "\033[95m"
     underline = "\033[4m"
 
 
-class CustomArgumentParser(argparse.ArgumentParser):
-    def __init__(self, *args: Any, **kwargs: Any):
-        kwargs.setdefault("suggest_on_error", True)
-        super().__init__(*args, **kwargs)
-
-    def error(self, message: str):
-        print(f"\n{Format.red}Error:{Format.reset} {message}\n")
-        sys.exit(2)
-
-
 class CLIHandler:
     """Handles the command-line interface for the application."""
-
-    def __init__(self):
-        self.task_handler = CLITaskHandler()
-        self.update_handler = CLIUpdateHandler()
-        self.channel_handler = CLIChannelHandler()
-        self.crash_dump_handler = CLICrashDumpHandler()
 
     def send_command_to_application(self, command: str):
         """
@@ -151,201 +256,7 @@ class CLIHandler:
             print(f"{APP_NAME} removed from startup.")
 
     def parse_arguments(self):
-        parser = CustomArgumentParser(
-            description="The command-line interface for YASB Reborn.",
-            add_help=False,
-            prog="yasbc",
-        )
-        subparsers = parser.add_subparsers(
-            dest="command",
-            help="Commands",
-        )
-
-        start_parser = subparsers.add_parser(
-            "start",
-            help="Start the application",
-            prog="yasbc start",
-        )
-        start_parser.add_argument(
-            "-s",
-            "--silent",
-            action="store_true",
-            help="Silence print messages",
-        )
-
-        stop_parser = subparsers.add_parser(
-            "stop",
-            help="Stop the application",
-            prog="yasbc stop",
-        )
-        stop_parser.add_argument(
-            "-s",
-            "--silent",
-            action="store_true",
-            help="Silence print messages",
-        )
-        stop_parser.add_argument(
-            "-f",
-            "--force",
-            action="store_true",
-            help="Force stop the application",
-        )
-
-        reload_parser = subparsers.add_parser(
-            "reload",
-            help="Reload the application",
-            prog="yasbc reload",
-        )
-        reload_parser.add_argument(
-            "-s",
-            "--silent",
-            action="store_true",
-            help="Silence print messages",
-        )
-
-        subparsers.add_parser(
-            "update",
-            help="Update the application",
-            add_help=False,
-        )
-
-        enable_autostart_parser = subparsers.add_parser(
-            "enable-autostart",
-            help="Enable autostart on system boot",
-            prog="yasbc enable-autostart",
-        )
-        enable_autostart_parser.add_argument(
-            "--task",
-            action="store_true",
-            help="Enable autostart as a scheduled task",
-        )
-
-        disable_autostart_parser = subparsers.add_parser(
-            "disable-autostart",
-            help="Disable autostart on system boot",
-            prog="yasbc disable-autostart",
-        )
-        disable_autostart_parser.add_argument(
-            "--task",
-            action="store_true",
-            help="Disable autostart as a scheduled task",
-        )
-
-        subparsers.add_parser(
-            "enable-crash-dumps",
-            help="Enable crash dumps for troubleshooting",
-            add_help=False,
-        )
-
-        subparsers.add_parser(
-            "disable-crash-dumps",
-            help="Disable crash dumps",
-            add_help=False,
-        )
-
-        subparsers.add_parser(
-            "monitor-information",
-            help="Show information about connected monitors",
-            add_help=False,
-        )
-
-        show_bar_parser = subparsers.add_parser(
-            "show-bar",
-            help="Show the bar on a specific screen",
-            prog="yasbc show-bar",
-        )
-        show_bar_parser.add_argument(
-            "-s",
-            "--screen",
-            type=str,
-            help="Screen name (optional)",
-        )
-
-        hide_bar_parser = subparsers.add_parser(
-            "hide-bar",
-            help="Hide the bar on a specific screen",
-            prog="yasbc hide-bar",
-        )
-        hide_bar_parser.add_argument(
-            "-s",
-            "--screen",
-            type=str,
-            help="Screen name (optional)",
-        )
-
-        toggle_bar_parser = subparsers.add_parser(
-            "toggle-bar",
-            help="Toggle the bar on a specific screen",
-            prog="yasbc toggle-bar",
-        )
-        toggle_bar_parser.add_argument(
-            "-s",
-            "--screen",
-            type=str,
-            help="Screen name (optional)",
-        )
-
-        # Channel management
-        set_channel_parser = subparsers.add_parser(
-            "set-channel",
-            help="Switch release channels",
-            prog="yasbc set-channel",
-        )
-        set_channel_parser.add_argument(
-            "target_channel",
-            type=str,
-            choices=["stable", "preview"],
-            help="Channel to switch to 'stable' for tested releases or 'preview' for latest updates",
-        )
-
-        subparsers.add_parser(
-            "reset",
-            help="Restore default config files and clear cache",
-            add_help=False,
-        )
-
-        subparsers.add_parser(
-            "config-dir",
-            help="Open config directory in file explorer",
-            add_help=False,
-        )
-
-        subparsers.add_parser(
-            "help",
-            help="Show help message",
-            add_help=False,
-        )
-        subparsers.add_parser(
-            "log",
-            help="Tail yasb process logs (cancel with Ctrl-C)",
-            add_help=False,
-        )
-        # No arguments and no -h of its own, everything after `cloud` falls through as
-        # unrecognised and is handed to core.cloud.cli, which has its own parser.
-        subparsers.add_parser(
-            "cloud",
-            help="Back up and restore your config with YASB Cloud",
-            prog="yasbc cloud",
-            add_help=False,
-        )
-        parser.add_argument(
-            "-v",
-            "--version",
-            action="store_true",
-            help="Show program's version number and exit.",
-        )
-        parser.add_argument(
-            "-c",
-            "--config",
-            action="store_true",
-            help="Print config directory path",
-        )
-        parser.add_argument(
-            "-h",
-            "--help",
-            action="store_true",
-            help="Show help message",
-        )
+        parser = build(YASBC)
         args, passthrough = parser.parse_known_args()
         # Only `cloud` is allowed leftovers, every other command stays strict.
         if passthrough and args.command != "cloud":
@@ -354,15 +265,16 @@ class CLIHandler:
             if not args.silent:
                 print(
                     textwrap.dedent(f"""\
-                    Start YASB Reborn v{YASB_VERSION} in background.
+                    Start YASB Reborn v{BUILD_VERSION} in background.
 
                     # Community
                     * Join the Discord https://discord.gg/qkeunvBFgX - Chat, ask questions, share your desktops and more...
                     * GitHub discussions https://github.com/amnweb/yasb/discussions - Ask questions, share your ideas and more...
-
+                    * Offical Website https://yasb.dev
+                    
                     # Documentation
-                    * Read the docs https://github.com/amnweb/yasb/wiki - how to configure and use YASB
-                    * Read the FAQ https://github.com/amnweb/yasb/wiki/FAQ
+                    * Read the docs https://docs.yasb.dev/latest - how to configure and use YASB
+                    * Read the FAQ https://docs.yasb.dev/latest/faq
                     
                     # Support the project
                     * Consider sponsoring the project on GitHub Sponsors or Buy Me a Coffee
@@ -374,16 +286,31 @@ class CLIHandler:
 
         elif args.command == "stop":
             if args.force:
-                for proc in ["yasb.exe"]:
-                    if is_process_running(proc):
-                        subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
+                _stop_yasb()
             else:
                 self.send_command_to_application("stop")
             sys.exit(0)
         elif args.command == "cloud":
-            from core.cloud.cli import run as run_cloud
-
             sys.exit(run_cloud(passthrough))
+        elif args.command == "help":
+            if args.help_path[:1] == ["cloud"]:
+                sys.exit(run_cloud(["help", *args.help_path[1:]]))
+            sys.exit(print_help(YASBC, args.help_path))
+        elif args.command == "addons":
+            addons = CLIAddonsHandler()
+            if args.addons_command == "search":
+                sys.exit(addons.search(args.text))
+            if args.addons_command == "install":
+                sys.exit(addons.install(args.id, version=args.version, force=args.force))
+            if args.addons_command == "copy":
+                sys.exit(addons.copy(args.name, full=args.full, force=args.force))
+            if args.addons_command == "update":
+                sys.exit(addons.update(args.id, everything=args.all))
+            if args.addons_command == "remove":
+                sys.exit(addons.remove(args.name, yes=args.yes))
+            if args.addons_command == "list":
+                sys.exit(addons.list())
+            sys.exit(print_help(YASBC, ["addons", *(args.help_path if args.addons_command == "help" else [])]))
         elif args.command == "reload":
             if is_process_running("yasb.exe"):
                 if not args.silent:
@@ -393,62 +320,38 @@ class CLIHandler:
                 print("YASB is not running. Reload aborted.")
             sys.exit(0)
 
-        elif args.command == "show-bar":
+        elif args.command in ("show-bar", "hide-bar", "toggle-bar"):
             screen_arg = f" --screen {args.screen}" if args.screen else ""
-            self.send_command_to_application(f"show-bar{screen_arg}")
-            sys.exit(0)
-
-        # For hide-bar command
-        elif args.command == "hide-bar":
-            screen_arg = f" --screen {args.screen}" if args.screen else ""
-            self.send_command_to_application(f"hide-bar{screen_arg}")
-            sys.exit(0)
-
-        # For toggle-bar command
-        elif args.command == "toggle-bar":
-            screen_arg = f" --screen {args.screen}" if args.screen else ""
-            self.send_command_to_application(f"toggle-bar{screen_arg}")
+            self.send_command_to_application(f"{args.command}{screen_arg}")
             sys.exit(0)
 
         elif args.command == "set-channel":
-            self.channel_handler.switch_channel(args.target_channel)
+            CLIChannelHandler().switch_channel(args.target_channel)
             sys.exit(0)
 
         elif args.command == "update":
-            self.update_handler.update_yasb(YASB_VERSION)
+            CLIUpdateHandler().update_yasb()
 
         elif args.command == "enable-autostart":
             if args.task:
-                if not self.task_handler.is_admin():
-                    print("Please run this command as an administrator.")
-                else:
-                    self.task_handler.create_task()
+                _as_admin(CLITaskHandler().create_task)
             else:
                 self.enable_startup()
             sys.exit(0)
 
         elif args.command == "disable-autostart":
             if args.task:
-                if not self.task_handler.is_admin():
-                    print("Please run this command as an administrator.")
-                else:
-                    self.task_handler.delete_task()
+                _as_admin(CLITaskHandler().delete_task)
             else:
                 self.disable_startup()
             sys.exit(0)
 
         elif args.command == "enable-crash-dumps":
-            if not self.task_handler.is_admin():
-                print("Please run this command as an administrator.")
-            else:
-                self.crash_dump_handler.enable()
+            _as_admin(CLICrashDumpHandler().enable)
             sys.exit(0)
 
         elif args.command == "disable-crash-dumps":
-            if not self.task_handler.is_admin():
-                print("Please run this command as an administrator.")
-            else:
-                self.crash_dump_handler.disable()
+            _as_admin(CLICrashDumpHandler().disable)
             sys.exit(0)
 
         elif args.command == "log":
@@ -489,8 +392,6 @@ class CLIHandler:
 
         elif args.command == "monitor-information":
             try:
-                from PyQt6.QtGui import QGuiApplication
-
                 app = QGuiApplication([])
 
                 screens = QGuiApplication.screens()
@@ -528,17 +429,8 @@ class CLIHandler:
                 print("Reset cancelled.")
                 sys.exit(0)
 
-            import shutil
-            from pathlib import Path
-
-            # Determine config path
-
             config_path = Path(DEFAULT_CONFIG_DIRECTORY)
-
-            # Stop YASB if it is running
-            for proc in ["yasb.exe"]:
-                if is_process_running(proc):
-                    subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
+            _stop_yasb()
 
             # Delete config.yaml if it exists, so YASB opens the setup on its next start
             fpath = config_path / "config.yaml"
@@ -550,8 +442,6 @@ class CLIHandler:
                     print(f"Failed to delete {fpath}: {e}")
 
             # Clear all files in app_data_folder if it exists
-
-            from core.utils.system import app_data_path
 
             app_data_folder = app_data_path()
             if app_data_folder.exists() and app_data_folder.is_dir():
@@ -580,53 +470,13 @@ class CLIHandler:
             print(DEFAULT_CONFIG_DIRECTORY)
             sys.exit(0)
 
-        elif args.command == "help" or args.help:
-            print(
-                textwrap.dedent(f"""\
-                The command-line interface for YASB Reborn.
-
-                {Format.underline}Usage{Format.reset}: yasbc <COMMAND>
-
-                {Format.underline}Commands{Format.reset}:
-                  start                     Start the application
-                  stop                      Stop the application
-                  reload                    Reload the application
-                  enable-autostart          Enable autostart on system boot
-                  disable-autostart         Disable autostart on system boot
-                  enable-crash-dumps        Enable crash dumps for troubleshooting
-                  disable-crash-dumps       Disable crash dumps
-                  monitor-information       Show information about connected monitors
-                  show-bar                  Show the bar on all or a specific screen
-                  hide-bar                  Hide the bar on all or a specific screen
-                  toggle-bar                Toggle the bar on all or a specific screen
-                  set-channel               Switch release channels (stable, preview)
-                  update                    Update the application
-                  log                       Tail yasb process logs (cancel with Ctrl-C)
-                  reset                     Restore default config files and clear cache
-                  cloud                     Back up and restore your config with YASB Cloud
-                  config-dir                Open config directory in file explorer
-                  help                      Print this message
-
-                {Format.underline}Options{Format.reset}:
-                -v, --version  Print version
-                -c, --config   Print config directory path
-                -h, --help     Print this message
-            """)
-            )
-            sys.exit(0)
-
         elif args.version:
-            from core.utils.system import get_architecture
-
             architecture = get_architecture()
             arch_suffix = f" {architecture}" if architecture else ""
-            version_message = (
-                f"YASB Reborn v{YASB_VERSION}{arch_suffix} ({YASB_RELEASE_CHANNEL})\nYASB-CLI v{YASB_CLI_VERSION}"
-            )
+            version_message = f"YASB Reborn v{BUILD_VERSION}{arch_suffix} ({RELEASE_CHANNEL})\nYASB-CLI v{CLI_VERSION}"
             print(version_message)
         else:
-            print("Unknown command. Use --help for available options.")
-            sys.exit(1)
+            sys.exit(print_help(YASBC))
 
 
 class CLICrashDumpHandler:
@@ -721,16 +571,7 @@ class CLICrashDumpHandler:
 
 
 class CLITaskHandler:
-    """Handles tasks related to the command-line interface."""
-
-    def is_admin(self):
-        try:
-            return IsUserAnAdmin()
-        except BaseException:
-            return False
-
-    def get_current_user_sid(self):
-        return get_current_user_sid()
+    """YASB as a scheduled task that starts at logon."""
 
     def create_task(self):
         scheduler = create_dispatch("Schedule.Service")
@@ -744,7 +585,7 @@ class CLITaskHandler:
         trigger.Enabled = True
         trigger.StartBoundary = datetime.datetime.now().isoformat()
         principal = task_def.Principal
-        principal.UserId = self.get_current_user_sid()
+        principal.UserId = get_current_user_sid()
         principal.LogonType = 3
         principal.RunLevel = 0
         settings = task_def.Settings
@@ -793,11 +634,6 @@ class CLIChannelHandler:
         Args:
             target_channel: Target channel ('stable' or 'preview')
         """
-        import tempfile
-
-        from core.app.update.service import get_update_service
-        from core.utils.system import get_architecture
-
         update_service = get_update_service()
         current_channel = update_service.current_channel
         architecture = get_architecture()
@@ -855,27 +691,7 @@ class CLIChannelHandler:
             print(f"Installer {release_info.asset_name}")
             if release_info.asset_size:
                 print(f"Size {release_info.asset_size / 1024 / 1024:.1f} MB")
-            # Download the MSI
-            temp_dir = tempfile.gettempdir()
-            msi_path = os.path.join(temp_dir, release_info.asset_name)
-
-            # Use CLIUpdateHandler's download method
-            update_handler = CLIUpdateHandler()
-            update_handler.download_yasb(release_info.download_url, msi_path)
-
-            # Kill running processes
-            for proc in ["yasb.exe"]:
-                if is_process_running(proc):
-                    subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
-
-            # Install and restart
-            install_command = f'msiexec /i "{os.path.abspath(msi_path)}" /passive /norestart'
-            run_after_command = f'"{EXE_PATH}"'
-            combined_command = f"{install_command} && {run_after_command}"
-
-            print("Starting installer...")
-            subprocess.Popen(combined_command, shell=True)
-            sys.exit(0)
+            CLIUpdateHandler().install(release_info)
 
         except Exception as e:
             print(f"\nError switching channels: {e}")
@@ -885,33 +701,14 @@ class CLIChannelHandler:
 class CLIUpdateHandler:
     """Handles the update functionality for the command-line interface."""
 
-    def get_installed_product_code(self):
-        from core.utils.win32.bindings.msi import MsiEnumRelatedProducts
-
-        product_code = ctypes.create_unicode_buffer(MAX_GUID_CHARS + 1)
-        index = 0
-        while True:
-            result = MsiEnumRelatedProducts("{3f620cf5-07b5-47fd-8e37-9ca8ad14b608}", index, product_code)
-            if result == ERROR_NO_MORE_ITEMS:
-                break
-            elif result == 0:
-                return product_code.value
-            index += 1
-        return None
-
-    def update_yasb(self, yasb_version: str):
+    def update_yasb(self) -> None:
         """Check for updates and install if available using centralized update service."""
-        import tempfile
-
-        from core.app.update.service import get_update_service
-        from core.utils.system import get_architecture
-
         architecture = get_architecture()
         update_service = get_update_service()
 
         # Check if updates are supported
         if not update_service.is_update_supported():
-            if YASB_RELEASE_CHANNEL.startswith("pr-"):
+            if RELEASE_CHANNEL.startswith("pr-"):
                 print("\nAutomatic updates are disabled for PR build.")
             else:
                 print("\nUpdates are not supported on this system.")
@@ -921,13 +718,13 @@ class CLIUpdateHandler:
 
         print("Checking for updates...")
         arch_suffix = f" ({architecture})" if architecture else ""
-        print(f"Current version {yasb_version}{arch_suffix} ({YASB_RELEASE_CHANNEL})")
+        print(f"Current version {BUILD_VERSION}{arch_suffix} ({RELEASE_CHANNEL})")
 
         try:
             release_info = update_service.check_for_updates(timeout=15)
 
             if release_info is None:
-                print(f"YASB Reborn is already up to date (v{yasb_version}).\n")
+                print(f"YASB Reborn is already up to date (v{BUILD_VERSION}).\n")
                 sys.exit(0)
 
             # Update available
@@ -949,28 +746,21 @@ class CLIUpdateHandler:
                 print("\n\nUpdate canceled.")
                 sys.exit(0)
 
-            # Download the MSI
-            temp_dir = tempfile.gettempdir()
-            msi_path = os.path.join(temp_dir, release_info.asset_name)
-            self.download_yasb(release_info.download_url, msi_path)
-
-            # Kill running processes
-            for proc in ["yasb.exe"]:
-                if is_process_running(proc):
-                    subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
-
-            # Install and restart
-            install_command = f'msiexec /i "{os.path.abspath(msi_path)}" /passive /norestart'
-            run_after_command = f'"{EXE_PATH}"'
-            combined_command = f"{install_command} && {run_after_command}"
-
-            print("Starting installer...")
-            subprocess.Popen(combined_command, shell=True)
-            sys.exit(0)
+            self.install(release_info)
 
         except Exception as e:
             print(f"\nFailed to check for updates: {e}")
             sys.exit(1)
+
+    def install(self, release_info: ReleaseInfo) -> NoReturn:
+        """Downloads the release's installer, stops YASB and runs the installer, which starts YASB again."""
+        msi_path = os.path.join(tempfile.gettempdir(), release_info.asset_name)
+        self.download_yasb(release_info.download_url, msi_path)
+        _stop_yasb()
+        install_command = f'msiexec /i "{os.path.abspath(msi_path)}" /passive /norestart'
+        print("Starting installer...")
+        subprocess.Popen(f'{install_command} && "{EXE_PATH}"', shell=True)
+        sys.exit(0)
 
     def download_yasb(self, msi_url: str, msi_path: str) -> None:
         """Download a file with progress bar.
@@ -979,9 +769,6 @@ class CLIUpdateHandler:
             msi_url: Download URL
             msi_path: Local file path
         """
-        import urllib.error
-        from urllib.request import urlopen
-
         try:
             with urlopen(msi_url) as response:
                 content_length = response.getheader("Content-Length")
@@ -1017,7 +804,7 @@ class CLIUpdateHandler:
             print("\nDownload interrupted by user.")
             sys.exit(0)
 
-        except urllib.error.URLError as e:
+        except URLError as e:
             print(f"Download failed: {e}")
             sys.exit(1)
 

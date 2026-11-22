@@ -153,9 +153,10 @@ def test_the_bar_icon_and_label_show_muted_and_a_missing_microphone(service: Fak
     label = find_item(widget, "label")
     assert icon is not None and label is not None
     assert label.property("text") == ""
-    widget.setProperty("icon", "on")
-    widget.setProperty("mutedIcon", "off")
-    widget.setProperty("label", "{level} on {device} {x}")
+    settings = widget.property("settings")
+    settings.setProperty("icon", "on")
+    settings.setProperty("mutedIcon", "off")
+    settings.setProperty("label", "{level} on {device} {x}")
     assert (icon.property("text"), label.property("text")) == ("on", "40% on Headset {x}")
     audio = widget.findChild(AudioInput)
     assert audio is not None

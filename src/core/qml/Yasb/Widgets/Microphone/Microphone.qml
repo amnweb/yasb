@@ -11,76 +11,105 @@ import Yasb.Themes
 Item {
     id: microphone
 
-    // Label placeholders: {level}, the microphone level as 30%, or mutedText while muted and noDeviceText without a
-    // microphone; {device}, the microphone's name. Empty shows only the icon
-    property string label: ""
-    property string mutedText: "mute"
-    property string noDeviceText: "No Device"
+    component PopupIcons: QtObject {
+        property string check
+        property string open
+        property string expand
+        property string collapse
+        property string device
+    }
+
+    component Settings: QtObject {
+        required property Theme theme
+
+        // Label placeholders: {level}, the microphone level as 30%, or mutedText while muted and noDeviceText without a
+        // microphone; {device}, the microphone's name. Empty shows only the icon
+        property string label: ""
+        property string mutedText: "mute"
+        property string noDeviceText: "No Device"
+        // Percentage points per wheel step
+        property int scrollStep: 2
+        property bool invertWheel: false
+        property int popupWidth: 324
+        // The microphone on the bar, drawn in iconFont and the text colour
+        property int iconSize: theme.bar.iconFont.pixelSize
+        property string icon: "\ue720"
+        // Also shown when there is no microphone
+        property string mutedIcon: "\uf781"
+        // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
+        property color textColor: theme.colors.text
+        property font font
+        // Glyphs take the theme's icon font, each part unless the widget file sets it
+        property font iconFont
+        iconFont.family: theme.bar.iconFont.family
+        iconFont.weight: theme.bar.iconFont.weight
+        iconFont.variableAxes: theme.bar.iconFont.variableAxes
+        // The popup: the theme's, unless set here
+        property color popupColor: theme.popup.background
+        property color popupBorderColor: theme.popup.border
+        property real popupRadius: theme.popup.radius
+        property real popupGap: theme.popup.gap
+        // Text in the popup: the theme's font family, in this widget's sizes
+        property font popupFont
+        popupFont.family: theme.popup.font.family
+        popupFont.pixelSize: 13
+        property font popupSmallFont
+        popupSmallFont.family: theme.popup.font.family
+        popupSmallFont.pixelSize: 12
+        property font popupTitleFont
+        popupTitleFont.family: theme.popup.font.family
+        popupTitleFont.pixelSize: 16
+        popupTitleFont.weight: 600
+        // Popup icons; device is the microphone on each input device
+        readonly property PopupIcons popupIcons: PopupIcons {
+            check: "\ue73e"
+            open: "\ue76c"
+            expand: "\ue70d"
+            collapse: "\ue70e"
+            device: "\ue720"
+        }
+        property font popupIconFont
+        popupIconFont.family: theme.popup.iconFont.family
+        popupIconFont.weight: theme.popup.iconFont.weight
+        popupIconFont.variableAxes: theme.popup.iconFont.variableAxes
+        // Each device's glyph, the mark on the device in use, and the arrow of the settings link
+        property int deviceIconSize: 14
+        property int checkIconSize: 12
+        property int footerIconSize: 10
+        property int popupOpenDuration: theme.popup.openDuration
+        property int popupCloseDuration: theme.popup.closeDuration
+        property color popupTextColor: theme.colors.text
+        property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
+        property color popupDividerColor: theme.colors.divider
+        property color popupSecondaryTextColor: theme.colors.textSecondary
+        property color popupHoverColor: theme.colors.hover
+        property color popupSelectedColor: theme.colors.selected
+        property color accentColor: theme.colors.accent
+    }
+
     required property BarBase bar
     readonly property Theme theme: bar.theme
-    // Percentage points per wheel step
-    property int scrollStep: 2
-    property bool invertWheel: false
-    property int popupWidth: 324
-    // The microphone on the bar, drawn in iconFont and the text colour
-    property int iconSize: theme.bar.iconFont.pixelSize
-    property string icon: "\ue720"
-    // Also shown when there is no microphone
-    property string mutedIcon: "\uf781"
+    readonly property Settings settings: Settings {
+        theme: microphone.theme
+    }
 
     readonly property bool dark: theme.dark
-    // Text on the bar takes the theme's colour, and labels the bar's font; parts set in font replace the bar's
-    property color textColor: theme.colors.text
-    property font font
-    // Glyphs take the theme's icon font, each part unless the widget file sets it
-    property font iconFont
-    iconFont.family: theme.bar.iconFont.family
-    iconFont.weight: theme.bar.iconFont.weight
-    iconFont.variableAxes: theme.bar.iconFont.variableAxes
-    // The popup: the theme's, unless set here
-    property color popupColor: theme.popup.background
-    property color popupBorderColor: theme.popup.border
-    property real popupRadius: theme.popup.radius
-    property real popupGap: theme.popup.gap
-    // Text in the popup: the theme's font family, in this widget's sizes
-    property font popupFont
-    popupFont.family: theme.popup.font.family
-    popupFont.pixelSize: 13
-    property font popupSmallFont
-    popupSmallFont.family: theme.popup.font.family
-    popupSmallFont.pixelSize: 12
-    property font popupTitleFont
-    popupTitleFont.family: theme.popup.font.family
-    popupTitleFont.pixelSize: 16
-    popupTitleFont.weight: Font.DemiBold
-    // Each device's glyph, the mark on the device in use, and the arrow of the settings link
-    property int deviceIconSize: 14
-    property int checkIconSize: 12
-    property int footerIconSize: 10
-    property int popupOpenDuration: theme.popup.openDuration
-    property int popupCloseDuration: theme.popup.closeDuration
-    property color popupTextColor: theme.colors.text
-    property color popupSecondaryBackgroundColor: theme.colors.backgroundSecondary
-    property color popupDividerColor: theme.colors.divider
-    property color popupSecondaryTextColor: theme.colors.textSecondary
-    property color popupHoverColor: theme.colors.hover
-    property color popupSelectedColor: theme.colors.selected
     readonly property string edge: bar.edge
-    property color accentColor: theme.colors.accent
-    readonly property string currentIcon: audio.available && !audio.muted ? icon : mutedIcon
-    readonly property string text: format(label)
+
+    readonly property string currentIcon: audio.available && !audio.muted ? settings.icon : settings.mutedIcon
+    readonly property string text: format(settings.label)
 
     function format(template: string): string {
-        const level = !audio.available ? noDeviceText : audio.muted ? mutedText : `${audio.volume}%`
+        const level = !audio.available ? settings.noDeviceText : audio.muted ? settings.mutedText : `${audio.volume}%`
         return template.replace(/\{level\}/g, () => level).replace(/\{device\}/g, () => audio.deviceName)
     }
 
     function placePopup() {
         const start = mapToGlobal(0, 0)
-        let px = edge === "left" ? start.x + width + popupGap
-            : edge === "right" ? start.x - popup.width - popupGap : start.x + (width - popup.width) / 2
-        let py = edge === "top" ? start.y + height + popupGap
-            : edge === "bottom" ? start.y - popup.height - popupGap : start.y + (height - popup.height) / 2
+        let px = edge === "left" ? start.x + width + settings.popupGap
+            : edge === "right" ? start.x - popup.width - settings.popupGap : start.x + (width - popup.width) / 2
+        let py = edge === "top" ? start.y + height + settings.popupGap
+            : edge === "bottom" ? start.y - popup.height - settings.popupGap : start.y + (height - popup.height) / 2
         const screen = microphone.Screen
         px = Math.max(screen.virtualX + 8, Math.min(px, screen.virtualX + screen.width - popup.width - 8))
         py = Math.max(screen.virtualY + 8, Math.min(py, screen.virtualY + screen.desktopAvailableHeight - popup.height - 8))
@@ -135,11 +164,11 @@ Item {
             objectName: "icon"
             anchors.verticalCenter: parent.verticalCenter
             text: microphone.currentIcon
-            color: microphone.textColor
-            font.family: microphone.iconFont.family
-            font.weight: microphone.iconFont.weight
-            font.variableAxes: microphone.iconFont.variableAxes
-            font.pixelSize: microphone.iconSize
+            color: microphone.settings.textColor
+            font.family: microphone.settings.iconFont.family
+            font.weight: microphone.settings.iconFont.weight
+            font.variableAxes: microphone.settings.iconFont.variableAxes
+            font.pixelSize: microphone.settings.iconSize
         }
 
         Label {
@@ -148,8 +177,8 @@ Item {
             visible: text !== ""
             text: microphone.text
             textFormat: Text.PlainText
-            color: microphone.textColor
-            font: microphone.font
+            color: microphone.settings.textColor
+            font: microphone.settings.font
         }
     }
 
@@ -166,7 +195,7 @@ Item {
         onWheel: wheel => {
             const delta = wheel.angleDelta.y || wheel.angleDelta.x
             if (delta !== 0 && audio.available)
-                audio.setVolume(audio.volume + ((delta > 0) !== microphone.invertWheel ? microphone.scrollStep : -microphone.scrollStep))
+                audio.setVolume(audio.volume + ((delta > 0) !== microphone.settings.invertWheel ? microphone.settings.scrollStep : -microphone.settings.scrollStep))
         }
     }
 
@@ -175,6 +204,7 @@ Item {
 
         property string glyph
         property int iconSize: 14
+        property font iconFont: microphone.settings.popupIconFont
         property bool checked: false
         property string tip
 
@@ -192,17 +222,17 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 4
-            color: area.containsMouse ? microphone.popupHoverColor : button.checked ? microphone.popupSelectedColor : "transparent"
+            color: area.containsMouse ? microphone.settings.popupHoverColor : button.checked ? microphone.settings.popupSelectedColor : "transparent"
         }
 
         Text {
             anchors.centerIn: parent
             text: button.glyph
-            color: microphone.popupTextColor
+            color: microphone.settings.popupTextColor
             opacity: button.checked || area.containsMouse ? 1 : 0.6
-            font.family: microphone.iconFont.family
-            font.weight: microphone.iconFont.weight
-            font.variableAxes: microphone.iconFont.variableAxes
+            font.family: button.iconFont.family
+            font.weight: button.iconFont.weight
+            font.variableAxes: button.iconFont.variableAxes
             font.pixelSize: button.iconSize
         }
 
@@ -220,26 +250,26 @@ Item {
         property bool devicesOpen: false
         objectName: "popup"
         title: "Microphone"
-        width: microphone.popupWidth
+        width: microphone.settings.popupWidth
         height: popupContent.implicitHeight
         anchor: microphone
-        font: microphone.popupFont
+        font: microphone.settings.popupFont
         theme: microphone.theme
         backdropItem: surface
-        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: microphone.popupOpenDuration; easing.type: Easing.OutCubic }
-        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: microphone.popupCloseDuration; easing.type: Easing.InCubic }
+        enter: NumberAnimation { target: popup; property: "reveal"; to: 1; duration: microphone.settings.popupOpenDuration; easing.type: Easing.OutCubic }
+        exit: NumberAnimation { target: popup; property: "reveal"; to: 0; duration: microphone.settings.popupCloseDuration; easing.type: Easing.InCubic }
         onVisibleChanged: { if (!visible) reveal = 0 }
 
         Rectangle {
             id: surface
             anchors.fill: parent
-            radius: microphone.popupRadius
-            color: microphone.popupColor
+            radius: microphone.settings.popupRadius
+            color: microphone.settings.popupColor
             // Active and inactive only, so disabled controls keep the style's dimmed colours
-            palette.active.accent: microphone.accentColor
-            palette.inactive.accent: microphone.accentColor
+            palette.active.accent: microphone.settings.accentColor
+            palette.inactive.accent: microphone.settings.accentColor
             border.width: 1
-            border.color: microphone.popupBorderColor
+            border.color: microphone.settings.popupBorderColor
             opacity: popup.reveal
             scale: 0.85 + popup.reveal * 0.15
             transformOrigin: microphone.edge === "bottom" ? Item.Bottom : Item.Top
@@ -263,12 +293,12 @@ Item {
                         text: audio.deviceName || "No microphone"
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
-                        color: microphone.popupTextColor
-                        font: microphone.popupTitleFont
+                        color: microphone.settings.popupTextColor
+                        font: microphone.settings.popupTitleFont
                     }
                     IconButton {
                         visible: audio.devices.length > 1
-                        glyph: popup.devicesOpen ? "\ue70e" : "\ue70d"
+                        glyph: popup.devicesOpen ? microphone.settings.popupIcons.collapse : microphone.settings.popupIcons.expand
                         iconSize: 12
                         checked: popup.devicesOpen
                         tip: "Microphones"
@@ -281,7 +311,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.bottomMargin: 8
                     implicitHeight: 1
-                    color: microphone.popupDividerColor
+                    color: microphone.settings.popupDividerColor
                 }
 
                 Column {
@@ -302,7 +332,7 @@ Item {
                             width: parent.width
                             height: 34
                             radius: 4
-                            color: modelData.current ? microphone.popupSelectedColor : deviceArea.containsMouse ? microphone.popupHoverColor : "transparent"
+                            color: modelData.current ? microphone.settings.popupSelectedColor : deviceArea.containsMouse ? microphone.settings.popupHoverColor : "transparent"
                             Accessible.role: Accessible.RadioButton
                             Accessible.name: modelData.name
                             Accessible.checked: modelData.current
@@ -314,13 +344,13 @@ Item {
                             Text {
                                 x: 10
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: microphone.icon
-                                color: microphone.popupTextColor
+                                text: microphone.settings.popupIcons.device
+                                color: microphone.settings.popupTextColor
                                 opacity: device.modelData.current ? 1 : 0.75
-                                font.family: microphone.iconFont.family
-                                font.weight: microphone.iconFont.weight
-                                font.variableAxes: microphone.iconFont.variableAxes
-                                font.pixelSize: microphone.deviceIconSize
+                                font.family: microphone.settings.popupIconFont.family
+                                font.weight: microphone.settings.popupIconFont.weight
+                                font.variableAxes: microphone.settings.popupIconFont.variableAxes
+                                font.pixelSize: microphone.settings.deviceIconSize
                             }
 
                             Text {
@@ -330,8 +360,8 @@ Item {
                                 text: device.modelData.name
                                 textFormat: Text.PlainText
                                 elide: Text.ElideRight
-                                color: device.modelData.current ? microphone.popupTextColor : microphone.popupSecondaryTextColor
-                                font: microphone.popupFont
+                                color: device.modelData.current ? microphone.settings.popupTextColor : microphone.settings.popupSecondaryTextColor
+                                font: microphone.settings.popupFont
                             }
 
                             Text {
@@ -339,12 +369,12 @@ Item {
                                 anchors.rightMargin: 10
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: device.modelData.current
-                                text: "\ue73e"
-                                color: microphone.accentColor
-                                font.family: microphone.iconFont.family
-                                font.weight: microphone.iconFont.weight
-                                font.variableAxes: microphone.iconFont.variableAxes
-                                font.pixelSize: microphone.checkIconSize
+                                text: microphone.settings.popupIcons.check
+                                color: microphone.settings.accentColor
+                                font.family: microphone.settings.popupIconFont.family
+                                font.weight: microphone.settings.popupIconFont.weight
+                                font.variableAxes: microphone.settings.popupIconFont.variableAxes
+                                font.pixelSize: microphone.settings.checkIconSize
                             }
 
                             MouseArea {
@@ -372,6 +402,8 @@ Item {
                     IconButton {
                         glyph: microphone.currentIcon
                         iconSize: 16
+                        // The bar's microphone icon, so the bar's icon font
+                        iconFont: microphone.settings.iconFont
                         enabled: audio.available
                         tip: audio.muted ? "Unmute" : "Mute"
                         onClicked: audio.toggleMute()
@@ -391,8 +423,8 @@ Item {
                         Layout.preferredWidth: 28
                         horizontalAlignment: Text.AlignRight
                         text: audio.volume
-                        color: microphone.popupTextColor
-                        font: microphone.popupFont
+                        color: microphone.settings.popupTextColor
+                        font: microphone.settings.popupFont
                     }
                 }
 
@@ -402,9 +434,9 @@ Item {
                     Layout.rightMargin: 1
                     Layout.bottomMargin: 1
                     implicitHeight: 40
-                    bottomLeftRadius: microphone.popupRadius - 1
-                    bottomRightRadius: microphone.popupRadius - 1
-                    color: footerArea.containsMouse ? Qt.tint(microphone.popupSecondaryBackgroundColor, microphone.popupHoverColor) : microphone.popupSecondaryBackgroundColor
+                    bottomLeftRadius: microphone.settings.popupRadius - 1
+                    bottomRightRadius: microphone.settings.popupRadius - 1
+                    color: footerArea.containsMouse ? Qt.tint(microphone.settings.popupSecondaryBackgroundColor, microphone.settings.popupHoverColor) : microphone.settings.popupSecondaryBackgroundColor
                     Accessible.role: Accessible.Link
                     Accessible.name: "Sound settings"
                     Accessible.onPressAction: {
@@ -415,7 +447,7 @@ Item {
                     Rectangle {
                         width: parent.width
                         height: 1
-                        color: microphone.popupDividerColor
+                        color: microphone.settings.popupDividerColor
                     }
 
                     Text {
@@ -423,21 +455,21 @@ Item {
                         anchors.leftMargin: 15
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Sound settings"
-                        color: footerArea.containsMouse ? microphone.popupTextColor : microphone.popupSecondaryTextColor
-                        font: microphone.popupSmallFont
+                        color: footerArea.containsMouse ? microphone.settings.popupTextColor : microphone.settings.popupSecondaryTextColor
+                        font: microphone.settings.popupSmallFont
                     }
 
                     Text {
                         anchors.right: parent.right
                         anchors.rightMargin: 14
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "\ue76c"
-                        color: microphone.popupTextColor
+                        text: microphone.settings.popupIcons.open
+                        color: microphone.settings.popupTextColor
                         opacity: footerArea.containsMouse ? 1 : 0.75
-                        font.family: microphone.iconFont.family
-                        font.weight: microphone.iconFont.weight
-                        font.variableAxes: microphone.iconFont.variableAxes
-                        font.pixelSize: microphone.footerIconSize
+                        font.family: microphone.settings.popupIconFont.family
+                        font.weight: microphone.settings.popupIconFont.weight
+                        font.variableAxes: microphone.settings.popupIconFont.variableAxes
+                        font.pixelSize: microphone.settings.footerIconSize
                     }
 
                     MouseArea {

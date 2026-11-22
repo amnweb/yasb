@@ -76,5 +76,7 @@ def test_the_widget_shows_the_usage_and_the_alternate_label(worker: FakeWorker):
     widget.setProperty("showAlternate", True)
     assert label.property("text") == "CPU: 42.5% | freq: 3000.00 MHz"
 
-    widget.setProperty("alternateLabel", "{info[percent][core]:.0f} of {info[cores][total]} at {info[freq][max]} {x}")
+    widget.property("settings").setProperty(
+        "alternateLabel", "{info[percent][core]:.0f} of {info[cores][total]} at {info[freq][max]} {x}"
+    )
     assert label.property("text") == "40 45 of 2 at 4000 {x}"
