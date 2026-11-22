@@ -112,7 +112,7 @@ class Setup(QObject):
         return THEME_NAME
 
     @qml_property("QVariantMap", constant=True)
-    def widgets(self) -> dict[str, Any]:
+    def manifests(self) -> dict[str, Any]:
         return builtin_manifests()
 
     @pyqtSlot("QVariantMap", result="QString")

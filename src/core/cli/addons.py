@@ -129,7 +129,7 @@ def builtin_widgets() -> list[str]:
 
 def _named(name: str, widgets: list[str]) -> str | None:
     """The widget of that name, in any case, spelled as on disk."""
-    return next((widget for widget in widgets if widget.lower() == name.lower()), None)
+    return next((widget for widget in widgets if widget.casefold() == name.casefold()), None)
 
 
 def copy_manifest(widget: str) -> dict[str, Any]:

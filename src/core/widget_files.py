@@ -78,8 +78,10 @@ def manifest_problem(widget_name: str) -> str | None:
         return str(e)
     if data is None:
         return None
-    if str(data.get("id")).casefold() != widget_name.casefold():
-        return f"{MANIFEST} has the id {data.get('id')}, but its folder is {widget_name}"
+    if "id" not in data:
+        return f"{MANIFEST} has no id"
+    if str(data["id"]).casefold() != widget_name.casefold():
+        return f"{MANIFEST} has the id {data['id']}, but its folder is {widget_name}"
     api = data.get("yasbApi")
     if api != SERVICE_API_VERSION[0]:
         return f"needs YASB API {api}, YASB {BUILD_VERSION} has {SERVICE_API_VERSION[0]}"
