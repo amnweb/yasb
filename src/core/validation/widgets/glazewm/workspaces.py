@@ -12,6 +12,11 @@ class GlazewmAppIconsConfig(CustomBaseModel):
     hide_floating: bool = False
 
 
+class GlazewmWorkspacesAnimationConfig(CustomBaseModel):
+    enabled: bool = False
+    duration: int = 200
+
+
 class GlazewmWorkspacesConfig(CustomBaseModel):
     offline_label: str = "GlazeWM Offline"
     populated_label: str | None = None
@@ -26,3 +31,4 @@ class GlazewmWorkspacesConfig(CustomBaseModel):
     enable_scroll_switching: bool = True
     reverse_scroll_direction: bool = False
     app_icons: GlazewmAppIconsConfig = GlazewmAppIconsConfig()
+    animation: GlazewmWorkspacesAnimationConfig = GlazewmWorkspacesAnimationConfig()
