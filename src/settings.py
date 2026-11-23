@@ -5,8 +5,6 @@ import sys
 BUILD_VERSION = "3.0.0"
 CLI_VERSION = "1.3.0"
 RELEASE_CHANNEL = "stable"
-# Raised in its major number when a change to the services breaks widgets that use them
-SERVICE_API_VERSION = (1, 0)
 # Application Settings
 APP_NAME = "YASB"
 APP_NAME_FULL = "Yet Another Status Bar"

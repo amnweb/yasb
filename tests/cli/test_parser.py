@@ -11,11 +11,15 @@ from core.cloud import cli as cloud_cli
 @pytest.mark.parametrize(
     ("root", "argv", "expected"),
     [
-        (cli.YASBC, ["addons", "copy", "clock", "--full"], {"addons_command": "copy", "name": "clock", "full": True}),
+        (
+            cli.YASBC,
+            ["addons", "install", "clock", "--full"],
+            {"addons_command": "install", "id": "clock", "full": True},
+        ),
         (cli.YASBC, ["addons", "update"], {"addons_command": "update", "id": None, "all": False}),
         (cli.YASBC, ["show-bar", "-s", "DP1"], {"command": "show-bar", "screen": "DP1"}),
         (cli.YASBC, ["set-channel", "preview"], {"command": "set-channel", "target_channel": "preview"}),
-        (cli.YASBC, ["help", "addons", "copy"], {"command": "help", "help_path": ["addons", "copy"]}),
+        (cli.YASBC, ["help", "addons", "install"], {"command": "help", "help_path": ["addons", "install"]}),
         (cloud_cli.CLOUD, ["list", "-p", "2"], {"command": "list", "page": 2, "search": ""}),
         (cloud_cli.CLOUD, ["restore", "latest", "-y"], {"command": "restore", "backup": "latest", "yes": True}),
     ],
@@ -43,14 +47,14 @@ def test_help_lists_usage_arguments_and_options_in_padded_columns():
 
 def test_dash_h_prints_help_before_a_missing_argument_is_an_error(capsys: pytest.CaptureFixture[str]):
     with pytest.raises(SystemExit) as exit_:
-        build(cli.YASBC).parse_args(["addons", "copy", "-h"])
+        build(cli.YASBC).parse_args(["addons", "install", "-h"])
     assert exit_.value.code == 0
-    assert "Usage: yasbc addons copy [OPTIONS] <NAME>" in capsys.readouterr().out
+    assert "Usage: yasbc addons install [OPTIONS] <ID>" in capsys.readouterr().out
 
 
 def test_help_finds_a_command_by_its_path(capsys: pytest.CaptureFixture[str]):
-    assert print_help(cli.YASBC, ["addons", "copy"]) == 0
-    assert capsys.readouterr().out.startswith("Copy a widget's settings")
+    assert print_help(cli.YASBC, ["addons", "install"]) == 0
+    assert capsys.readouterr().out.startswith("Install an addon")
     assert print_help(cli.YASBC, ["nope"]) == 2
     assert "error: no command 'nope'" in capsys.readouterr().err
 
@@ -59,7 +63,7 @@ def test_help_finds_a_command_by_its_path(capsys: pytest.CaptureFixture[str]):
     ("argv", "usage"),
     [
         (["addons", "nope"], "yasbc addons [OPTIONS] [COMMAND]"),
-        (["addons", "copy"], "yasbc addons copy [OPTIONS] <NAME>"),
+        (["addons", "install"], "yasbc addons install [OPTIONS] <ID>"),
     ],
 )
 def test_errors_show_the_usage_of_the_command_they_happened_in(

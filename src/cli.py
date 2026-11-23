@@ -119,7 +119,7 @@ YASBC = Command(
         Command("cloud", "Back up and restore your config with YASB Cloud", passthrough=True),
         Command(
             "addons",
-            "Copy YASB's widgets, install addons, and update, list and remove them",
+            "Search, install, update and list widgets, themes, layouts and configs",
             commands=(
                 Command(
                     "search",
@@ -130,20 +130,16 @@ YASBC = Command(
                 ),
                 Command(
                     "install",
-                    "Install a widget, theme or layout from the addons repository",
-                    arguments=(Argument("id", "The addon, such as amnweb.clock"),),
+                    "Install an addon, or YASB's own widget to change its settings",
+                    arguments=(
+                        Argument(
+                            "id", "The addon, such as amnweb.clock, its GitHub link, or YASB's widget, such as clock"
+                        ),
+                    ),
                     options=(
                         Option(("--version",), "Install this version, not the newest", value="VERSION", value_type=int),
-                        Option(("--force",), "Replace the addon if you have it"),
-                    ),
-                ),
-                Command(
-                    "copy",
-                    "Copy a widget's settings to change them, or the whole widget with --full",
-                    arguments=(Argument("name", "The widget, such as clock"),),
-                    options=(
-                        Option(("--full",), "Copy the whole widget, not only its settings"),
-                        Option(("--force",), "Replace your copy if you have one"),
+                        Option(("--full",), "Install YASB's whole widget, not only its settings"),
+                        Option(("--force",), "Replace it if you have it"),
                     ),
                 ),
                 Command(
@@ -152,13 +148,7 @@ YASBC = Command(
                     arguments=(Argument("id", "Update this widget, theme or layout", optional=True),),
                     options=(Option(("--all",), "Update all of them"),),
                 ),
-                Command(
-                    "remove",
-                    "Delete a widget from your widgets folder",
-                    arguments=(Argument("name", "The widget, such as clock"),),
-                    options=(Option(("-y", "--yes"), "Delete without asking"),),
-                ),
-                Command("list", "List the widgets in your widgets folder"),
+                Command("list", "List your widgets and installed themes, layouts and config"),
             ),
         ),
         Command("config-dir", "Open config directory in file explorer"),
@@ -301,13 +291,9 @@ class CLIHandler:
             if args.addons_command == "search":
                 sys.exit(addons.search(args.text))
             if args.addons_command == "install":
-                sys.exit(addons.install(args.id, version=args.version, force=args.force))
-            if args.addons_command == "copy":
-                sys.exit(addons.copy(args.name, full=args.full, force=args.force))
+                sys.exit(addons.install(args.id, version=args.version, full=args.full, force=args.force))
             if args.addons_command == "update":
                 sys.exit(addons.update(args.id, everything=args.all))
-            if args.addons_command == "remove":
-                sys.exit(addons.remove(args.name, yes=args.yes))
             if args.addons_command == "list":
                 sys.exit(addons.list())
             sys.exit(print_help(YASBC, ["addons", *(args.help_path if args.addons_command == "help" else [])]))

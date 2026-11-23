@@ -53,9 +53,10 @@ from core.services.window_switcher.windows import WindowList
 from core.services.windows_desktops.desktops import VirtualDesktops
 from core.utils.environment import Environment
 from core.utils.hotkey import Hotkey
-from settings import SERVICE_API_VERSION
 
 QML_URI = "Yasb"
+# Qt registers types under a version
+QML_VERSION = (1, 0)
 
 QML_TYPES: tuple[type[QObject], ...] = (
     Backdrop,
@@ -120,7 +121,7 @@ QML_UNCREATABLE_TYPES: tuple[type[QObject], ...] = (
 
 @cache
 def register_qml_types() -> None:
-    major, minor = SERVICE_API_VERSION
+    major, minor = QML_VERSION
     for typ in QML_TYPES:
         qmlRegisterType(typ, QML_URI, major, minor, typ.__name__)
     for typ in QML_UNCREATABLE_TYPES:

@@ -1,16 +1,25 @@
 import hashlib
 import io
 import json
+import os
 import re
 import shutil
+import subprocess
+import sys
 import textwrap
+import time
 import zipfile
-from functools import cache
+from collections.abc import Callable
+from datetime import datetime
+from functools import cache, partial
 from pathlib import Path
-from typing import Any
+from tempfile import TemporaryDirectory
+from typing import Any, cast
+from urllib.error import HTTPError
 from urllib.request import urlopen
 
 from core import widget_files
+from core.utils.process import is_process_running
 from core.widget_files import (
     MANIFEST,
     builtin_manifest,
@@ -19,11 +28,16 @@ from core.widget_files import (
     folder_manifest,
     manifest_problem,
 )
-from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, SERVICE_API_VERSION, YASB_ADDONS
+from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, DEFAULT_LOG_FILENAME, YASB_ADDONS
 
 ADDONS_REPOSITORY = YASB_ADDONS.rstrip("/").rpartition("/")[2]
 ADDONS_RAW = YASB_ADDONS.rstrip("/").replace("https://github.com/", "https://raw.githubusercontent.com/", 1) + "/main"
+GITHUB = "https://github.com/"
 
+_ADDON_ID = re.compile(r"([a-z0-9-]+)\.([a-z][a-z0-9]*)")
+_GITHUB_LINK = re.compile(rf"{GITHUB}([A-Za-z0-9-]+)/[\w.-]+")
+# The user's keys, their repository and YASB's log
+_KEPT_IN_CONFIG = shutil.ignore_patterns(".env", ".git", f"{DEFAULT_LOG_FILENAME}*")
 _PROPERTY = re.compile(r"(?:readonly )?property \S+ (\w+)(?:: (.*))?")
 
 
@@ -146,11 +160,6 @@ def _named(name: str, widgets: list[str]) -> str | None:
     return next((widget for widget in widgets if widget.casefold() == name.casefold()), None)
 
 
-def copy_manifest(widget: str) -> dict[str, Any]:
-    """The manifest of a copy of YASB's own widget of that id."""
-    return {**builtin_manifests()[widget], "yasbApi": SERVICE_API_VERSION[0]}
-
-
 def _write_manifest(folder: Path, data: dict[str, Any]) -> None:
     (folder / MANIFEST).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -168,11 +177,15 @@ def _addons_folder(kind: str) -> Path:
     return widget_files.USER_WIDGETS_DIR if kind == "widget" else Path(DEFAULT_CONFIG_DIRECTORY) / f"{kind}s"
 
 
-def _installed() -> list[Path]:
-    """The folders of the widgets folder, then the addons in the themes and layouts folders."""
-    widgets = [widget_files.USER_WIDGETS_DIR / name for name in _widgets(widget_files.USER_WIDGETS_DIR)]
-    folders = (_addons_folder("theme"), _addons_folder("layout"))
-    return widgets + [folder / name for folder in folders for name in _widgets(folder) if "." in name]
+def _installed() -> list[tuple[str, str, Path]]:
+    """The id, type and folder of the installed config, then of all widgets, then of the installed themes and layouts."""
+    config = Path(DEFAULT_CONFIG_DIRECTORY)
+    config_id = _config_id(config)
+    installed = [(config_id, "config", config)] if config_id else []
+    for kind in ("widget", "theme", "layout"):
+        folder = _addons_folder(kind)
+        installed += [(name, kind, folder / name) for name in _widgets(folder) if kind == "widget" or "." in name]
+    return installed
 
 
 def _download(url: str) -> bytes:
@@ -188,22 +201,14 @@ def addons_index() -> dict[str, dict[str, Any]]:
 
 
 def _release(entry: dict[str, Any], number: int | None = None) -> dict[str, Any]:
-    """The addon's version of that number, or its newest, for this YASB's API; raises ValueError when there is
-    none."""
-    api = SERVICE_API_VERSION[0]
+    """The addon's version of that number, or its newest; raises ValueError when there is none."""
     if number is not None:
         release = next((version for version in entry["versions"] if version["version"] == number), None)
         if release is None:
             numbers = ", ".join(str(version["version"]) for version in entry["versions"])
             raise ValueError(f"no v{number}, versions: {numbers}")
-        if release["yasbApi"] != api:
-            raise ValueError(f"v{number} is for YASB API {release['yasbApi']}, this YASB has API {api}")
         return release
-    fitting = [version for version in entry["versions"] if version["yasbApi"] == api]
-    if not fitting:
-        apis = ", ".join(sorted({str(version["yasbApi"]) for version in entry["versions"]}))
-        raise ValueError(f"no version for YASB API {api}, only for API {apis}")
-    return max(fitting, key=lambda version: version["version"])
+    return max(entry["versions"], key=lambda version: version["version"])
 
 
 def _install(entry: dict[str, Any], release: dict[str, Any], target: Path) -> None:
@@ -217,9 +222,144 @@ def _install(entry: dict[str, Any], release: dict[str, Any], target: Path) -> No
         archive.extractall(target)
 
 
+def _repository_manifest(repository: str) -> dict[str, Any]:
+    """The manifest of an addon in its author's GitHub repository; raises ValueError for one YASB can't install."""
+    link = _GITHUB_LINK.fullmatch(repository)
+    if link is None:
+        raise ValueError(f"only GitHub repositories work, such as {GITHUB}amnweb/clock")
+    try:
+        manifest = json.loads(
+            _download(f"{repository.replace(GITHUB, 'https://raw.githubusercontent.com/')}/HEAD/{MANIFEST}")
+        )
+    except HTTPError as e:
+        raise ValueError(f"it has no {MANIFEST}, or is private" if e.code == 404 else str(e)) from None
+    if not isinstance(manifest, dict):
+        raise ValueError(f"{MANIFEST} is not a JSON object")
+    data = cast(dict[str, Any], manifest)
+    owner = link[1].lower()
+    addon_id = _ADDON_ID.fullmatch(str(data.get("id")))
+    if addon_id is None or addon_id[1] != owner:
+        raise ValueError(f"the id in {MANIFEST} must be {owner}.<name>, in lower case")
+    if data.get("type") not in ("widget", "theme", "layout", "config"):
+        raise ValueError(f"the type in {MANIFEST} must be widget, theme, layout or config")
+    if not all(isinstance(text := data.get(key), str) and text.isprintable() for key in ("title", "description")):
+        raise ValueError(f"the title and description in {MANIFEST} must be text on one line")
+    if type(data.get("version")) is not int:
+        raise ValueError(f"the version in {MANIFEST} must be a whole number")
+    return data
+
+
+def _install_repository(repository: str, manifest: dict[str, Any], target: Path) -> None:
+    """Downloads the GitHub repository and unpacks it as the target folder, with the repository in its manifest."""
+    with zipfile.ZipFile(io.BytesIO(_download(f"{repository}/archive/HEAD.zip"))) as archive:
+        files: dict[str, zipfile.ZipInfo] = {}
+        for info in archive.infolist():
+            # GitHub puts the repository in a folder of its own
+            path = info.filename.partition("/")[2]
+            if path and not info.is_dir() and not any(part.startswith(".") for part in path.split("/")):
+                files[path] = info
+        if MANIFEST not in files or json.loads(archive.read(files[MANIFEST])) != manifest:
+            raise ValueError("the repository has just changed, try again in a few minutes")
+        if programs := [path for path in files if path.lower().endswith((".exe", ".dll"))]:
+            raise ValueError(f"addons can't include .exe or .dll files: {', '.join(programs)}")
+        is_config = manifest["type"] == "config"
+        main_file = DEFAULT_CONFIG_FILENAME if is_config else file_name(manifest["id"])
+        if main_file.casefold() not in (path.casefold() for path in files):
+            raise ValueError(f"it has no {main_file}")
+        shutil.rmtree(target, ignore_errors=True)
+        for path, info in files.items():
+            info.filename = path
+            archive.extract(info, target)
+    _write_manifest(target, {**manifest, "source": repository})
+
+
+def _config_id(config: Path) -> str | None:
+    """The id of an installed config; None for the user's own."""
+    config_id = str((_read_manifest(config) or {}).get("id"))
+    return config_id if _ADDON_ID.fullmatch(config_id) else None
+
+
+def _backup_config(config: Path, old_config: Path) -> Path:
+    """Saves the old config beside the config folder as a ZIP file named by its id."""
+    backup_id = _config_id(old_config) or "mine"
+    backup = config.with_name(f"{config.name}-backups") / f"backup_{backup_id}_{datetime.now():%Y-%m-%d_%H%M%S}.zip"
+    backup.parent.mkdir(exist_ok=True)
+    return Path(shutil.make_archive(str(old_config), "zip", old_config)).rename(backup)
+
+
+def _replace_config(config: Path, new_config: Path, old_config: Path) -> None:
+    """Moves everything out of the config folder and the new config in, or leaves it as it was and raises OSError."""
+    moved: list[tuple[Path, Path]] = []
+
+    def move_all(source: Path, target: Path) -> None:
+        names = os.listdir(source)
+        for name in set(names) - _KEPT_IN_CONFIG(str(source), names):
+            (source / name).rename(target / name)
+            moved.append((source / name, target / name))
+
+    try:
+        move_all(config, old_config)
+        print(f"Saved your config to {_backup_config(config, old_config)}")
+        move_all(new_config, config)
+    except OSError as e:
+        for source, target in reversed(moved):
+            target.rename(source)
+        if isinstance(e, PermissionError):
+            raise OSError(
+                f"{e.filename} is in use, so nothing was changed.\nClose every program that has a file or folder in "
+                f"{config} open, such as File Explorer, a terminal or an editor, and try again."
+            ) from e
+        raise
+
+
+def _stop_yasb_and_wait() -> None:
+    subprocess.run(["yasbc", "stop", "--silent"], creationflags=subprocess.CREATE_NO_WINDOW, check=False)
+    deadline = time.monotonic() + 15
+    while is_process_running("yasb.exe"):
+        if time.monotonic() > deadline:
+            raise OSError("YASB did not stop")
+        time.sleep(0.25)
+
+
+def _install_config(config: Path, unpack: Callable[[Path], None]) -> None:
+    """Saves the config, then replaces it with what unpack puts in a folder, with the bar stopped meanwhile."""
+    config.mkdir(parents=True, exist_ok=True)
+    # Beside the config, as only there it can be moved
+    with TemporaryDirectory(dir=config.resolve().parent, ignore_cleanup_errors=True) as folder:
+        new_config, old_config = Path(folder, "new"), Path(folder, "old")
+        old_config.mkdir()
+        unpack(new_config)
+        was_running = is_process_running("yasb.exe")
+        try:
+            if was_running:
+                _stop_yasb_and_wait()
+            _replace_config(config, new_config, old_config)
+        finally:
+            if was_running:
+                subprocess.Popen(["yasb.exe"])
+
+
+def _external_warning(repository: str, manifest: dict[str, Any]) -> str:
+    yellow, reset = ("\033[93m", "\033[0m") if sys.stdout.isatty() else ("", "")
+    return textwrap.dedent(f"""\
+        {yellow}WARNING: This addon is not from {ADDONS_REPOSITORY}{reset}
+
+          {manifest["title"]} v{manifest["version"]} ({manifest["type"]})
+          {repository}
+
+        {yellow}YASB's developers have not reviewed it and are not responsible for any damage it causes.
+        Addons run code with your user rights: they can read, change and delete your files.
+        Review the code yourself and install it only if you trust the author.{reset}
+    """)
+
+
 def _source(data: dict[str, Any] | None) -> str:
     """Where a widget or addon came from, by its manifest."""
-    return "custom" if data is None else ADDONS_REPOSITORY if "." in str(data.get("id")) else "YASB"
+    if data is None:
+        return "custom"
+    if "source" in data:
+        return str(data["source"]).removeprefix(GITHUB)
+    return ADDONS_REPOSITORY if "." in str(data.get("id")) else "YASB"
 
 
 def _title(folder: Path, data: dict[str, Any] | None) -> str:
@@ -227,17 +367,17 @@ def _title(folder: Path, data: dict[str, Any] | None) -> str:
     return str(data.get("title") or folder.name) if data else folder.name
 
 
-def _row(widget: str) -> tuple[str, str, str, str, str]:
-    """The widget's name, id, version, where it came from, and why it no longer fits YASB, if it doesn't."""
-    folder = widget_files.USER_WIDGETS_DIR / widget
+def _row(addon_id: str, kind: str, folder: Path) -> tuple[str, str, str, str, str, str]:
+    """The widget's or addon's name, id, type, version, source, and why it no longer fits YASB, if it doesn't."""
     data = _read_manifest(folder)
     version = data.get("version") if data else None
     return (
         _title(folder, data),
-        widget,
+        addon_id,
+        kind,
         str(version) if version is not None else "-",
         _source(data),
-        (manifest_problem(widget) or ""),
+        (manifest_problem(addon_id) or "") if kind == "widget" else "",
     )
 
 
@@ -252,41 +392,57 @@ def _print_table(headers: tuple[str, ...], rows: list[tuple[str, ...]]) -> None:
 
 
 class CLIAddonsHandler:
-    """Copies YASB's widgets into the config folder, and updates, lists and removes what is there."""
+    """Searches, installs, updates and lists widgets, themes and layouts."""
 
-    def copy(self, name: str, full: bool = False, force: bool = False) -> int:
+    def install(self, name: str, version: int | None = None, full: bool = False, force: bool = False) -> int:
+        """Installs an addon by its id, which has a dot, or its GitHub link, or YASB's own widget to change it."""
+        is_link = "/" in name
+        is_builtin = "." not in name and not is_link
+        if full and not is_builtin:
+            print("--full is only for YASB's own widgets.")
+            return 1
+        if version is not None and (is_builtin or is_link):
+            print(f"--version is only for addons from {ADDONS_REPOSITORY}.")
+            return 1
+        if is_link:
+            return self._install_from_github(name, force)
+        if is_builtin:
+            return self._install_builtin(name, full, force)
+        return self._install_addon(name, version, force)
+
+    def _install_builtin(self, name: str, full: bool, force: bool) -> int:
         widget = _named(name, builtin_widgets())
         if widget is None:
-            print(f"Unknown widget '{name}'. Available: {', '.join(builtin_widgets())}")
+            print(f"YASB has no widget '{name}'. Run 'yasbc addons search {name}' to look for an addon.")
             return 1
         source = widget_files.BUILTIN_WIDGETS_DIR / widget
         target = widget_files.USER_WIDGETS_DIR / widget
-        copy = None if full else settings_copy(widget, (source / f"{widget}.qml").read_text(encoding="utf-8"))
-        if copy is None and not full:
-            print(f"{widget} has no settings. Use --full to copy the whole widget.")
+        settings = None if full else settings_copy(widget, (source / f"{widget}.qml").read_text(encoding="utf-8"))
+        if settings is None and not full:
+            print(f"{widget} has no settings. Use --full to install the whole widget.")
             return 1
         if target.exists() and not force:
             print(f"{target} already exists. Use --force to replace it.")
             return 1
         try:
             shutil.rmtree(target, ignore_errors=True)
-            if copy is None:
+            if settings is None:
                 shutil.copytree(source, target)
             else:
                 target.mkdir(parents=True)
-                (target / f"{widget}.qml").write_text(copy, encoding="utf-8")
-            _write_manifest(target, copy_manifest(widget))
+                (target / f"{widget}.qml").write_text(settings, encoding="utf-8")
+            _write_manifest(target, builtin_manifests()[widget])
         except OSError as e:
-            print(f"Failed to copy {widget}: {e}")
+            print(f"Could not install {widget}: {e}")
             return 1
-        if copy is None:
-            print(f"Copied {widget} to {target}")
+        if settings is None:
+            print(f"Installed {widget} to {target}")
         else:
-            print(f"Copied {widget} settings to {target / f'{widget}.qml'}")
+            print(f"Installed {widget} settings to {target / f'{widget}.qml'}")
         return 0
 
     def search(self, text: str | None = None) -> int:
-        """Lists YASB's widgets and the addons for this YASB whose name, id, description, author or type has text."""
+        """Lists YASB's widgets and the addons whose name, id, description, author or type has text."""
         query = (text or "").casefold()
 
         def matches(*fields: object) -> bool:
@@ -303,11 +459,7 @@ class CLIAddonsHandler:
             for entry in addons_index().values():
                 if not matches(entry["id"], entry["title"], entry["description"], entry["author"], entry["type"]):
                     continue
-                try:
-                    version = _release(entry)["version"]
-                except ValueError:
-                    # No version for this YASB's API, so install would refuse it
-                    continue
+                version = _release(entry)["version"]
                 addons.append(
                     (entry["title"], entry["id"], entry["type"], str(version), ADDONS_REPOSITORY, entry["description"])
                 )
@@ -317,10 +469,7 @@ class CLIAddonsHandler:
         if rows:
             rows = [(*row[:-1], textwrap.shorten(row[-1], 60, placeholder="...")) for row in rows]
             _print_table(("Name", "Id", "Type", "Version", "Source", "Description"), rows)
-            footer = f"{len(rows)} found."
-            if addons:
-                footer += " Run 'yasbc addons install <id>' to install an addon."
-            print(footer)
+            print(f"\n{len(rows)} found. Run 'yasbc addons install <id>' to install one.")
         elif failed is None:
             print(f"No widgets or addons match '{text}'." if text else "No widgets or addons found.")
         if failed is not None:
@@ -328,7 +477,7 @@ class CLIAddonsHandler:
             return 1
         return 0
 
-    def install(self, addon_id: str, version: int | None = None, force: bool = False) -> int:
+    def _install_addon(self, addon_id: str, version: int | None, force: bool) -> int:
         try:
             entry = addons_index().get(addon_id.casefold())
             if entry is None:
@@ -337,18 +486,49 @@ class CLIAddonsHandler:
         except (OSError, ValueError) as e:
             print(f"Could not install {addon_id}: {e}")
             return 1
-        addon, kind = entry["id"], entry["type"]
-        target = _addons_folder(kind) / addon
-        if target.exists() and not force:
+        title = f"{entry['title']} v{release['version']}"
+        return self._install_files(entry["id"], entry["type"], title, partial(_install, entry, release), force)
+
+    def _install_from_github(self, link: str, force: bool) -> int:
+        repository = link.removesuffix("/").removesuffix(".git")
+        try:
+            manifest = _repository_manifest(repository)
+        except (OSError, ValueError) as e:
+            print(f"Could not install {repository}: {e}")
+            return 1
+        title = f"{manifest['title']} v{manifest['version']}"
+        unpack = partial(_install_repository, repository, manifest)
+        warning = _external_warning(repository, manifest)
+        return self._install_files(manifest["id"], manifest["type"], title, unpack, force, warning)
+
+    def _install_files(
+        self, addon_id: str, kind: str, title: str, unpack: Callable[[Path], None], force: bool, warning: str = ""
+    ) -> int:
+        """Installs the addon with unpack, which puts its files in a folder, after the user agreed to the warning."""
+        is_config = kind == "config"
+        target = Path(DEFAULT_CONFIG_DIRECTORY) if is_config else _addons_folder(kind) / addon_id
+        if not is_config and target.exists() and not force:
             print(f"{target} already exists. Use update, or --force to replace it.")
             return 1
-        try:
-            _install(entry, release, target)
-        except (OSError, ValueError) as e:
-            print(f"Could not install {addon}: {e}")
+        if warning:
+            print(warning)
+        if is_config:
+            print(f"{title} replaces your whole config. Yours is saved first.")
+        if (warning or is_config) and input("Do you want to install it? [y/N] ") != "y":
             return 1
-        print(f"Installed {entry['title']} v{release['version']} to {target}")
-        where = f"Add {addon} to a bar's widgets" if kind == "widget" else f"Set a bar's {kind} to {addon}"
+        try:
+            if is_config:
+                _install_config(target, unpack)
+            else:
+                unpack(target)
+        except (OSError, ValueError, zipfile.BadZipFile) as e:
+            print(f"Could not install {addon_id}: {e}")
+            return 1
+        if is_config:
+            print(f"{title} is your config now.")
+            return 0
+        print(f"Installed {title} to {target}")
+        where = f"Add {addon_id} to a bar's widgets" if kind == "widget" else f"Set a bar's {kind} to {addon_id}"
         print(f"{where} in {DEFAULT_CONFIG_FILENAME} to use it.")
         return 0
 
@@ -357,54 +537,67 @@ class CLIAddonsHandler:
         if name is not None and everything:
             print("Name a widget or use --all, not both.")
             return 1
-        folders = _installed()
+        installed = _installed()
         if name is not None:
-            folder = next((folder for folder in folders if folder.name.casefold() == name.casefold()), None)
-            if folder is None:
-                print(f"No widget, theme or layout named '{name}' in {DEFAULT_CONFIG_DIRECTORY}")
+            installed = [addon for addon in installed if addon[0].casefold() == name.casefold()]
+            if not installed:
+                print(f"No widget, theme, layout or config named '{name}' in {DEFAULT_CONFIG_DIRECTORY}")
                 return 1
-            folders = [folder]
-        found: list[tuple[Path, dict[str, Any], int]] = []
+        found: list[tuple[str, str, Path, dict[str, Any], int]] = []
         failed = False
-        for folder in folders:
+        for addon_id, kind, folder in installed:
             data = _read_manifest(folder)
             if data is None:
                 if name is not None:
-                    print(f"{folder.name}: no {MANIFEST}, skipped")
+                    print(f"{addon_id}: no {MANIFEST}, skipped")
                 continue
             try:
                 newer = self._newer(folder, data)
             except (OSError, ValueError) as e:
-                print(f"{folder.name}: could not check for an update: {e}")
+                print(f"{addon_id}: could not check for an update: {e}")
                 failed = True
                 continue
             if isinstance(newer, int):
-                found.append((folder, data, newer))
+                found.append((addon_id, kind, folder, data, newer))
             elif name is not None:
-                print(f"{folder.name}: {newer}")
+                print(f"{addon_id}: {newer}")
         if name is None and not found:
             if not failed:
                 print("Everything is up to date.")
         elif name is None and not everything:
             rows = [
-                (_title(folder, data), folder.name, str(data.get("version")), str(version), _source(data))
-                for folder, data, version in found
+                (_title(folder, data), addon_id, kind, str(data.get("version")), str(version), _source(data))
+                for addon_id, kind, folder, data, version in found
             ]
-            _print_table(("Name", "Id", "Version", "Available", "Source"), rows)
-            print(f"{len(found)} update{'s' if len(found) > 1 else ''} available.")
+            _print_table(("Name", "Id", "Type", "Version", "Available", "Source"), rows)
+            print(f"\n{len(found)} update{'s' if len(found) > 1 else ''} available.")
             print("Run 'yasbc addons update <id>' for one, or 'yasbc addons update --all' for all.")
         else:
-            for folder, data, _ in found:
+            for addon_id, kind, folder, data, version in found:
+                if kind == "config":
+                    if not everything:
+                        return self.install(str(data.get("source") or addon_id))
+                    print(
+                        f"{addon_id}: v{version} replaces your whole config. Run 'yasbc addons update {addon_id}' for it."
+                    )
+                    continue
                 try:
-                    print(f"{folder.name}: {self._update(folder, data)}")
-                except (OSError, ValueError) as e:
-                    print(f"{folder.name}: could not update: {e}")
+                    print(f"{addon_id}: {self._update(folder, data)}")
+                except (OSError, ValueError, zipfile.BadZipFile) as e:
+                    print(f"{addon_id}: could not update: {e}")
                     failed = True
         return 1 if failed else 0
 
     def _newer(self, folder: Path, data: dict[str, Any]) -> int | str:
         """The version an update would bring, or why there is none."""
         installed = data.get("version")
+        if "source" in data:
+            manifest = _repository_manifest(str(data["source"]))
+            if any(manifest[key] != data.get(key) for key in ("id", "type")):
+                return f"{data['source']} now holds the {manifest['type']} {manifest['id']}, skipped"
+            return (
+                "up to date" if isinstance(installed, int) and installed >= manifest["version"] else manifest["version"]
+            )
         if "." in str(data.get("id")):
             entry = addons_index().get(str(data["id"]).casefold())
             if entry is None:
@@ -418,6 +611,10 @@ class CLIAddonsHandler:
 
     def _update(self, folder: Path, data: dict[str, Any]) -> str:
         """Updates a widget or addon that _newer found an update for."""
+        if "source" in data:
+            manifest = _repository_manifest(str(data["source"]))
+            _install_repository(str(data["source"]), manifest, folder)
+            return f"updated to v{manifest['version']}"
         if "." in str(data.get("id")):
             entry = addons_index()[str(data["id"]).casefold()]
             release = _release(entry)
@@ -432,36 +629,20 @@ class CLIAddonsHandler:
         path = folder / file_name(widget)
         old, text = path.read_text(encoding="utf-8"), source.read_text(encoding="utf-8")
         if not re.search(rf"^{builtin}\s*\{{", old, re.MULTILINE) or _options(text) is None:
-            return f"full copy of v{data.get('version')}, YASB has v{version}. Use copy --full --force to replace it"
+            installed = data.get("version")
+            return f"full copy of v{installed}, YASB has v{version}. Use install {builtin} --full --force to replace it"
         copy, dropped = refresh_copy(builtin, old, text)
         path.write_text(copy, encoding="utf-8")
-        _write_manifest(path.parent, copy_manifest(builtin))
+        _write_manifest(path.parent, entry)
         note = f". Removed settings: {', '.join(dropped)}" if dropped else ""
         return f"updated to v{version}{note}"
 
-    def remove(self, name: str, yes: bool = False) -> int:
-        widget = _named(name, _widgets(widget_files.USER_WIDGETS_DIR))
-        if widget is None:
-            print(f"No widget named '{name}' in {widget_files.USER_WIDGETS_DIR}")
-            return 1
-        target = widget_files.USER_WIDGETS_DIR / widget
-        if not yes and input(f"Delete {target}? [y/N] ") != "y":
-            return 1
-        try:
-            shutil.rmtree(target)
-        except OSError as e:
-            print(f"Could not delete {target}: {e}")
-            return 1
-        print(f"Deleted {target}.")
-        return 0
-
     def list(self) -> int:
-        widgets = _widgets(widget_files.USER_WIDGETS_DIR)
-        if not widgets:
-            print(f"No widgets in {widget_files.USER_WIDGETS_DIR}")
+        rows = [_row(addon_id, kind, folder) for addon_id, kind, folder in _installed()]
+        if not rows:
+            print(f"No widgets, themes or layouts in {DEFAULT_CONFIG_DIRECTORY}")
             return 0
-        rows = [_row(widget) for widget in widgets]
-        headers = ("Name", "Id", "Version", "Source", "Warning")
+        headers = ("Name", "Id", "Type", "Version", "Source", "Warning")
         # The warning column only when a widget has one
         width = len(headers) if any(row[-1] for row in rows) else len(headers) - 1
         _print_table(headers[:width], [row[:width] for row in rows])

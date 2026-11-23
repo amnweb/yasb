@@ -15,7 +15,6 @@ from core.widget_files import (
     outdated_widgets,
     undefined_widgets,
 )
-from settings import SERVICE_API_VERSION
 
 
 @pytest.fixture
@@ -122,26 +121,25 @@ def test_a_copy_its_manifest_says_no_longer_fits_gives_way_to_the_builtin(widget
     builtin_clock = _widget(builtin, "Clock")
     (builtin / WIDGET_LIST).write_text(json.dumps({"widgets": [{"id": "Clock", "version": 2}]}), encoding="utf-8")
     copy = _widget(user, "Clock")
-    _manifest(user, "Clock", version=2, yasbApi=SERVICE_API_VERSION[0])
+    _manifest(user, "Clock", version=2)
     assert str(find_widget_file("clock")) == str(copy)
 
-    _manifest(user, "Clock", version=1, yasbApi=SERVICE_API_VERSION[0])
+    _manifest(user, "Clock", version=1)
     assert str(find_widget_file("Clock")) == str(builtin_clock)
     config = YasbConfig.model_validate({"bars": {"main": {"widgets": {"left": ["Clock"]}}}})
     assert list(outdated_widgets(config)) == ["Clock"]
 
 
-def test_a_widget_made_for_another_api_or_under_another_id_is_skipped(widget_dirs: tuple[Path, Path]):
+def test_a_widget_with_another_id_is_skipped(widget_dirs: tuple[Path, Path]):
     user, _ = widget_dirs
     _widget(user, "Mine")
-    _manifest(user, "Mine", yasbApi=SERVICE_API_VERSION[0] + 1)
+    _manifest(user, "Mine")
+    assert find_widget_file("Mine") is not None
+
+    (user / "Mine" / "manifest.json").write_text(json.dumps({"id": "amnweb.mine"}), encoding="utf-8")
     config = YasbConfig.model_validate({"bars": {"main": {"widgets": {"left": ["Mine"]}}}})
     assert find_widget_file("Mine") is None
-    assert "YASB API" in outdated_widgets(config)["Mine"]
     assert undefined_widgets(config) == []
-
-    (user / "Mine" / "manifest.json").write_text(json.dumps({"id": "amnweb.mine", "yasbApi": SERVICE_API_VERSION[0]}))
-    assert find_widget_file("Mine") is None
     assert "amnweb.mine" in outdated_widgets(config)["Mine"]
 
 

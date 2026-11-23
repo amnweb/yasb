@@ -4,7 +4,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any, NamedTuple, cast
 
-from settings import BUILD_VERSION, DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, SCRIPT_PATH, SERVICE_API_VERSION
+from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, SCRIPT_PATH
 
 # Lazy: yasbc reads the widget folders without loading Qt or the config's models
 lazy from core.app.windows.alert_dialog import show_alert
@@ -87,9 +87,6 @@ def manifest_problem(widget_name: str) -> str | None:
         return f"{MANIFEST} has no id"
     if str(data["id"]).casefold() != widget_name.casefold():
         return f"{MANIFEST} has the id {data['id']}, but its folder is {widget_name}"
-    api = data.get("yasbApi")
-    if api != SERVICE_API_VERSION[0]:
-        return f"needs YASB API {api}, YASB {BUILD_VERSION} has {SERVICE_API_VERSION[0]}"
     builtin = builtin_manifest(widget_name)
     if builtin is not None and data.get("version") != builtin["version"]:
         return f"copy of v{data.get('version')}, YASB's {builtin['id']} is v{builtin['version']}"
