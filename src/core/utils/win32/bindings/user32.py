@@ -280,6 +280,9 @@ user32.IsWindowVisible.restype = BOOL
 user32.IsIconic.argtypes = [HWND]
 user32.IsIconic.restype = BOOL
 
+user32.IsZoomed.argtypes = [HWND]
+user32.IsZoomed.restype = BOOL
+
 user32.GetWindowTextLengthW.argtypes = [HWND]
 user32.GetWindowTextLengthW.restype = c_int
 
@@ -694,6 +697,10 @@ def IsWindowVisible(hwnd: int) -> bool:
 
 def IsIconic(hwnd: int) -> bool:
     return bool(user32.IsIconic(hwnd))
+
+
+def IsZoomed(hwnd: int) -> bool:
+    return bool(user32.IsZoomed(hwnd))
 
 
 def GetWindowTextLength(hwnd: int) -> int:

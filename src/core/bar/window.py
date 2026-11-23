@@ -27,14 +27,17 @@ from core.app.controller import exit_application, reload_application
 from core.app.windows.alert_dialog import show_alert
 from core.bar.animation import BarAnimationManager
 from core.bar.appbar import AppBarManager
-from core.bar.autohide import AutoHideManager, MaximizedWindowWatcher
+from core.bar.autohide import AutoHideManager
 from core.bar.geometry import bar_geometry, bar_length
+from core.bar.maximized import MaximizedWindows
 from core.bar.revisions import Revisions, path_key
 from core.events.service import EventService
 from core.theme_files import config_qml_file, load_theme
 from core.utils.qml import qml_property
 from core.utils.win32 import app_bar
+from core.utils.win32.bindings.user32 import MonitorFromWindow
 from core.utils.win32.composition import BackdropWindow, host_backdrop_supported
+from core.utils.win32.constants import MONITOR_DEFAULTTONEAREST
 from core.validation.bar import BarConfig
 from core.widget_files import bar_widget_files
 from settings import APP_BAR_TITLE, DEFAULT_CONFIG_DIRECTORY, SCRIPT_PATH
@@ -162,7 +165,14 @@ class BarWindow(QQuickWindow):
         self.bar_id = f"{name}_{screen.name().replace('\\', '').replace('.', '')}_{str(uuid.uuid4())[:8]}"
         self.hide_on_fullscreen = config.hide_on_fullscreen and config.always_on_top
         self.autohide_manager: AutoHideManager | None = None
-        self._maximized_watcher: MaximizedWindowWatcher | None = None
+        self.has_maximized_window = False
+        self._maximized_windows = MaximizedWindows.instance()
+        self._follows_maximized = False
+        self._hide_when_maximized = config.auto_hide == "maximized" and not config.reserve_space
+        self._had_autohide_before = False
+        # Set by create(), which runs after the first layout loads
+        # We need this to track maximized windows when YASB needs it.
+        self.hwnd = 0
         self._app_bar = app_bar.Win32AppBar()
         self._event_service = EventService()
         self.item: QQuickItem | None = None
@@ -204,8 +214,7 @@ class BarWindow(QQuickWindow):
 
         if config.auto_hide == "always":
             self.enable_autohide()
-        elif config.auto_hide == "maximized" and not config.reserve_space:
-            self._maximized_watcher = MaximizedWindowWatcher(self, self)
+        self._on_maximized_changed()
 
         screen.geometryChanged.connect(self._on_screen_changed, Qt.ConnectionType.QueuedConnection)
         self.cli_requested.connect(self.handle_cli)
@@ -254,6 +263,7 @@ class BarWindow(QQuickWindow):
             old_context.deleteLater()
         self._trim_timer.start()
         self._warn_about_missing_slots(path)
+        self._follow_maximized()
 
     def _fit_item(self) -> None:
         if self.item is None:
@@ -440,6 +450,46 @@ class BarWindow(QQuickWindow):
         self.update_app_bar()
         if self.autohide_manager is not None and self.autohide_manager.is_enabled():
             self.autohide_manager.setup_detection_zone()
+        self._on_maximized_changed()
+
+    def _follow_maximized(self) -> None:
+        """Follows the maximized windows while the bar hides for them or its QML reads hasMaximizedWindow."""
+        item = self.item
+        read = item is not None and item.receivers(getattr(item, "hasMaximizedWindowChanged")) > 0
+        wanted = self._hide_when_maximized or read
+        if wanted and not self._follows_maximized:
+            self._follows_maximized = True
+            self._maximized_windows.changed.connect(self._on_maximized_changed)
+            self._maximized_windows.follow(self)
+        elif not wanted and self._follows_maximized:
+            self._stop_following_maximized()
+        self._on_maximized_changed()
+
+    def _stop_following_maximized(self) -> None:
+        self._follows_maximized = False
+        self._maximized_windows.changed.disconnect(self._on_maximized_changed)
+        self._maximized_windows.unfollow(self)
+
+    def _on_maximized_changed(self) -> None:
+        # Nearest, so a bar sliding past its screen edge still counts as on its monitor
+        maximized = (
+            self._follows_maximized
+            and bool(self.hwnd)
+            and self._maximized_windows.maximized_on(MonitorFromWindow(self.hwnd, MONITOR_DEFAULTTONEAREST))
+        )
+        if self.item is not None and self.item.property("hasMaximizedWindow") != maximized:
+            self.item.setProperty("hasMaximizedWindow", maximized)
+        if maximized == self.has_maximized_window:
+            return
+        self.has_maximized_window = maximized
+        if not self._hide_when_maximized:
+            return
+        if maximized:
+            self._had_autohide_before = self.autohide_enabled
+            if not self._had_autohide_before:
+                self.enable_autohide()
+        elif not self._had_autohide_before:
+            self.disable_autohide()
 
     def update_app_bar(self) -> None:
         margin = self.config.margin
@@ -483,7 +533,7 @@ class BarWindow(QQuickWindow):
             self.autohide_manager.cleanup()
             self.autohide_manager = None
         if not self.isVisible():
-            self.show()
+            self.show_bar()
         if self.context is not None:
             self.context.autoHideChanged.emit()
 
@@ -532,8 +582,8 @@ class BarWindow(QQuickWindow):
     def cleanup(self) -> None:
         self._event_service.unregister_event("handle_bar_cli", self.cli_requested)
         AppBarManager().unregister_bar(self.hwnd)
-        if self._maximized_watcher is not None:
-            self._maximized_watcher.cleanup()
+        if self._follows_maximized:
+            self._stop_following_maximized()
         if self.autohide_manager is not None:
             self.autohide_manager.cleanup()
         self._animation.cleanup()

@@ -15,6 +15,8 @@ Item {
     readonly property string screenName: context.screenName
     readonly property string edge: context.edge
     readonly property bool vertical: edge === "left" || edge === "right"
+    // Whether a window is maximized on the bar's monitor.
+    property bool hasMaximizedWindow: false
 
     property alias background: surface
     property alias color: surface.color

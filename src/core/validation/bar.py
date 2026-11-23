@@ -22,7 +22,7 @@ class BarMargin(CustomBaseModel):
 
 class BarAnimation(CustomBaseModel):
     type: Literal["none", "slide", "fade"] = "slide"
-    duration: int = Field(default=300, ge=0)
+    duration: int = Field(default=200, ge=0)
 
 
 class BarConfig(CustomBaseModel):

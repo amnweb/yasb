@@ -33,7 +33,6 @@ EXCLUDED_WINDOW_CLASSES = {
     "CEF-OSC-WIDGET",
     "CEFCLIENT",
 }
-EXCLUDED_WINDOW_CLASS_SUFFIXES = ("QWindowIcon",)
 
 
 class AppBarManager(QAbstractNativeEventFilter):
@@ -138,8 +137,7 @@ class AppBarManager(QAbstractNativeEventFilter):
             _, pid = get_window_thread_process_id(hwnd)
             if pid == os.getpid():
                 return True
-            class_name = GetClassName(hwnd) or ""
-            return class_name in EXCLUDED_WINDOW_CLASSES or class_name.endswith(EXCLUDED_WINDOW_CLASS_SUFFIXES)
+            return GetClassName(hwnd) in EXCLUDED_WINDOW_CLASSES
         except Exception:
             return False
 

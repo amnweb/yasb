@@ -4,11 +4,6 @@ from typing import TYPE_CHECKING, override
 from PyQt6.QtCore import QEvent, QObject, QPoint, QRect, Qt, QTimer
 from PyQt6.QtGui import QCursor, QGuiApplication, QWindow
 
-from core.bar.appbar import EXCLUDED_WINDOW_CLASS_SUFFIXES, EXCLUDED_WINDOW_CLASSES
-from core.utils.win32.bindings.user32 import GetClassName, GetWindowText, IsWindowVisible, MonitorFromWindow, user32
-from core.utils.win32.structs import WNDENUMPROC
-from core.utils.win32.utils import is_window_maximized
-
 if TYPE_CHECKING:
     from core.bar.window import BarWindow
 
@@ -159,67 +154,3 @@ class AutoHideManager(QObject):
                 self.bar.update_app_bar()
             except Exception as e:
                 logging.error("Failed to restore AppBar reservation: %s", e)
-
-
-class MaximizedWindowWatcher(QObject):
-    """Turns autohide on while any window is maximized on the bar's monitor."""
-
-    def __init__(self, bar: BarWindow, parent: QObject | None = None):
-        super().__init__(parent)
-        self.bar = bar
-        self._active = False
-        self._had_autohide_before = False
-        self._timer = QTimer(self)
-        self._timer.setInterval(500)
-        self._timer.timeout.connect(self._check)
-        self._timer.start()
-
-    def _has_maximized_window(self, monitor: int) -> bool:
-        found = False
-
-        def visit(hwnd: int, _: object) -> bool:
-            nonlocal found
-            try:
-                if not IsWindowVisible(hwnd) or not GetWindowText(hwnd):
-                    return True
-                class_name = GetClassName(hwnd) or ""
-                if class_name in EXCLUDED_WINDOW_CLASSES or class_name.endswith(EXCLUDED_WINDOW_CLASS_SUFFIXES):
-                    return True
-                if MonitorFromWindow(hwnd) == monitor and is_window_maximized(hwnd):
-                    found = True
-                    return False
-            except Exception:
-                pass
-            return True
-
-        user32.EnumWindows(WNDENUMPROC(visit), 0)
-        return found
-
-    def _check(self) -> None:
-        monitor = MonitorFromWindow(self.bar.hwnd)
-        if not monitor:
-            return
-        try:
-            maximized = self._has_maximized_window(monitor)
-        except Exception:
-            logging.exception("Failed to check maximized windows")
-            return
-        if maximized and not self._active:
-            self._active = True
-            self._had_autohide_before = self.bar.autohide_enabled
-            if not self._had_autohide_before:
-                self.bar.enable_autohide()
-        elif not maximized and self._active:
-            self._release()
-
-    def _release(self) -> None:
-        self._active = False
-        if self._had_autohide_before:
-            self._had_autohide_before = False
-            return
-        self.bar.disable_autohide()
-
-    def cleanup(self) -> None:
-        self._timer.stop()
-        if self._active:
-            self._release()

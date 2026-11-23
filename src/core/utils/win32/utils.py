@@ -10,6 +10,7 @@ from PyQt6.QtGui import QCursor, QGuiApplication
 from winrt.windows.applicationmodel import Package
 from winrt.windows.management.deployment import PackageManager
 
+from core.utils.win32.bindings.dwmapi import DwmGetWindowAttribute
 from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
     GetCurrentProcess,
@@ -36,6 +37,7 @@ from core.utils.win32.bindings.version import get_version_strings
 from core.utils.win32.constants import (
     DISPLAY_DEVICE_ACTIVE,
     DISPLAY_DEVICE_ATTACHED_TO_DESKTOP,
+    DWMWA_CLOAKED,
     EDD_GET_DEVICE_INTERFACE_NAME,
     ERROR_INVALID_HANDLE,
     ERROR_INVALID_PARAMETER,
@@ -261,6 +263,12 @@ def is_window_maximized(hwnd: int) -> bool:
     if not GetWindowPlacement(hwnd, byref(placement)):
         raise ctypes.WinError(GetLastError())
     return placement.showCmd == SW_MAXIMIZE
+
+
+def is_window_cloaked(hwnd: int) -> bool:
+    cloaked = ctypes.c_uint(0)
+    result = DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, byref(cloaked), ctypes.sizeof(cloaked))
+    return result == 0 and cloaked.value != 0
 
 
 class WindowInfo(TypedDict):

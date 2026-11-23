@@ -116,9 +116,47 @@ def test_auto_hide_sets_up_its_manager(make_bar: MakeBar):
     assert make_bar(auto_hide="always").autohide_enabled
 
 
-def test_maximized_auto_hide_starts_the_watcher(make_bar: MakeBar):
-    assert make_bar(auto_hide="maximized")._maximized_watcher is not None
-    assert make_bar(auto_hide="maximized", reserve_space=True)._maximized_watcher is None
+def maximize_on_monitor(bar: BarWindow, monkeypatch: pytest.MonkeyPatch, maximized: bool) -> None:
+    def maximized_on(monitor: int | None) -> bool:
+        return maximized and monitor == 1
+
+    # The offscreen window has no monitor of its own
+    def monitor_from_window(hwnd: int, flags: int) -> int:
+        return 1
+
+    monkeypatch.setattr(window, "MonitorFromWindow", monitor_from_window)
+    monkeypatch.setattr(bar._maximized_windows, "maximized_on", maximized_on)
+    bar._on_maximized_changed()
+
+
+MAXIMIZED_LAYOUT = 'import Yasb.Bar\n\nBar {\n    id: bar\n    color: bar.hasMaximizedWindow ? "red" : "blue"\n}\n'
+
+
+def test_maximized_windows_are_followed_only_for_a_bar_that_reads_them(make_bar: MakeBar, widget_dir: Path):
+    assert not make_bar()._follows_maximized
+    assert make_bar(layout=_bar_file(widget_dir, MAXIMIZED_LAYOUT))._follows_maximized
+    assert make_bar(auto_hide="maximized")._follows_maximized
+
+
+def test_a_maximized_window_reaches_the_layout(make_bar: MakeBar, widget_dir: Path, monkeypatch: pytest.MonkeyPatch):
+    bar = make_bar(layout=_bar_file(widget_dir, MAXIMIZED_LAYOUT))
+    maximize_on_monitor(bar, monkeypatch, True)
+    assert _root(bar).property("hasMaximizedWindow") and _root(bar).property("color") == QColor("red")
+    assert not bar.autohide_enabled
+    maximize_on_monitor(bar, monkeypatch, False)
+    assert _root(bar).property("color") == QColor("blue")
+
+
+def test_a_maximized_window_hides_the_bar(make_bar: MakeBar, widget_dir: Path, monkeypatch: pytest.MonkeyPatch):
+    bar = make_bar(auto_hide="maximized")
+    maximize_on_monitor(bar, monkeypatch, True)
+    assert bar.autohide_enabled
+    maximize_on_monitor(bar, monkeypatch, False)
+    assert not bar.autohide_enabled
+    # A bar that reserves its space never hides for one
+    bar = make_bar(auto_hide="maximized", reserve_space=True, layout=_bar_file(widget_dir, MAXIMIZED_LAYOUT))
+    maximize_on_monitor(bar, monkeypatch, True)
+    assert bar.has_maximized_window and not bar.autohide_enabled
 
 
 @pytest.mark.parametrize(
