@@ -53,6 +53,7 @@ from core.services.window_switcher.windows import WindowList
 from core.services.windows_desktops.desktops import VirtualDesktops
 from core.utils.environment import Environment
 from core.utils.hotkey import Hotkey
+from core.utils.notifier import Notifier
 
 QML_URI = "Yasb"
 # Qt registers types under a version
@@ -104,7 +105,7 @@ QML_TYPES: tuple[type[QObject], ...] = (
     WallpaperThumbnail,
 )
 
-QML_SINGLETONS: tuple[type[QObject], ...] = (Environment, PowerPlans, PowerModes)
+QML_SINGLETONS: tuple[type[QObject], ...] = (Environment, Notifier, PowerPlans, PowerModes)
 
 QML_UNCREATABLE_TYPES: tuple[type[QObject], ...] = (
     About,

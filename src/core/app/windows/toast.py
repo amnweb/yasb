@@ -1,6 +1,7 @@
 """Windows toast notifications, shown under YASB's app identity."""
 
 from functools import lru_cache
+from xml.sax.saxutils import escape
 
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
@@ -82,8 +83,8 @@ class ToastNotifier:
             <visual>
                 <binding template="ToastGeneric">
                     <image placement="appLogoOverride" hint-crop="circle" src="{icon_path}"/>
-                    <text>{title}</text>
-                    <text>{message}</text>
+                    <text>{escape(title)}</text>
+                    <text>{escape(message)}</text>
                 </binding>
             </visual>
             {actions}
