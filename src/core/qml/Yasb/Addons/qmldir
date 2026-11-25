@@ -1,0 +1,13 @@
+module Yasb.Addons
+
+AddonCard 1.0 AddonCard.qml
+AddonsMenu 1.0 AddonsMenu.qml
+AddonsState 1.0 AddonsState.qml
+AddonsWindow 1.0 AddonsWindow.qml
+BrowsePage 1.0 BrowsePage.qml
+DetailPage 1.0 DetailPage.qml
+Field 1.0 Field.qml
+Glyph 1.0 Glyph.qml
+ImageViewer 1.0 ImageViewer.qml
+InstalledPage 1.0 InstalledPage.qml
+RoundedImage 1.0 RoundedImage.qml

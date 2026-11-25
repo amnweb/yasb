@@ -1,70 +1,36 @@
-"""Minimal Markdown-to-HTML converter for QTextBrowser rendering.
-
-Handles headings, paragraphs, bold, italic, strikethrough, inline code,
-code fences, links, images, unordered/ordered lists, blockquotes, tables,
-and horizontal rules.
-Produces clean semantic HTML without inline styles
-so that QTextDocument.defaultStyleSheet CSS rules work as expected.
-"""
+"""Markdown for MarkdownView, and the GitHub Markdown it is given."""
 
 import re
-from html import escape as html_escape
 
-_CODE_BLOCK_PLACEHOLDER = "\x00CB{index}\x00"
-_INLINE_CODE_PLACEHOLDER = "\x01IC{index}\x01"
-_CODE_BLOCK_PREFIX = "\x00CB"
-
-
-# Compiled patterns
-# GitHub blob URL to raw URL rewriting
-_IMG_GH_BLOB = re.compile(r"!\[(.*?)\]\(https?://github\.com/([^/]+)/([^/]+)/blob/([^)]+)\)")
-_IMG_TAG_GH = re.compile(
-    r'<img([^>]*?)src=["\']https?://github\.com/([^/]+)/([^/]+)/blob/([^"\']+)(["\'])', re.IGNORECASE
+from PyQt6.QtCore import QObject, QUrl, pyqtSlot
+from PyQt6.QtGui import (
+    QColor,
+    QFont,
+    QImage,
+    QTextBlockFormat,
+    QTextCharFormat,
+    QTextCursor,
+    QTextDocument,
+    QTextFormat,
+    QTextFrameFormat,
+    QTextImageFormat,
+    QTextLength,
+    QTextListFormat,
+    QTextTableFormat,
 )
-_HTML_WRAPPERS = re.compile(r"</?(?:div|span|center|section|article|figure|figcaption|p)[^>]*>", re.IGNORECASE)
-_INDENT_INLINE = re.compile(r"^[ \t]+(<(?:img|br|a|hr).*)$", re.IGNORECASE | re.MULTILINE)
-_IMG_SIZE_ATTR = re.compile(r'\s*(?:width|height)=["\'][^"\']*["\']', re.IGNORECASE)
+from PyQt6.QtQuick import QQuickTextDocument
 
-# Inline markdown
+from core.utils.shell_utils import shell_open
+
 _MD_IMG = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
-_MD_LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-_MD_BOLD_EM = re.compile(r"\*{3}(.+?)\*{3}")
-_MD_BOLD = re.compile(r"\*{2}(.+?)\*{2}")
-_MD_BOLD_U = re.compile(r"__(.+?)__")
-_MD_EM_STAR = re.compile(r"(?<!\w)\*(.+?)\*(?!\w)")
-_MD_EM_UNDER = re.compile(r"(?<!\w)_(.+?)_(?!\w)")
-_MD_STRIKE = re.compile(r"~~(.+?)~~")
 _MD_AUTOLINK = re.compile(r"<(https?://[^>]+)>")
-
-# Block-level
-_CODE_FENCE = re.compile(r"```\w*\n(.*?)```", re.DOTALL)
-_CODE_INLINE = re.compile(r"`([^`\n]+)`")
-_HEADING = re.compile(r"^(#{1,6})\s+(.+?)(?:\s+#+)?$")
-_HEADING_FENCE = re.compile(r"^#{1,6}\s")
-_HR = re.compile(r"^[-*_](?:\s*[-*_]){2,}\s*$")
-_TABLE_SEP = re.compile(r"^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$")
-_UL_ITEM = re.compile(r"^[-*+]\s")
-_UL_ITEM_ALL = re.compile(r"^\s*[-*+]\s")
-_UL_STRIP = re.compile(r"^\s*[-*+]\s+")
-_OL_ITEM = re.compile(r"^\d+[.)]\s")
-_OL_ITEM_ALL = re.compile(r"^\s*\d+[.)]\s")
-_OL_STRIP = re.compile(r"^\s*\d+[.)]\s+")
-_BQ_START = re.compile(r"^>")
-_BQ_PREFIX = re.compile(r"^>\s?")
+# A tag starts with a letter, / or ! right after its <, so "x < 5" is text
+_HTML_TAG = re.compile(r"<[A-Za-z/!][^>]*>")
+# Fenced and inline code, whose < and > are code
+_MD_CODE = re.compile(r"^(`{3,}|~{3,}).*?(?:^\1[ \t]*$|\Z)|``.+?``|`[^`\n]+`", re.MULTILINE | re.DOTALL)
 
 # GFM alert blocks: > [!NOTE], > [!TIP], > [!IMPORTANT], > [!WARNING], > [!CAUTION]
 _GFM_ALERT = re.compile(r"^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$", re.IGNORECASE)
-
-_ALERT_STYLES_DEFAULT: dict[str, tuple[str, str]] = {
-    "note": ("#4cc2ff", "rgba(76,194,255,0.75)"),
-    "tip": ("#6ccb5f", "rgba(108,203,95,0.75)"),
-    "important": ("#a371f7", "rgba(163,113,247,0.75)"),
-    "warning": ("#fce100", "rgba(252,225,0,0.75)"),
-    "caution": ("#ff99a4", "rgba(255,153,164,0.75)"),
-}
-
-# Raw HTML block elements that should be passed through as-is
-_HTML_BLOCK_OPEN = re.compile(r"^<(table|details|figure|fieldset|dl|form)\b", re.IGNORECASE)
 
 # GitHub changelog preprocessing
 _IMG_TAG = re.compile(r"<img\s[^>]*/?>", re.IGNORECASE)
@@ -73,75 +39,35 @@ _COMPARE_URL = re.compile(r"(?<![<\[(])(https://github\.com/[^/\s]+/[^/\s]+/comp
 _PULL_URL = re.compile(r"(?<![\[(])https://github\.com/[^/\s]+/[^/\s]+/pull/(\d+)")
 _PLAIN_HASH = re.compile(r"\b([0-9a-fA-F]{7,40})(?=\s*$)", re.MULTILINE)
 
-# Helpers
+# Points: 18, 18 and 16 px
+_HEADING_SIZES = {1: 13.5, 2: 13.5, 3: 12}
+# Each alert's icon, icon colour and box colour
+_ALERTS = {
+    "note": (chr(0xE946), "accent", "infoFill"),
+    "important": (chr(0xE946), "accent", "infoFill"),
+    "tip": (chr(0xE930), "success", "successFill"),
+    "warning": (chr(0xE7BA), "caution", "cautionFill"),
+    "caution": (chr(0xE783), "critical", "criticalFill"),
+}
+# Marks an alert's box and the paragraphs around it
+_ALERT_BOX = QTextFormat.Property.UserProperty.value
+_BULLETS = (QTextListFormat.Style.ListDisc, QTextListFormat.Style.ListCircle, QTextListFormat.Style.ListSquare)
 
 
-def _replace_placeholders(html: str, placeholders: list[str], template: str) -> str:
-    for index, value in enumerate(placeholders):
-        html = html.replace(template.format(index=index), value)
-    return html
+def strip_images_and_html(text: str) -> str:
+    """Markdown without images or HTML tags, so nothing loads from the network."""
 
+    def strip(part: str) -> str:
+        part = _MD_IMG.sub("", part)
+        return _HTML_TAG.sub(lambda tag: tag[0] if _MD_AUTOLINK.fullmatch(tag[0]) else "", part)
 
-def _md_inline(text: str) -> str:
-    """Convert inline Markdown (bold, italic, links, images) to HTML."""
-    text = _MD_IMG.sub(r'<img src="\2" alt="\1">', text)
-    text = _MD_LINK.sub(r'<a href="\2">\1</a>', text)
-    text = _MD_BOLD_EM.sub(r"<strong><em>\1</em></strong>", text)
-    text = _MD_BOLD.sub(r"<strong>\1</strong>", text)
-    text = _MD_BOLD_U.sub(r"<strong>\1</strong>", text)
-    text = _MD_EM_STAR.sub(r"<em>\1</em>", text)
-    text = _MD_EM_UNDER.sub(r"<em>\1</em>", text)
-    text = _MD_STRIKE.sub(r"<del>\1</del>", text)
-    text = _MD_AUTOLINK.sub(r'<a href="\1">\1</a>', text)
-    return text
-
-
-def _md_table(lines: list[str]) -> str:
-    """Convert Markdown table lines into an HTML <table>."""
-
-    def _cells(row: str) -> list[str]:
-        return [c.strip() for c in row.strip().strip("|").split("|")]
-
-    def _cell_html(c: str) -> str:
-        h = _md_inline(c)
-        # Cap image widths so they don't inflate columns and squeeze text cells
-        h = h.replace("<img ", '<img width="540" ')
-        return h
-
-    headers = _cells(lines[0])
-    rows = [_cells(ln) for ln in lines[2:] if ln.strip()]
-    html = "<table><thead><tr>" + "".join(f"<th>{_md_inline(h)}</th>" for h in headers) + "</tr></thead>"
-    if rows:
-        html += (
-            "<tbody>"
-            + "".join("<tr>" + "".join(f"<td>{_cell_html(c)}</td>" for c in r) + "</tr>" for r in rows)
-            + "</tbody>"
-        )
-    return html + "</table>"
-
-
-def _starts_block(lines: list[str], i: int) -> bool:
-    line = lines[i].strip()
-    if "|" in line and i + 1 < len(lines) and _TABLE_SEP.match(lines[i + 1].strip()):
-        return True
-    blocks = (_HEADING_FENCE, _HR, _UL_ITEM, _OL_ITEM, _HTML_BLOCK_OPEN)
-    return line.startswith(_CODE_BLOCK_PREFIX) or any(block.match(line) for block in blocks)
-
-
-# Public API
-def preprocess_readme(text: str) -> str:
-    """Strip block-level HTML wrappers and rewrite GitHub blob URLs to raw URLs."""
-    text = _IMG_GH_BLOB.sub(r"![\1](https://raw.githubusercontent.com/\2/\3/\4)", text)
-    text = _IMG_TAG_GH.sub(r"<img\1src=\5https://raw.githubusercontent.com/\2/\3/\4\5", text)
-    text = _HTML_WRAPPERS.sub("", text)
-    text = _INDENT_INLINE.sub(r"\1", text)
-    text = re.sub(
-        r"(<img\b)([^>]*?)>",
-        lambda m: m.group(1) + _IMG_SIZE_ATTR.sub("", m.group(2)) + ">",
-        text,
-        flags=re.IGNORECASE,
-    )
-    return text
+    kept: list[str] = []
+    end = 0
+    for code in _MD_CODE.finditer(text):
+        kept += [strip(text[end : code.start()]), code[0]]
+        end = code.end()
+    kept.append(strip(text[end:]))
+    return "".join(kept).strip()
 
 
 def convert_img_tags(text: str) -> str:
@@ -174,148 +100,185 @@ def strip_commit_links(changelog: str, repo_url: str = "") -> str:
     return text
 
 
-def md_to_html(src: str, *, alert_styles: dict[str, tuple[str, str]] | None = None) -> str:
-    """Minimal Markdown-to-HTML converter for QTextBrowser rendering."""
-    src = src.replace("\r\n", "\n")
-    code_blocks: list[str] = []
-
-    def _stash_code(m: re.Match[str]) -> str:
-        code = html_escape(m.group(1).rstrip("\n"))
-        code_blocks.append(f"<pre><code>{code}</code></pre>")
-        return _CODE_BLOCK_PLACEHOLDER.format(index=len(code_blocks) - 1)
-
-    src = _CODE_FENCE.sub(_stash_code, src)
-    inline_codes: list[str] = []
-
-    def _stash_ic(m: re.Match[str]) -> str:
-        inline_codes.append(f"<code>{html_escape(m.group(1))}</code>")
-        return _INLINE_CODE_PLACEHOLDER.format(index=len(inline_codes) - 1)
-
-    src = _CODE_INLINE.sub(_stash_ic, src)
-
-    lines = src.split("\n")
-    out: list[str] = []
-    i, n = 0, len(lines)
-    while i < n:
-        line = lines[i]
-        stripped = line.strip()
-        if not stripped:
-            i += 1
+def _alert_boxes(document: QTextDocument, colors: dict[str, QColor]) -> None:
+    """Turns each GitHub alert, a quote that starts with its marker, into a box."""
+    alerts: list[tuple[int, int, str]] = []
+    block = document.begin()
+    while block.isValid():
+        marker = block.text().partition(" ")[0]
+        alert = (
+            _GFM_ALERT.match(marker) if block.blockFormat().intProperty(QTextFormat.Property.BlockQuoteLevel) else None
+        )
+        if alert is not None:
+            alerts.append((block.position(), len(marker), alert[1].lower()))
+        block = block.next()
+    cursor = QTextCursor(document)
+    # Its own change: Qt finds the new tables only once it ends
+    cursor.beginEditBlock()
+    for position, marker, kind in reversed(alerts):
+        glyph, color, fill = _ALERTS[kind]
+        end = position + document.findBlock(position).length() - 1
+        cursor.setPosition(min(position + marker + 1, end))
+        cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+        message = cursor.selection()
+        cursor.setPosition(position)
+        cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+        cursor.removeSelectedText()
+        # A table needs a paragraph on each side
+        empty = QTextBlockFormat()
+        empty.setLineHeight(0, QTextBlockFormat.LineHeightTypes.FixedHeight.value)
+        empty.setProperty(_ALERT_BOX, True)
+        cursor.setBlockFormat(empty)
+        box = QTextTableFormat()
+        box.setBorder(1)
+        box.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Solid)
+        box.setBorderBrush(colors["stroke"])
+        box.setBackground(colors[fill])
+        box.setCellPadding(12)
+        box.setCellSpacing(0)
+        box.setWidth(QTextLength(QTextLength.Type.PercentageLength, 100))
+        box.setProperty(_ALERT_BOX, True)
+        table = cursor.insertTable(1, 1, box)
+        if table is None:
             continue
-        # Code block placeholder
-        if stripped.startswith(_CODE_BLOCK_PREFIX):
-            out.append(stripped)
-            i += 1
-            continue
-        # Heading
-        hm = _HEADING.match(stripped)
-        if hm:
-            lvl = len(hm.group(1))
-            out.append(f"<h{lvl}>{_md_inline(hm.group(2))}</h{lvl}>")
-            i += 1
-            continue
-        # Horizontal rule
-        if _HR.match(stripped):
-            out.append(
-                '<table width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0;">'
-                '<tr><td style="padding:0; height:1px; font-size:1px; background-color:rgba(128,128,128,0.25);"> </td></tr></table>'
-            )
-            i += 1
-            continue
-        # Table
-        if "|" in stripped and i + 1 < n and _TABLE_SEP.match(lines[i + 1].strip()):
-            tlines: list[str] = []
-            while i < n and "|" in lines[i]:
-                tlines.append(lines[i])
-                i += 1
-            out.append(_md_table(tlines))
-            continue
-        # Raw HTML block passthrough (e.g. <table>, <details>)
-        if stripped.startswith("<"):
-            m = _HTML_BLOCK_OPEN.match(stripped)
-            if m:
-                tag = m.group(1).lower()
-                html_lines = [line]
-                i += 1
-                depth = 1
-                while i < n and depth > 0:
-                    cur = lines[i]
-                    cur_lower = cur.lower()
-                    depth += cur_lower.count(f"<{tag}") - cur_lower.count(f"</{tag}")
-                    html_lines.append(cur)
-                    i += 1
-                out.append("\n".join(html_lines))
+        after = table.lastCursorPosition()
+        after.movePosition(QTextCursor.MoveOperation.NextBlock)
+        gap = QTextBlockFormat(empty)
+        gap.setBottomMargin(8)
+        after.setBlockFormat(gap)
+        inside = table.cellAt(0, 0).firstCursorPosition()
+        inside.setBlockFormat(QTextBlockFormat())
+        icon = QTextCharFormat()
+        icon.setFontFamilies(["Segoe Fluent Icons"])
+        icon.setForeground(colors[color])
+        inside.insertText(glyph + "  ", icon)
+        title = QTextCharFormat()
+        title.setFontWeight(QFont.Weight.DemiBold)
+        inside.insertText(kind.capitalize() + "  ", title)
+        inside.insertFragment(message)
+    cursor.endEditBlock()
+
+
+def style_document(document: QTextDocument, colors: dict[str, QColor]) -> None:
+    _alert_boxes(document, colors)
+    document.setIndentWidth(20)
+    cursor = QTextCursor(document)
+    # One change, laid out once, instead of one per format
+    cursor.beginEditBlock()
+    consolas = QTextCharFormat()
+    consolas.setFontFamilies(["Consolas"])
+
+    def merge(begin: int, end: int, char: QTextCharFormat) -> None:
+        cursor.setPosition(begin)
+        cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+        cursor.mergeCharFormat(char)
+
+    block = document.begin()
+    while block.isValid():
+        level = block.blockFormat().headingLevel()
+        fence = block.blockFormat().hasProperty(QTextFormat.Property.BlockCodeFence)
+        quote = block.blockFormat().intProperty(QTextFormat.Property.BlockQuoteLevel)
+        end = block.position() + block.length() - 1
+        if quote:
+            muted = QTextCharFormat()
+            muted.setForeground(colors["quote"])
+            merge(block.position(), end, muted)
+        cursor.setPosition(block.position())
+        if cursor.currentTable() is None and not block.blockFormat().boolProperty(_ALERT_BOX):
+            spacing = QTextBlockFormat()
+            spacing.setTopMargin(24 if level and block != document.begin() else 0)
+            spacing.setBottomMargin(8)
+            if quote:
+                spacing.setLeftMargin(20 * quote)
+            if fence:
+                spacing.setNonBreakableLines(False)
+            cursor.mergeBlockFormat(spacing)
+        if level:
+            heading = QTextCharFormat()
+            if level in _HEADING_SIZES:
+                heading.setFontPointSize(_HEADING_SIZES[level])
+            heading.setFontWeight(QFont.Weight.DemiBold)
+            merge(block.position(), end, heading)
+        if fence:
+            merge(block.position(), end, consolas)
+        else:
+            code: list[tuple[int, int]] = []
+            fragments = block.begin()
+            while not fragments.atEnd():
+                fragment = fragments.fragment()
+                if fragment.charFormat().fontFixedPitch():
+                    code.append((fragment.position(), fragment.position() + fragment.length()))
+                fragments += 1
+            for begin, stop in code:
+                merge(begin, stop, consolas)
+        bullets = block.textList()
+        if bullets is not None and bullets.format().style() in _BULLETS:
+            # By depth, not by the character written
+            listing = bullets.format()
+            listing.setStyle(_BULLETS[(listing.indent() - 1) % len(_BULLETS)])
+            bullets.setFormat(listing)
+        block = block.next()
+    root = document.rootFrame()
+    for frame in root.childFrames() if root is not None else []:
+        table = frame.firstCursorPosition().currentTable()
+        if table is not None and not table.format().boolProperty(_ALERT_BOX):
+            lines = table.format()
+            lines.setBorder(1)
+            lines.setBorderBrush(colors["line"])
+            lines.setBorderCollapse(True)
+            lines.setCellPadding(6)
+            lines.setCellSpacing(0)
+            table.setFormat(lines)
+    cursor.endEditBlock()
+
+
+def fit_images(document: QTextDocument, width: float) -> None:
+    """Shrinks the loaded images wider than width to it."""
+    cursor = QTextCursor(document)
+    cursor.beginEditBlock()
+    block = document.begin()
+    while block.isValid():
+        images: list[tuple[int, int, QTextImageFormat]] = []
+        fragments = block.begin()
+        while not fragments.atEnd():
+            fragment = fragments.fragment()
+            if fragment.charFormat().isImageFormat():
+                images.append((fragment.position(), fragment.length(), fragment.charFormat().toImageFormat()))
+            fragments += 1
+        for position, length, image in images:
+            loaded = document.resource(QTextDocument.ResourceType.ImageResource.value, QUrl(image.name()))
+            if not isinstance(loaded, QImage) or loaded.isNull():
                 continue
-        # Blockquote
-        if _BQ_START.match(stripped):
-            bq: list[str] = []
-            while i < n:
-                cur = lines[i].strip()
-                if _BQ_START.match(cur):
-                    bq.append(_BQ_PREFIX.sub("", lines[i], count=1))
-                elif cur and bq[-1].strip() and not _starts_block(lines, i):
-                    bq.append(cur)
-                else:
-                    break
-                i += 1
-            # GFM alert blocks [!NOTE], [!TIP], [!IMPORTANT], [!WARNING], [!CAUTION]
-            if bq:
-                am = _GFM_ALERT.match(bq[0].strip())
-                if am:
-                    kind = am.group(1).lower()
-                    astyles = alert_styles or _ALERT_STYLES_DEFAULT
-                    entry = astyles.get(kind, ("#ffffff", "rgba(255,255,255,0.20)"))
-                    title_color, border_color = entry
-                    body_lines = [_md_inline(ln.strip()) for ln in bq[1:] if ln.strip()]
-                    body_html = ("<br>" + "<br>".join(body_lines)) if body_lines else ""
-                    out.append(
-                        f'<table width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0;">'
-                        f'<tr><td style="padding:10px 14px;border-left:4px solid {border_color};">'
-                        f'<b style="color:{title_color}; font-size:14px;">{kind.title()}</b>'
-                        f"{body_html}"
-                        f"</td></tr></table>"
-                    )
-                    continue
-            body_lines = [_md_inline(ln.strip()) for ln in bq if ln.strip()]
-            body_html = "<br>".join(body_lines)
-            out.append(
-                f'<table width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0;">'
-                f'<tr><td style="padding:6px 12px;">{body_html}</td></tr></table>'
-            )
-            continue
-        # Unordered list
-        if _UL_ITEM.match(stripped):
-            items: list[str] = []
-            while i < n and _UL_ITEM_ALL.match(lines[i]):
-                items.append(_UL_STRIP.sub("", lines[i], count=1))
-                i += 1
-            out.append("<ul>" + "".join(f"<li>{_md_inline(it)}</li>" for it in items) + "</ul>")
-            continue
-        # Ordered list
-        if _OL_ITEM.match(stripped):
-            items = []
-            while i < n and _OL_ITEM_ALL.match(lines[i]):
-                items.append(_OL_STRIP.sub("", lines[i], count=1))
-                i += 1
-            out.append("<ol>" + "".join(f"<li>{_md_inline(it)}</li>" for it in items) + "</ol>")
-            continue
-        # Paragraph - collect consecutive non-blank, non-block lines
-        para: list[str] = []
-        while (
-            i < n
-            and lines[i].strip()
-            and not _HEADING_FENCE.match(lines[i].strip())
-            and not _BQ_START.match(lines[i].strip())
-            and not _HR.match(lines[i].strip())
-            and not (_UL_ITEM.match(lines[i].strip()) and not para)
-            and not (_OL_ITEM.match(lines[i].strip()) and not para)
-            and not lines[i].strip().startswith(_CODE_BLOCK_PREFIX)
-        ):
-            para.append(lines[i].strip())
-            i += 1
-        if para:
-            out.append("<p>" + "<br>".join(_md_inline(p) for p in para) + "</p>")
+            scale = min(1.0, width / loaded.width()) if width > 0 else 1.0
+            size = round(loaded.width() * scale), round(loaded.height() * scale)
+            if (round(image.width()), round(image.height())) == size:
+                continue
+            fit = QTextImageFormat()
+            fit.setWidth(size[0])
+            fit.setHeight(size[1])
+            cursor.setPosition(position)
+            cursor.setPosition(position + length, QTextCursor.MoveMode.KeepAnchor)
+            cursor.mergeCharFormat(fit)
+        block = block.next()
+    cursor.endEditBlock()
 
-    html = "\n".join(out)
-    html = _replace_placeholders(html, code_blocks, _CODE_BLOCK_PLACEHOLDER)
-    return _replace_placeholders(html, inline_codes, _INLINE_CODE_PLACEHOLDER)
+
+class Markdown(QObject):
+    @pyqtSlot(QObject, str, "QVariantMap")
+    def show(self, holder: QObject, markdown: str, colors: dict[str, QColor]) -> None:
+        document = holder.textDocument() if isinstance(holder, QQuickTextDocument) else None
+        if document is not None:
+            document.setMarkdown(markdown)
+            style_document(document, colors)
+
+    @pyqtSlot(QObject, float)
+    def fitImages(self, holder: QObject, width: float) -> None:
+        document = holder.textDocument() if isinstance(holder, QQuickTextDocument) else None
+        if document is not None:
+            fit_images(document, width)
+
+    @pyqtSlot(str)
+    def open(self, url: str) -> None:
+        # The text can come from anyone, and a file: or other link would run what it names
+        if QUrl(url).scheme().lower() in ("http", "https", "mailto"):
+            shell_open(url)

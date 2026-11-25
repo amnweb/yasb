@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import os
 import re
 import zipfile
 from collections.abc import Iterator
@@ -13,9 +14,11 @@ from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtQml import QQmlComponent, QQmlEngine, QQmlError
 
 from core import widget_files
+from core.addons import operations
+from core.addons.operations import ADDONS_RAW
+from core.addons.settings_copy import settings_copy
 from core.bar.revisions import Revisions
-from core.cli import addons
-from core.cli.addons import ADDONS_RAW, CLIAddonsHandler, builtin_widgets, settings_copy
+from core.cli.addons import CLIAddonsHandler, builtin_widgets
 from core.qml_types import register_qml_types
 from core.theme_files import config_qml_file, load_theme
 from settings import QML_IMPORT_PATH
@@ -70,7 +73,7 @@ WITH_SETTINGS = [widget for widget in builtin_widgets() if settings_copy(widget,
 @pytest.fixture
 def user_widgets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(widget_files, "USER_WIDGETS_DIR", tmp_path)
-    monkeypatch.setattr(addons, "DEFAULT_CONFIG_DIRECTORY", str(tmp_path))
+    monkeypatch.setattr(operations, "DEFAULT_CONFIG_DIRECTORY", str(tmp_path))
     return tmp_path
 
 
@@ -78,10 +81,10 @@ def user_widgets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def repository(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, bytes]]:
     """The addons repository's files by URL."""
     files: dict[str, bytes] = {}
-    monkeypatch.setattr(addons, "_download", files.__getitem__)
-    addons.addons_index.cache_clear()
+    monkeypatch.setattr(operations, "download", files.__getitem__)
+    operations.addons_index.cache_clear()
     yield files
-    addons.addons_index.cache_clear()
+    operations.addons_index.cache_clear()
 
 
 def _publish(repository: dict[str, bytes], addon_id: str, kind: str, *versions: int) -> None:
@@ -99,7 +102,7 @@ def _publish(repository: dict[str, bytes], addon_id: str, kind: str, *versions: 
     entry = {"id": addon_id, "type": kind, "author": login, "title": name, "description": f"A {kind}"}
     index = {"addons": [{**entry, "versions": entries}]}
     repository[f"{ADDONS_RAW}/index.json"] = json.dumps(index).encode()
-    addons.addons_index.cache_clear()
+    operations.addons_index.cache_clear()
 
 
 @pytest.fixture
@@ -256,7 +259,7 @@ def test_list_shows_the_config_folders_widgets_one_line_each(user_widgets: Path,
         ["Name", "Id", "Type", "Version", "Source"],
         ["-" * len(lines[0])],
         ["amnweb.clock", "amnweb.clock", "widget", "-", "custom"],
-        ["Note", "amnweb.note", "widget", "2", addons.ADDONS_REPOSITORY],
+        ["Note", "amnweb.note", "widget", "2", operations.ADDONS_REPOSITORY],
         ["Clock", "Clock", "widget", "1", "YASB"],
     ]
 
@@ -306,7 +309,7 @@ def test_install_takes_the_newest_version_and_update_lists_before_it_changes_any
     _publish(repository, "someone.note", "widget", 1, 2, 4)
     capsys.readouterr()
     assert handler.update() == 0
-    assert ["someone.note", "someone.note", "widget", "1", "4", addons.ADDONS_REPOSITORY] in [
+    assert ["someone.note", "someone.note", "widget", "1", "4", operations.ADDONS_REPOSITORY] in [
         line.split() for line in capsys.readouterr().out.splitlines()
     ]
     assert note.read_text(encoding="utf-8") == "// v1\n"
@@ -325,7 +328,7 @@ def test_search_lists_yasbs_widgets_and_the_addons(repository: dict[str, bytes],
         "someone.note",
         "widget",
         "2",
-        addons.ADDONS_REPOSITORY,
+        operations.ADDONS_REPOSITORY,
         "A",
         "widget",
     ]
@@ -354,14 +357,14 @@ def test_a_config_replaces_the_users_which_is_saved_first(
     (config / "widgets" / "Mine").mkdir(parents=True)
     for name in ("config.yaml", ".env", "yasb.log", "widgets/Mine/Mine.qml"):
         (config / name).write_text(name)
-    monkeypatch.setattr(addons, "DEFAULT_CONFIG_DIRECTORY", str(config))
-    monkeypatch.setattr(addons, "is_process_running", set[str]().__contains__)
+    monkeypatch.setattr(operations, "DEFAULT_CONFIG_DIRECTORY", str(config))
+    monkeypatch.setattr(operations, "is_process_running", set[str]().__contains__)
     monkeypatch.setattr("builtins.input", "y{:.0}".format)
     _publish(repository, "someone.frame", "config", 1)
     handler = CLIAddonsHandler()
 
     before = sorted(config.rglob("*"))
-    with addons.os.scandir(config / "widgets" / "Mine") as opened:
+    with os.scandir(config / "widgets" / "Mine") as opened:
         next(opened)
         assert handler.install("someone.frame") == 1
     assert "widgets is in use, so nothing was changed" in capsys.readouterr().out
@@ -373,7 +376,7 @@ def test_a_config_replaces_the_users_which_is_saved_first(
     capsys.readouterr()
     handler.list()
     row = capsys.readouterr().out.splitlines()[2].split()
-    assert row == ["yasb", "someone.frame", "config", "1", addons.ADDONS_REPOSITORY]
+    assert row == ["yasb", "someone.frame", "config", "1", operations.ADDONS_REPOSITORY]
     assert sorted(path.name for path in tmp_path.iterdir()) == ["yasb", "yasb-backups"]
     backup = next((tmp_path / "yasb-backups").glob("backup_mine_*.zip"))
     with zipfile.ZipFile(backup) as archive:
@@ -383,7 +386,7 @@ def test_a_config_replaces_the_users_which_is_saved_first(
     _publish(repository, "someone.frame", "config", 1, 2)
     capsys.readouterr()
     assert handler.update() == 0
-    assert ["yasb", "someone.frame", "config", "1", "2", addons.ADDONS_REPOSITORY] in [
+    assert ["yasb", "someone.frame", "config", "1", "2", operations.ADDONS_REPOSITORY] in [
         line.split() for line in capsys.readouterr().out.splitlines()
     ]
     # Only by its id, as it replaces the whole config

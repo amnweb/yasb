@@ -90,11 +90,11 @@ def _install_qt_message_filter():
     qInstallMessageHandler(_qt_message_handler)
 
 
-def init_logger():
+def init_logger(path: str = LOG_PATH, app: str = APP_NAME):
     _suppress_third_party_warnings()
     _install_qt_message_filter()
     # File handler should be without colors
-    file_handler = _LogFile(LOG_PATH, maxBytes=1024 * 1024, backupCount=5, encoding="utf-8")
+    file_handler = _LogFile(path, maxBytes=1024 * 1024, backupCount=5, encoding="utf-8")
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(logging.Formatter(LOG_FORMAT, datefmt=LOG_DATETIME))
     # Configure logging with colors
@@ -106,7 +106,7 @@ def init_logger():
     # c_stack is dead on Windows
     if file_handler.stream is not None:
         faulthandler.enable(file=file_handler.stream, all_threads=True, c_stack=False)
-    logging.info("%s v%s", APP_NAME, BUILD_VERSION)
+    logging.info("%s v%s", app, BUILD_VERSION)
 
 
 def enable_debug_logging():

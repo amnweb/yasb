@@ -8,27 +8,23 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from PyQt6.QtCore import QBuffer, QByteArray, QIODevice, QUrl
-from PyQt6.QtGui import QGuiApplication, QImage
+from comtypes import GUID
+from PyQt6.QtCore import QUrl
+from PyQt6.QtGui import QGuiApplication, QImage, QTextDocument
 from PyQt6.QtQml import QQmlComponent, QQmlEngine
 
-from core.app.update.installer import Updater, changelog_html, download_installer, fit_images
-from core.app.update.service import ReleaseInfo
+from core.app.update.installer import Updater, download_installer
+from core.app.update.service import UPDATE_TOAST_ACTION, ReleaseInfo
 from core.app.windows import about as about_module
+from core.app.windows import toast
 from core.app.windows.about import About
 from core.qml_types import register_qml_types
-from settings import QML_IMPORT_PATH
+from core.utils.markdown import fit_images
+from core.utils.win32.bindings.ole32 import create_com_object
+from core.utils.win32.bindings.shell32 import INotificationActivationCallback
+from core.utils.win32.constants import CLSCTX_LOCAL_SERVER
+from settings import QML_IMPORT_PATH, TOAST_ACTIVATOR_CLSID
 from tests.support.qt import wait
-
-
-def png(width: int, height: int) -> bytes:
-    image = QImage(width, height, QImage.Format.Format_ARGB32)
-    image.fill(0xFF336699)
-    data = QByteArray()
-    buffer = QBuffer(data)
-    buffer.open(QIODevice.OpenModeFlag.WriteOnly)
-    image.save(buffer, "PNG")
-    return bytes(data.data())
 
 
 @pytest.fixture
@@ -94,36 +90,46 @@ def test_a_cancelled_or_short_download_leaves_no_file(
     assert not path.exists()
 
 
-def test_changelog_images_are_embedded_and_shrink_to_the_text_width(server: tuple[str, dict[str, bytes]]):
-    url, files = server
-    files["/wide.png"] = png(1600, 100)
-    files["/small.png"] = png(40, 20)
-    html, images = changelog_html(
-        f'![wide]({url}/wide.png)\n\n<img src="{url}/small.png">\n\n![gone]({url}/missing.png)'
-    )
-    assert [(image.width, image.height) for image in images] == [(1600, 100), (40, 20)]
-    fitted = fit_images(html, images, 800)
-    assert 'width="800" height="50"' in fitted
-    assert 'width="40" height="20"' in fitted
-    assert fitted.count("data:image/png;base64,") == 2
-    assert f"{url}/missing.png" in fitted
-    assert 'width="1600" height="100"' in fit_images(html, images, 0)
-
-
-def test_changelog_images_follow_the_window_width(qapp: QGuiApplication, server: tuple[str, dict[str, bytes]]):
-    url, files = server
-    files["/wide.png"] = png(1600, 100)
-    updater = Updater(release(changelog=f"![wide]({url}/wide.png)"))
-    updater.setProperty("textWidth", 800)
-    updater.loadChangelog()
+def test_the_changelog_loads_as_markdown_with_short_links(qapp: QGuiApplication):
+    commit = "https://github.com/amnweb/yasb/commit/8926b9de686c75c0fed8fb1a4155cfd7e675c8ee"
+    updaters = [Updater(release(changelog=f'<img src="https://x.y/banner.png">\n\n* add a thing {commit}'))]
+    updaters.append(Updater(release(changelog=" ")))
+    for updater in updaters:
+        assert updater.property("changelog") == ""
+        updater.loadChangelog()
     for _ in range(100):
-        if updater.property("changelog"):
+        if all(updater.property("changelog") for updater in updaters):
             break
-        wait(50)
-    assert 'width="800" height="50"' in updater.property("changelog")
-    updater.setProperty("textWidth", 400)
-    wait(200)
-    assert 'width="400" height="25"' in updater.property("changelog")
+        wait(10)
+    assert updaters[0].property("changelog") == f"![](https://x.y/banner.png)\n\n* add a thing [8926b9d]({commit})"
+    assert updaters[1].property("changelog") == "_No changelog provided._"
+
+
+def test_images_shrink_to_the_text_width(qapp: QGuiApplication):
+    document = QTextDocument()
+    document.setMarkdown("![wide](wide.png) ![small](small.png) ![gone](missing.png)")
+    # Added after the text, as a TextEdit loads them
+    for name, width, height in (("wide.png", 1600, 100), ("small.png", 40, 20)):
+        document.addResource(
+            QTextDocument.ResourceType.ImageResource.value,
+            QUrl(name),
+            QImage(width, height, QImage.Format.Format_ARGB32),
+        )
+
+    def sizes() -> list[tuple[float, float]]:
+        fragments = document.begin().begin()
+        found: list[tuple[float, float]] = []
+        while not fragments.atEnd():
+            image = fragments.fragment().charFormat().toImageFormat()
+            if image.isValid():
+                found.append((image.width(), image.height()))
+            fragments += 1
+        return found
+
+    fit_images(document, 800)
+    assert sizes()[:2] == [(800, 50), (40, 20)]
+    fit_images(document, 400)
+    assert sizes()[:2] == [(400, 25), (40, 20)]
 
 
 def test_a_failed_download_lets_the_user_try_again(qapp: QGuiApplication):
@@ -168,3 +174,19 @@ def test_the_windows_load(qapp: QGuiApplication, name: str):
     assert window is not None, [error.toString() for error in component.errors()]
     window.deleteLater()
     wait(0)
+
+
+def test_a_click_on_the_update_toast_reaches_its_action(qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(toast, "_actions", {})
+    clicks: list[str] = []
+    toast.on_toast(UPDATE_TOAST_ACTION, lambda: clicks.append(UPDATE_TOAST_ACTION))
+    toast.register_activator()
+    try:
+        # As the notification center and the notification widget find and call it
+        activator = create_com_object(GUID(TOAST_ACTIVATOR_CLSID), INotificationActivationCallback, CLSCTX_LOCAL_SERVER)
+        assert activator is not None
+        activator.Activate("YASB", UPDATE_TOAST_ACTION, None, 0)
+        activator.Activate("YASB", "unknown", None, 0)
+    finally:
+        toast.revoke_activator()
+    assert clicks == [UPDATE_TOAST_ACTION]

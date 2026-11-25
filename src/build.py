@@ -6,7 +6,7 @@ import winrt
 from cx_Freeze import Executable, setup  # pyright: ignore[reportUnknownVariableType, reportMissingTypeStubs]
 
 from core.utils.system import detect_architecture
-from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL
+from settings import APP_ID, BUILD_VERSION, MSI_UPGRADE_CODE, RELEASE_CHANNEL, TOAST_ACTIVATOR_CLSID
 
 icon_ico = "assets/images/app_icon.ico"
 icon_png = "assets/images/app_icon.png"
@@ -86,13 +86,30 @@ msi_data = {
             "[TARGETDIR]assets\\images\\app_icon.png",
             "TARGETDIR",
         ),
+        # Clicks on YASB's notifications go to this COM class, which Windows starts yasb.exe for when needed
+        (
+            "AppUserModelIdActivator",
+            -1,
+            f"Software\\Classes\\AppUserModelId\\{APP_ID}",
+            "CustomActivator",
+            TOAST_ACTIVATOR_CLSID,
+            "TARGETDIR",
+        ),
+        (
+            "ToastActivatorServer",
+            -1,
+            f"Software\\Classes\\CLSID\\{TOAST_ACTIVATOR_CLSID}\\LocalServer32",
+            None,
+            '"[TARGETDIR]yasb.exe"',
+            "TARGETDIR",
+        ),
     ],
 }
 
 bdist_msi_options = {
     "data": msi_data,
     "install_icon": icon_ico,
-    "upgrade_code": "{3f620cf5-07b5-47fd-8e37-9ca8ad14b608}",
+    "upgrade_code": MSI_UPGRADE_CODE,
     "add_to_path": True,
     "dist_dir": "dist/out",
     "initial_target_dir": r"[ProgramFiles64Folder]\YASB",
@@ -130,6 +147,13 @@ executables = [
         icon=icon_ico,
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasb_cloud",
+    ),
+    Executable(
+        "core/addons/app.py",
+        base="gui",
+        icon=icon_ico,
+        copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
+        target_name="yasb_addons",
     ),
 ]
 

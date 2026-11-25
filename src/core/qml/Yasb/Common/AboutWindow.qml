@@ -91,10 +91,10 @@ Window {
         Image {
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: 8
-            Layout.preferredWidth: 64
-            Layout.preferredHeight: 64
+            Layout.preferredWidth: 96
+            Layout.preferredHeight: 96
             source: window.about.iconUrl
-            sourceSize: Qt.size(64, 64)
+            sourceSize: Qt.size(96, 96)
         }
 
         Label {

@@ -53,6 +53,7 @@ from core.services.window_switcher.windows import WindowList
 from core.services.windows_desktops.desktops import VirtualDesktops
 from core.utils.environment import Environment
 from core.utils.hotkey import Hotkey
+from core.utils.markdown import Markdown
 from core.utils.notifier import Notifier
 
 QML_URI = "Yasb"
@@ -105,7 +106,7 @@ QML_TYPES: tuple[type[QObject], ...] = (
     WallpaperThumbnail,
 )
 
-QML_SINGLETONS: tuple[type[QObject], ...] = (Environment, Notifier, PowerPlans, PowerModes)
+QML_SINGLETONS: tuple[type[QObject], ...] = (Environment, Notifier, PowerPlans, PowerModes, Markdown)
 
 QML_UNCREATABLE_TYPES: tuple[type[QObject], ...] = (
     About,

@@ -33,6 +33,8 @@ USER_AGENT_HEADER = {"User-Agent": "YASB Updater"}
 CHECK_INTERVAL = 60 * 60  # 60 minutes
 LAST_CHECK_FILE = app_data_path("last_update_check")
 ARCHITECTURE = get_architecture()
+# What a click on the update toast does, which the tray gives
+UPDATE_TOAST_ACTION = "update"
 
 # Module-level singletons
 _update_service_instance: UpdateService | None = None
@@ -413,23 +415,19 @@ def start_update_checker() -> None:
             if release_info:
                 for cb in _update_callbacks:
                     cb(release_info)
-                icon_path = APP_ICON_TRANSPARENT
-                toaster = ToastNotifier()
 
-                # Determine launch URL and message based on channel
                 if update_service.current_channel == "preview":
-                    launch_url = "https://github.com/amnweb/yasb/releases/tag/preview"
                     message = "New preview build is available!"
                 else:
-                    launch_url = "https://github.com/amnweb/yasb/releases/latest"
                     message = f"New version {release_info.version} is available!"
 
-                toaster.show(
-                    icon_path=icon_path,
+                # A click opens the update dialog, which the tray gives for this action
+                ToastNotifier().show(
+                    icon_path=APP_ICON_TRANSPARENT,
                     title="Update Available",
                     message=message,
-                    launch_url=launch_url,
                     scenario="reminder",
+                    action=UPDATE_TOAST_ACTION,
                 )
             # Update last check time
             update_service.update_last_check_time()

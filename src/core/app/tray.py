@@ -1,6 +1,7 @@
 import ctypes
 import logging
 import os
+import threading
 from collections.abc import Callable
 from functools import cache, partial
 
@@ -9,8 +10,14 @@ from PyQt6.QtGui import QColor, QImage, QPainter
 
 from core.app.controller import exit_application, reload_application
 from core.app.update.installer import show_update
-from core.app.update.service import ReleaseInfo, register_update_callback
+from core.app.update.service import (
+    UPDATE_TOAST_ACTION,
+    ReleaseInfo,
+    get_update_service,
+    register_update_callback,
+)
 from core.app.windows.about import About
+from core.app.windows.toast import on_toast, register_activator, revoke_activator
 from core.bar.manager import BarManager
 from core.utils.shell_utils import shell_open
 from core.utils.win32.autostart import AUTOSTART_FILE, disable_autostart, enable_autostart, is_autostart_enabled
@@ -61,6 +68,7 @@ from settings import (
 )
 
 CLOUD_EXE_PATH = os.path.join(SCRIPT_PATH, "yasb_cloud.exe")
+ADDONS_EXE_PATH = os.path.join(SCRIPT_PATH, "yasb_addons.exe")
 TRAY_WINDOW_CLASS = "YasbTray"
 # The message the shell sends the tray window for clicks on the icon
 TRAY_MESSAGE = WM_APP + 1
@@ -113,6 +121,8 @@ class SystemTrayManager(QObject):
     """YASB's icon in the notification area, with a native menu, made directly with Shell_NotifyIcon."""
 
     _update_signal = pyqtSignal(object)
+    _toast_clicked = pyqtSignal()
+    _checked = pyqtSignal(object)
 
     def __init__(self, bar_manager: BarManager):
         super().__init__()
@@ -136,6 +146,12 @@ class SystemTrayManager(QObject):
         self._dark_menu = self._allow_dark_menu()
         self._update_signal.connect(self._set_update_badge)
         register_update_callback(self._update_signal.emit)
+        self._checking = False
+        self._checked.connect(self._open_checked)
+        # Click's COM call returns before the dialog opens
+        self._toast_clicked.connect(self._open_update_from_toast, Qt.ConnectionType.QueuedConnection)
+        on_toast(UPDATE_TOAST_ACTION, self._toast_clicked.emit)
+        register_activator()
         app = QCoreApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self.close)
@@ -145,6 +161,7 @@ class SystemTrayManager(QObject):
         self._notify(NIM_ADD)
 
     def close(self) -> None:
+        revoke_activator()
         if self._shown:
             self._notify(NIM_DELETE)
             self._shown = False
@@ -181,6 +198,36 @@ class SystemTrayManager(QObject):
             szTip=self._tooltip[:127],
         )
         return bool(shell32.Shell_NotifyIconW(action, ctypes.byref(data)))
+
+    def _open_update_from_toast(self) -> None:
+        """Opens the update dialog for a click on the update toast, which can come before YASB has checked: when
+        Windows started YASB for the click, or the toast is from an earlier run."""
+        if self._pending_release_info is not None:
+            self._open_update_dialog()
+            return
+        if self._checking:
+            return
+        self._checking = True
+
+        def check() -> None:
+            try:
+                release = get_update_service().check_for_updates(timeout=10)
+            except Exception:
+                # check_for_updates logs why
+                release = None
+            try:
+                self._checked.emit(release)
+            except RuntimeError:
+                # YASB exited first
+                pass
+
+        threading.Thread(target=check, daemon=True, name="ToastUpdateCheck").start()
+
+    def _open_checked(self, release_info: ReleaseInfo | None) -> None:
+        self._checking = False
+        if release_info is not None:
+            self._set_update_badge(release_info)
+            self._open_update_dialog(release_info)
 
     def _set_update_badge(self, release_info: ReleaseInfo | None = None):
         self._update_available = True
@@ -222,9 +269,16 @@ class SystemTrayManager(QObject):
                 add_item(menu, "Update Available", self._open_update_dialog)
                 add_separator(menu)
             add_item(menu, "Open Config", partial(shell_open, DEFAULT_CONFIG_DIRECTORY))
-            if os.path.exists(CLOUD_EXE_PATH):
-                add_item(menu, "YASB Cloud", partial(shell_open, CLOUD_EXE_PATH))
             add_item(menu, "Reload YASB", partial(reload_application, "Reloading Application from tray..."))
+            apps = [
+                (label, path)
+                for label, path in (("YASB Cloud", CLOUD_EXE_PATH), ("YASB Addons", ADDONS_EXE_PATH))
+                if os.path.exists(path)
+            ]
+            if apps:
+                add_separator(menu)
+                for label, path in apps:
+                    add_item(menu, label, partial(shell_open, path))
             add_separator(menu)
             if AUTOSTART_FILE:
                 if is_autostart_enabled(APP_NAME):
