@@ -26,8 +26,7 @@ class FolderContentsWidget(BaseWidget):
         # self.count = len(list(self.folder.iterdir()))
 
         # Widget Label
-        label = QLabel("shortcuts")  # can be replaced with f"{self.folder} [{self.count}]"
-        self._widget_container_layout.addWidget(label)
+        self.build_widget_label(self.config.label, None)
 
         # Popup Logic
         self.register_callback("show_menu", self.show_menu)
