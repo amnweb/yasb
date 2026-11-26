@@ -22,7 +22,7 @@ Item {
     readonly property int preset: ready && addon.versions.includes(installed) ? installed : latest
     // The version the menu picked, which the button installs
     property int chosen: preset
-    property int picture: 0
+    readonly property list<string> gallery: ready ? (addon.cover ? [addon.cover] : []).concat(addon.previews) : []
     property string about
     property string changes
     property bool readmeLoading: false
@@ -56,7 +56,6 @@ Item {
     onInstalledChanged: pickPreset()
     onAddonChanged: {
         pickPreset()
-        picture = 0
         about = ""
         changes = ""
         if (addon) {
@@ -146,7 +145,7 @@ Item {
     ImageViewer {
         id: viewer
 
-        images: page.ready ? page.addon.images : []
+        images: page.gallery
     }
 
     Flickable {
@@ -201,19 +200,11 @@ Item {
                     Layout.preferredWidth: 200
                     Layout.preferredHeight: 200
                     radius: 8
-                    source: page.ready && page.addon.images.length > page.picture ? page.addon.images[page.picture] : ""
+                    source: page.ready ? page.addon.cover : ""
                     fill: page.host.subtleFill
                     glyph: "\uE91B"
                     glyphSize: 40
                     glyphColor: page.host.secondaryText
-
-                    TapHandler {
-                        onTapped: viewer.show(page.picture)
-                    }
-
-                    HoverHandler {
-                        cursorShape: Qt.PointingHandCursor
-                    }
                 }
 
                 ColumnLayout {
@@ -294,12 +285,31 @@ Item {
                         }
 
                         Button {
+                            id: copyButton
+
                             visible: page.ready && page.addon.type !== "config"
-                            text: qsTr("Copy id")
+                            text: copied.running ? qsTr("Copied") : qsTr("Copy id")
+                            Layout.preferredWidth: Math.max(implicitWidth, copiedText.advanceWidth + leftPadding + rightPadding)
                             ToolTip.visible: hovered
                             ToolTip.delay: 500
                             ToolTip.text: page.usage
-                            onClicked: page.host.addons.copy(page.addon.id)
+                            onClicked: {
+                                page.host.addons.copy(page.addon.id)
+                                copied.restart()
+                            }
+
+                            TextMetrics {
+                                id: copiedText
+
+                                font: copyButton.font
+                                text: qsTr("Copied")
+                            }
+
+                            Timer {
+                                id: copied
+
+                                interval: 2000
+                            }
                         }
 
                         LinkButton {
@@ -311,41 +321,29 @@ Item {
             }
 
             Card {
-                visible: page.ready && page.addon.images.length > 1
-                heading: qsTr("Screenshots")
+                visible: page.gallery.length > 0
+                heading: qsTr("Images")
 
                 Flow {
                     Layout.fillWidth: true
                     spacing: 8
 
                     Repeater {
-                        model: page.ready ? page.addon.images : []
+                        model: page.gallery
 
-                        delegate: Rectangle {
+                        delegate: RoundedImage {
                             id: thumb
 
                             required property string modelData
                             required property int index
 
-                            width: 112
-                            height: 112
-                            radius: 6
-                            color: "transparent"
-                            border.width: 2
-                            border.color: page.picture === index ? system.accent : "transparent"
-
-                            RoundedImage {
-                                anchors.fill: parent
-                                anchors.margins: 3
-                                source: thumb.modelData
-                                fill: page.host.subtleFill
-                            }
+                            width: 106
+                            height: 106
+                            source: modelData
+                            fill: page.host.subtleFill
 
                             TapHandler {
-                                onTapped: {
-                                    page.picture = thumb.index
-                                    viewer.show(thumb.index)
-                                }
+                                onTapped: viewer.show(thumb.index)
                             }
 
                             HoverHandler {

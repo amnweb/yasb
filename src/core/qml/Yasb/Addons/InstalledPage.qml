@@ -120,7 +120,7 @@ Item {
                         Layout.alignment: Qt.AlignVCenter
                         Layout.preferredWidth: 32
                         Layout.preferredHeight: 32
-                        source: row.entry !== null && row.entry.images.length > 0 ? row.entry.images[0] : ""
+                        source: row.entry !== null ? row.entry.cover : ""
                         fill: page.host.subtleFill
                         glyph: row.modelData.type === "theme" ? "\uE790" : row.modelData.type === "layout" ? "\uE75A"
                             : row.modelData.type === "config" ? "\uE713" : "\uECA5"

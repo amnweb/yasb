@@ -44,14 +44,10 @@ def _folder_url(entry: dict[str, Any]) -> str:
     return f"{operations.ADDONS_RAW}/{entry['type']}s/{login}/{name}"
 
 
-def _images(entry: dict[str, Any]) -> list[str]:
-    """The images index.json lists, or the palette or screenshot every addon has."""
-    return entry.get("images") or ["palette.png" if entry["type"] == "theme" else "screenshot.png"]
-
-
 def _entry_row(entry: dict[str, Any]) -> dict[str, Any]:
     latest = operations.release(entry)
     login, _, name = entry["id"].partition(".")
+    assets = f"{_folder_url(entry)}/assets"
     return {
         "id": entry["id"],
         "type": entry["type"],
@@ -61,7 +57,8 @@ def _entry_row(entry: dict[str, Any]) -> dict[str, Any]:
         "version": latest["version"],
         "released": latest["released"],
         "versions": sorted((version["version"] for version in entry["versions"]), reverse=True),
-        "images": [f"{_folder_url(entry)}/assets/{image}" for image in _images(entry)],
+        "cover": f"{assets}/{entry['cover']}" if entry.get("cover") else "",
+        "previews": [f"{assets}/{preview}" for preview in entry.get("previews", [])],
         "authorUrl": f"{operations.GITHUB}{entry['author']}",
         "pageUrl": f"{YASB_ADDONS}/tree/main/{entry['type']}s/{login}/{name}",
     }

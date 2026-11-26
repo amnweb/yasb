@@ -45,7 +45,7 @@ ItemDelegate {
             Layout.margins: 1
             radius: 7
             roundBottom: false
-            source: card.addon.images.length > 0 ? card.addon.images[0] : ""
+            source: card.addon.cover
             fill: card.host.subtleFill
             glyph: card.addon.type === "theme" ? "\uE790" : card.addon.type === "layout" ? "\uE75A"
                 : card.addon.type === "config" ? "\uE713" : "\uECA5"

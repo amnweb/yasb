@@ -270,8 +270,8 @@ Window {
                     id: pages
 
                     // Each change slides the page in, or zooms it in when an addon opens
-                    readonly property string view: [browsing.addons.state,
-                        browsing.shown ? "addon" : browsing.searching ? "search" : browsing.section].join()
+                    readonly property string view: browsing.shown ? "addon" : browsing.searching ? "search"
+                        : browsing.section
                     // The view is set once while the window is built, which must not slide in
                     property bool built: false
 
