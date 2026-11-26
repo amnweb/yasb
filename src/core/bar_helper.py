@@ -15,10 +15,11 @@ from PyQt6.QtCore import (
     QPoint,
     QPropertyAnimation,
     QRect,
+    QRectF,
     Qt,
     QTimer,
 )
-from PyQt6.QtGui import QAction, QCursor, QEnterEvent, QMouseEvent
+from PyQt6.QtGui import QAction, QColor, QCursor, QEnterEvent, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -38,6 +39,8 @@ from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
 from core.utils.win32.bindings.user32 import (
     GetClassName,
     GetForegroundWindow,
+    GetMonitorInfo,
+    GetWindowRect,
     GetWindowText,
     IsWindowVisible,
     KillTimer,
@@ -50,7 +53,7 @@ from core.utils.win32.bindings.user32 import (
 )
 from core.utils.win32.constants import HWND_BOTTOM, HWND_NOTOPMOST, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE
 from core.utils.win32.registry_keys import PERSONALIZE_KEY
-from core.utils.win32.structs import MSG, WNDENUMPROC
+from core.utils.win32.structs import MSG, RECT, WNDENUMPROC
 from core.utils.win32.utils import apply_qmenu_style
 
 if TYPE_CHECKING:
@@ -243,6 +246,24 @@ class BarAnimationManager(QObject):
         self._stop_animation()
 
 
+def _parse_css_color(value: str) -> QColor:
+    """Parse '#rrggbb', named colors or 'rgba(r, g, b, a)' (alpha 0-1 or 0-255)."""
+    v = value.strip()
+    if v.lower().startswith(("rgba(", "rgb(")):
+        try:
+            parts = [x.strip() for x in v[v.index("(") + 1 : v.rindex(")")].split(",")]
+            r, g, b = (int(float(x)) for x in parts[:3])
+            a = 255
+            if len(parts) > 3:
+                af = float(parts[3])
+                a = int(af * 255) if af <= 1 else int(af)
+            return QColor(r, g, b, a)
+        except ValueError, IndexError:
+            pass
+    color = QColor(v)
+    return color if color.isValid() else QColor(255, 255, 255, 90)
+
+
 class AutoHideZone(QFrame):
     """A transparent zone at the edge of the screen to detect when to show the bar"""
 
@@ -256,13 +277,47 @@ class AutoHideZone(QFrame):
             | Qt.WindowType.WindowDoesNotAcceptFocus
             | Qt.WindowType.NoDropShadowWindowHint
         )
-        self.setWindowOpacity(0.01)
+        self.setObjectName("autohide-zone")
+        zone_cfg = parent.config.auto_hide_zone
+        self._handle_color: QColor | None = None
+        self._handle_radius = zone_cfg.radius
+        if zone_cfg.visible:
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+            self._handle_color = _parse_css_color(zone_cfg.color)
+        else:
+            self.setWindowOpacity(0.01)
+
+        self._show_timer = QTimer(self)
+        self._show_timer.setSingleShot(True)
+        self._show_timer.timeout.connect(self._trigger_show)
+
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
+        if self._handle_color is None:
+            return super().paintEvent(a0)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(self._handle_color)
+        painter.drawRoundedRect(QRectF(self.rect()), self._handle_radius, self._handle_radius)
+        painter.end()
+
+    def _trigger_show(self) -> None:
+        if self._bar.autohide_manager is not None:
+            self._bar.autohide_manager.show_bar()
 
     @override
     def enterEvent(self, event: QEnterEvent | None) -> None:
-        # Show the parent bar when mouse enters detection zone
-        if self._bar.autohide_manager is not None:
-            self._bar.autohide_manager.show_bar()
+        # Show the parent bar when mouse enters detection zone (optionally after a delay)
+        delay = self._bar.config.auto_hide_zone.show_delay
+        if delay > 0:
+            self._show_timer.start(delay)
+        else:
+            self._trigger_show()
+
+    @override
+    def leaveEvent(self, a0: QEvent | None) -> None:
+        self._show_timer.stop()
 
 
 class AutoHideManager(QObject):
@@ -275,13 +330,15 @@ class AutoHideManager(QObject):
         self._detection_zone_height = 1
         self._detection_zone: AutoHideZone | None = None
         self._hide_timer: QTimer | None = None
+        self._fullscreen_timer: QTimer | None = None
+        self._fullscreen_active = False
         self._is_enabled = False
 
     def setup_autohide(self):
         """Initialize autohide functionality"""
         self._is_enabled = True
-        # Set fixed 1px detection zone height
-        self._detection_zone_height = 1
+        zone_cfg = self.bar_widget.config.auto_hide_zone
+        self._detection_zone_height = zone_cfg.height
 
         # Create detection zone
         self._detection_zone = AutoHideZone(self.bar_widget)
@@ -293,6 +350,13 @@ class AutoHideManager(QObject):
 
         # Install event filter on the bar
         self.bar_widget.installEventFilter(self)
+
+        # Poll the foreground window so the zone never sits on top of fullscreen apps/games
+        if zone_cfg.disable_on_fullscreen:
+            self._fullscreen_timer = QTimer(self.bar_widget)
+            self._fullscreen_timer.setInterval(1000)
+            self._fullscreen_timer.timeout.connect(self._check_fullscreen)
+            self._fullscreen_timer.start()
 
         # Remove reserved screen space when autohide is enabled
         if hasattr(self.bar_widget, "app_bar_manager") and self.bar_widget.app_bar_manager:
@@ -315,17 +379,18 @@ class AutoHideManager(QObject):
         screen_geometry = screen.geometry()
         alignment = self.bar_widget.alignment
 
-        if alignment["position"] == "top":
-            self._detection_zone.setGeometry(
-                screen_geometry.x(), screen_geometry.y(), screen_geometry.width(), self._detection_zone_height
-            )
+        zone_width_cfg = self.bar_widget.config.auto_hide_zone.width
+        if isinstance(zone_width_cfg, int):
+            zone_width = min(zone_width_cfg, screen_geometry.width())
         else:
-            self._detection_zone.setGeometry(
-                screen_geometry.x(),
-                screen_geometry.y() + screen_geometry.height() - self._detection_zone_height,
-                screen_geometry.width(),
-                self._detection_zone_height,
-            )
+            zone_width = max(1, int(screen_geometry.width() * int(zone_width_cfg[:-1]) / 100))
+        zone_x = screen_geometry.x() + (screen_geometry.width() - zone_width) // 2
+
+        if alignment["position"] == "top":
+            zone_y = screen_geometry.y()
+        else:
+            zone_y = screen_geometry.y() + screen_geometry.height() - self._detection_zone_height
+        self._detection_zone.setGeometry(zone_x, zone_y, zone_width, self._detection_zone_height)
 
         self.restart_hide_timer()
 
@@ -335,8 +400,58 @@ class AutoHideManager(QObject):
 
     def show_bar(self):
         """Show the bar when mouse hovers over detection zone"""
+        if self._fullscreen_timer is not None and self._is_fullscreen_foreground():
+            return
         if not self.bar_widget.isVisible() and self._is_enabled:
             self.bar_widget.show()
+            # Hide the handle while the bar is visible; hide_bar() brings it back
+            if self._detection_zone:
+                self._detection_zone.hide()
+
+    def _is_fullscreen_foreground(self) -> bool:
+        """True when the foreground window covers the whole monitor this bar lives on."""
+        try:
+            hwnd = GetForegroundWindow()
+            if not hwnd or not IsWindowVisible(hwnd):
+                return False
+            _, pid = get_window_thread_process_id(hwnd)
+            if pid == os.getpid():
+                return False
+            window_class = GetClassName(hwnd) or ""
+            if window_class in AppBarManager.EXCLUDED_WINDOW_CLASSES or window_class in (
+                "Windows.UI.Core.CoreWindow",
+                "ForegroundStaging",
+            ):
+                return False
+            bar_monitor = MonitorFromWindow(int(self.bar_widget.winId()), 2)
+            if not bar_monitor or MonitorFromWindow(hwnd, 2) != bar_monitor:
+                return False
+            info = GetMonitorInfo(bar_monitor)
+            rect = RECT()
+            if info is None or not GetWindowRect(hwnd, ctypes.byref(rect)):
+                return False
+            mon = info.rcMonitor
+            return (
+                rect.left <= mon.left and rect.top <= mon.top and rect.right >= mon.right and rect.bottom >= mon.bottom
+            )
+        except Exception:
+            return False
+
+    def _check_fullscreen(self) -> None:
+        """Hide zone (and bar) while a fullscreen app is in front; restore afterwards."""
+        if not self._is_enabled or not self._detection_zone:
+            return
+        fullscreen = self._is_fullscreen_foreground()
+        if fullscreen == self._fullscreen_active:
+            return
+        self._fullscreen_active = fullscreen
+        if fullscreen:
+            self._detection_zone.hide()
+            if self.bar_widget.isVisible() and not self.bar_widget.geometry().contains(QCursor.pos()):
+                self.bar_widget.hide()
+        elif not self.bar_widget.isVisible():
+            self._detection_zone.show()
+            self._detection_zone.raise_()
 
     def _is_child_of_bar(self, widget: QObject | None) -> bool:
         """Walk parent chain to check if widget belongs to this bar."""
@@ -376,7 +491,7 @@ class AutoHideManager(QObject):
                 self.restart_hide_timer()
                 return
             self.bar_widget.hide()
-            if self._detection_zone:
+            if self._detection_zone and not self._fullscreen_active:
                 self._detection_zone.show()
                 self._detection_zone.raise_()
 
@@ -428,6 +543,8 @@ class AutoHideManager(QObject):
         """Clean up resources"""
         if self._hide_timer:
             self._hide_timer.stop()
+        if self._fullscreen_timer:
+            self._fullscreen_timer.stop()
         if self._detection_zone:
             self._detection_zone.hide()
             self._detection_zone.deleteLater()
