@@ -26,8 +26,8 @@ All apps, A to Z. Each is an object:
 - `kind` : string, `store` for Microsoft Store apps, otherwise `desktop`.
 - `target` : string, program or file a desktop app starts.
 - `arguments` : string, arguments a desktop app starts with.
-- `icon` : string, image URL of the icon. It ends with `/` and a number, replace that number with `iconRevision`,
-  as `icon.replace(/\/\d+$/, "/" + iconRevision)`, so the icon reloads once it is ready.
+- `icon` : string, image URL of the icon. It ends with `/` and a number. Replace that number with `iconRevision`, as in
+  `icon.replace(/\/\d+$/, "/" + iconRevision)`, so the icon reloads once it's ready.
 
 #### layout : LaunchpadLayout `read-only`
 
@@ -60,7 +60,7 @@ ignored.
 
 #### takeFocus(window: Window)
 
-Gives a YASB window (such as a popup) the foreground and keyboard focus. Needed when a popup opened from a hotkey
+Brings a YASB window (such as a popup) to the foreground with keyboard focus. Needed when a popup opened from a hotkey
 must accept typing.
 
 ## LaunchpadLayout
@@ -103,8 +103,8 @@ All functions take rows by their number in the current order, from 0.
 
 #### move(source: int, before: int)
 
-Moves the row at `source` before the row at `before`, or to the end for `count`. Doesn't save, because it runs at
-every step of a drag, call `commit()` when the drag ends.
+Moves the row at `source` before the row at `before`, or to the end for `count`. Doesn't save, because it runs at every
+step of a drag. Call `commit()` when the drag ends.
 
 #### commit()
 

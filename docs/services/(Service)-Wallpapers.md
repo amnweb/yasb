@@ -2,8 +2,8 @@
 
 `import Yasb`
 
-The images in your wallpaper folders and the one each screen shows, with functions to set a wallpaper, with a
-transition if you like, and thumbnails of them. The folders are read on `refresh()`.
+The images in your wallpaper folders and the one each screen shows, with functions to set a wallpaper, optionally with a
+transition, and thumbnails of the images. The folders are read on `refresh()`.
 
 Two types:
 
@@ -78,13 +78,13 @@ Windows has taken this image as the wallpaper.
 
 #### currentChanged()
 
-`currentIndex()` can give another place now.
+`currentIndex()` may now return a different value.
 
 ## WallpaperThumbnail
 
-The image scaled to cover `size` and cropped around its centre. It is made off the GUI thread and kept in
-`%LOCALAPPDATA%\YASB\wallpaper_thumbnails`, thumbnails older than 30 days, then the oldest beyond 100 MB, are
-deleted after each `refresh()`.
+The image scaled to cover `size` and cropped around its centre. It's made off the GUI thread and cached in
+`%LOCALAPPDATA%\YASB\wallpaper_thumbnails`. After each `refresh()`, thumbnails older than 30 days are deleted, then the
+oldest ones beyond 100 MB.
 
 ### Properties
 

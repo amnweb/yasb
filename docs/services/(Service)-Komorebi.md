@@ -67,8 +67,8 @@ Workspaces on the bar's monitor, in komorebi's order. Each is an object:
 
 #### activateWorkspace(index: int)
 
-Shows the workspace with this index on the bar's monitor. When called many times quickly (for example while
-scrolling), only the last request waits its turn.
+Shows the workspace with this index on the bar's monitor. When called many times in quick succession (for example while
+scrolling), only the latest request stays queued.
 
 #### switchWorkspace(delta: int)
 

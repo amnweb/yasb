@@ -2,9 +2,9 @@
 
 `import Yasb.Bar` · inherits [BarBase](./(Type)-BarBase)
 
-A layout with three slots: `left`, `center` and `right`, or `top`, `center` and `bottom` on a bar at the left or
-right edge. They show the widgets config.yaml lists under those names, side by side along the bar. The left slot's
-widgets sit at its start, the center slot's in its middle and the right slot's at its end.
+A layout with three slots: `left`, `center` and `right`, or `top`, `center` and `bottom` on a bar at the left or right
+edge. Each slot shows the widgets listed under its name in config.yaml, in a row along the bar. Widgets in the left slot
+are aligned to its start, the center slot to its middle, and the right slot to its end.
 
 Everything from [BarBase](./(Type)-BarBase) applies, such as `color`, `radius`, `padding` and `spacing`.
 
@@ -28,7 +28,7 @@ Bar {
 }
 ```
 
-YASB's `bar.qml` draws on the bar too: a line on the side away from the screen edge, placed on `background`:
+YASB's `bar.qml` also draws on the bar: a line on the side facing away from the screen edge, placed on `background`:
 
 ```qml
 // %USERPROFILE%\.config\yasb\layouts\bar.qml
@@ -64,7 +64,7 @@ config.yaml lists the widgets under `left`, `center` and `right`, or `top`, `cen
 
 #### leftSlot, centerSlot, rightSlot : WidgetSlot `read-only`
 
-The three slots, each a [WidgetSlot](./(Type)-WidgetSlot), such as to set `stretch` or `spacing` on one.
+The three slots, each a [WidgetSlot](./(Type)-WidgetSlot), so you can set `stretch` or `spacing` on one of them.
 `topSlot` is the same slot as `leftSlot`, and `bottomSlot` the same as `rightSlot`.
 
 ### Slot lengths

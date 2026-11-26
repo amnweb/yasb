@@ -2,9 +2,9 @@
 
 `import Yasb`
 
-The internet connection of any kind (Wi-Fi, Ethernet, mobile broadband, or another adapter such as a VPN's), with
-its signal and whether it reaches the internet. Plus Wi-Fi: nearby networks, the Wi-Fi switch, and functions to
-join, leave and forget networks.
+The internet connection of any kind (Wi-Fi, Ethernet, mobile broadband, or another adapter such as a VPN's), with its
+signal and whether it reaches the internet. It also covers Wi-Fi: nearby networks, the Wi-Fi switch, and joining,
+leaving and forgetting networks.
 
 Two types:
 
@@ -47,7 +47,7 @@ No functions or signals.
 
 ## WifiNetworks
 
-Networks only fill while `watching` is `true` (for example while a popup is open), because scanning is costly.
+Networks are only populated while `watching` is `true` (for example while a popup is open), because scanning is costly.
 
 ### Properties
 

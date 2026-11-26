@@ -43,9 +43,9 @@ Default: `[]`
 
 #### useHook : bool
 
-`true`: read the tray through YASB's hook in Explorer. `false`: through the legacy tray window. The legacy window
-is also used where the hook can't run, such as under emulation. The first SystrayModel created decides for all
-bars, changing it later has no effect until YASB restarts.
+`true`: read the tray through YASB's hook in Explorer. `false`: through the legacy tray window. The legacy window is
+also used where the hook can't run, such as under emulation. The first SystrayModel created decides for all bars.
+Changing it later has no effect until YASB restarts.
 
 Default: `true`
 

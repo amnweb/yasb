@@ -3,8 +3,8 @@
 `import Yasb`
 
 Runs a program or command line and gives what it printed: as text, as JSON, or line by line while it runs. Runs on
-`run()`, or every `interval` while `active`. Each Process runs its own program, and stops it when the Process goes
-or YASB quits.
+`run()`, or every `interval` while `active`. Each Process runs its own program and stops it when the Process is
+destroyed or YASB quits.
 
 ## Process
 
@@ -39,8 +39,8 @@ Default: `0`
 
 #### active : bool
 
-When `false`, runs on `interval` pause, such as while the widget is hidden, a run under way goes on. Turning it on
-runs at once when `interval` is above `0`.
+When `false`, interval runs pause, for example while the widget is hidden. A run already in progress continues. Turning
+it on runs at once when `interval` is above `0`.
 
 Default: `true`
 
@@ -71,8 +71,8 @@ Default: `""`
 
 #### output : var `read-only`
 
-With `text` and `json`, the whole output of the last run that went well, with line ends as `\n` and the last ones
-removed. With `lines`, the last line. `""` before.
+With `text` and `json`, the whole output of the last successful run, with line ends as `\n` and the last ones removed.
+With `lines`, the last line. `""` before the first run.
 
 #### errorOutput : string `read-only`
 
@@ -88,12 +88,11 @@ Exit code of the last run. `-1` when it could not start.
 
 #### running : bool `read-only`
 
-`true` while a run is under way.
+`true` while a run is in progress.
 
 #### error : string `read-only`
 
-What went wrong in the last run, `""` when it went well. A run that went wrong keeps the last good `output` and
-`data`.
+The error from the last run, or `""` if it succeeded. A failed run keeps the last good `output` and `data`.
 
 - `Could not start <program>: <reason>`: the program could not start.
 - `Exited with code <code>`, followed by the first line of `errorOutput` when there is one.
@@ -125,8 +124,8 @@ cmd.exe.
 
 #### kill()
 
-Stops the program of the run under way. Programs it started keep running, so a command line run through cmd.exe
-can go on after cmd.exe is stopped. A command that runs for long should be a list.
+Stops the running program. Programs it started keep running, so a command line run through cmd.exe can continue after
+cmd.exe is stopped. Use a list for long-running commands.
 
 ### Signals
 
@@ -137,7 +136,7 @@ JSON.
 
 #### finished(exitCode: int)
 
-A run ended well. `exitCode` is always `0`, as any other code is an error.
+A run succeeded. `exitCode` is always `0`, as any other code is an error.
 
 #### failed(error: string)
 

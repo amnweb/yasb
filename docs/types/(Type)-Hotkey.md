@@ -2,8 +2,8 @@
 
 `import Yasb`
 
-A keyboard shortcut for your widget. While YASB runs, pressing the keys anywhere in Windows runs `onActivated` in
-your widget.
+A global keyboard shortcut for your widget. While YASB is running, pressing the keys anywhere in Windows triggers
+`onActivated`.
 
 Guide: [Writing widgets](./Writing-Widgets)
 
@@ -18,7 +18,7 @@ import Yasb
 import Yasb.Bar
 
 Item {
-    // The bar the widget is in; YASB sets it
+    // Set by YASB to the bar the widget is in
     required property BarBase bar
 
     Hotkey {
@@ -38,18 +38,18 @@ bars:
         - HelloKey
 ```
 
-YASB's own widgets with a shortcut have a `hotkey` option, empty by default except Launchpad's `alt+l`. Some have
-more, such as OBS's `recordHotkey`. To set one, get the widget's options
-with `yasbc addons install Cpu`, set `hotkey` in `%USERPROFILE%\.config\yasb\widgets\Cpu\Cpu.qml` and save. See
+Built-in widgets that support a shortcut have a `hotkey` option. It's empty by default, except Launchpad's, which is
+`alt+l`. Some have more, like OBS's `recordHotkey`. To set one, run `yasbc addons install Cpu` to get the widget's
+options, then set `hotkey` in `%USERPROFILE%\.config\yasb\widgets\Cpu\Cpu.qml` and save. See
 [Widgets](./Widgets#get-a-widgets-options).
 
 ## Which bar gets it
 
-With a bar on each screen, each bar has its own copy of your widget, and only the copies on the screen that
-`screen` picks get the press. Holding the keys down sends it once.
+If you have a bar on each screen, each bar has its own copy of your widget. Only the copies on the screen chosen by
+`screen` receive the key press. Holding the keys down triggers it once.
 
-YASB reads the shortcuts when the bars load, and again when a file you save rebuilds a bar. A `keys` that changes
-while the widget runs takes effect then.
+YASB reads shortcuts when the bars load, and again when saving a file rebuilds a bar. If `keys` changes while the widget
+is running, the change takes effect at that point.
 
 ## Hotkey
 
@@ -67,16 +67,16 @@ The shortcut: modifiers and one key joined by `+`, in any case, such as `alt+shi
   (or `equals`), `comma`, `minus`, `period`, `slash`, `backquote` (or `grave`), `bracketleft`, `backslash`,
   `bracketright` and `quote`.
 
-A shortcut with an unknown key or more than one key isn't registered, and neither is one another app already
-uses. Each logs a warning.
+A shortcut isn't registered if it has an unknown key or more than one key, or if another app already uses it. Each case
+logs a warning.
 
 Default: `""`
 
 #### screen : string
 
-Which bar's widget gets the press: `active` (the screen of the window in front), `cursor` (the screen under the
-mouse) or `primary` (the primary screen). When several widgets use the same keys, the `screen` of the first one
-YASB finds counts for all of them.
+Which bar's widget gets the press: `active` (the screen of the foreground window), `cursor` (the screen under the mouse)
+or `primary` (the primary screen). When several widgets use the same keys, the `screen` of the first one YASB finds
+applies to all of them.
 
 Default: `"active"`
 
@@ -84,4 +84,4 @@ Default: `"active"`
 
 #### activated()
 
-The keys were pressed. When several widgets on that bar use the same keys, each of them gets it.
+Emitted when the keys are pressed. If several widgets on that bar use the same keys, all of them receive it.

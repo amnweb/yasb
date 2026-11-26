@@ -32,18 +32,18 @@ environment variable to that folder. Right-click YASB's tray icon and click **Op
 
 ## How YASB picks up your changes
 
-While `watch` is `true` in `config.yaml`, which it is unless you change it, YASB watches your config folder:
+While `watch` is `true` in `config.yaml` (the default), YASB watches your config folder:
 
-- When you save `config.yaml`, YASB restarts with it. If the file has an error, YASB shows the error and keeps
-  running with the config it had.
-- When you save a QML file in the `widgets` folder, or the layout or theme that `config.yaml` names, the bars that
-  use it load it again, without a restart. If the file has an error, YASB lists the errors and the bars keep the
-  version they show.
+- When you save `config.yaml`, YASB restarts with it. If the file has an error, YASB shows the error and keeps running
+  with the config it had.
+- When you save a QML file in the `widgets` folder, or the layout or theme that `config.yaml` names, the bars that use
+  it load it again, without a restart. If the file has an error, YASB lists the errors and the bars keep the version
+  they're showing.
 - Other QML files in your config folder are left alone, so you can keep drafts there.
 - YASB reads `.env` when it starts. After you change it, right-click the tray icon and click **Reload YASB**, or run
   `yasbc reload`.
 
-With `watch: false`, YASB changes nothing until you reload it.
+With `watch: false`, changes only apply when you reload YASB.
 
 ## When something goes wrong
 

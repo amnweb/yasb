@@ -1,8 +1,8 @@
 # Addons
 
-An addon is a widget, theme, layout or whole config that someone shared for YASB. You find and install them in the
-YASB Addons window or with `yasbc addons`, both do the same. The same tools also give you a copy of YASB's own
-widgets to change their options, and keep those copies up to date.
+An addon is a widget, theme, layout or whole config that someone shared for YASB. You can find and install them in the
+YASB Addons window or with `yasbc addons`. Both do the same thing. The same tools also copy the built-in widgets so you
+can change their options, and keep those copies up to date.
 
 ## Find and install
 
@@ -31,8 +31,8 @@ yasbc addons install amnweb.clock
 
 ## Use what you installed
 
-An addon's id is its author's GitHub name and its own name, with a dot, such as `amnweb.clock`. Each kind goes to its
-own folder in your config folder, and config.yaml uses it by its id:
+An addon's id is its author's GitHub name and its own name, with a dot, such as `amnweb.clock`. Each type goes into its
+own folder in your config folder, and config.yaml refers to it by id:
 
 - A widget goes to `widgets\amnweb.clock`. Add `amnweb.clock` to a bar's widgets.
 - A theme goes to `themes\amnweb.nord`. Set a bar's `theme: amnweb.nord`.
@@ -53,9 +53,9 @@ See [Configuration](./Configuration) for the rest of config.yaml.
 ### A config
 
 A config addon replaces your whole config folder. YASB asks first, then saves yours as a ZIP file in
-`%USERPROFILE%\.config\yasb-backups`, named after the config it was, such as `backup_mine_2026-11-26_101500.zip`.
-Your `.env` file, your `.git` folder and YASB's log stay as they are. If YASB is running, it stops while the files
-change and starts again after.
+`%USERPROFILE%\.config\yasb-backups`, named after the config it was, such as `backup_mine_2026-11-26_101500.zip`. Your
+`.env` file, `.git` folder and YASB's log are left untouched. If YASB is running, it stops while the files are replaced
+and restarts afterwards.
 
 ## Change one of YASB's own widgets
 
@@ -78,14 +78,14 @@ Clock {
 }
 ```
 
-Change what you like and save. YASB uses your copy from then on. Delete the `widgets\Clock` folder to go back to
-YASB's own options. `--full` copies the whole widget instead, to change more than its options, a widget without
-options can only be copied that way.
+Change what you like and save. YASB uses your copy from then on. Delete the `widgets\Clock` folder to go back to YASB's
+own options. `--full` copies the whole widget instead, so you can change more than its options. A widget without options
+can only be copied this way.
 
 ### When YASB updates its widget
 
-Your copy remembers which version of the widget it came from. When YASB brings a new version of that widget, it
-uses its own widget instead of your copy, and shows an alert that your copy no longer fits. Update the copy:
+Your copy records which version of the widget it came from. When a YASB update ships a new version of that widget, YASB
+uses the built-in widget instead of your copy and shows an alert that your copy is out of date. Update the copy:
 
 ```powershell
 yasbc addons update Clock
@@ -103,7 +103,7 @@ yasbc addons update amnweb.clock
 yasbc addons update --all
 ```
 
-`--all` updates everything but a config, which replaces your whole config folder, update a config by its id.
+`--all` updates everything except a config, because that replaces your whole config folder. Update a config by its id.
 `yasbc addons list` shows everything you have, with its version and where it came from.
 
 ## From a GitHub link

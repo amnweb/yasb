@@ -1,9 +1,9 @@
 # Installation
 
-YASB is made for Windows 11. It may also work on Windows 10, but it isn't tested there, and one limitation is
-known: the blur behind the bar and its popups needs Windows 11.
+YASB is built for Windows 11. It may work on Windows 10, but it isn't tested there. One known limitation: the blur
+behind the bar and its popups needs Windows 11.
 
-Install it with the installer or a package manager, on its first start, YASB opens a short setup for your bar.
+Install it with the installer or a package manager. On first start, YASB opens a short setup for your bar.
 
 ## Before you install
 
@@ -24,9 +24,9 @@ as [JetBrainsMono Propo](https://github.com/ryanoasis/nerd-fonts/releases/latest
 
 ### Preview
 
-The [preview release](https://github.com/amnweb/yasb/releases/tag/preview) is built from the newest code. Its
-installers are `yasb-preview-x64.msi` and `yasb-preview-aarch64.msi`. `yasbc set-channel` switches an installed
-YASB between the stable and the preview release, see [YASB CLI](./CLI#yasbc-set-channel).
+The [preview release](https://github.com/amnweb/yasb/releases/tag/preview) is built from the newest code. Its installers
+are `yasb-preview-x64.msi` and `yasb-preview-aarch64.msi`. `yasbc set-channel` switches an installed YASB between the
+stable and preview releases (see [YASB CLI](./CLI#yasbc-set-channel)).
 
 ### Package managers
 
@@ -57,8 +57,8 @@ To run YASB from its source code, or build the installer yourself, see [Contribu
 
 ## Start with Windows
 
-The setup's last page can start YASB with Windows. Later, right-click YASB's tray icon and click
-**Enable Autostart**, or **Disable Autostart** to turn it off. From a terminal:
+The setup's last page can start YASB with Windows. To change it later, right-click YASB's tray icon and click **Enable
+Autostart** or **Disable Autostart**. From a terminal:
 
 ```powershell
 yasbc enable-autostart
@@ -83,7 +83,7 @@ When YASB starts and finds no `config.yaml` in your config folder (`%USERPROFILE
 - `layouts\bar.qml`, `layouts\floating.qml` or `layouts\islands.qml`: the bar's look, for the style you picked.
 - `themes\yasb.qml`: the colors and fonts of the bar, its widgets, popups and menus.
 
-A layout or theme file that is already there is kept as it is. When you save a change to any of the three files, YASB applies it.
+Existing layout and theme files aren't overwritten. When you save a change to any of the three files, YASB applies it.
 
 > [!WARNING]
 > YASB 3 can't read a `config.yaml` from YASB 2. If it finds one, the setup asks you to close YASB, move that `config.yaml` out of your config folder (or back it up and delete it), then start YASB again.

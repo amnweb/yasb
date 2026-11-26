@@ -2,8 +2,8 @@
 
 `import Yasb`
 
-Updates waiting from Windows Update, winget and Scoop, with functions to install and skip them. Each source is
-checked on its own interval, nothing shows before its first check, 10 to 20 seconds after it starts. All
+Updates waiting from Windows Update, winget and Scoop, with functions to install and skip them. Each source is checked
+on its own interval. Its first check runs 10 to 20 seconds after startup, and nothing shows before it. All
 AvailableUpdates objects with the same source and interval share one check.
 
 ## AvailableUpdates
@@ -81,8 +81,8 @@ Each source that is checked, as an object:
 - `installed` : bool, `false` when the tool is missing, so it is never checked.
 - `checking` : bool, `true` while it is checked.
 - `installing` : bool, `true` while its update terminal is open.
-- `error` : string, what went wrong in its last check or install, `""` when nothing. A failed check keeps the
-  updates found before.
+- `error` : string, the error from its last check or install, `""` when none. A failed check keeps the updates found
+  before.
 - `checked` : date, when it was last checked. Invalid before its first check.
 - `count` : int, how many of `updates` are its.
 
@@ -118,13 +118,13 @@ Checks this source again now, or every source for `""`. Ignored for a source tha
 
 #### install(source: string, ids: list&lt;string&gt;)
 
-For `winget` and `scoop`, opens a terminal that updates these packages by `id` and waits for Enter before it
-closes, the source is checked again once it closes. Ignored while its terminal is open. For `windows`, opens
-Windows Update in Settings, as Windows installs its own updates.
+For `winget` and `scoop`, opens a terminal that updates these packages by `id` and waits for Enter before closing. The
+source is checked again once the terminal closes. Ignored while its terminal is open. For `windows`, opens Windows
+Update in Settings, as Windows installs its own updates.
 
 #### skip(source: string, id: string)
 
-Hides this version of the update until a newer one comes.
+Hides this version of the update until a newer version is available.
 
 #### restore(source: string, id: string)
 

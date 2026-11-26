@@ -2,9 +2,9 @@
 
 `import Yasb`
 
-Windows' virtual desktops, the one in view and those with windows open, with functions to switch, create, rename
-and remove them, move and pin windows, and set their wallpapers. Updates when Windows reports a change. All
-VirtualDesktops objects share one connection to Windows, which picks up again after Explorer restarts.
+Windows' virtual desktops, the one in view and those with windows open, with functions to switch, create, rename and
+remove them, move and pin windows, and set their wallpapers. Updates when Windows reports a change. All VirtualDesktops
+objects share one connection to Windows, which reconnects after Explorer restarts.
 
 ## VirtualDesktops
 
@@ -19,7 +19,7 @@ The desktops, in Task View's order. Each is an object:
 - `populated` : bool, `true` when it has a window of its own that Windows shows in its switchers. Windows on every
   desktop don't count.
 
-Empty until Explorer first answers.
+Empty until Explorer first responds.
 
 #### current : int `read-only`
 
@@ -45,7 +45,7 @@ Empty until Explorer first answers.
 
 #### readForeground()
 
-Remembers the window in front, for menu entries that act on it once the menu has taken the focus. The desktop, the
+Remembers the foreground window, for menu entries that act on it after the menu has taken focus. The desktop, the
 taskbar, YASB's own windows and windows Windows leaves out of its switchers aren't found.
 
 #### switchTo(number: int)
@@ -54,7 +54,7 @@ Switches to this desktop.
 
 #### step(offset: int)
 
-Switches by `offset` desktops, such as `1` or `-1`, going round at either end.
+Switches by `offset` desktops, such as `1` or `-1`, wrapping around at either end.
 
 #### create()
 
@@ -75,7 +75,7 @@ Moves the window `readForeground()` found to this desktop.
 
 #### moveFrontWindowTo(number: int)
 
-Moves the window in front now to this desktop, for hotkeys and clicks that open no menu.
+Moves the current foreground window to this desktop, for hotkeys and clicks that open no menu.
 
 #### toggleWindowPin()
 

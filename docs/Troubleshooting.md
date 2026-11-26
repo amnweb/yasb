@@ -1,7 +1,7 @@
 # Troubleshooting
 
-When something doesn't look right, start with the log. When YASB can't use a file, it shows an alert that says which
-file and why, this page explains each one.
+When something looks wrong, start with the log. When YASB can't use a file, it shows an alert saying which file and why.
+This page explains each alert.
 
 ## The log
 
@@ -39,17 +39,16 @@ Fix config.yaml and start YASB again. See [Configuration](./Configuration).
 
 ### YASB stopped while starting
 
-Something went wrong that YASB didn't expect. The details hold the error, include them when you ask for help.
+YASB hit an unexpected error. The details show it. Include them when you ask for help.
 
 ### Your config.yaml is from YASB 2
 
-The setup opens with this message when config.yaml is from YASB 2, which YASB 3 can't read. Close YASB, move
-config.yaml out of your config folder, or back it up and delete it, then start YASB again. The setup then makes a
-new one.
+The setup opens with this message when config.yaml is from YASB 2, which YASB 3 can't read. Close YASB, move config.yaml
+out of your config folder (or back it up and delete it), then start YASB again. The setup then makes a new one.
 
 ### Nothing happens
 
-Only one YASB runs at a time. Starting it while it already runs does nothing, and the log says
+Only one instance of YASB can run at a time. Starting it again while it's running does nothing, and the log says
 "Another instance of the YASB is already running."
 
 ## Alerts while YASB runs
@@ -63,7 +62,7 @@ so:
 | A QML file has errors | A saved widget, layout or theme file has an error. | Keeps the version it shows. |
 | Failed to reload the layout of bar '...' | The saved layout has an error. | Keeps the layout it shows. |
 
-Fix the file and save it again, the details say which file and which line.
+Fix the file and save it again. The details say which file and which line.
 
 ## Alerts when the bars load
 
@@ -80,7 +79,7 @@ Fix the file and save it again, the details say which file and which line.
 Some problems don't show an alert, only a warning in the log:
 
 - A bar lists widgets under a slot its layout doesn't have. Those widgets aren't shown. See
-  [Layouts](./Layouts#slots-of-your-own).
+  [Layouts](./Layouts#custom-slots).
 - A widget's shortcut isn't valid, or another app already uses it. See [Hotkey](./(Type)-Hotkey).
 - A layout's `backdropShapes` isn't valid, so the bar has no blur. See [BarBase](./(Type)-BarBase).
 

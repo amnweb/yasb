@@ -77,8 +77,8 @@ Focuses the workspace with this name.
 
 #### switchWorkspace(direction: int)
 
-`direction` above 0 (scroll up): previous workspace. Below 0: next workspace. Among GlazeWM's active workspaces, on
-`screenName`'s monitor with `monitorExclusive`, or on all monitors without it.
+`direction` above 0 (scroll up): previous workspace. Below 0: next workspace. It cycles through GlazeWM's active
+workspaces on `screenName`'s monitor when `monitorExclusive` is set, or on all monitors otherwise.
 
 ## GlazewmTiling
 

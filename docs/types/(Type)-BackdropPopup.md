@@ -2,16 +2,18 @@
 
 `import Yasb.Common` · inherits [QtObject](https://doc.qt.io/qt-6/qml-qtqml-qtobject.html)
 
-A popup for a widget, in a window of its own, blurred behind `backdropItem` when its bar has a backdrop. Put the
-popup's content inside it. It closes on Escape, when it loses the focus, and on a press on the bar outside
-`anchor` or around the popup. While hidden, its window gives back its graphics memory.
+A widget popup that opens in its own window. Put the popup's content inside it. When the bar has `backdrop: true`, the
+area behind `backdropItem` is blurred.
+
+The popup closes when you press Escape, when it loses focus, or when you press the mouse on the bar or on the empty
+space around the popup. Pressing `anchor` doesn't close it. While hidden, its window releases its graphics resources.
 
 Guide: [Writing widgets](./Writing-Widgets)
 
 ## Example
 
-A widget that opens a popup under itself on a click, or over itself on a bar at the bottom, in the theme's popup
-colours, with a blur behind it when the bar has `backdrop: true`:
+This widget opens a popup when clicked. The popup appears below the widget, or above it on a bar at the bottom. It uses
+the theme's popup colours and gets a blurred background when the bar has `backdrop: true`:
 
 ```qml
 // %USERPROFILE%\.config\yasb\widgets\HelloPopup\HelloPopup.qml
@@ -42,7 +44,7 @@ Item {
     implicitWidth: label.implicitWidth
     implicitHeight: label.implicitHeight
 
-    // The popup is a window of its own, so it goes when the widget does
+    // The popup is a separate window, so hide it when the widget is destroyed
     Component.onDestruction: popup.hide()
 
     Label {
@@ -87,11 +89,11 @@ Item {
 }
 ```
 
-The widget places the popup by setting `x` and `y` before `open()`. Because `anchor` is the widget, a second click
-on it closes the popup instead of closing and opening it again. `backdropItem` is the rectangle, so the blur has
-its rounded corners.
+The widget places the popup by setting `x` and `y` before `open()`. Because `anchor` is the widget, clicking it again
+closes the popup instead of closing and reopening it. `backdropItem` is the rectangle, so the blur gets the same rounded
+corners.
 
-To fade the popup in and out, give it `enter` and `exit` animations, as YASB's Quick Launch does:
+To fade the popup in and out, give it `enter` and `exit` animations. The built-in Quick Launch widget does this:
 
 ```qml
 BackdropPopup {
@@ -110,15 +112,27 @@ BackdropPopup {
 }
 ```
 
+## Shapes in a popup
+
+A Shape inside the popup loses its geometry when the popup hides and releases its graphics. A path that changes
+with each update, like a live graph line, is rebuilt anyway. A path that stays the same, like a graph's grid, isn't
+drawn again when the popup reopens. Leave it empty while the popup is hidden, so it's rebuilt each time it opens:
+
+```qml
+PathSvg {
+    path: popup.visible ? root.gridPath : ""
+}
+```
+
 ## BackdropPopup
 
-Every Label and control inside it takes `font`, and the controls take their accent and text colours from `theme`.
+Every Label and control inside the popup uses `font`. Controls get their accent and text colours from `theme`.
 
 ### Properties
 
 #### x, y, width, height : real
 
-Where the popup is on screen, and its size.
+The popup's position on screen and its size.
 
 Default: `0`
 
@@ -134,11 +148,12 @@ The widget's [Theme](./(Type)-Theme). Required.
 
 #### font : font
 
-The font every Label and control in the popup takes, such as the widget's popup font.
+The font used by every Label and control in the popup, usually the widget's popup font.
 
 #### backdropItem : Item
 
-The item the blur follows, with its position, size, rounded corners and opacity. `null` for no blur.
+The item that defines the blurred area. The blur follows its position, size, rounded corners and opacity. Set it to
+`null` for no blur.
 
 Default: `null`
 
@@ -150,14 +165,13 @@ Default: `null`
 
 #### exit : Animation
 
-Runs each time the popup closes, the popup hides once it ends.
+Runs each time the popup closes. The popup hides when it finishes.
 
 Default: `null`
 
 #### pinned : bool
 
-When `true`, the popup stays open when it loses the focus or the bar is pressed. `close()` and Escape still close
-it.
+When `true`, the popup stays open when it loses focus or the bar is pressed. `close()` and Escape still close it.
 
 Default: `false`
 
@@ -181,18 +195,18 @@ Default: `"transparent"`
 
 #### window : Window `read-only`
 
-The popup's window, for functions that give it the focus, such as `takeFocus()` of
+The popup's window. Pass it to functions that focus a window, like `takeFocus()` of
 [Window switcher](./(Service)-WindowSwitcher) or `activate()` of [Quick launch](./(Service)-QuickLaunch).
 
 ### Functions
 
 #### open()
 
-Shows the popup and gives it the focus, then runs `enter`. A running `exit` stops.
+Shows and focuses the popup, then runs `enter`. Stops `exit` if it's running.
 
 #### close()
 
-Runs `exit`, then hides the popup once it ends, without `exit`, hides it at once. Ignored while the popup is
+Runs `exit` and hides the popup when it finishes. Without `exit`, hides it immediately. Does nothing if the popup is
 hidden or already closing.
 
 #### hide()
@@ -203,4 +217,4 @@ BackdropPopup has no signals.
 
 ## Used by
 
-The popups of YASB's own widgets.
+The popups of all built-in widgets.

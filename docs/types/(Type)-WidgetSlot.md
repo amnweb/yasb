@@ -2,9 +2,9 @@
 
 `import Yasb.Bar` · inherits [Item](https://doc.qt.io/qt-6/qml-qtquick-item.html)
 
-A place for widgets in a layout: it shows the widgets config.yaml lists under its `name`, in a row along the bar,
-or a column on a bar at the left or right edge. [Bar](./(Type)-Bar) has three, in a
-[BarBase](./(Type)-BarBase) layout you place your own.
+A container for widgets in a layout. It shows the widgets listed under its `name` in config.yaml, in a row along the
+bar, or in a column on a bar at the left or right edge. [Bar](./(Type)-Bar) has three. In a [BarBase](./(Type)-BarBase)
+layout you add your own.
 
 Guide: [Layouts](./Layouts)
 
@@ -48,8 +48,8 @@ bars:
 
 ## WidgetSlot
 
-Along the bar, a slot is as long as its widgets unless you size it, and across it, as thick as the bar. A widget
-that fails to load is left out, with a warning in the log.
+A slot is as long as its widgets unless you size it, and as thick as the bar. A widget that fails to load is skipped and
+a warning is logged.
 
 ### Properties
 
@@ -78,8 +78,8 @@ Default: the bar's `spacing`
 
 #### bar : BarBase
 
-The bar the slot belongs to. When left `null`, the slot finds the BarBase it sits in by itself, and logs a warning
-when there is none.
+The bar the slot belongs to. If `null`, the slot finds the BarBase it's in automatically, and logs a warning if there
+isn't one.
 
 Default: `null`
 

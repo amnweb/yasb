@@ -50,13 +50,13 @@ Label {
 ## Theme
 
 `colors`, `bar`, `popup` and `menu` are groups. You can't replace a group, but you set the values inside it, as the
-example does. Inside a theme file, `dark` and `system` are read by their names alone.
+example does. Inside a theme file you can use `dark` and `system` directly, without a prefix.
 
 ### Properties
 
 #### dark : bool `read-only`
 
-`true` while Windows is in dark mode, and it changes when you switch. Write a value as `dark ? A : B` to have `A` in dark mode and `B` in light mode.
+`true` while Windows is in dark mode. It updates when you switch modes. Write a value as `dark ? A : B` to have `A` in dark mode and `B` in light mode.
 
 #### system : [SystemPalette](https://doc.qt.io/qt-6/qml-qtquick-systempalette.html) `read-only`
 
@@ -82,7 +82,7 @@ Theme has no functions or signals.
 
 ## Colors
 
-`text` to `textDisabled` go from the strongest text to the weakest.
+`text` through `textDisabled` go from the most prominent text to the least.
 
 ### Properties
 
@@ -94,19 +94,19 @@ Default: `dark ? "#FFFFFF" : Qt.alpha("#000000", 0.894)`
 
 #### textSecondary : color
 
-Text a step weaker than `text`.
+Text less prominent than `text`.
 
 Default: `dark ? Qt.alpha("#FFFFFF", 0.773) : Qt.alpha("#000000", 0.62)`
 
 #### textTertiary : color
 
-Text a step weaker than `textSecondary`.
+Text less prominent than `textSecondary`.
 
 Default: `dark ? Qt.alpha("#FFFFFF", 0.53) : Qt.alpha("#000000", 0.447)`
 
 #### textDisabled : color
 
-The weakest text, for what can't be used.
+The least prominent text, for disabled items.
 
 Default: `dark ? Qt.alpha("#FFFFFF", 0.365) : Qt.alpha("#000000", 0.36)`
 
@@ -118,19 +118,19 @@ Default: `dark ? "#000000" : "#FFFFFF"`
 
 #### background : color
 
-The base the bar and popups start from.
+The base color for the bar and popups.
 
 Default: `dark ? "#202020" : "#F3F3F3"`
 
 #### backgroundSecondary : color
 
-An area a step darker, laid over `background`.
+A slightly darker area on top of `background`.
 
 Default: `dark ? Qt.alpha("#000000", 0.1) : Qt.alpha("#000000", 0.024)`
 
 #### card : color
 
-Boxes that hold a group of things.
+Boxes that group related content.
 
 Default: `dark ? Qt.alpha("#FFFFFF", 0.05) : Qt.alpha("#FFFFFF", 0.7)`
 
@@ -154,19 +154,19 @@ Default: `dark ? Qt.alpha("#FFFFFF", 0.08) : Qt.alpha("#000000", 0.06)`
 
 #### hover : color
 
-A fill laid over any background, under the pointer.
+An overlay fill, on any background, for the item under the pointer.
 
 Default: `dark ? Qt.alpha("#FFFFFF", 0.06) : Qt.alpha("#000000", 0.035)`
 
 #### pressed : color
 
-A fill laid over any background, while pressed.
+An overlay fill, on any background, for an item while pressed.
 
 Default: `dark ? Qt.alpha("#FFFFFF", 0.04) : Qt.alpha("#000000", 0.024)`
 
 #### selected : color
 
-A fill laid over any background, behind the selected or current item.
+An overlay fill, on any background, behind the selected or current item.
 
 Default: `dark ? Qt.alpha("#FFFFFF", 0.06) : Qt.alpha("#000000", 0.035)`
 
@@ -196,7 +196,7 @@ Default: `dark ? Qt.alpha("#FFFFFF", 0.07) : Qt.alpha("#000000", 0.06)`
 
 #### smoke : color
 
-Laid over a popup's content to set it back behind something opened on top, such as a group.
+An overlay that dims a popup's content behind something opened over it, such as a group.
 
 Default: `Qt.alpha("#000000", 0.3)`
 
@@ -238,13 +238,14 @@ Default: `colors.border`
 
 #### font : [font](https://doc.qt.io/qt-6/qml-font.html)
 
-The widgets' labels on the bar. Every `Label` in a widget takes it, each part the widget doesn't set itself.
+The font for widget labels on the bar. Every `Label` in a widget uses it for each font property the widget doesn't set
+itself.
 
 Default: `family` `"Segoe UI"`, `pixelSize` `13`
 
 #### iconFont : [font](https://doc.qt.io/qt-6/qml-font.html)
 
-The widgets' icons on the bar and in popups, a widget's `iconSize` sets their size on the bar.
+The font for widget icons on the bar and in popups. A widget's `iconSize` sets their size on the bar.
 
 Default: `family` `"Segoe Fluent Icons"`, `pixelSize` `16`
 
@@ -292,7 +293,7 @@ Default: `family` `"Segoe UI"`
 
 #### iconFont : [font](https://doc.qt.io/qt-6/qml-font.html)
 
-Icons in popups, each widget sets their sizes.
+The font for icons in popups. Each widget sets their sizes.
 
 Default: `family` `"Segoe Fluent Icons"`
 
@@ -326,4 +327,4 @@ Default: `150`
 
 ## Used by
 
-Every bar, YASB's bar menu, and the options of YASB's own widgets, which start from the theme's values.
+Every bar, the bar menu, and the options of the built-in widgets, whose defaults come from the theme.

@@ -5,9 +5,9 @@
 Bluetooth radio state, connected devices, known devices and nearby devices, with functions to scan, connect,
 disconnect and turn the radio on or off.
 
-`radioOn` and `connected` always update. `devices` and `nearby` only fill while `watching` is `true` (for example
-while a popup is open). All BluetoothMonitor objects share one connection to Windows Bluetooth, which runs while at
-least one exists.
+`radioOn` and `connected` always update. `devices` and `nearby` are only populated while `watching` is `true` (for
+example while a popup is open). All BluetoothMonitor objects share one connection to Windows Bluetooth, which stays open
+while at least one exists.
 
 ## BluetoothMonitor
 

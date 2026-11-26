@@ -56,10 +56,10 @@ Run the tests:
 python -m pytest
 ```
 
-One folder or one file runs on its own, such as `python -m pytest tests/cloud`. The tests never touch your real
-YASB setup, and no windows open. [tests/README.md](https://github.com/amnweb/yasb/blob/main/tests/README.md)
-explains where a test goes, how to write one, and the checks of YASB's ctypes code against the Windows SDK, which
-need Visual Studio's C++ compiler.
+You can run a single folder or file, for example `python -m pytest tests/cloud`. The tests never touch your real YASB
+setup, and no windows open. [tests/README.md](https://github.com/amnweb/yasb/blob/main/tests/README.md) explains where a
+test goes, how to write one, and the checks of YASB's ctypes code against the Windows SDK, which need Visual Studio's
+C++ compiler.
 
 ## Build the installer
 

@@ -1,19 +1,19 @@
 # Layouts
 
-A layout is the bar's own look: its background, corners, border, padding and spacing, and anything else you draw
-on it. The widgets come from `config.yaml`, the layout decides where their slots are. The setup wrote one of
-`layouts\bar.qml`, `layouts\floating.qml` or `layouts\islands.qml` in your config folder, for the style you picked.
+A layout is the bar's own look: its background, corners, border, padding and spacing, and anything else you draw on it.
+The widgets come from `config.yaml`, and the layout decides where their slots go. Depending on the style you picked, the
+setup created `layouts\bar.qml`, `layouts\floating.qml` or `layouts\islands.qml` in your config folder.
 
 ## Pick a layout
 
 A bar's `layout` in `config.yaml` picks its layout, as [Layouts and themes](./Configuration#layouts-and-themes)
-explains. Without one, the bar is YASB's own [Bar](./(Type)-Bar), in the theme's bar background. While `watch` is on,
-the bar changes as soon as you save its layout. A layout with an error isn't used: the bar shows YASB's own instead,
-and an alert shows the error.
+explains. Without one, the bar uses the default [Bar](./(Type)-Bar) with the theme's bar background. While `watch` is
+on, the bar changes as soon as you save its layout. A layout with an error isn't used. The bar falls back to the
+default, and an alert shows the error.
 
 ## YASB's layouts
 
-The setup's three styles are three short layouts. This is `floating.qml`:
+Each of the setup's three styles is a short layout file. This is `floating.qml`:
 
 ```qml
 // %USERPROFILE%\.config\yasb\layouts\floating.qml
@@ -101,8 +101,8 @@ Bar {
 
 ## Islands
 
-On an [IslandBar](./(Type)-IslandBar), the widgets of each slot share one island. To set a widget apart, add
-`property bool island: false` to your [copy of the widget](./Widgets), beside its `settings`. The widget then sits
+On an [IslandBar](./(Type)-IslandBar), the widgets of each slot share one island. To take a widget out of its island,
+add `property bool island: false` to your [copy of the widget](./Widgets), beside its `settings`. The widget then sits
 on the rail outside any island, and the widgets after it start a new island:
 
 ```qml
@@ -118,11 +118,11 @@ Clock {
 }
 ```
 
-## Slots of your own
+## Custom slots
 
-[Bar](./(Type)-Bar) has three slots. For others, start from [BarBase](./(Type)-BarBase), which has none, and place a
-[WidgetSlot](./(Type)-WidgetSlot) for each slot you want. Each one shows the widgets that `config.yaml` lists under
-its `name`. This layout, for a bar at the top or bottom, has a `start` slot and an `end` slot:
+[Bar](./(Type)-Bar) has three slots. For different slots, start from [BarBase](./(Type)-BarBase), which has none, and
+add a [WidgetSlot](./(Type)-WidgetSlot) for each slot you want. Each one shows the widgets that `config.yaml` lists
+under its `name`. This layout, for a bar at the top or bottom, has a `start` slot and an `end` slot:
 
 ```qml
 // %USERPROFILE%\.config\yasb\layouts\two-ends.qml
@@ -158,14 +158,14 @@ bars:
 
 ## The right-click menu
 
-A right-click on the bar, away from its widgets, opens YASB's bar menu: Task Manager, a screenshot of
-the bar, auto-hide, reload and exit. `contextMenu: null` in the layout turns it off.
+A right-click on the bar, outside its widgets, opens YASB's bar menu: Task Manager, a screenshot of the bar, auto-hide,
+reload and exit. `contextMenu: null` in the layout turns it off.
 
 ## Blur
 
-With `backdrop: true`, YASB blurs the area that `backdropShapes` gives, which is the whole bar with its `radius`
-unless you set it. Set it when you draw a shape of your own, as a list of `{x, y, width, height, radius}` in the
-bar's coordinates. The blur only shows through a fill you can see through, as [Themes](./Themes#blur) explains.
+With `backdrop: true`, YASB blurs the area defined by `backdropShapes`. By default that's the whole bar with its
+`radius`. Set it when you draw a custom shape, as a list of `{x, y, width, height, radius}` in the bar's coordinates.
+The blur only shows through a fill you can see through, as [Themes](./Themes#blur) explains.
 
 ## Share a layout
 

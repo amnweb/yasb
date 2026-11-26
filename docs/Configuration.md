@@ -1,9 +1,8 @@
 # Configuration
 
-`config.yaml` in your [config folder](./Getting-Started#your-config-folder) holds YASB's settings and your bars:
-the screens each bar is on, its edge, size and place, the layout and theme it uses, and its widgets. This page
-explains every key in it. What a widget shows and how it looks is set in the widget's own file, as
-[Widgets](./Widgets) explains.
+`config.yaml` in your [config folder](./Getting-Started#your-config-folder) holds YASB's settings and your bars: the
+screens each bar is on, its edge, size and place, the layout and theme it uses, and its widgets. This page covers every
+key. A widget's content and look are set in the widget's own file (see [Widgets](./Widgets)).
 
 ## An example
 
@@ -36,9 +35,9 @@ bars:
         - Volume
 ```
 
-YASB checks the whole file when it reads it. A key it doesn't know, or a value it can't use, is an error: YASB shows
-an alert that lists each one. When YASB starts with such a file, it doesn't start. When you save one while it runs,
-it keeps the config it had.
+YASB validates the whole file when it reads it. Unknown keys and invalid values are errors, and YASB shows an alert
+listing each one. If the file has errors at startup, YASB doesn't start. If you save a file with errors while YASB is
+running, it keeps the previous config.
 
 ## Settings
 
@@ -48,7 +47,7 @@ it keeps the config it had.
 | `debug` | `true` or `false` | `false` | Writes more detail to `yasb.log`. |
 | `update_check` | `true` or `false` | `true` | Shows a notification when a new version of YASB is out. |
 | `theme` | a theme | YASB's own theme | The theme of every bar that doesn't name its own. See [Themes](./Themes). |
-| `bars` | bars by name | one bar, `yasb-bar`, with no widgets | Your bars. Each name is yours to pick. |
+| `bars` | bars by name | one bar, `yasb-bar`, with no widgets | Your bars. You choose the names. |
 
 ## Bars
 
@@ -61,11 +60,11 @@ Each bar under `bars` takes these keys. Leave one out and it keeps its default.
 | `theme` | a theme | the `theme` above | The colors and fonts of this bar and its widgets. See [Themes](./Themes). |
 | `screens` | a list of screens | `["*"]` | The screens that get this bar. See [Screens](#screens). |
 | `edge` | `top`, `bottom`, `left` or `right` | `top` | The screen edge the bar sits on. |
-| `align` | `left`, `center` or `right`, on a `left` or `right` edge, `top`, `center` or `bottom` | `center` | Where a bar shorter than its edge sits along it. |
-| `length` | pixels, a percentage such as `"50%"`, or `"auto"` | `"100%"` | How long the bar is along its edge. A percentage is of the whole edge. `"auto"` makes it as long as its widgets, except on an [IslandBar](./(Type)-IslandBar) layout, which always runs the whole edge. It's never longer than the edge less the margins. |
+| `align` | `left`, `center` or `right`. On a `left` or `right` edge: `top`, `center` or `bottom`. | `center` | Where a bar shorter than its edge sits along it. |
+| `length` | pixels, a percentage such as `"50%"`, or `"auto"` | `"100%"` | How long the bar is along its edge. A percentage is of the whole edge. `"auto"` makes it as long as its widgets, except on an [IslandBar](./(Type)-IslandBar) layout, which always runs the whole edge. It's never longer than the edge minus the margins. |
 | `thickness` | pixels | `40` | How tall the bar is, or how wide on a `left` or `right` edge. |
 | `margin` | `top`, `left`, `bottom` and `right`, in pixels | `0` each | The gap between the bar and the screen's edges. |
-| `reserve_space` | `true` or `false` | `false` | Maximized windows stop at the bar instead of covering it. The space kept is the bar's `thickness` and its margins on both sides of it. It has no effect while the bar auto-hides. |
+| `reserve_space` | `true` or `false` | `false` | Maximized windows stop at the bar instead of covering it. The reserved space is the bar's `thickness` plus its margins on both sides. It has no effect while the bar auto-hides. |
 | `always_on_top` | `true` or `false` | `false` | The bar stays above other windows. |
 | `hide_on_fullscreen` | `true` or `false` | `false` | The bar hides while a game or video fills the screen. It needs `always_on_top: true`. |
 | `auto_hide` | `never`, `always` or `maximized` | `never` | `always`: the bar slides away until the pointer touches its screen edge. `maximized`: the bar slides away while a window is maximized on its screen, unless `reserve_space` is `true`. |
@@ -93,12 +92,12 @@ A bar whose layout or theme is missing or has an error gets YASB's own, and YASB
 - `primary`: your main screen.
 - A screen's name, as `yasbc monitor-information` shows it after `Name:`.
 
-`"*"` and `"**"` work only on their own, as the list's one entry. In a list with other screens, YASB takes them as
-a screen's name, finds no such screen and skips them. `primary` and screen names can be listed together.
+`"*"` and `"**"` only work as the list's only entry. Listed with other screens, they're treated as a screen name, which
+matches no screen, so they're skipped. `primary` and screen names can be listed together.
 
-A bar gets one window on each of its screens. A named screen that isn't connected is skipped, and `yasb.log` says
-so. When you connect or disconnect a screen, YASB restarts and places the bars again. This puts one bar on the main
-screen and a smaller one on every other screen:
+A bar has one window on each of its screens. A named screen that isn't connected is skipped, and `yasb.log` says so.
+When you connect or disconnect a screen, YASB restarts and places the bars again. This puts one bar on the main screen
+and a smaller one on every other screen:
 
 ```yaml
 bars:
@@ -119,11 +118,10 @@ bars:
 
 ## Widgets in a bar
 
-`widgets` maps each slot of the bar to its widgets, in the order they show. The layout decides the slots. YASB's
-layouts have `left`, `center` and `right` on a bar at the top or bottom, and `top`, `center` and `bottom` on a bar at
-the left or right. A layout can add slots of its own, as [Layouts](./Layouts) shows. A slot's name starts with a
-letter and has only letters, digits, `-` and `_`. Widgets in a slot that the layout doesn't have don't show, and
-`yasb.log` says so.
+`widgets` maps each slot of the bar to its widgets, in the order they show. The layout decides the slots. YASB's layouts
+have `left`, `center` and `right` on a bar at the top or bottom, and `top`, `center` and `bottom` on a bar at the left
+or right. A layout can add slots of its own, as [Layouts](./Layouts) shows. A slot's name starts with a letter and has
+only letters, digits, `-` and `_`. Widgets in a slot the layout doesn't have aren't shown, and `yasb.log` notes it.
 
 A widget's name is one of:
 
@@ -131,7 +129,7 @@ A widget's name is one of:
 - A widget of your own, in `widgets\Name\Name.qml` in your config folder.
 - A widget addon, by its id, such as `amnweb.clock`. See [Addons](./Addons).
 
-Names don't care about case. When YASB can't find a widget, it shows an alert that names it and leaves it out.
+Names are case-insensitive. When YASB can't find a widget, it shows an alert that names it and leaves it out.
 
 ## Environment variables
 

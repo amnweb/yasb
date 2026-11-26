@@ -1,8 +1,8 @@
 <p align="center"><img src="https://raw.githubusercontent.com/amnweb/yasb/main/src/assets/images/app_icon.png" width="180"></p>
 <h2 align="center">Welcome to the YASB wiki!</h2>
 
-YASB is a status bar for Windows 10 and 11. The bar and its widgets are QML files, and Python services under them
-read your PC: the CPU, the battery, what's playing, your windows and more. You change a widget by setting its
+YASB is a status bar for Windows 10 and 11. The bar and its widgets are QML files, backed by Python services that read
+data from your PC: the CPU, the battery, what's playing, your windows and more. You change a widget by setting its
 options in a QML file, and you write your own widget the same way.
 
 ## Start here

@@ -1,7 +1,7 @@
 # YASB CLI
 
-`yasbc` comes with YASB and works it from a terminal: it starts, stops and reloads YASB, shows and hides bars,
-installs addons, and backs up your config with [YASB Cloud](./Cloud). Each command below prints the same help with
+`yasbc` ships with YASB and controls it from a terminal: it starts, stops and reloads YASB, shows and hides bars,
+installs addons, and backs up your config with [YASB Cloud](./Cloud). The help below is what each command prints with
 `--help`.
 
 ## yasbc

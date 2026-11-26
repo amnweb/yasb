@@ -1,11 +1,10 @@
 # Services
 
-A service is what YASB reads from Windows, or from another program, for your widgets: the CPU, the battery,
-what's playing, your windows, the weather and more. Each one is a QML type from `import Yasb`. Your widget creates
-it, tells it what to do, and shows what it reads. YASB's own widgets are built on the same services.
+A service gives your widgets data from Windows or from another program: the CPU, the battery, what's playing, your
+windows, the weather and more. Each one is a QML type from `import Yasb`. Your widget creates the service, configures it
+and displays its data. The built-in widgets use the same services.
 
-This page explains how every service is used. Each service's own page then shows what you can do with it, and
-lists everything it has.
+This page covers how all services work. Each service has its own page with examples and a full reference.
 
 ## Create it
 
@@ -27,11 +26,10 @@ Item {
 }
 ```
 
-Each widget creates its own. A service that reads something costly, such as the tray or Bluetooth, shares one
-reader between every widget that creates it, so a second widget costs nothing extra, its page says so.
+Each widget creates its own instance. Services that read something expensive, like the tray or Bluetooth, share one
+reader between all instances, so a second widget costs nothing extra. Their pages say so.
 
-A few services are singletons: there is only one, and you use it by its name without creating it, such as
-`PowerPlans.plans`. Their pages say so.
+A few services are singletons. You use them by name without creating them, like `PowerPlans.plans`. Their pages say so.
 
 ## Settings
 
@@ -44,16 +42,16 @@ BatteryMonitor {
 }
 ```
 
-Each page lists them with their defaults, a setting you leave out keeps its default. You can bind one to your
-widget's own options, such as `updateInterval: settings.updateInterval`, and the service follows when it changes.
+Each page lists them with their defaults. A setting you leave out keeps its default. You can bind one to your widget's
+options, such as `updateInterval: settings.updateInterval`, and the service updates when it changes.
 
 ## Data
 
-Data are properties you read. Bind to them and your widget changes by itself whenever the service reads something
-new, you never ask for it.
+Data are read-only properties. Bind to them and your widget updates automatically whenever the service has new data.
+There's nothing to request.
 
-Some data is an object with keys, such as `battery.data.percent`. Until the service has read it, or where Windows
-doesn't say, a value can be `-1`, `""` or `null`, as each page explains. `??` gives a value to show instead:
+Some data is an object with keys, such as `battery.data.percent`. Before the first read, or when Windows doesn't provide
+it, a value can be `-1`, `""` or `null`, as each page explains. Use `??` to show a fallback:
 
 ```qml
 Label {
@@ -70,7 +68,7 @@ A list of things, such as screens, devices or tray icons, is a model: give it to
 ```qml
 BluetoothMonitor {
     id: bluetooth
-    // devices fills only while watching; see "While it isn't seen" below
+    // devices is only populated while watching (see "Pausing work while hidden" below)
     watching: true
 }
 
@@ -102,13 +100,13 @@ Button {
 ```
 
 A function that acts on one thing in a list takes a value from that thing's row, such as a device's `address` or a
-screen's `monitor`. Take it from the row each time you call, don't keep it, as it can change.
+screen's `monitor`. Read it from the row each time you call the function. Don't store it, because it can change.
 
-## While it isn't seen
+## Pausing work while hidden
 
-Some services do more work than others, such as scanning for devices. They have a setting that pauses that work,
-such as `watching` or `running`. Bind it to whether your popup or widget is seen, such as
-`watching: popup.visible`, and the service only does the work while it's needed.
+Some services do heavier work, like scanning for devices. They have a setting that pauses it, such as `watching` or
+`running`. Bind it to your popup's or widget's visibility, for example `watching: popup.visible`, so the work only runs
+while it's needed.
 
 ## The services
 

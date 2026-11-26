@@ -3,7 +3,7 @@
 `import Yasb`
 
 Default output device, its volume and mute state, all output devices, and the apps playing sound, with functions to
-change them. Updates when the volume or devices change in Windows, the apps on `refreshApps()`. All AudioOutput
+change them. Updates when the volume or devices change in Windows. `apps` updates on `refreshApps()`. All AudioOutput
 objects share one connection to Windows audio.
 
 ## AudioOutput
@@ -42,7 +42,7 @@ The apps with an audio session on the default output device, one per process and
 
 - `key` : int, used by `setAppVolume()` and `setAppMuted()`. Valid until the next `refreshApps()`.
 - `pid` : int, the app's process id.
-- `name` : string, the app's name, or its process name made readable.
+- `name` : string, the app's name, or a cleaned-up version of its process name.
 - `process` : string, the process name, such as `chrome.exe`.
 - `appId` : string, the app's id in Windows. `""` when it has none.
 - `volume` : int, the app's volume, 0 to 100.
@@ -71,7 +71,7 @@ Makes this output device Windows' default device. Windows' default communication
 
 #### refreshApps()
 
-Reads `apps` again. Also done by itself when the default output device changes, once `apps` has been read.
+Reads `apps` again. Also runs automatically when the default output device changes, once `apps` has been read.
 
 #### setAppVolume(key: int, value: int)
 

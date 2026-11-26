@@ -2,12 +2,12 @@
 
 `import Yasb`
 
-The window in front: its title, app, icon and details, plus a text built from your own label. Updates when another
-window comes to the front, or when the window's title changes, or it closes or minimizes.
+The foreground window: its title, app, icon and details, and a text built from your `label`. Updates when the foreground
+window changes, and when its title changes or it closes or is minimized.
 
 Some windows are ignored:
 
-- Desktop, Start and Search: when one of them comes to the front, there is no window.
+- Desktop, Start and Search: when one of them becomes the foreground window, there is no window.
 - Taskbar, YASB, komorebi and Flow Launcher, and windows in your ignore lists: the previous window stays.
 
 ## ActiveWindowTracker
@@ -22,8 +22,8 @@ Default: `""`
 
 #### monitorExclusive : bool
 
-When `true`, only windows on `screenName` count, a window in front on another screen shows as no window. Needs
-`screenName`, without it, all screens count.
+When `true`, only windows on `screenName` count. A foreground window on another screen shows as no window. Needs
+`screenName`. Without it, all screens count.
 
 Default: `true`
 
@@ -81,8 +81,8 @@ Rules that change the title, program name and app name. They run in order on eac
 - `replacement`: what each match becomes. `\1`, `\2` and so on insert the match's groups.
 - `case` (optional): `lower`, `upper`, `title` or `capitalize`, applied to the whole text if the rule matched.
 
-Rules without `pattern` or `replacement` are skipped. Example, keeps only the part of a browser title before " - ":
-`[{ pattern: "^(.*) - (Google Chrome|Mozilla Firefox)$", replacement: "\\1" }]`.
+Rules without `pattern` or `replacement` are skipped. For example, this keeps only the part of a browser title before "
+- ": `[{ pattern: "^(.*) - (Google Chrome|Mozilla Firefox)$", replacement: "\\1" }]`.
 
 Default: `[]`
 
@@ -110,8 +110,8 @@ Default: `[]`
 
 #### text : string `read-only`
 
-`label` (or `alternateLabel`) filled in for the window, or `noWindowLabel` when there is none. If a placeholder
-doesn't fit the window, the label is shown as written.
+`label` (or `alternateLabel`) filled in for the window, or `noWindowLabel` when there is none. If a placeholder can't be
+filled for the window, the label is shown unchanged.
 
 #### icon : string `read-only`
 

@@ -34,7 +34,7 @@ The notifications in the notification center, newest first. Each is an object:
 Images are local files only: a web image when Windows saved a copy to show the notification, never a file on a
 network share. An image that isn't on this PC is `""`.
 
-A plain list, not a model: every change replaces the whole list. Only notifications of the toast kind are listed.
+A plain list, not a model: every change replaces the whole list. Only toast notifications are listed.
 
 #### allowed : bool `read-only`
 
@@ -70,8 +70,8 @@ Removes this notification from the notification center.
 
 #### activate(id: int)
 
-Does what clicking the notification does: opens its link, or hands it to its app. When the app can't take it, or
-the notification has no launch arguments, the app's window comes forward, or the app starts. Once handled, the
+Does what clicking the notification does: opens its link, or hands it to its app. If the app can't handle it, or the
+notification has no launch arguments, the app's window is brought to the front, or the app is started. Once handled, the
 notification is removed. Ignored for an `id` not in `notifications`.
 
 #### setDoNotDisturb(enabled: bool)

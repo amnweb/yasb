@@ -3,7 +3,7 @@
 `import Yasb`
 
 Windows' power mode when plugged in and on battery, with a function to change it. Read when first used and on
-`refresh()`, changes made in Windows Settings show only after `refresh()`.
+`refresh()`. Changes made in Windows Settings only show after `refresh()`.
 
 PowerModes is a singleton: use it by its name, without creating it.
 

@@ -43,7 +43,7 @@ When the last check ended. Invalid before the first.
 
 #### configure(servers: list, sslVerify: bool, sslCheck: bool, timeout: int, interval: int, sslWarning: int, notifyOffline: bool, notifySsl: bool)
 
-Sets what to check. Settings no other ServerChecks uses are checked at once.
+Sets what to check. If no other ServerChecks uses these settings, they're checked immediately.
 
 - `servers`: each a URL, or an object with `url` and an optional `name`. Empty URLs are skipped.
 - `sslVerify`: `true` checks each server's certificate and host name, `false` accepts any certificate.
@@ -59,7 +59,7 @@ Sets what to check. Settings no other ServerChecks uses are checked at once.
 
 #### refresh()
 
-Checks now. Ignored while a check is under way.
+Checks now. Ignored while a check is in progress.
 
 ServerChecks has no signals.
 

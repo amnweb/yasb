@@ -2,10 +2,10 @@
 
 `import Yasb`
 
-Current time and date in any time zone, formatted your way, in any language.
+Formats the current date and time for any time zone, in any language.
 
-TimeZones has no properties or signals. Each `format()` call returns the time at that moment, to show a running
-clock, call it from a `Timer`, for example once a second.
+TimeZones has no properties or signals. Each `format()` call returns the time at that moment. To show a running clock,
+call it from a `Timer`, for example once a second.
 
 ## TimeZones
 

@@ -2,9 +2,9 @@
 
 `import Yasb.Bar` · inherits [Item](https://doc.qt.io/qt-6/qml-qtquick-item.html)
 
-The root of a layout with no slots of its own: the bar's surface, its theme and its right-click menu. Place a
-[WidgetSlot](./(Type)-WidgetSlot) for each slot the layout has. [Bar](./(Type)-Bar) and
-[IslandBar](./(Type)-IslandBar) are built on it. A layout whose root isn't one of the three doesn't load.
+The base type for layouts. It gives the bar's surface, theme and right-click menu, but no slots. Add a
+[WidgetSlot](./(Type)-WidgetSlot) for each slot you want. [Bar](./(Type)-Bar) and [IslandBar](./(Type)-IslandBar) are
+built on it. A layout's root must be one of these three types, or the layout doesn't load.
 
 Guide: [Layouts](./Layouts)
 
@@ -89,21 +89,21 @@ Default: `12`
 #### backdropShapes : list
 
 Where the blur goes when the bar has `backdrop: true`, as a list of `{x, y, width, height, radius}` in the bar's
-coordinates. An invalid list gives no blur, and a warning in the log.
+coordinates. If the list is invalid, there's no blur and a warning is logged.
 
 Default: the whole bar, with its `radius`
 
 #### backdropPath : string
 
-An SVG path for the blur's outline instead, which can reach outside the bar, as IslandBar's does.
+An SVG path for the blur's outline instead of `backdropShapes`. It can extend outside the bar, like IslandBar's.
 
 Default: `""`
 
 #### contextMenu : Component
 
-What a right-click on the bar opens, away from its widgets: YASB's bar menu, `null` for none, or a Component of
-your own. Yours is created with `bar` (this bar), `position` (the click, on screen) and `area` (the screen's
-rectangle), so it declares those three properties.
+The menu that opens when you right-click the bar outside its widgets: YASB's bar menu, `null` for none, or your own
+Component. Your component is created with `bar` (this bar), `position` (the click position, in screen coordinates) and
+`area` (the screen's rectangle), so it must declare those three properties.
 
 Default: YASB's bar menu
 
@@ -137,14 +137,14 @@ The screen edge the bar is on: `top`, `bottom`, `left` or `right`.
 
 #### hasMaximizedWindow : bool `read-only`
 
-`true` while a window is maximized on the bar's screen. YASB only follows maximized windows while the layout reads
-this, or the bar hides for them.
+`true` while a window is maximized on the bar's screen. YASB only tracks maximized windows while the layout reads this
+property or the bar auto-hides for them.
 
 ### Items inside it
 
-Items you place in a BarBase are laid out inside the bar, `padding` in from its ends, and every Label among them
-takes the theme's bar font.
+Items you put in a BarBase are laid out inside the bar, inset by `padding` from each end. Every Label among them uses
+the theme's bar font.
 
-YASB logs a warning for each slot in config.yaml that the layout has no WidgetSlot for, its widgets aren't shown.
+If config.yaml lists a slot the layout has no WidgetSlot for, its widgets aren't shown and YASB logs a warning.
 
 BarBase has no functions or signals for layouts.

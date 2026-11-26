@@ -2,9 +2,9 @@
 
 `import Yasb`
 
-Keyboard language and layout of the window in front, installed layouts, and caps lock, with a function to switch
-layouts. Updated every `updateInterval`. While a YASB window has the focus (such as a popup), the language of the
-previous window stays.
+Keyboard language and layout of the foreground window, installed layouts, and caps lock, with a function to switch
+layouts. Updated every `updateInterval`. While a YASB window such as a popup has focus, the previous window's language
+is kept.
 
 ## KeyboardLanguage
 
@@ -18,7 +18,7 @@ Default: `1000`
 
 #### language : object `read-only`
 
-Language of the window in front. `{}` until read.
+Language of the foreground window. `{}` until read.
 
 - `language_code` : string, two-letter code, such as `"en"`.
 - `iso_language_code` : string, three-letter code, such as `"eng"`.
@@ -42,7 +42,7 @@ Installed keyboard layouts, sorted by language name. Each is an object:
 - `name` : string, language name, such as `"English (United States)"`.
 - `code` : string, three-letter language code in capitals, such as `"ENG"`.
 - `layout` : string, keyboard layout name, such as `"US"`.
-- `current` : bool, `true` for the layout of the window in front.
+- `current` : bool, `true` for the layout of the foreground window.
 
 ### Functions
 
@@ -52,8 +52,8 @@ Reads the language, layouts and caps lock now.
 
 #### rememberWindow()
 
-Remembers the window in front, so `activate()` switches that window. Call it before opening a layout menu, because
-the menu takes the focus.
+Remembers the foreground window, so `activate()` switches that window. Call it before opening a layout menu, because the
+menu takes focus.
 
 #### activate(id: string)
 

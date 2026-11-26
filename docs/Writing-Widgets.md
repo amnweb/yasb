@@ -1,11 +1,11 @@
 # Writing widgets
 
-A widget is a QML file in your config folder. YASB's Python services give it the data, such as the CPU usage or
-what's playing, and the widget decides how to show it. This page builds one widget step by step: a CPU meter that
-warns when the CPU is busy and opens a popup with the busiest processes. Each step shows the whole file.
+A widget is a QML file in your config folder. YASB's Python services provide the data, such as CPU usage or what's
+playing, and the widget decides how to display it. This page builds one widget step by step: a CPU meter that warns when
+the CPU is busy and opens a popup with the busiest processes. Each step shows the whole file.
 
-You'll need a little QML. Qt's [QML introduction](https://doc.qt.io/qt-6/qmlfirststeps.html) covers what this page
-uses, and [Qt Quick's types](https://doc.qt.io/qt-6/qtquick-qmlmodule.html) are all there for a widget to use.
+You'll need some basic QML. Qt's [QML introduction](https://doc.qt.io/qt-6/qmlfirststeps.html) covers everything this
+page uses, and all of [Qt Quick's types](https://doc.qt.io/qt-6/qtquick-qmlmodule.html) are available to widgets.
 
 ## A widget on the bar
 
@@ -19,7 +19,7 @@ import QtQuick.Controls
 import Yasb.Bar
 
 Item {
-    // The bar the widget is in; YASB sets it
+    // Set by YASB to the bar the widget is in
     required property BarBase bar
 
     implicitWidth: label.implicitWidth
@@ -44,10 +44,10 @@ bars:
         - CpuLoad
 ```
 
-The bar shows "Hello". YASB makes the widget as tall as the bar, or as wide on a bar at the left or right, and
-`implicitWidth` tells it how much room the widget needs along the bar. A `Label` takes the theme's bar font by
-itself. While `watch` is on, the bar loads the file again each time you save it. If the file has an error, an
-alert shows it, and the bar keeps the version it showed.
+The bar now shows "Hello". YASB sizes the widget to the bar's height, or its width on a bar at the left or right, and
+`implicitWidth` tells it how much space the widget needs along the bar. A `Label` uses the theme's bar font by default.
+With `watch` on, the bar reloads the file every time you save it. If the file has an error, an alert shows it and the
+bar keeps the previous version.
 
 ## Data from a service
 
@@ -85,14 +85,14 @@ Item {
 }
 ```
 
-The label changes each time `monitor.data` does. `root.bar.theme` is the bar's [Theme](./(Type)-Theme), so the text
-takes the theme's color, and changes with it in light and dark mode.
+The label updates whenever `monitor.data` changes. `root.bar.theme` is the bar's [Theme](./(Type)-Theme), so the text
+uses the theme's color and follows it between light and dark mode.
 
 ## Options
 
-YASB's widgets keep their options together at the top, in a `component Settings`, each with its value. Values from
-the theme stay up to date with it, and anyone who opens the file sees at once what they can change. The widget
-makes one `Settings` and reads its options from `settings`:
+The built-in widgets declare all their options at the top, in a `component Settings`, each with its default value.
+Defaults bound to the theme stay in sync with it, and anyone who opens the file can see right away what's configurable.
+The widget creates one `Settings` and reads its options from `settings`:
 
 ```qml
 // %USERPROFILE%\.config\yasb\widgets\CpuLoad\CpuLoad.qml
@@ -146,13 +146,13 @@ Item {
 
 The finished widget adds three things:
 
-- A [BackdropPopup](./(Type)-BackdropPopup) opens on a click. It's a window of its own, which the widget places next
-  to itself. It closes on Escape, or when you click elsewhere, and it blurs what's behind it when the bar has
+- A [BackdropPopup](./(Type)-BackdropPopup) opens on a click. It's a separate window that the widget positions next to
+  itself. It closes on Escape or when you click elsewhere, and its background is blurred when the bar has
   `backdrop: true`.
-- A [Process](./(Service)-Process) runs PowerShell when the popup opens, and the popup shows what it printed: the five
-  processes that have used the most CPU time.
-- A [Hotkey](./(Type)-Hotkey) opens the popup from the keyboard, and [Notifier](./(Type)-Notifier) shows a Windows
-  toast when the CPU gets busy.
+- A [Process](./(Service)-Process) runs a PowerShell command when the popup opens, and the popup shows its output: the
+  five processes that have used the most CPU time.
+- A [Hotkey](./(Type)-Hotkey) opens the popup from the keyboard, and [Notifier](./(Type)-Notifier) shows a Windows toast
+  when the CPU gets busy.
 
 ```qml
 // %USERPROFILE%\.config\yasb\widgets\CpuLoad\CpuLoad.qml
@@ -217,7 +217,7 @@ Item {
             Notifier.toast("CPU", `The CPU is at ${usage.toFixed(0)}%`)
     }
 
-    // The popup is a window of its own, so it goes when the widget does
+    // The popup is a separate window, so hide it when the widget is destroyed
     Component.onDestruction: popup.hide()
 
     CpuMonitor {
@@ -285,9 +285,9 @@ Item {
 }
 ```
 
-The popup's `anchor` is the widget, so a click on the widget closes the popup again instead of opening a second one.
-`backdropItem` is the item the blur follows, with its corners. Each `Label` in the popup takes the popup's `font`,
-and its text color from the theme.
+Because the popup's `anchor` is the widget, clicking the widget again closes the popup instead of opening it a second
+time. `backdropItem` is the item the blur follows, including its rounded corners. Each `Label` in the popup uses the
+popup's `font` and gets its text color from the theme.
 
 ## Keep a token out of the file
 
@@ -298,8 +298,8 @@ A widget that calls an API often needs a key or a token. Put it in the `.env` fi
 IPINFO_TOKEN=your-token
 ```
 
-[Environment](./(Type)-Environment) reads it, and the widget file stays safe to share. This widget shows your
-country, asked every ten minutes while the widget shows:
+Read it with [Environment](./(Type)-Environment), and the widget file stays safe to share. This widget shows your
+country, fetched every ten minutes while the widget is visible:
 
 ```qml
 // %USERPROFILE%\.config\yasb\widgets\Country\Country.qml
@@ -340,20 +340,20 @@ YASB reads `.env` when it starts, so reload YASB after you change it.
 
 ## Files beside the widget
 
-A widget's folder can hold more files, such as icons or sounds. `Qt.resolvedUrl()` finds them next to the widget
+A widget's folder can hold more files, such as icons or sounds. `Qt.resolvedUrl()` resolves paths relative to the widget
 file: `Image { source: Qt.resolvedUrl("icon.svg") }`, or `Notifier.playSound(Qt.resolvedUrl("ding.wav"))`.
 
 ## What a widget can use
 
-- **Services**, from `import Yasb`: one type for each thing YASB reads, such as the CPU, the battery, the media
-  playing or your windows. Each one has a page in the sidebar, under **Services**.
-- **Utilities**, from `import Yasb`: [Process](./(Service)-Process) runs a program, [Hotkey](./(Type)-Hotkey) gives a
-  global key combination, [Notifier](./(Type)-Notifier) shows toasts and plays sounds, and
+- **Services**, from `import Yasb`: one type for each thing YASB reads, such as the CPU, the battery, the media playing
+  or your windows. Each one has a page in the sidebar, under **Services**.
+- **Utilities**, from `import Yasb`: [Process](./(Service)-Process) runs a program, [Hotkey](./(Type)-Hotkey) registers
+  a global shortcut, [Notifier](./(Type)-Notifier) shows toasts and plays sounds, and
   [Environment](./(Type)-Environment) reads environment variables.
 - **Popups**, from `import Yasb.Common`: [BackdropPopup](./(Type)-BackdropPopup), and
-  [LoadingLine](./(Type)-LoadingLine) for a popup that is loading.
-- **The bar and its theme**, from `import Yasb.Bar` and `import Yasb.Themes`: [BarBase](./(Type)-BarBase) is the
-  `bar` property, with its `edge`, `vertical` and `theme`.
+  [LoadingLine](./(Type)-LoadingLine), a loading indicator for popups.
+- **The bar and its theme**, from `import Yasb.Bar` and `import Yasb.Themes`: the `bar` property is a
+  [BarBase](./(Type)-BarBase), with its `edge`, `vertical` and `theme`.
 - **Qt**: everything in Qt Quick, Qt Quick Controls, Qt Quick Layouts and Qt Quick Shapes.
 
 YASB's own widgets are in `core\qml\Yasb\Widgets` in YASB's folder, or in

@@ -2,8 +2,8 @@
 
 `import Yasb` · a singleton: use it by its name, without creating it
 
-Reads an environment variable, so a token or a password can stay in YASB's `.env` file instead of a widget file
-you share.
+Reads environment variables, so tokens and passwords can live in YASB's `.env` file instead of in widget files you
+share.
 
 Guide: [Writing widgets](./Writing-Widgets#keep-a-token-out-of-the-file)
 
@@ -15,8 +15,8 @@ Put the token in `%USERPROFILE%\.config\yasb\.env`, one `NAME=value` per line:
 GITHUB_TOKEN=your-token
 ```
 
-Then read it where the widget needs it. Here it is the GitHub widget's `token` option, in the copy that
-`yasbc addons install Github` writes:
+Then read it where the widget needs it. For example, the `token` option in the GitHub widget copy that
+`yasbc addons install Github` creates:
 
 ```qml
 // %USERPROFILE%\.config\yasb\widgets\Github\Github.qml
@@ -30,13 +30,12 @@ Github {
 }
 ```
 
-OBS's `password` option can come from it the same way, such as `Environment.value("OBS_PASSWORD")`.
+OBS's `password` option works the same way: `Environment.value("OBS_PASSWORD")`.
 
 ## The .env file
 
-YASB reads `.env` from your config folder once, when it starts, so a change to it shows after YASB restarts or
-reloads. The config folder is `%USERPROFILE%\.config\yasb`, or the folder in the `YASB_CONFIG_HOME` environment
-variable.
+YASB reads `.env` from your config folder once, at startup. Restart or reload YASB after you change it. The config
+folder is `%USERPROFILE%\.config\yasb`, or the folder in the `YASB_CONFIG_HOME` environment variable.
 
 ## Environment
 
@@ -50,4 +49,4 @@ Environment has no properties or signals.
 
 ## Used by
 
-The options of YASB's own GitHub and OBS widgets, when you set them this way.
+The built-in GitHub and OBS widgets, if you set their options this way.

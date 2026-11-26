@@ -2,8 +2,7 @@
 
 `import Yasb.Common` · inherits [Item](https://doc.qt.io/qt-6/qml-qtquick-item.html)
 
-A thin line with a bar sliding along it while `running`, to show that something is loading, such as under a
-popup's header.
+A thin loading indicator. While `running`, a bar slides along the line. It usually sits under a popup's header.
 
 Guide: [Writing widgets](./Writing-Widgets)
 
@@ -32,8 +31,7 @@ ColumnLayout {
 ```
 
 Here `root.theme` is the widget's theme, and the ColumnLayout sits inside the widget's
-[BackdropPopup](./(Type)-BackdropPopup). With `trackColor` set, the line also shows as a divider while nothing
-loads.
+[BackdropPopup](./(Type)-BackdropPopup). With `trackColor` set, the line doubles as a divider when nothing is loading.
 
 ## LoadingLine
 
@@ -44,7 +42,7 @@ while the line is visible and wider than 0.
 
 #### running : bool
 
-When `true`, the bar slides along the line, over and over.
+When `true`, the bar slides along the line repeatedly.
 
 Default: `false`
 

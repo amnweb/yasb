@@ -26,9 +26,9 @@ defaults.
 Keys every provider reads:
 
 - `enabled` : bool, `false` leaves the provider out. Default `true`.
-- `prefix` : string, text typed first, followed by a space, to search only this provider. `"*"`, or no
-  `prefix`, gives none: the provider's results join the others' without a prefix.
-- `priority` : int, providers run and list their results from the lowest. Default `0`.
+- `prefix` : string, text typed first, followed by a space, to search only this provider. `"*"`, or no `prefix`, gives
+  none: the provider's results join the others' without a prefix.
+- `priority` : int, providers with lower values run and list their results first. Default `0`.
 - `show_preview` : bool, the `shown` key of the provider's previews, see `preview()`. Default `true`.
 
 The other keys are the provider's own options.
@@ -37,7 +37,7 @@ Default: `{}`
 
 #### maxResults : int
 
-Most results of one search, from 1 to 500.
+The maximum number of results per search, from 1 to 500.
 
 Default: `50`
 
@@ -54,7 +54,7 @@ The results of the last search. See [ResultModel](#resultmodel).
 
 #### loading : bool `read-only`
 
-`true` while a search is under way, or while some of its results are still loading.
+`true` while a search is in progress, or while some of its results are still loading.
 
 #### prediction : string `read-only`
 
@@ -77,8 +77,7 @@ Searches for `text`. A provider's prefix followed by a space searches only that 
 
 #### refresh()
 
-Runs the last search again, if it is under way or has results. Providers also call it when what they show
-changes.
+Runs the last search again, if it's in progress or has results. Providers also call it when what they show changes.
 
 #### execute(row: int)
 

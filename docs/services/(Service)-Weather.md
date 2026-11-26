@@ -2,10 +2,10 @@
 
 `import Yasb`
 
-The weather now, by hour and by day, for a place you choose, from Open-Meteo, with a search for places. Fetched
-every `updateInterval`, the last forecast is kept and shows at once when YASB starts, if it has the same units and
-enough days. All WeatherForecast objects
-with the same `locationId`, `units`, `forecastDays` and `updateInterval` share one fetch.
+The weather now, by hour and by day, for a place you choose, from Open-Meteo, with a search for places. Fetched every
+`updateInterval`. The last forecast is cached and shown immediately when YASB starts, if it has the same units and
+enough days. All WeatherForecast objects with the same `locationId`, `units`, `forecastDays` and `updateInterval` share
+one fetch.
 
 The place and its last forecast are saved by location id in `%LOCALAPPDATA%\YASB\weather.json`.
 
@@ -15,8 +15,8 @@ The place and its last forecast are saved by location id in `%LOCALAPPDATA%\YASB
 
 #### locationId : string
 
-The saved place to show. WeatherForecast objects with the same id show the same place, give one another id for
-another place.
+The saved place to show. WeatherForecast objects with the same id show the same place. Give one a different id for a
+different place.
 
 Default: `"weather"`
 
@@ -71,7 +71,7 @@ The saved place, empty without one:
 
 #### error : string `read-only`
 
-What went wrong in the last fetch, `""` when nothing. The last forecast stays shown.
+The error from the last fetch, or `""`. The last forecast stays shown.
 
 - `Open-Meteo: <reason>`, or `Open-Meteo returned HTTP <code>.`: Open-Meteo refused.
 - `Could not connect to Open-Meteo.`
@@ -105,13 +105,13 @@ Texts of the weather now and today, each `"--"` until there is a forecast:
 
 #### condition : string `read-only`
 
-The picture for the weather now: a kind of weather followed by `Day` or `Night`, such as `rainyNight`. The kinds are
-`sunny`, `cloudy`, `foggy`, `drizzle`, `rainy`, `snowy` and `thunderstorm`, a clear night is `clearNight`.
-`default` without a forecast, or for a weather code YASB doesn't know.
+The icon name for the current weather: a kind of weather followed by `Day` or `Night`, such as `rainyNight`. The kinds
+are `sunny`, `cloudy`, `foggy`, `drizzle`, `rainy`, `snowy` and `thunderstorm`. A clear night is `clearNight`. `default`
+without a forecast, or for a weather code YASB doesn't know.
 
 #### current : object `read-only`
 
-The weather now, empty without a forecast. See [Forecast values](#forecast-values) for its values, it also has:
+The weather now, empty without a forecast. See [Forecast values](#forecast-values) for its values. It also has:
 
 - `time` : string, the time of the reading, such as `2026-11-03T06:45`.
 - `isDay` : bool, `true` in daylight.
@@ -137,17 +137,17 @@ For each of `days`, the list of its hours, each an object with the hourly values
 
 - `time` : string, the hour, such as `2026-11-03T14:00`.
 - `timeText` : string, as `timeFormat` writes it.
-- `now` : bool, `true` for the hour under way.
+- `now` : bool, `true` for the current hour.
 - `isDay` : bool, `true` in daylight.
 - `condition` : string, the hour's picture.
 - `text` : string, the hour's weather.
 - `temperatureText` and `feelsLikeText` : string, the temperatures as text.
-- `rainChance` and `snowChance` : int, the chance of precipitation when that hour's weather is rain, or snow,
-  otherwise `0`.
+- `rainChance` and `snowChance` : int, the chance of precipitation when that hour's weather is rain, or snow, otherwise
+  `0`.
 
 #### upcoming : list `read-only`
 
-The next 24 hours, from the one under way, as in `hours`.
+The next 24 hours, starting with the current one, as in `hours`.
 
 #### unitLabels : object `read-only`
 
@@ -159,11 +159,11 @@ The places the last `search()` found, up to 20, each as in `location`.
 
 #### searching : bool `read-only`
 
-`true` while a search is under way.
+`true` while a search is in progress.
 
 #### searchError : string `read-only`
 
-What went wrong in the last search, `""` when nothing.
+The error from the last search, or `""`.
 
 ### Forecast values
 
@@ -190,9 +190,9 @@ Fetches the forecast now.
 
 #### setLocation(place: object)
 
-Saves this place for `locationId`, for every WeatherForecast with that id: one of `searchResults`, or one of your
-own with a `name`, a `latitude` and a `longitude`. Ignored without a numeric `latitude` and `longitude`. A new
-place is fetched at once, the same place again keeps its forecast.
+Saves this place for `locationId`, for every WeatherForecast with that id: one of `searchResults`, or one of your own
+with a `name`, a `latitude` and a `longitude`. Ignored without a numeric `latitude` and `longitude`. A new place is
+fetched immediately. Setting the same place again keeps its forecast.
 
 #### clearLocation()
 
@@ -200,9 +200,9 @@ Forgets the place of `locationId`, for every WeatherForecast with that id.
 
 #### search(text: string)
 
-Searches for places once typing pauses: a name, narrowed by a region or country after a comma, as in
-`Paris, Texas`. The region matches the start of a place's regions, country or country code, in any case and
-without accents. Under 2 letters before the comma clears `searchResults`. Names come in Windows' language.
+Searches for places once typing pauses: a name, narrowed by a region or country after a comma, as in `Paris, Texas`. The
+region matches the start of a place's regions, country or country code, in any case and without accents. Fewer than 2
+letters before the comma clears `searchResults`. Names are in Windows' display language.
 
 WeatherForecast has no signals.
 

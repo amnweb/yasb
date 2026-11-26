@@ -2,8 +2,8 @@
 
 `import Yasb`
 
-Level of each frequency band of the sound an output device plays, from bass to highs, many times a second. For
-drawing a visualizer. Also tells whether sound is playing.
+The level of each frequency band in the sound an output device plays, from bass to highs, updated many times a second,
+for drawing a visualizer. It also reports whether sound is playing.
 
 Changing any setting except `running` restarts the analysis. All AudioLevels objects that listen to the same
 device share one capture.
@@ -89,8 +89,8 @@ Default: `2000`
 
 #### running : bool
 
-Set to `false` while the visualizer isn't visible, such as `running: visible`. The analysis stops and the bands
-drop to 0, but `playing` still updates.
+Set it to `false` while the visualizer is hidden, for example `running: visible`. The analysis stops and the bands drop
+to 0, but `playing` still updates.
 
 Default: `true`
 

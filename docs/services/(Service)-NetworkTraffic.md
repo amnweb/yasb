@@ -45,8 +45,8 @@ The connection on the adapter, after the last reading:
 - `sessionUploaded` : int, bytes sent in this session.
 - `sessionSeconds` : int, seconds since this session started.
 
-A session starts when the connection moves to another network or adapter, and on `reset()`. Connecting again to
-the same network carries on the same session. Sessions are kept only while YASB runs.
+A session starts when the connection moves to another network or adapter, and on `reset()`. Reconnecting to the same
+network continues the session. Sessions are kept only while YASB runs.
 
 Until the first reading, and while there is no connection, `connected` is `false`, the strings and `interfaces`
 are empty, and the numbers are `0`. The first reading of a session has rates of `0`.
@@ -59,7 +59,7 @@ Windows' record of the data this connection used, read again at most once a minu
   `hourly` has points.
 - `hourly` : list&lt;object&gt;, each hour of today, from midnight to now.
 - `updatedAt` : int, when it was read, in milliseconds since 1970.
-- `loading` : bool, `true` while the first reading for this connection, or for a new day, is under way.
+- `loading` : bool, `true` while the first reading for this connection, or for a new day, is in progress.
 
 Each point in `daily` and `hourly` has:
 

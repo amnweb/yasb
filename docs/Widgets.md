@@ -12,7 +12,7 @@ YASB comes with these widgets. Put a widget on a bar by its id, as
 | Brightness | `Brightness` | Your screen brightness. |
 | Clock | `Clock` | The time and date. |
 | CPU | `Cpu` | Your processor usage. |
-| Do not disturb | `Dnd` | Windows' do not disturb, off, priority only or alarms only. |
+| Do not disturb | `Dnd` | Windows' do not disturb mode: off, priority only or alarms only. |
 | GitHub | `Github` | Your GitHub notifications. |
 | GlazeWM workspaces | `GlazewmWorkspaces` | Workspaces of the GlazeWM tiling window manager. |
 | GPU | `Gpu` | Your graphics card usage. |
@@ -47,14 +47,14 @@ A widget's options are in a QML file. To change them, run `yasbc addons install`
 yasbc addons install Clock
 ```
 
-This writes the widget's options, each at its value and with its comments, to a file in your config folder:
+This writes all the widget's options, with their values and comments, to a file in your config folder:
 
 ```text
 %USERPROFILE%\.config\yasb\widgets\Clock\Clock.qml
 ```
 
-Open that file, change what you like and save it. YASB uses it from then on in place of its own options, and
-applies each change when you save. Delete the folder to go back to YASB's own options.
+Open that file, change what you like and save it. From then on, YASB uses this file instead of the default options and
+applies each change when you save. Delete the folder to go back to the defaults.
 
 ## Where the widgets are
 

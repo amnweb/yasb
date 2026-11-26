@@ -1,9 +1,9 @@
 # Themes
 
-A theme sets the colors and fonts of the bar, its widgets, its popups and its right-click menus. It's a QML file whose
-root is [Theme](./(Type)-Theme), and it sets only what it changes: everything else keeps YASB's own value. The setup
-wrote `themes\yasb.qml` in your config folder with every value in it, so the quickest start is to change that file
-and save it.
+A theme sets the colors and fonts of the bar, its widgets, its popups and its right-click menus. It's a QML file with
+[Theme](./(Type)-Theme) as its root. You only set what you want to change, and everything else keeps its default. The
+setup created `themes\yasb.qml` in your config folder with every value filled in, so the quickest way to start is to
+edit that file.
 
 ## Pick a theme
 
@@ -33,9 +33,9 @@ Theme {
 }
 ```
 
-Name it in `config.yaml` with `theme: mine`. While `watch` is on, the bars change as soon as you save the file. A
-theme with an error, or whose root isn't `Theme`, isn't used: the bar gets YASB's own theme, and an alert shows the
-error.
+Name it in `config.yaml` with `theme: mine`. While `watch` is on, the bars change as soon as you save the file. If a
+theme has an error or its root isn't `Theme`, it isn't used. The bar falls back to the default theme and an alert shows
+the error.
 
 A theme has four groups. The [Theme](./(Type)-Theme) page lists every value in them, with its default:
 
@@ -58,24 +58,23 @@ Windows. A color such as `"#4CC2FF"` replaces it.
 
 ## Fonts
 
-Fonts are Qt fonts, set part by part, such as `font.family`, `font.pixelSize`, `font.weight`, `font.letterSpacing` or
-`font.variableAxes`. A part you set replaces only that part, and the font keeps the rest.
+Fonts are Qt fonts, set one property at a time, such as `font.family`, `font.pixelSize`, `font.weight`,
+`font.letterSpacing` or `font.variableAxes`. Setting one property changes only that property, and the rest are kept.
 
-`bar.iconFont` and `popup.iconFont` draw the widgets' icons, which are glyphs of Segoe Fluent Icons. Another icon font
-shows other glyphs, or none, unless you also change the icons in each widget's options.
+`bar.iconFont` and `popup.iconFont` draw the widgets' icons, which are glyphs of Segoe Fluent Icons. A different icon
+font shows different glyphs, or none, unless you also change the icons in each widget's options.
 
-## What a theme reaches
+## How themes reach widgets
 
 Each widget's options start from the theme: the CPU graph's color is the theme's `colors.accent`, and its popup's
-background is `popup.background`. So a theme reaches every option you haven't set in your
-[copy of a widget](./Widgets). A value set in a widget's copy wins over the theme.
+background is `popup.background`. So the theme applies to every option you haven't set in your
+[copy of a widget](./Widgets). A value set in your copy overrides the theme.
 
 ## Blur
 
-With `backdrop: true` in `config.yaml`, the bar and its popups blur what's behind them, which needs Windows 11. The
-blur only shows through a background you can see through, such as `Qt.alpha(colors.background, 0.85)` for 85%
-opaque. When you turn on blur in the setup, it writes `yasb.qml` with backgrounds like that, and with plain
-`colors.background` when you don't.
+With `backdrop: true` in `config.yaml`, the bar and its popups blur what's behind them, which needs Windows 11. The blur
+only shows through a background you can see through, such as `Qt.alpha(colors.background, 0.85)` for 85% opaque. If you
+turn on blur in the setup, it writes `yasb.qml` with backgrounds like that. Otherwise it uses plain `colors.background`.
 
 ## Share a theme
 

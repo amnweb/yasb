@@ -17,7 +17,7 @@ import Yasb
 import Yasb.Bar
 
 Item {
-    // The bar the widget is in; YASB sets it
+    // Set by YASB to the bar the widget is in
     required property BarBase bar
 
     Timer {
@@ -32,7 +32,7 @@ Item {
 }
 ```
 
-To play a WAV file of your own beside the widget, give its URL: `Notifier.playSound(Qt.resolvedUrl("ding.wav"))`.
+To play your own WAV file from the widget's folder, pass its URL: `Notifier.playSound(Qt.resolvedUrl("ding.wav"))`.
 
 ## Notifier
 
@@ -49,7 +49,7 @@ Plays YASB's notification sound.
 
 #### playSound(source: string)
 
-Plays a WAV file, given as a path or a file URL. A file that doesn't exist plays nothing, and logs a warning.
+Plays a WAV file, given as a path or a file URL. If the file doesn't exist, nothing plays and a warning is logged.
 
 #### stopSound()
 
