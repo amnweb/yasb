@@ -138,6 +138,10 @@ class DisplayBrightness(QObject):
     def available(self) -> bool:
         return self.brightness >= 0
 
+    @qml_property(int, notify=changed)
+    def monitor(self) -> int:
+        return self._hmonitor or 0
+
     # [{monitor, name, subtitle, brightness, contrast}], contrast -1 where the display has none
     @qml_property(QObject, constant=True)
     def displays(self) -> DisplayList:

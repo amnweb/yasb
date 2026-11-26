@@ -35,6 +35,10 @@ Brightness of the bar's screen, 0 to 100. `-1` when unknown or when YASB can't c
 
 `true` when `brightness` is known, so `setBrightness()` works.
 
+#### monitor : int `read-only`
+
+The bar's screen, as the `monitor` field of its row in `displays`. `0` without a window.
+
 #### displays : list `read-only`
 
 All screens YASB can control, one row each. See [Row fields](#row-fields).
