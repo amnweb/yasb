@@ -1,277 +1,146 @@
-# Config file
+# Configuration
 
-The configuration uses the YAML file format and is named `config` or `config.yaml`.
-Valid directories for this file are `C:/Users/{username}/.config/yasb/` or ENV variable `YASB_CONFIG_HOME` if set.
-All valid options for the widgets are listed on the widgets page.
+`config.yaml` in your [config folder](./Getting-Started#your-config-folder) holds YASB's settings and your bars:
+the screens each bar is on, its edge, size and place, the layout and theme it uses, and its widgets. This page
+explains every key in it. What a widget shows and how it looks is set in the widget's own file, as
+[Widgets](./Widgets) explains.
 
-## Environment Variables Support
+## An example
 
-YASB supports loading environment variables from a `.env` file.  
-This allows you to securely store sensitive information (such as API keys or tokens) outside of your main `config.yaml`.
-
-- The `.env` file should be placed in your config directory:  
-  `C:/Users/{username}/.config/yasb/.env`  
-  or in the directory specified by the `YASB_CONFIG_HOME` environment variable.
-- Variables defined in `.env` can be referenced in your `config.yaml` by setting the value to `env` (for example, `api_key: env` or `api_key: "$env:YASB_WEATHER_API_KEY"`).
-- The `.env` file is loaded automatically on startup.
-
-**Example `.env` file:**
-```
-YASB_WEATHER_API_KEY=your_api_key_here
-YASB_GITHUB_TOKEN=your_github_token_here
-YASB_WEATHER_LOCATION=your_location_here
-# Some Qt settings
-QT_SCREEN_SCALE_FACTORS="1.25;1"
-QT_SCALE_FACTOR_ROUNDING_POLICY="PassThrough"
-```
-
-## Status Bar Root Configuration
-| Option            | Type    | Default       | Description |
-|-------------------|---------|---------------|-------------|
-| `watch_stylesheet`         | boolean | `true`        | Reload bar when style is changed. |
-| `watch_config`         | boolean    | `true`        | Reload bar when config is changed. |
-| `debug`      | boolean  | `false`   | Enable debug mode to see more logs |
-| `update_check`      | boolean  | `true`   | Enable automatic update check. This works only if the application is installed. |
-| `show_systray`      | boolean  | `true`   | Show or hide the YASB system tray icon. |
-| `system_colors`     | boolean  | `false`  | Enable automatic generation of CSS variables from Windows theme colors. |
-| `tooltip`           | object   | [See below](#tooltip-configuration) | Global tooltip configuration. |
-| `komorebi`      | object  | [See below](#komorebi-settings-for-tray-menu)   | Komorebi configuration for tray menu. |
-| `glazewm`      | object  | [See below](#glazewm-settings-for-tray-menu)   | Glazewm configuration for tray menu. |
-
-## Logging and Debugging
-YASB provides detailed logging to help troubleshoot widget or configuration issues.
-
-- **Enable Debug Mode:** Set `debug: true` in your root configuration to output verbose logs.
-- **View Logs via CLI:** Run `yasbc log` in your terminal to stream real-time logs.
-- **View Log File:** Check the `yasb.log` file located in your config directory (default: `C:/Users/{username}/.config/yasb/`).
-
-## Tooltip Configuration
-Global configuration for tooltips and their blur effects.
-
-| Option            | Type    | Default       | Description |
-|-------------------|---------|---------------|-------------|
-| `offset`          | integer | `5`           | The distance in pixels between the tooltip and the hovered item or bar. |
-| `blur_effect`     | object  | [See below](#tooltip-blur-effect-configuration) | Global tooltip blur configuration. |
-
-### Tooltip Blur Effect Configuration
-
-| Option            | Type    | Default       | Description |
-|-------------------|---------|---------------|-------------|
-| `enabled`         | boolean | `false`       | Whether the blur effect is enabled for tooltips. |
-| `dark_mode`       | boolean | `false`       | Whether to enable dark mode for the tooltip blur. |
-| `round_corners`   | boolean | `false`       | Whether to enable rounded corners for the tooltips. Note: This is only effective on Windows 11. |
-| `round_corners_type` | string | `'normal'` | The type of rounded corners, can be `normal` or `small`. Note: This is only effective on Windows 11. |
-| `border_color`    | string  | `'None'`      | The border color for the tooltip, can be `None`, `"system"`, or a hex color (e.g., `"#ff0000"`). Note: This is only effective on Windows 11. |
-
-> **Note:**
-> Rounded corners, border color and rounded corners type are only effective on Windows 11.
-
-**Example Configuration:**
 ```yaml
-tooltip:
-  offset: 5
-  blur_effect:
-    enabled: true
-    dark_mode: false
-    round_corners: true
-    round_corners_type: "small"
-    border_color: "None"
+watch: true
+debug: false
+update_check: true
+theme: yasb
+bars:
+  yasb-bar:
+    layout: floating
+    screens:
+      - "*"
+    edge: top
+    thickness: 40
+    margin:
+      top: 6
+      left: 6
+      right: 6
+    reserve_space: true
+    backdrop: true
+    widgets:
+      left:
+        - ActiveWindow
+      center:
+        - Clock
+      right:
+        - Cpu
+        - Memory
+        - Volume
 ```
 
+YASB checks the whole file when it reads it. A key it doesn't know, or a value it can't use, is an error: YASB shows
+an alert that lists each one. When YASB starts with such a file, it doesn't start. When you save one while it runs,
+it keeps the config it had.
 
-## Komorebi settings for tray menu
-Adds a Komorebi submenu to the YASB tray icon menu. None of the commands are set by default. The submenu is shown only when Komorebi is installed and at least one command is set, and it only lists the actions you set a command for.
+## Settings
 
-| Option            | Type    | Default       | Description |
-|-------------------|---------|---------------|-------------|
-| `start_command`         | string | `None` | Command that starts Komorebi. |
-| `stop_command`         | string    | `None` | Command that stops Komorebi. |
-| `reload_command`      | string  | `None` | Command that reloads the Komorebi configuration. |
+| Key | Value | Default | What it does |
+| --- | --- | --- | --- |
+| `watch` | `true` or `false` | `true` | Applies your changes when you save `config.yaml`, a widget, or the layout or theme it names. See [how YASB picks up your changes](./Getting-Started#how-yasb-picks-up-your-changes). |
+| `debug` | `true` or `false` | `false` | Writes more detail to `yasb.log`. |
+| `update_check` | `true` or `false` | `true` | Shows a notification when a new version of YASB is out. |
+| `theme` | a theme | YASB's own theme | The theme of every bar that doesn't name its own. See [Themes](./Themes). |
+| `bars` | bars by name | one bar, `yasb-bar`, with no widgets | Your bars. Each name is yours to pick. |
 
-**Example Configuration:**
-```yaml
-komorebi:
-  start_command: "komorebic start --whkd"
-  stop_command: "komorebic stop --whkd"
-  reload_command: "komorebic reload-configuration"
-```
+## Bars
 
+Each bar under `bars` takes these keys. Leave one out and it keeps its default.
 
-## Glazewm settings for tray menu
-Adds a GlazeWM submenu to the YASB tray icon menu. None of the commands are set by default. The submenu is shown only when GlazeWM is installed and at least one command is set, and it only lists the actions you set a command for.
+| Key | Value | Default | What it does |
+| --- | --- | --- | --- |
+| `enabled` | `true` or `false` | `true` | `false` keeps the bar in the file but doesn't show it. |
+| `layout` | a layout | YASB's own bar | The bar's look. See [Layouts](./Layouts). |
+| `theme` | a theme | the `theme` above | The colors and fonts of this bar and its widgets. See [Themes](./Themes). |
+| `screens` | a list of screens | `["*"]` | The screens that get this bar. See [Screens](#screens). |
+| `edge` | `top`, `bottom`, `left` or `right` | `top` | The screen edge the bar sits on. |
+| `align` | `left`, `center` or `right`, on a `left` or `right` edge, `top`, `center` or `bottom` | `center` | Where a bar shorter than its edge sits along it. |
+| `length` | pixels, a percentage such as `"50%"`, or `"auto"` | `"100%"` | How long the bar is along its edge. A percentage is of the whole edge. `"auto"` makes it as long as its widgets, except on an [IslandBar](./(Type)-IslandBar) layout, which always runs the whole edge. It's never longer than the edge less the margins. |
+| `thickness` | pixels | `40` | How tall the bar is, or how wide on a `left` or `right` edge. |
+| `margin` | `top`, `left`, `bottom` and `right`, in pixels | `0` each | The gap between the bar and the screen's edges. |
+| `reserve_space` | `true` or `false` | `false` | Maximized windows stop at the bar instead of covering it. The space kept is the bar's `thickness` and its margins on both sides of it. It has no effect while the bar auto-hides. |
+| `always_on_top` | `true` or `false` | `false` | The bar stays above other windows. |
+| `hide_on_fullscreen` | `true` or `false` | `false` | The bar hides while a game or video fills the screen. It needs `always_on_top: true`. |
+| `auto_hide` | `never`, `always` or `maximized` | `never` | `always`: the bar slides away until the pointer touches its screen edge. `maximized`: the bar slides away while a window is maximized on its screen, unless `reserve_space` is `true`. |
+| `backdrop` | `true` or `false` | `false` | Blurs what's behind the bar. It needs Windows 11, and a bar color you can see through, as YASB's theme has. |
+| `animation` | `type` and `duration` | `type: slide`, `duration: 200` | How the bar shows and hides: `type` is `slide`, `fade` or `none`, and `duration` is in milliseconds. |
+| `widgets` | widgets by slot | none | The widgets in the bar. See [Widgets in a bar](#widgets-in-a-bar). |
 
-| Option            | Type    | Default       | Description |
-|-------------------|---------|---------------|-------------|
-| `start_command`         | string | `None` | Command that starts GlazeWM. |
-| `stop_command`         | string    | `None` | Command that stops GlazeWM. |
-| `reload_command`      | string  | `None` | Command that reloads the GlazeWM configuration. |
+### Layouts and themes
 
-**Example Configuration:**
-```yaml
-glazewm:
-  start_command: "glazewm.exe start"
-  stop_command: "glazewm.exe command wm-exit"
-  reload_command: "glazewm.exe command wm-exit && glazewm.exe start"
-```
+`layout` and `theme` take a name, which YASB looks for in your `layouts` or `themes` folder:
 
+- A name such as `floating` is `layouts\floating.qml`.
+- An addon's id such as `amnweb.nord` is the addon's own folder, `themes\amnweb.nord`.
+- A path that ends in `.qml`, such as `my\bar.qml`, is that file, relative to your config folder.
+- `default` is YASB's own bar or theme, the same as leaving the key out.
 
-## Status Bar Configuration
-| Option            | Type    | Default       | Description |
-|-------------------|---------|---------------|-------------|
-| `enabled`         | boolean | `true`        | Whether the status bar is enabled. |
-| `screens`         | list    | `['*']`       | The screens on which the status bar should be displayed. Use `['*']` for all unassigned screens, `['**']` for all screens (including assigned), or specify screen names like `['DELL P2419H (1)']`. |
-| `class_name`      | string  | `"yasb-bar"`  | The CSS class name for the status bar. |
-| `style`           | string  | `"bar"`       | The visual style of the status bar. Can be `"bar"` or `"adaptive"`. [See below](#bar-style) |
-| `style_adaptive_exclude` | list | `[]`          | Widgets the `"adaptive"` style leaves outside its painted surface. [See below](#bar-style) |
-| `context_menu`    | boolean | `true`        | Whether to enable the right-click context menu on the status bar. |
-| `alignment`       | object  | [See below](#bar-alignment) | The alignment settings for the status bar. |
-| `blur_effect`     | object  | [See below](#blur-effect-configuration) | The blur effect settings for the status bar. |
-| `window_flags`    | object  | [See below](#window-flags-configuration) | The window flags for the status bar. |
-| `dimensions`      | object  | `{width: "100%", height: 30}` | The dimensions of the status bar. Width can be a number (pixels), percentage string (e.g., `"100%"`, `"50%"`), or `"auto"` to resize based on content. When using `"auto"`, the bar will automatically resize as widget content changes, with a maximum width of the available screen width minus padding. |
-| `padding`         | object  | `{top: 0, left: 0, bottom: 0, right: 0}` | The padding for the status bar. |
-| `animation`       | object  | `{enabled: true, duration: 500}` | The animation settings for the status bar. Duration is in milliseconds. Animation is used to show/hide the bar smoothly. |
-| `widgets`         | list  | `left[], center[], right[]` | Active widgets and position. |
-| `layouts`         | object  | [See below](#layouts-configuration) | Configuration for widget layouts in each section (left, center, right). |
+A bar whose layout or theme is missing or has an error gets YASB's own, and YASB shows an alert that says why.
 
-> **note:**
-> Setting the width to `"auto"` is not recommended for widgets that constantly update data, such as CPU, memory, clock, etc. This can cause the bar to constantly resize, which may lead to flickering or performance issues.
+## Screens
 
-> **Note:**
-> `screens` can be specified as a list of monitor names. If you want the bar to appear on all screens, use `['*']`. To specify a single screen, use `['DELL P2419H (1)']` or a similar name based on your monitor setup. To show the bar only and always on the primary screen, use `['primary']`.
+`screens` lists the screens that get the bar:
 
+- `"*"`: every screen that no other bar names.
+- `"**"`: every screen, even one another bar names.
+- `primary`: your main screen.
+- A screen's name, as `yasbc monitor-information` shows it after `Name:`.
 
-### Bar Style
+`"*"` and `"**"` work only on their own, as the list's one entry. In a list with other screens, YASB takes them as
+a screen's name, finds no such screen and skips them. `primary` and screen names can be listed together.
 
-| Option    | Description |
-|-----------|-------------|
-| `"bar"`      | The default. The bar is a solid rectangle filled by the `background-color` of `.yasb-bar`. |
-| `"adaptive"` | The bar surface follows its content. A thin rail is painted along the outer edge across the full width, and each widget group (left, center and right) drops to the full bar height as its own island hugging its widgets. The space between islands is transparent, so the wallpaper shows through. The outermost islands sit flush against the edges of the bar. Islands can be turned off from the stylesheet for a plain full-width bar, optionally with just its outer corners curved. |
+A bar gets one window on each of its screens. A named screen that isn't connected is skipped, and `yasb.log` says
+so. When you connect or disconnect a screen, YASB restarts and places the bars again. This puts one bar on the main
+screen and a smaller one on every other screen:
 
 ```yaml
 bars:
-  primary-bar:
-    style: "adaptive"
+  main:
+    screens:
+      - primary
+    widgets:
+      right:
+        - Clock
+  others:
+    screens:
+      - "*"
+    thickness: 32
+    widgets:
+      center:
+        - Clock
 ```
 
-The rail height, corner radius, the padding around each group, and whether islands are drawn at
-all are set from the stylesheet so they reload with your theme. See
-[Adaptive bar style](./Styling#adaptive-bar-style) for the available properties.
+## Widgets in a bar
 
-> **Note:**
-> Islands need gaps to cut out, so with islands on this needs a bar wide enough to leave space
-> between the widget groups. A bar with `dimensions.width: "auto"`, or one whose widgets fill the
-> full width, is painted as a normal rectangle either way.
+`widgets` maps each slot of the bar to its widgets, in the order they show. The layout decides the slots. YASB's
+layouts have `left`, `center` and `right` on a bar at the top or bottom, and `top`, `center` and `bottom` on a bar at
+the left or right. A layout can add slots of its own, as [Layouts](./Layouts) shows. A slot's name starts with a
+letter and has only letters, digits, `-` and `_`. Widgets in a slot that the layout doesn't have don't show, and
+`yasb.log` says so.
 
-`style_adaptive_exclude` lists widgets the island shape does not paint under. The island stops
-before the widget and starts again after it, so a widget in the middle of a group splits it into
-two islands. It has nothing to do if islands are turned off from the stylesheet, there is only
-one surface left to exclude a widget from.
+A widget's name is one of:
+
+- YASB's own widget, such as `Clock`. [Widgets](./Widgets) lists them all.
+- A widget of your own, in `widgets\Name\Name.qml` in your config folder.
+- A widget addon, by its id, such as `amnweb.clock`. See [Addons](./Addons).
+
+Names don't care about case. When YASB can't find a widget, it shows an alert that names it and leaves it out.
+
+## Environment variables
+
+`$env:NAME` anywhere in a value becomes the value of the environment variable `NAME`, or nothing when it isn't
+set. YASB reads the variables from Windows and from the `.env` file in your config folder:
 
 ```yaml
 bars:
-  primary-bar:
-    style: "adaptive"
-    style_adaptive_exclude: ["systray", "weather"]
-```
-
-Names come from your `widgets` section. The widget draws as usual, only the surface under it is
-gone. Widgets inside a Grouper cannot be named on their own, excluding the grouper leaves the whole
-group out.
-
-### Bar Alignment
-| Option            | Type    | Default       | Description |
-|-------------------|---------|---------------|-------------|
-| `position`        | string  | `"top"`       | The position of the status bar, can be `"top"` or `"bottom"` |
-| `align`          | string |  `"center"` | The alignment of the status bar, can be `"left"`, `"center"`, or `"right"` |
-
-### Animation Configuration
-Customize how the status bar transitions when shown or hidden:
-
-| Option     | Type    | Default   | Description |
-|------------|---------|-----------|-------------|
-| `enabled`  | boolean | `true`    | Whether to animate the bar when showing or hiding it. |
-| `duration` | integer | `500`     | The animation duration in milliseconds. |
-| `type`     | string  | `"slide"` | The style of animation to play. Can be `"slide"` (slides from the screen edge) or `"fade"` (fades in/out). |
-
-
-### Blur Effect Configuration
-| Option            | Type    | Default       | Description |
-|-------------------|---------|---------------|-------------|
-| `enabled`         | boolean | `false`       | Whether the blur effect is enabled. |
-| `dark_mode`       | boolean | `false`       | Whether to enable dark mode and more shadow below the bar. |
-| `round_corners`   | boolean | `false`       | Whether to enable rounded corners for the bar. Note: This is only effective on Windows 11. |
-| `round_corners_type` | string | `'normal'` | The type of rounded corners, can be `normal` or `small`. Note: This is only effective on Windows 11. |
-| `border_color`    | string  | `'system'`   | The border color for the bar, can be `None`, `"system"`, or a hex color (e.g., `"#ff0000"`). Note: This is only effective on Windows 11. |
-
-> **Note:**
-> Rounded corners, border color and rounded corners type are only effective on Windows 11.
-
-### Window Flags Configuration
-| Option            | Type    | Default       | Description |
-|-------------------|---------|---------------|-------------|
-| `always_on_top`   | boolean | `false`       | Whether the status bar should always stay on top of other windows. |
-| `windows_app_bar` | boolean | `false`       | Whether the status bar should behave like a Windows app bar. |
-| `hide_on_fullscreen` | boolean | `false`    | Whether the status bar should hide when a window is in fullscreen mode. |
-| `hide_on_maximized` | boolean | `false`    | Whether the status bar should auto-hide when any window is maximized on the bar's monitor. Only works when `windows_app_bar` is `false`. |
-| `auto_hide` | boolean | `false`    | Whether the status bar should auto-hide when not in use. |
-
-### Layouts Configuration
-Each section (left, center, right) can be configured with the following properties:
-
-| Option            | Type    | Default       | Description |
-|-------------------|---------|---------------|-------------|
-| `alignment`       | string  | Section-dependent | Widget alignment within section ("left", "center", "right") |
-| `stretch`         | boolean | `true`        | Whether widgets should stretch to fill available space |
-
-Example:
-```yaml
-layouts:
-  left:
-    alignment: "left"
-    stretch: true
-  center:
-    alignment: "center"
-    stretch: true
-  right:
-    alignment: "right"
-    stretch: true
-```
-
-## Multiple Bars Example
-> **Note:**
-> If you want to have different bars on each screen you will need to define on which screen the bar should be displayed, `screens` inside bar config is your monitor name. You can find your monitor names using `yasbc monitor-information` or inside device manager.
-
-### Screen Assignment Options
-- `screens: ['*']` - Show on all **unassigned** screens (screens not explicitly assigned to other bars)
-- `screens: ['**']` - Show on **all screens** (including screens assigned to other bars)
-- `screens: ['SCREEN_NAME']` - Show on specific screen(s)
-
-```yaml
-bars:
-  status-bar:
-    screens: ['DELL P2419H (1)']  # Show only on monitor 1
-    widgets:
-      left: ["clock"]
-      center: ["cpu"]
-      right: ["memory"]
-
-  status-bar-2:
-    screens: ['DELL P2419H (2)']  # Show only on monitor 2
-    widgets:
-      left: ["active_window"]
-      center: ["media"]
-      right: ["volume","power_menu"]
-
-  status-bar-3:
-    screens: ['*']  # Show on all unassigned screens
-    widgets:
-      center: ["weather"]
-
-  global-taskbar:
-    screens: ['**']  # Show on ALL screens (including monitors 1 and 2)
-    widgets:
-      left: ["taskbar"]
-
-widgets:
-    ...
+  yasb-bar:
+    screens:
+      - $env:YASB_SCREEN
 ```

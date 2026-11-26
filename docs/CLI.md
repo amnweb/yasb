@@ -1,145 +1,457 @@
-# YASB CLI (Command Line Interface)
+# YASB CLI
 
-The YASB CLI is a command line interface that allows you to interact with the YASB status bar. The CLI is a powerful tool that allows you to manage your YASB bar, start, stop, enable autostart, disable autostart, reload, update and watch the logs in the terminal.
+`yasbc` comes with YASB and works it from a terminal: it starts, stops and reloads YASB, shows and hides bars,
+installs addons, and backs up your config with [YASB Cloud](./Cloud). Each command below prints the same help with
+`--help`.
 
-## Usage
-`yasbc [command] [options]`
+## yasbc
 
-## Commands
-- `start` - Start the status bar.
-- `stop` - Stop the status bar.
-- `enable-autostart` - Enable autostart for the status bar on system boot.
-- `disable-autostart` - Disable autostart for the status bar on system boot.
-- `enable-crash-dumps` - Save a crash dump file when YASB crashes.
-- `disable-crash-dumps` - Stop saving crash dump files.
-- `reload` - Reload the status bar configuration.
-- `monitor-information` - Show information about connected monitors.
-- `hide-bar` - Hide the status bar.
-- `show-bar` - Show the status bar.
-- `toggle-bar` - Toggle the visibility of the status bar.
-- `update` - Update the application to the latest version.
-- `set-channel` - Set the update channel (stable, preview).
-- `migrate-config` - Find and fix deprecated options in your configuration file.
-- `log` - Stream the status bar logs in real-time.
-- `reset` - Restore default config files and clear cache.
-- `config-dir` - Open the configuration directory in Windows File Explorer.
-- `cloud` - Back up and restore your configuration with YASB Cloud. See [YASB Cloud](./Cloud).
-- `help` - Show the help message.
+```text
+The command-line interface for YASB Reborn
 
-## Options
-- `-h`, `--help` - Show the help message.
-- `-v`, `--version` - Show the YASB and YASB-CLI versions.
-- `-c`, `--config` - Print the absolute path to your configuration folder.
-- `-s`, `--silent` - Disable normal print status messages for `start`, `stop`, and `reload`.
-- `-f`, `--force` - Force stop the application. Used with the `stop` command.
-- `-s`, `--screen` - Name of the screen to target. Used with `show-bar`, `hide-bar` and `toggle-bar`.
+Usage: yasbc [OPTIONS] [COMMAND]
 
-> **Note:**
-> You can use the `--silent` option with the `start`, `stop` and `reload` commands to prevent non-error messages from being displayed.
+Commands:
+  start                Start the application
+  stop                 Stop the application
+  reload               Reload the application
+  enable-autostart     Enable autostart on system boot
+  disable-autostart    Disable autostart on system boot
+  enable-crash-dumps   Enable crash dumps for troubleshooting
+  disable-crash-dumps  Disable crash dumps
+  monitor-information  Show information about connected monitors
+  show-bar             Show the bar on all or a specific screen
+  hide-bar             Hide the bar on all or a specific screen
+  toggle-bar           Toggle the bar on all or a specific screen
+  set-channel          Switch release channels
+  update               Update the application
+  log                  Tail yasb process logs (cancel with Ctrl-C)
+  reset                Restore default config files and clear cache
+  cloud                Back up and restore your config with YASB Cloud
+  addons               Search, install, update and list widgets, themes, layouts and configs
+  config-dir           Open config directory in file explorer
+  help                 Print this message or the help of the given command
 
-## Autostart
-
-To enable autostart for the status bar on system boot, use the following command:
-```bash
-yasbc enable-autostart
-```
-To disable autostart for the status bar on system boot, use the following command:
-```bash
-yasbc disable-autostart
-```
-To create task scheduler for autostart on windows, use the following command:
-```bash
-yasbc enable-autostart --task
+Options:
+  -v, --version  Print version
+  -c, --config   Print config directory path
+  -h, --help     Print help
 ```
 
-To disable task scheduler for autostart on windows, use the following command:
-```bash
-yasbc disable-autostart --task
-```
-> **Note:**
-> Creating a task scheduler for autostart on Windows requires administrator privileges.
+## yasbc start
 
-## Crash Dumps
+```text
+Start the application
 
-If YASB closes on its own with nothing in the log (a silent crash), Windows records the crash in Event Viewer but does not save a dump file, so there is nothing left to debug afterwards. To tell Windows to keep one, use the following command:
-```bash
-yasbc enable-crash-dumps
-```
-To stop saving crash dumps, use the following command:
-```bash
-yasbc disable-crash-dumps
-```
-Dumps are written to the `dumps` folder inside your configuration directory, and the last 5 are kept. When reporting a crash, attach the newest `.dmp` file together with your `yasb.log`.
+Usage: yasbc start [OPTIONS]
 
-> **Note:**
-> Enabling and disabling crash dumps requires administrator privileges. A dump is a snapshot of memory, so it can contain data from your configuration such as API keys or tokens.
-
-## Show and Hide the Status Bar
-To hide the status bar on all screens, use the following command:
-```bash
-yasbc hide-bar
-```
-To hide the status bar on a specific screen, use the following command:
-```bash
-yasbc hide-bar --screen <screen_name>
-```
-To show the status bar on all screens, use the following command:
-```bash
-yasbc show-bar
-```
-To show the status bar on a specific screen, use the following command:
-```bash
-yasbc show-bar --screen <screen_name>
-```
-To toggle the visibility of the status bar on all screens, use the following command:
-```bash
-yasbc toggle-bar
-```
-To toggle the visibility of the status bar on a specific screen, use the following command:
-```bash
-yasbc toggle-bar --screen <screen_name>
-```
-To update YASB to the latest version with current update channel, use the following command:
-```bash
-yasbc update
+Options:
+  -s, --silent  Silence print messages
+  -h, --help    Print help
 ```
 
-## Reset YASB
-To reset YASB to the default config files and clear cache, use the following command:
-```bash
-yasbc reset
+## yasbc stop
+
+```text
+Stop the application
+
+Usage: yasbc stop [OPTIONS]
+
+Options:
+  -s, --silent  Silence print messages
+  -f, --force   Force stop the application
+  -h, --help    Print help
 ```
 
-> **Note:**
-> This will remove all config files and clear cache.
+## yasbc reload
 
-## Switch Update Channel
-To switch the update channel to preview, use the following command:
-```bash
-yasbc set-channel preview
-```
+```text
+Reload the application
 
-## Open Configuration Folder
-To quickly locate your settings, you can print the config folder path:
-```bash
-yasbc --config
-```
-Or open the folder directly in Windows File Explorer:
-```bash
-yasbc config-dir
+Usage: yasbc reload [OPTIONS]
+
+Options:
+  -s, --silent  Silence print messages
+  -h, --help    Print help
 ```
 
-## Streaming Live Logs
-To watch live log entries generated by YASB (very helpful for debugging custom widgets or styles):
-```bash
-yasbc log
-```
-> [!NOTE]
-> Set `debug: true` in your `config.yaml` if you want verbose logs. Press `Ctrl+C` in your terminal to exit the log viewer.
+## yasbc enable-autostart
 
-## Upgrading Old Configurations
-If you've updated YASB and want to check if your existing `config.yaml` contains any outdated settings:
-```bash
-yasbc migrate-config
+```text
+Enable autostart on system boot
+
+Usage: yasbc enable-autostart [OPTIONS]
+
+Options:
+      --task  Enable autostart as a scheduled task
+  -h, --help  Print help
 ```
-This tool scans your settings, shows you which options will be renamed or removed, and prompts you before applying changes. A backup file (`config.yaml.bak`) is automatically created before any edits are made.
+
+## yasbc disable-autostart
+
+```text
+Disable autostart on system boot
+
+Usage: yasbc disable-autostart [OPTIONS]
+
+Options:
+      --task  Disable autostart as a scheduled task
+  -h, --help  Print help
+```
+
+## yasbc enable-crash-dumps
+
+```text
+Enable crash dumps for troubleshooting
+
+Usage: yasbc enable-crash-dumps [OPTIONS]
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc disable-crash-dumps
+
+```text
+Disable crash dumps
+
+Usage: yasbc disable-crash-dumps [OPTIONS]
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc monitor-information
+
+```text
+Show information about connected monitors
+
+Usage: yasbc monitor-information [OPTIONS]
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc show-bar
+
+```text
+Show the bar on all or a specific screen
+
+Usage: yasbc show-bar [OPTIONS]
+
+Options:
+  -s, --screen <SCREEN>  Screen name (optional)
+  -h, --help             Print help
+```
+
+## yasbc hide-bar
+
+```text
+Hide the bar on all or a specific screen
+
+Usage: yasbc hide-bar [OPTIONS]
+
+Options:
+  -s, --screen <SCREEN>  Screen name (optional)
+  -h, --help             Print help
+```
+
+## yasbc toggle-bar
+
+```text
+Toggle the bar on all or a specific screen
+
+Usage: yasbc toggle-bar [OPTIONS]
+
+Options:
+  -s, --screen <SCREEN>  Screen name (optional)
+  -h, --help             Print help
+```
+
+## yasbc set-channel
+
+```text
+Switch release channels
+
+Usage: yasbc set-channel [OPTIONS] <TARGET_CHANNEL>
+
+Arguments:
+  <TARGET_CHANNEL>  'stable' for tested releases or 'preview' for the latest updates [possible values: stable, preview]
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc update
+
+```text
+Update the application
+
+Usage: yasbc update [OPTIONS]
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc log
+
+```text
+Tail yasb process logs (cancel with Ctrl-C)
+
+Usage: yasbc log [OPTIONS]
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc reset
+
+```text
+Restore default config files and clear cache
+
+Usage: yasbc reset [OPTIONS]
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc cloud
+
+```text
+Back up and restore your YASB configuration
+
+Usage: yasbc cloud [OPTIONS] [COMMAND]
+
+Commands:
+  auth     Sign in through your browser
+  logout   Sign out on this machine
+  status   Show the signed-in account, plan and usage
+  list     List your backups
+  backup   Back up the configuration directory now
+  restore  Replace the configuration with a backup
+  save     Save a backup to a folder without restoring it
+  delete   Delete a backup from YASB Cloud
+  share    Publish a backup and print its link
+  unshare  Stop sharing a backup
+  help     Print this message or the help of the given command
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc cloud auth
+
+```text
+Sign in through your browser
+
+Usage: yasbc cloud auth [OPTIONS]
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc cloud logout
+
+```text
+Sign out on this machine
+
+Usage: yasbc cloud logout [OPTIONS]
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc cloud status
+
+```text
+Show the signed-in account, plan and usage
+
+Usage: yasbc cloud status [OPTIONS]
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc cloud list
+
+```text
+List your backups
+
+Usage: yasbc cloud list [OPTIONS]
+
+Options:
+  -s, --search <SEARCH>  Only backups whose note or PC name contains this
+  -p, --page <PAGE>      Which page to show, 50 per page
+  -h, --help             Print help
+```
+
+## yasbc cloud backup
+
+```text
+Back up the configuration directory now
+
+Usage: yasbc cloud backup [OPTIONS]
+
+Options:
+  -n, --note <NOTE>  Label for this backup
+  -h, --help         Print help
+```
+
+## yasbc cloud restore
+
+```text
+Replace the configuration with a backup
+
+Usage: yasbc cloud restore [OPTIONS] <BACKUP>
+
+Arguments:
+  <BACKUP>  Backup id from `yasbc cloud list`, or `latest`
+
+Options:
+  -y, --yes   Skip the confirmation
+  -h, --help  Print help
+```
+
+## yasbc cloud save
+
+```text
+Save a backup to a folder without restoring it
+
+Usage: yasbc cloud save [OPTIONS] <BACKUP> <FOLDER>
+
+Arguments:
+  <BACKUP>  Backup id from `yasbc cloud list`, or `latest`
+  <FOLDER>  Where to write it
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc cloud delete
+
+```text
+Delete a backup from YASB Cloud
+
+Usage: yasbc cloud delete [OPTIONS] <BACKUP>
+
+Arguments:
+  <BACKUP>  Backup id from `yasbc cloud list`, or `latest`
+
+Options:
+  -y, --yes   Skip the confirmation
+  -h, --help  Print help
+```
+
+## yasbc cloud share
+
+```text
+Publish a backup and print its link
+
+Usage: yasbc cloud share [OPTIONS] <BACKUP>
+
+Arguments:
+  <BACKUP>  Backup id from `yasbc cloud list`, or `latest`
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc cloud unshare
+
+```text
+Stop sharing a backup
+
+Usage: yasbc cloud unshare [OPTIONS] <BACKUP>
+
+Arguments:
+  <BACKUP>  Backup id from `yasbc cloud list`, or `latest`
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc addons
+
+```text
+Search, install, update and list widgets, themes, layouts and configs
+
+Usage: yasbc addons [OPTIONS] [COMMAND]
+
+Commands:
+  search   Search YASB's widgets and the addons repository
+  install  Install an addon, or YASB's own widget to change its settings
+  update   List updates for your copies of YASB's widgets and your addons, or update them
+  list     List your widgets and installed themes, layouts and config
+  help     Print this message or the help of the given command
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc addons search
+
+```text
+Search YASB's widgets and the addons repository
+
+Usage: yasbc addons search [OPTIONS] [TEXT]
+
+Arguments:
+  [TEXT]  Look for this in the name, id, description, author or type
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc addons install
+
+```text
+Install an addon, or YASB's own widget to change its settings
+
+Usage: yasbc addons install [OPTIONS] <ID>
+
+Arguments:
+  <ID>  The addon, such as amnweb.clock, its GitHub link, or YASB's widget, such as clock
+
+Options:
+      --version <VERSION>  Install this version, not the newest
+      --full               Install YASB's whole widget, not only its settings
+      --force              Replace it if you have it
+  -h, --help               Print help
+```
+
+## yasbc addons update
+
+```text
+List updates for your copies of YASB's widgets and your addons, or update them
+
+Usage: yasbc addons update [OPTIONS] [ID]
+
+Arguments:
+  [ID]  Update this widget, theme or layout
+
+Options:
+      --all   Update all of them
+  -h, --help  Print help
+```
+
+## yasbc addons list
+
+```text
+List your widgets and installed themes, layouts and config
+
+Usage: yasbc addons list [OPTIONS]
+
+Options:
+  -h, --help  Print help
+```
+
+## yasbc config-dir
+
+```text
+Open config directory in file explorer
+
+Usage: yasbc config-dir [OPTIONS]
+
+Options:
+  -h, --help  Print help
+```
