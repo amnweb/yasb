@@ -134,6 +134,7 @@ executables = [
         shortcut_dir="MyProgramMenu",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasb",
+        manifest="assets/yasb.manifest",
     ),
     Executable(
         "cli.py",
