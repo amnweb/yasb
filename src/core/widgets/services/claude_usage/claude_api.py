@@ -126,8 +126,8 @@ def fetch_usage(cache_path: str, cache_ttl: int) -> dict[str, Any]:
         with urllib.request.urlopen(request, timeout=10) as response:
             payload = json.loads(response.read().decode("utf-8"))
 
-        five = payload.get("five_hour") or {}
-        seven = payload.get("seven_day") or {}
+        five: dict[str, Any] = payload.get("five_hour") or {}
+        seven: dict[str, Any] = payload.get("seven_day") or {}
         five_util = five.get("utilization")
         seven_util = seven.get("utilization")
         five_raw = float(five_util) if five_util is not None else None
