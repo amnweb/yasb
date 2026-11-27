@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import QLabel
 from core.events.service import EventService
 from core.events.win32 import WinEvent
 from core.utils.icons.service import IconService, WindowIcon
+from core.utils.utilities import clip_to_width, text_width
 from core.utils.win32.bindings.user32 import (
     GetForegroundWindow,
     GetParent,
@@ -364,8 +365,9 @@ class ActiveWindowWidget(BaseWidget):
                 if "app_name" in win_info and win_info["app_name"]:
                     win_info["app_name"] = self._rewrite_filter(win_info["app_name"])
 
-                if self.config.max_length and len(win_info["title"]) > self.config.max_length:
-                    truncated_title = f"{win_info['title'][: self.config.max_length]}{self.config.max_length_ellipsis}"
+                if self.config.max_length and text_width(win_info["title"]) > self.config.max_length:
+                    clipped = clip_to_width(win_info["title"], self.config.max_length)
+                    truncated_title = f"{clipped}{self.config.max_length_ellipsis}"
                     win_info["title"] = truncated_title
                     self._window_title_text.setText(self.config.label_no_window or "")
                     if self.config.label_icon:

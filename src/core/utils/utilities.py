@@ -1,4 +1,5 @@
 import math
+import unicodedata
 from enum import StrEnum
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, cast, override
@@ -56,6 +57,26 @@ def percent_to_float(percent: str) -> float:
 
 def is_valid_percentage_str(s: str) -> bool:
     return s.endswith("%") and len(s) <= 4 and s[:-1].isdigit()
+
+
+def _char_width(char: str) -> int:
+    # Full-width characters (CJK, most emoji) take the space of two Latin letters
+    return 2 if unicodedata.east_asian_width(char) in "WF" else 1
+
+
+def text_width(text: str) -> int:
+    """How many Latin-letter widths `text` takes, so max_length limits look the same in any script."""
+    return sum(_char_width(char) for char in text)
+
+
+def clip_to_width(text: str, width: int) -> str:
+    """The longest prefix of `text` whose text_width fits in `width`."""
+    used = 0
+    for index, char in enumerate(text):
+        used += _char_width(char)
+        if used > width:
+            return text[:index]
+    return text
 
 
 def get_screen_by_name(screen_name: str) -> QScreen | None:

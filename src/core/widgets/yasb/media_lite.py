@@ -27,7 +27,14 @@ from qasync import asyncSlot  # type: ignore
 from core.utils.icons.service import AppIcon, IconService, ProcessIcon
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import ElidedLabel, PopupWidget, ScrollingLabel, refresh_widget_style
+from core.utils.utilities import (
+    ElidedLabel,
+    PopupWidget,
+    ScrollingLabel,
+    clip_to_width,
+    refresh_widget_style,
+    text_width,
+)
 from core.utils.win32.aumid import activate_app_by_aumid, get_aumid_for_process, get_pid_for_window_aumid
 from core.utils.win32.aumid_process import get_process_name_for_aumid, resolve_shell_app
 from core.validation.widgets.yasb.media_lite import MediaLiteWidgetConfig
@@ -804,8 +811,8 @@ class MediaWidget(BaseWidget):
 
     def _format_max_field_size(self, text: str) -> str:
         max_size = self.config.max_label_size
-        if max_size > 0 and len(text) > max_size:
-            return text[: max_size - 3] + "..." if max_size > 3 else text[:max_size]
+        if max_size > 0 and text_width(text) > max_size:
+            return clip_to_width(text, max_size - 3) + "..." if max_size > 3 else clip_to_width(text, max_size)
         return text
 
     def _toggle_play_pause(self):

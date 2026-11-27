@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QLabel
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import refresh_widget_style
+from core.utils.utilities import clip_to_width, refresh_widget_style, text_width
 from core.validation.widgets.yasb.bluetooth import BluetoothConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.bluetooth.bluetooth_managers import BluetoothManager
@@ -172,8 +172,10 @@ class BluetoothWidget(BaseWidget):
                         active_widgets[widget_index].setText(formatted_text)
                         self._set_bt_state_class(active_widgets[widget_index])
                 else:
-                    if self.config.max_length and len(formatted_text) > self.config.max_length:
-                        formatted_text = formatted_text[: self.config.max_length] + self.config.max_length_ellipsis
+                    if self.config.max_length and text_width(formatted_text) > self.config.max_length:
+                        formatted_text = (
+                            clip_to_width(formatted_text, self.config.max_length) + self.config.max_length_ellipsis
+                        )
                     if widget_index < len(active_widgets):
                         active_widgets[widget_index].setText(formatted_text)
                         self._set_bt_state_class(active_widgets[widget_index])

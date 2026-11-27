@@ -14,7 +14,7 @@ Shows Bluetooth status, connected devices, and a popup menu to browse paired/new
 | `class_name` | string | `""` | Extra CSS class for the widget. |
 | `label_no_device` | string | `"No devices connected"` | Text for `{device_name}` when nothing is connected. |
 | `label_device_separator` | string | `", "` | Separator between device names. |
-| `max_length` | integer | `null` | Max label length before truncation. |
+| `max_length` | integer | `null` | Max label length before truncation. Full-width characters (Chinese, Japanese, Korean, most emoji) count as two. |
 | `max_length_ellipsis` | string | `"..."` | Ellipsis used when truncating. |
 | `tooltip` | boolean | `true` | Show tooltip on hover. |
 | `icons` | dict | [See below](#icons-options) | Bar icons for on / off / connected (Segoe Fluent by default; all three use `\ue702`). |

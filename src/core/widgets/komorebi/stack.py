@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
 from core.utils.icons.service import IconService, WindowIcon
-from core.utils.utilities import refresh_widget_style
+from core.utils.utilities import clip_to_width, refresh_widget_style, text_width
 from core.utils.win32.bindings.user32 import GetForegroundWindow
 from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.utils.win32.window_actions import close_application
@@ -444,12 +444,12 @@ class StackWidget(BaseWidget):
         )
         if self.config.max_length_overall:
             calculated_max_length = self.config.max_length_overall // max(1, len(self.komorebi_windows) - 1)
-            if len(default_label) > calculated_max_length:
-                default_label = default_label[:calculated_max_length] + self.config.max_length_ellipsis
-        elif self.config.max_length and len(default_label) > self.config.max_length:
-            default_label = default_label[: self.config.max_length] + self.config.max_length_ellipsis
-        if self.config.max_length_active and len(active_label) > self.config.max_length_active:
-            active_label = active_label[: self.config.max_length_active] + self.config.max_length_ellipsis
+            if text_width(default_label) > calculated_max_length:
+                default_label = clip_to_width(default_label, calculated_max_length) + self.config.max_length_ellipsis
+        elif self.config.max_length and text_width(default_label) > self.config.max_length:
+            default_label = clip_to_width(default_label, self.config.max_length) + self.config.max_length_ellipsis
+        if self.config.max_length_active and text_width(active_label) > self.config.max_length_active:
+            active_label = clip_to_width(active_label, self.config.max_length_active) + self.config.max_length_ellipsis
         return default_label, active_label
 
     def _try_add_window_button(self, window_index: int) -> WindowButton | None:

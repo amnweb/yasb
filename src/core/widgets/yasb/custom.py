@@ -6,6 +6,7 @@ import threading
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.utils.tooltip import set_tooltip
+from core.utils.utilities import clip_to_width, text_width
 from core.utils.win32.system_function import function_map
 from core.validation.widgets.yasb.custom import CustomConfig
 from core.widgets.base import BaseWidget
@@ -104,8 +105,8 @@ class CustomWidget(BaseWidget):
         self._update_label()
 
     def _truncate_label(self, label: str) -> str:
-        if self.config.label_max_length and len(label) > self.config.label_max_length:
-            return label[: self.config.label_max_length] + "..."
+        if self.config.label_max_length and text_width(label) > self.config.label_max_length:
+            return clip_to_width(label, self.config.label_max_length) + "..."
         return label
 
     def _update_label(self):

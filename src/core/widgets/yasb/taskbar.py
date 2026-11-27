@@ -24,7 +24,7 @@ from core.utils.icons.extract import get_stock_icon
 from core.utils.icons.service import IconService, WindowIcon
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import refresh_widget_style
+from core.utils.utilities import clip_to_width, refresh_widget_style, text_width
 from core.utils.win32.bindings.user32 import GetForegroundWindow, IsIconic, IsWindow
 from core.utils.win32.constants import KnownCLSID
 from core.utils.win32.utils import get_widget_monitor_hwnd
@@ -1953,14 +1953,15 @@ class TaskbarWidget(BaseWidget):
 
     def _format_title(self, title: str) -> str:
         """Format a window title according to max and min length settings."""
-        if len(title) > self.config.title_label.max_length:
-            formatted_title = title[: self.config.title_label.max_length] + ".."
+        if text_width(title) > self.config.title_label.max_length:
+            formatted_title = clip_to_width(title, self.config.title_label.max_length) + ".."
         else:
             formatted_title = title
 
         min_length = self.config.title_label.min_length
-        if len(formatted_title) < min_length:
-            formatted_title = formatted_title.ljust(min_length)
+        padding = min_length - text_width(formatted_title)
+        if padding > 0:
+            formatted_title += " " * padding
 
         return formatted_title
 
