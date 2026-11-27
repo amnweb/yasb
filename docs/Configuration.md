@@ -139,6 +139,7 @@ glazewm:
 | `alignment`       | object  | [See below](#bar-alignment) | The alignment settings for the status bar. |
 | `blur_effect`     | object  | [See below](#blur-effect-configuration) | The blur effect settings for the status bar. |
 | `window_flags`    | object  | [See below](#window-flags-configuration) | The window flags for the status bar. |
+| `auto_hide_zone`  | object  | [See below](#auto-hide-zone-configuration) | The hover zone that reveals the bar when `auto_hide` is enabled. |
 | `dimensions`      | object  | `{width: "100%", height: 30}` | The dimensions of the status bar. Width can be a number (pixels), percentage string (e.g., `"100%"`, `"50%"`), or `"auto"` to resize based on content. When using `"auto"`, the bar will automatically resize as widget content changes, with a maximum width of the available screen width minus padding. |
 | `padding`         | object  | `{top: 0, left: 0, bottom: 0, right: 0}` | The padding for the status bar. |
 | `animation`       | object  | `{enabled: true, duration: 500}` | The animation settings for the status bar. Duration is in milliseconds. Animation is used to show/hide the bar smoothly. |
@@ -226,6 +227,32 @@ Customize how the status bar transitions when shown or hidden:
 | `hide_on_fullscreen` | boolean | `false`    | Whether the status bar should hide when a window is in fullscreen mode. |
 | `hide_on_maximized` | boolean | `false`    | Whether the status bar should auto-hide when any window is maximized on the bar's monitor. Only works when `windows_app_bar` is `false`. |
 | `auto_hide` | boolean | `false`    | Whether the status bar should auto-hide when not in use. |
+
+### Auto Hide Zone Configuration
+Controls the zone at the screen edge that reveals the bar when `auto_hide` is enabled. The defaults keep the previous behavior (an invisible 1px zone across the full width).
+
+| Option            | Type    | Default       | Description |
+|-------------------|---------|---------------|-------------|
+| `width`           | string/int | `"100%"`   | Width of the zone, centered on the screen. A percentage string (e.g. `"5%"`) or pixels (e.g. `100`). A narrow zone avoids revealing the bar when you reach for a window's close button. |
+| `height`          | integer | `1`           | Height of the zone in pixels (1-50). |
+| `visible`         | boolean | `false`       | Draw the zone as a small handle so you can see where to hover. The handle is hidden while the bar is shown. |
+| `color`           | string  | `"rgba(255, 255, 255, 0.35)"` | Handle color when `visible` is `true`. Accepts `rgba()`, `rgb()`, hex or named colors. |
+| `radius`          | integer | `2`           | Corner radius of the handle in pixels. |
+| `show_delay`      | integer | `0`           | Milliseconds the cursor must stay in the zone before the bar is shown (0-5000). |
+| `disable_on_fullscreen` | boolean | `false` | Disable the zone (and hide the bar) while a fullscreen window, such as a game or video, is in the foreground on the bar's monitor. |
+
+Example:
+```yaml
+window_flags:
+  always_on_top: true
+  auto_hide: true
+auto_hide_zone:
+  width: "5%"
+  height: 4
+  visible: true
+  show_delay: 150
+  disable_on_fullscreen: true
+```
 
 ### Layouts Configuration
 Each section (left, center, right) can be configured with the following properties:

@@ -32,6 +32,29 @@ class BarWindowFlags(CustomBaseModel):
     auto_hide: bool = False
 
 
+class BarAutoHideZone(CustomBaseModel):
+    """Hover zone that reveals an auto-hidden bar."""
+
+    width: str | int = "100%"
+    height: int = Field(default=1, ge=1, le=50)
+    visible: bool = False
+    color: str = "rgba(255, 255, 255, 0.35)"
+    radius: int = Field(default=2, ge=0)
+    show_delay: int = Field(default=0, ge=0, le=5000)
+    disable_on_fullscreen: bool = False
+
+    @field_validator("width")
+    @classmethod
+    def validate_width(cls, v: str | int) -> str | int:
+        if isinstance(v, int):
+            if v < 1:
+                raise ValueError("Width must be a positive integer")
+            return v
+        if v.endswith("%") and v[:-1].isdigit() and 0 < int(v[:-1]) <= 100:
+            return v
+        raise ValueError("Width must be an integer or a percentage string (e.g. '20%')")
+
+
 class BarDimensions(CustomBaseModel):
     width: str | int = "100%"
     height: int = Field(default=30, ge=0)
@@ -85,6 +108,7 @@ class BarConfig(CustomBaseModel):
     blur_effect: BarBlurEffect = BarBlurEffect()
     animation: BarAnimation = BarAnimation()
     window_flags: BarWindowFlags = BarWindowFlags()
+    auto_hide_zone: BarAutoHideZone = BarAutoHideZone()
     dimensions: BarDimensions = BarDimensions()
     padding: BarPadding = BarPadding()
     widgets: BarWidgets = BarWidgets()
