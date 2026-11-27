@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QStyle, QStyle
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import CustomToolTip, set_tooltip
-from core.utils.utilities import PopupWidget, build_progress_widget
+from core.utils.utilities import PopupWidget, build_progress_widget, wheel_delta
 from core.utils.win32.utils import get_widget_monitor_hwnd
 from core.validation.widgets.yasb.brightness import BrightnessConfig
 from core.widgets.base import BaseWidget
@@ -461,11 +461,14 @@ class BrightnessWidget(BaseWidget):
         if a0 is None:
             return
 
+        delta = wheel_delta(a0, self.config.invert_wheel)
+        if delta == 0:
+            return
+
         current = self.get_brightness()
         if current is None:
             return
 
-        delta = -a0.angleDelta().y() if self.config.invert_wheel else a0.angleDelta().y()
         if delta > 0:
             new_value = min(current + self.config.scroll_step, 100)
         else:

@@ -13,6 +13,7 @@ from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
     refresh_widget_style,
+    wheel_delta,
 )
 from core.validation.widgets.yasb.microphone import MicrophoneConfig
 from core.widgets.base import BaseWidget
@@ -270,7 +271,7 @@ class MicrophoneWidget(BaseWidget):
     def wheelEvent(self, a0: QWheelEvent | None) -> None:
         if self.audio_endpoint is None or a0 is None:
             return
-        delta = -a0.angleDelta().y() if self.config.invert_wheel else a0.angleDelta().y()
+        delta = wheel_delta(a0, self.config.invert_wheel)
         if delta > 0:
             self._increase_volume()
         elif delta < 0:

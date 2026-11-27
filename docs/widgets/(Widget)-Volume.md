@@ -1,6 +1,6 @@
 # Volume Widget Options
 
-Displays your speaker volume and mute status. You can adjust the volume by scrolling your mouse wheel, click to mute/unmute, and open a popup menu to switch audio devices, manage app-specific volumes, and open sound settings.
+Displays your speaker volume and mute status. You can adjust the volume by scrolling your mouse wheel up/down or tilting it left/right, click to mute/unmute, and open a popup menu to switch audio devices, manage app-specific volumes, and open sound settings.
 
 | Option       | Type   | Default                                                                 | Description                                                                 |
 |--------------|--------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|

@@ -16,6 +16,7 @@ from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
     refresh_widget_style,
+    wheel_delta,
 )
 from core.utils.win32.bindings.user32 import user32
 from core.utils.win32.utils import get_app_name_from_pid
@@ -695,7 +696,7 @@ class VolumeWidget(BaseWidget):
     def wheelEvent(self, a0: QWheelEvent | None) -> None:
         if self.volume is None or a0 is None:
             return
-        delta = -a0.angleDelta().y() if self.config.invert_wheel else a0.angleDelta().y()
+        delta = wheel_delta(a0, self.config.invert_wheel)
         if delta > 0:
             self._increase_volume()
         elif delta < 0:
