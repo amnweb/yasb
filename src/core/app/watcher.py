@@ -40,8 +40,6 @@ class FileModifiedEventHandler(PatternMatchingEventHandler):
             return None
 
     def _changed(self, path: str) -> None:
-        if not self.bar_manager.config.watch:
-            return
         key = path_key(path)
         if key == self._config_key:
             new_hash = self._file_hash(path)

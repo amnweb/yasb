@@ -53,7 +53,7 @@ Only one instance of YASB can run at a time. Starting it again while it's runnin
 
 ## Alerts while YASB runs
 
-With `watch` on, YASB loads each file again when you save it. A file with an error isn't used, and an alert says
+YASB loads each file again when you save it. A file with an error isn't used, and an alert says
 so:
 
 | Alert | What happened | What YASB does |

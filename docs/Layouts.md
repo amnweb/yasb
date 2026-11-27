@@ -7,8 +7,8 @@ setup created `layouts\bar.qml`, `layouts\floating.qml` or `layouts\islands.qml`
 ## Pick a layout
 
 A bar's `layout` in `config.yaml` picks its layout, as [Layouts and themes](./Configuration#layouts-and-themes)
-explains. Without one, the bar uses the default [Bar](./(Type)-Bar) with the theme's bar background. While `watch` is
-on, the bar changes as soon as you save its layout. A layout with an error isn't used. The bar falls back to the
+explains. Without one, the bar uses the default [Bar](./(Type)-Bar) with the theme's bar background. The bar
+changes as soon as you save its layout. A layout with an error isn't used. The bar falls back to the
 default, and an alert shows the error.
 
 ## YASB's layouts

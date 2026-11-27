@@ -81,13 +81,10 @@ class BarManager(QObject):
             return
         if config is None or config == self.config:
             return
-        unchanged = config.model_dump(exclude={"watch"}) == self.config.model_dump(exclude={"watch"})
         self.config = config
-        if unchanged:
-            logging.info("Configuration updated (no reload required).")
-            return
-        self._disconnect_reload_signals()
-        reload_application("Reloading Application because of config change.")
+        logging.info("Configuration updated, reloading the bars.")
+        self.close_bars()
+        self.initialize_bars()
 
     @pyqtSlot(QScreen)
     def on_screens_update(self, _screen: QScreen) -> None:

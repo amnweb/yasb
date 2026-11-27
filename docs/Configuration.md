@@ -7,7 +7,6 @@ key. A widget's content and look are set in the widget's own file (see [Widgets]
 ## An example
 
 ```yaml
-watch: true
 debug: false
 update_check: true
 theme: yasb
@@ -43,7 +42,6 @@ running, it keeps the previous config.
 
 | Key | Value | Default | What it does |
 | --- | --- | --- | --- |
-| `watch` | `true` or `false` | `true` | Applies your changes when you save `config.yaml`, a widget, or the layout or theme it names. See [how YASB picks up your changes](./Getting-Started#how-yasb-picks-up-your-changes). |
 | `debug` | `true` or `false` | `false` | Writes more detail to `yasb.log`. |
 | `update_check` | `true` or `false` | `true` | Shows a notification when a new version of YASB is out. |
 | `theme` | a theme | YASB's own theme | The theme of every bar that doesn't name its own. See [Themes](./Themes). |

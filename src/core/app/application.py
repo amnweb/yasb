@@ -85,9 +85,8 @@ class YASBApplication(QGuiApplication):
                 logging.info("Debug mode enabled.")
             self._bars = BarManager(config, self._engine)
             self._bars.initialize_bars()
-            if config.watch:
-                self._observer = create_observer(self._bars)
-                self._observer.start()
+            self._observer = create_observer(self._bars)
+            self._observer.start()
             self._tray = SystemTrayManager(self._bars)
             self._tray.show()
             if config.update_check:

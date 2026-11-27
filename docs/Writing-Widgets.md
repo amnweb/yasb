@@ -46,7 +46,7 @@ bars:
 
 The bar now shows "Hello". YASB sizes the widget to the bar's height, or its width on a bar at the left or right, and
 `implicitWidth` tells it how much space the widget needs along the bar. A `Label` uses the theme's bar font by default.
-With `watch` on, the bar reloads the file every time you save it. If the file has an error, an alert shows it and the
+The bar reloads the file every time you save it. If the file has an error, an alert shows it and the
 bar keeps the previous version.
 
 ## Data from a service

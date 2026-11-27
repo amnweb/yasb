@@ -7,7 +7,6 @@ from core.validation.base_model import CustomBaseModel
 
 
 class YasbConfig(CustomBaseModel):
-    watch: bool = True
     debug: bool = False
     update_check: bool = True
     theme: str | None = Field(default=None, min_length=1)

@@ -302,11 +302,9 @@ class _Signal:
         self.calls.append(args)
 
 
-def _handler(watch: bool = True) -> tuple[FileModifiedEventHandler, _Signal, _Signal]:
+def _handler() -> tuple[FileModifiedEventHandler, _Signal, _Signal]:
     qml_changed, config_modified = _Signal(), _Signal()
-    manager = SimpleNamespace(
-        config=SimpleNamespace(watch=watch), qml_changed=qml_changed, config_modified=config_modified
-    )
+    manager = SimpleNamespace(qml_changed=qml_changed, config_modified=config_modified)
     return FileModifiedEventHandler(cast(Any, manager)), qml_changed, config_modified
 
 
@@ -345,9 +343,3 @@ def test_the_watcher_reloads_only_the_real_config_file(tmp_path: Path, monkeypat
     assert config_modified.calls == []
     handler.dispatch(FileModifiedEvent(str(config)))
     assert config_modified.calls == [()]
-
-
-def test_the_watcher_does_nothing_when_watching_is_off(tmp_path: Path):
-    handler, qml_changed, _ = _handler(watch=False)
-    handler.dispatch(FileModifiedEvent(str(tmp_path / "bar.qml")))
-    assert qml_changed.calls == []

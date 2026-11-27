@@ -104,7 +104,6 @@ def build_config(choices: SetupChoices) -> dict[str, Any]:
     bar["widgets"] = {position: list(names) for position in POSITIONS if (names := choices.widgets.get(position))}
     fields = YasbConfig.model_fields
     config: dict[str, Any] = {
-        "watch": fields["watch"].default,
         "debug": fields["debug"].default,
         "update_check": choices.update_check,
         "theme": THEME_NAME,

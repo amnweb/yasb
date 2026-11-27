@@ -33,7 +33,7 @@ Theme {
 }
 ```
 
-Name it in `config.yaml` with `theme: mine`. While `watch` is on, the bars change as soon as you save the file. If a
+Name it in `config.yaml` with `theme: mine`. The bars change as soon as you save the file. If a
 theme has an error or its root isn't `Theme`, it isn't used. The bar falls back to the default theme and an alert shows
 the error.
 
