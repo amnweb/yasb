@@ -413,6 +413,7 @@ class NotificationsWidget(BaseWidget):
             body.setTextFormat(Qt.TextFormat.PlainText)
             body.setWordWrap(True)
             body.setIndent(0)
+            body.setMinimumWidth(1)
             # a stylesheet max-height cuts the end of the text, not both ends
             body.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
             text.addWidget(body)
