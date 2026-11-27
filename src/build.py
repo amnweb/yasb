@@ -54,7 +54,6 @@ build_options = {
         ("assets/images/app_transparent.png", "assets/images/app_transparent.png"),
         ("assets/images/media.png", "assets/images/media.png"),
         ("assets/sound/notification01.wav", "assets/sound/notification01.wav"),
-        ("assets/sound/notification02.wav", "assets/sound/notification02.wav"),
         ("core/qml", "core/qml"),
         (f"core/services/quick_launch/providers/resources/{everything_dll_name}", f"lib/{everything_dll_name}"),
         (f"core/services/systray/hook/{hook_dll_name}", f"lib/{hook_dll_name}"),
