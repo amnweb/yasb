@@ -17,7 +17,7 @@ from PyQt6.QtGui import QWindow
 
 from core.services.brightness.service import BrightnessService
 from core.utils.qml import qml_property
-from core.utils.win32.bindings.user32 import MonitorFromWindow
+from core.utils.win32.bindings.user32 import MonitorFromRect
 
 ROLES = ["monitor", "name", "subtitle", "brightness", "contrast"]
 
@@ -148,7 +148,13 @@ class DisplayBrightness(QObject):
         return self._displays
 
     def _find_display(self, *_: Any) -> None:
-        hmonitor = MonitorFromWindow(int(self._window.winId())) if self._window is not None else None
+        """Find the monitor from the screen geometry"""
+        screen = self._window.screen() if self._window is not None else None
+        hmonitor = None
+        if screen is not None:
+            # A QScreen's top-left is in native pixels on Windows, only its size is scaled
+            x, y = screen.geometry().x(), screen.geometry().y()
+            hmonitor = MonitorFromRect((x, y, x + 1, y + 1))
         if hmonitor != self._hmonitor:
             self._hmonitor = hmonitor or None
             self.changed.emit()
