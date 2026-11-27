@@ -162,6 +162,7 @@ class SystrayWidget(BaseWidget):
 
         self.unpinned_vis_btn = QPushButton(self)
         self.unpinned_vis_btn.setCheckable(True)
+        self.unpinned_vis_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.unpinned_vis_btn.clicked.connect(self.toggle_unpinned_widget_visibility)
         self.unpinned_vis_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.unpinned_vis_btn.customContextMenuRequested.connect(self.show_context_menu)

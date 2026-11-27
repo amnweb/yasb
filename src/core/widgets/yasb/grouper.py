@@ -2,7 +2,7 @@ import logging
 from collections.abc import Callable, Mapping
 from typing import Any, override
 
-from PyQt6.QtCore import QEvent, QObject, QThread
+from PyQt6.QtCore import QEvent, QObject, Qt, QThread
 from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QPushButton
 
@@ -49,6 +49,7 @@ class GrouperWidget(BaseWidget):
             self._collapsed_icon = self._collapse_options.collapsed_label
             self._collapse_button.setText(self._collapsed_icon)
             self._collapse_button.setFlat(True)
+            self._collapse_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
             if self._collapse_options.label_position.lower() == "left":
                 self._widget_container_layout.addWidget(self._collapse_button)
