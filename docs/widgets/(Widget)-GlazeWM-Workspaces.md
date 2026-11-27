@@ -17,6 +17,7 @@ Displays your GlazeWM workspaces so you can see which ones are active or have wi
 | `enable_scroll_switching` | boolean | `true`      | Enable scroll switching between workspaces.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
 | `app_icons`    | dict    | [See below](#app-icons-options) | Controls the display of opened app icons per workspace. `enabled_focused` falls back to `enabled_active` if not explicitly set to a non-None bool value.  |
+| `animation`    | dict    | `{'enabled': False, 'duration': 200}` | Animate app icons and workspace buttons as they appear or disappear.  |
 
 ## App Icons Options
 
@@ -84,6 +85,9 @@ glazewm_workspaces:
   - **hide_label:** Whether to hide the label of the workspace buttons that app icons are displayed.
   - **hide_duplicates:** Whether to hide duplicate app icons.
   - **hide_floating:** Whether to hide floating window app icons.
+- **animation:** Animate app icons growing in and shrinking out as windows open and close, and workspace buttons as they appear or disappear. It includes:
+  - **enabled:** A boolean flag to enable or disable animations. Default `false`.
+  - **duration:** The duration of the animation in milliseconds. Default `200`.
 
 ## Note on Workspace Names
 In GlazeWM config use "1", "2", "3" for workspace "name" and NOT some custom string. This will ensure proper sorting of workspaces.

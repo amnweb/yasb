@@ -1,11 +1,13 @@
 import logging
 import re
+from collections.abc import Callable
 from enum import StrEnum, auto
+from functools import partial
 from typing import override
 
-from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtCore import QAbstractAnimation, QEasingCurve, QPropertyAnimation, Qt, pyqtSlot
 from PyQt6.QtGui import QMouseEvent, QPixmap, QShowEvent, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
+from PyQt6.QtWidgets import QWIDGETSIZE_MAX, QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
 from core.utils.icons.service import IconService, WindowIcon
 from core.utils.utilities import refresh_widget_style
@@ -29,6 +31,25 @@ class WorkspaceStatus(StrEnum):
 def natural_sort_key(s: str, _nsre: re.Pattern[str] = re.compile(r"(\d+)")):
     """Sorts a string in the format '1-2-3' in natural order."""
     return [int(text) if text.isdigit() else text.lower() for text in _nsre.split(s)]
+
+
+def animate_width(widget: QWidget, start: int, end: int, duration: int, on_finished: Callable[[], None] | None = None):
+    """Animate a widget's maximum width, like the taskbar animates its buttons."""
+    animation = QPropertyAnimation(widget, b"maximumWidth", widget)
+    animation.setStartValue(start)
+    animation.setEndValue(end)
+    animation.setDuration(duration)
+    animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+    def finished():
+        widget.setProperty("ws_animation", None)
+        widget.setMaximumWidth(QWIDGETSIZE_MAX)
+        if on_finished:
+            on_finished()
+
+    animation.finished.connect(finished)
+    widget.setProperty("ws_animation", animation)
+    animation.start(QAbstractAnimation.DeletionPolicy.DeleteWhenStopped)
 
 
 class GlazewmWorkspaceButton(QPushButton):
@@ -164,13 +185,16 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self.button_layout.addWidget(self.text_label)
 
         self.icons: dict[int, QPixmap | None] = {}
-        self.icon_labels: list[QLabel] = []
+        # Keyed by window handle so an icon keeps its label when windows are added/removed
+        self.icon_labels: dict[int, QLabel] = {}
         self.update_button()
 
     def update_button(self):
+        # A button that is just appearing grows as a whole, so don't animate its icons too
+        was_visible = self.isVisible()
         self._update_status()
         self._update_label()
-        self.update_icons()
+        self.update_icons(animate=was_visible)
         button_class = "ws-btn "
         # To maintain previous functionality, apply the equivalent active_ class to the focused_ workspace.
         if self.status.value == WorkspaceStatus.FOCUSED_POPULATED:
@@ -279,7 +303,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
             logging.debug("Failed to get icons for window with HWND %s", hwnd, exc_info=True)
             return None
 
-    def update_icons(self):
+    def update_icons(self, animate: bool = True):
         self.icons = self._get_all_icons_in_workspace()
 
         if not self.config.app_icons.enabled_active and self.status == WorkspaceStatus.ACTIVE_POPULATED:
@@ -292,32 +316,67 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         elif not self.config.app_icons.enabled_populated and self.status == WorkspaceStatus.POPULATED:
             icons_list = []
         else:
-            icons_list = [icon for icon in self.icons.values() if icon is not None]
+            icons_list = [(hwnd, icon) for hwnd, icon in self.icons.items() if icon is not None]
             if self.config.app_icons.max_icons > 0:
                 icons_list = icons_list[: self.config.app_icons.max_icons]
 
-        # Remove extra QLabel widgets if there are more than needed
-        for extra_label in self.icon_labels[len(icons_list) :]:
-            self.button_layout.removeWidget(extra_label)
-            extra_label.hide()
-            extra_label.deleteLater()
-        self.icon_labels = self.icon_labels[: len(icons_list)]
+        animate = (
+            animate
+            and self.config.animation.enabled
+            and self.isVisible()
+            and not getattr(self.parent_widget, "_initial_population", True)
+        )
+        wanted = {hwnd for hwnd, _ in icons_list}
+        # Windows moved between workspaces jump instead of shrinking out and growing in
+        moved: set[int] = getattr(self.parent_widget, "_moved_hwnds", set())
+        duration = self.config.animation.duration
 
-        # Add or update icons
-        for index, icon in enumerate(icons_list):
-            if index < len(self.icon_labels):
-                self.icon_labels[index].setPixmap(icon)
+        # Remove labels of windows that are gone, a still-growing one immediately like the taskbar does
+        for hwnd in [hwnd for hwnd in self.icon_labels if hwnd not in wanted]:
+            label = self.icon_labels.pop(hwnd)
+            if animate and hwnd not in moved and label.property("ws_animation") is None:
+                animate_width(label, label.width(), 0, duration, partial(self._remove_icon, label))
             else:
-                icon_label = QLabel(self)
-                icon_label.setProperty("class", f"icon icon-{index + 1}")
-                icon_label.setPixmap(icon)
-                self.button_layout.addWidget(icon_label)
-                self.icon_labels.append(icon_label)
+                self._remove_icon(label)
+
+        # Add new labels and keep them in window order
+        previous: QWidget = self.text_label
+        for index, (hwnd, icon) in enumerate(icons_list):
+            css_class = f"icon icon-{index + 1}"
+            label = self.icon_labels.get(hwnd)
+            if label is None:
+                label = self._add_icon(hwnd, icon, css_class, previous, animate and hwnd not in moved)
+            elif label.property("class") != css_class:
+                # Replace a label that changed position, Qt doesn't re-apply CSS margins on a class change
+                self._remove_icon(label)
+                label = self._add_icon(hwnd, icon, css_class, previous, animate=False)
+            else:
+                label.setPixmap(icon)
+            previous = label
 
         if self.config.app_icons.hide_label and len(self.icon_labels) > 0:
             self.text_label.hide()
         else:
             self.text_label.show()
+
+    def _add_icon(self, hwnd: int, icon: QPixmap, css_class: str, after: QWidget, animate: bool) -> QLabel:
+        label = self.icon_labels[hwnd] = QLabel(self)
+        label.setProperty("class", css_class)
+        label.setPixmap(icon)
+        self.button_layout.insertWidget(self.button_layout.indexOf(after) + 1, label)
+        if animate:
+            label.setFixedWidth(0)
+            animate_width(label, 0, label.sizeHint().width(), self.config.animation.duration)
+        # Show now so the button's sizeHint() includes the icon right away
+        label.show()
+        return label
+
+    def _remove_icon(self, label: QLabel) -> None:
+        if (running := label.property("ws_animation")) is not None:
+            running.stop()
+        self.button_layout.removeWidget(label)
+        label.hide()
+        label.deleteLater()
 
 
 class GlazewmWorkspacesWidget(BaseWidget):
@@ -327,11 +386,19 @@ class GlazewmWorkspacesWidget(BaseWidget):
         super().__init__(class_name="glazewm-workspaces")
         self.config = config
         self.workspaces: dict[str, GlazewmWorkspaceButton | GlazewmWorkspaceButtonWithIcons] = {}
+        # Which workspace each window was in on the last update, to spot windows that moved
+        self._window_workspaces: dict[int, str] = {}
+        self._moved_hwnds: set[int] = set()
+        # Skip animating the first batch of buttons so startup doesn't stutter
+        self._initial_population = True
 
         self.monitor_handle: int | None = None
         self.workspace_container_layout = QHBoxLayout()
         self.workspace_container_layout.setSpacing(0)
         self.workspace_container_layout.setContentsMargins(0, 0, 0, 0)
+        if self.config.animation.enabled:
+            # Grow the container to fit its buttons first, so a growing icon doesn't squeeze the others
+            self.workspace_container_layout.setSizeConstraint(QHBoxLayout.SizeConstraint.SetMinimumSize)
 
         self.workspace_container = QFrame(self)
         self.workspace_container.setLayout(self.workspace_container_layout)
@@ -344,10 +411,14 @@ class GlazewmWorkspacesWidget(BaseWidget):
         self.widget_layout.addWidget(self.offline_text)
         self.widget_layout.addWidget(self.workspace_container)
 
+        events = "workspace_activated workspace_deactivated workspace_updated focus_changed focused_container_moved"
+        if self.config.animation.enabled:
+            # Update as soon as a window opens or closes so its icon animates right away
+            events += " window_managed window_unmanaged"
         self.glazewm_client = GlazewmClient(
             self.config.glazewm_server_uri,
             [
-                "sub -e workspace_activated workspace_deactivated workspace_updated focus_changed focused_container_moved",
+                f"sub -e {events}",
                 "query monitors",
             ],
         )
@@ -391,6 +462,14 @@ class GlazewmWorkspacesWidget(BaseWidget):
                 if workspace.focus:
                     global_focused_ws = workspace.name
 
+        window_workspaces = {
+            window.handle: workspace.name for workspace in all_workspaces.values() for window in workspace.windows
+        }
+        self._moved_hwnds = {
+            hwnd for hwnd, name in window_workspaces.items() if self._window_workspaces.get(hwnd, name) != name
+        }
+        self._window_workspaces = window_workspaces
+
         if self.config.monitor_exclusive:
             workspace_source = {workspace.name: workspace for workspace in current_mon.workspaces}
         else:
@@ -415,6 +494,8 @@ class GlazewmWorkspacesWidget(BaseWidget):
                         display_name=workspace.display_name,
                         parent_widget=self,
                     )
+                # Start hidden so the button grows in instead of popping in
+                btn.setHidden(True)
 
             btn.monitor_exclusive = self.config.monitor_exclusive
             btn.workspace_name = workspace.name
@@ -452,19 +533,47 @@ class GlazewmWorkspacesWidget(BaseWidget):
                     btn.windows = []
 
             is_focused = btn.is_focused
+            # Check before update_button(), which may unhide it
+            was_shown = btn.isVisibleTo(self)
+            btn.update_button()
 
             if not self.config.monitor_exclusive:
-                if is_current_ipc_workspace or is_focused:
-                    btn.setHidden(False)
-                else:
-                    btn.setHidden(True)
+                visible = is_current_ipc_workspace or is_focused
             else:
-                if is_current_ipc_workspace:
-                    btn.setHidden(False)
-                else:
-                    btn.setHidden(True)
+                visible = is_current_ipc_workspace
+            self._update_button_visibility(btn, visible, was_shown)
 
-            btn.update_button()
+        self._initial_population = False
+
+    def _update_button_visibility(self, btn: QWidget, visible: bool, was_shown: bool) -> None:
+        """Show/hide a workspace button, growing/shrinking it like the taskbar does."""
+        if not self.config.animation.enabled or self._initial_population:
+            btn.setHidden(not visible)
+            return
+
+        running = btn.property("ws_animation")
+        # A button that is mid-animation counts as shown if it is growing in
+        shown = running.endValue() != 0 if running is not None else was_shown
+        if visible == shown:
+            if running is None:
+                # Undo update_button() unhiding a button that should stay hidden
+                btn.setHidden(not visible)
+            return
+
+        # Start from the current width, or from 0 if it was hidden
+        if running is not None:
+            start = btn.maximumWidth()
+            running.stop()
+        else:
+            start = btn.width() if shown else 0
+        btn.setMaximumWidth(start)
+        btn.setHidden(False)
+
+        duration = self.config.animation.duration
+        if visible:
+            animate_width(btn, start, btn.sizeHint().width(), duration)
+        else:
+            animate_width(btn, start, 0, duration, partial(btn.setHidden, True))
 
     def _get_active_workspace(
         self,
