@@ -71,7 +71,7 @@ class FakeBrightness(QObject):
 def service(qapp: QGuiApplication, monkeypatch: pytest.MonkeyPatch) -> FakeBrightness:
     service = FakeBrightness()
     monkeypatch.setattr(control_module, "BrightnessService", service)
-    monkeypatch.setattr(control_module, "MonitorFromWindow", lambda _hwnd: EXTERNAL)  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
+    monkeypatch.setattr(control_module, "MonitorFromRect", lambda _rect: EXTERNAL)  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
     return service
 
 
@@ -140,7 +140,7 @@ def test_without_a_window_or_on_a_display_without_brightness_nothing_is_set(
     control = started()
     assert (control.property("brightness"), control.property("available")) == (-1, False)
     control.setBrightness(50)
-    monkeypatch.setattr(control_module, "MonitorFromWindow", lambda _hwnd: 99)  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
+    monkeypatch.setattr(control_module, "MonitorFromRect", lambda _rect: 99)  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
     control.setProperty("window", QQuickWindow())
     control.setBrightness(50)
     assert service.set == [] and not control.property("available")
