@@ -215,6 +215,13 @@ class SshProviderConfig(CustomBaseModel):
     ssh_config_path: str = ""
 
 
+class VolumeProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "vol"
+    priority: int = 0
+    step: int = 5
+
+
 class QuickLaunchProvidersConfig(CustomBaseModel):
     apps: AppsProviderConfig = AppsProviderConfig()
     bookmarks: BookmarksProviderConfig = BookmarksProviderConfig()
@@ -240,6 +247,7 @@ class QuickLaunchProvidersConfig(CustomBaseModel):
     web_search: WebSearchProviderConfig = WebSearchProviderConfig()
     window_switcher: WindowSwitcherProviderConfig = WindowSwitcherProviderConfig()
     windows_terminal: WindowsTerminalProviderConfig = WindowsTerminalProviderConfig()
+    volume: VolumeProviderConfig = VolumeProviderConfig()
     world_clock: WorldClockProviderConfig = WorldClockProviderConfig()
     wsl: WslProviderConfig = WslProviderConfig()
 
