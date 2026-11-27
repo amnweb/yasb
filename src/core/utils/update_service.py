@@ -263,6 +263,12 @@ class UpdateService:
         try:
             release_data = self._fetch_release_data(check_channel, timeout)
 
+            # YASB 2.x never updates to 3.0.0 or later
+            version_text = release_data.get("name" if check_channel == "preview" else "tag_name", "")
+            major = re.search(r"(\d+)\.\d+\.\d+", version_text)
+            if not major or int(major.group(1)) >= 3:
+                return None
+
             # Select appropriate asset for architecture
             assets = release_data.get("assets", [])
             msi_asset = self._select_asset_for_architecture(assets, channel=check_channel)
