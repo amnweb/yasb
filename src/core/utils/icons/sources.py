@@ -2,8 +2,8 @@
 
 Window: its own icon if it's big enough, else its app's icon, else its class icon.
 Process: its app's icon, else one of its windows' icons.
-App: the icon shell:AppsFolder shows for the AUMID, else the one registered for its toasts. For a window or process
-only Store apps go this way, the rest use their exe.
+App: the icon shell:AppsFolder shows for the AUMID, else the one registered for its toasts. A window or process uses
+its AUMID if shell:AppsFolder lists it (Store apps, browser web apps), else its exe.
 File: the icon inside the file (exe, dll, cpl, ico), or the one a shortcut, .msc or Control Panel item points to;
 anything else gets the shell's icon.
 
@@ -96,8 +96,9 @@ def _process_icon(pid: int, size: int) -> Image.Image | None:
 
 
 def _app_icon(aumid: str | None, exe: str | None, size: int) -> Image.Image | None:
-    # only Store app IDs (Family!App) give the real icon, their exe has a generic one
-    if aumid and "!" in aumid:
+    # Store apps' exe has a generic icon, browser web apps share the browser's exe.
+    # An ID shell:AppsFolder doesn't list gives None.
+    if aumid:
         image = _store_app_icon(aumid, size)
         if image is not None:
             return image
