@@ -45,6 +45,7 @@ class _MonitorInfo:
         "contrast",
         "supports_contrast",
         "contrast_tested",
+        "vcp_max",
     )
 
     def __init__(self, hmonitor: int) -> None:
@@ -61,6 +62,7 @@ class _MonitorInfo:
         self.contrast: int | None = None
         self.supports_contrast: bool = False
         self.contrast_tested: bool = False
+        self.vcp_max: dict[tuple[int, int], int] = {}
 
 
 class BrightnessService(QObject):
@@ -594,6 +596,7 @@ class BrightnessService(QObject):
                         if dxva2.GetVCPFeatureAndVCPFeatureReply(
                             handle, BYTE(code), None, byref(current), byref(maximum)
                         ):
+                            self._remember_vcp_max(hmonitor, i, code, maximum.value)
                             return round(current.value / max(maximum.value, 1) * 100)
                         if attempt + 1 < DDC_ATTEMPTS:
                             time.sleep(DDC_RETRY_SLEEP)
@@ -602,6 +605,29 @@ class BrightnessService(QObject):
                 self._destroy_physical_monitors(monitors, count)
         except Exception:
             return None
+
+    def _remember_vcp_max(self, hmonitor: int, index: int, code: int, maximum: int) -> int:
+        max_val = maximum or 100
+        with self._lock:
+            monitor = self._monitors.get(hmonitor)
+            if monitor:
+                monitor.vcp_max[(index, code)] = max_val
+        return max_val
+
+    def _vcp_max(self, hmonitor: int, index: int, handle: int, code: int) -> int:
+        with self._lock:
+            monitor = self._monitors.get(hmonitor)
+            cached = monitor.vcp_max.get((index, code)) if monitor else None
+        if cached is not None:
+            return cached
+
+        current, maximum = DWORD(), DWORD()
+        for attempt in range(DDC_ATTEMPTS):
+            if dxva2.GetVCPFeatureAndVCPFeatureReply(handle, BYTE(code), None, byref(current), byref(maximum)):
+                return self._remember_vcp_max(hmonitor, index, code, maximum.value)
+            if attempt + 1 < DDC_ATTEMPTS:
+                time.sleep(DDC_RETRY_SLEEP)
+        return 100
 
     def _vcp_write(self, hmonitor: int, code: int, value: int) -> bool:
         try:
@@ -613,16 +639,7 @@ class BrightnessService(QObject):
                 any_ok = False
                 for i in range(count):
                     handle = monitors[i].hPhysicalMonitor or 0
-                    current, maximum = DWORD(), DWORD()
-                    max_val = 100
-                    for attempt in range(DDC_ATTEMPTS):
-                        if dxva2.GetVCPFeatureAndVCPFeatureReply(
-                            handle, BYTE(code), None, byref(current), byref(maximum)
-                        ):
-                            max_val = maximum.value or 100
-                            break
-                        if attempt + 1 < DDC_ATTEMPTS:
-                            time.sleep(DDC_RETRY_SLEEP)
+                    max_val = self._vcp_max(hmonitor, i, handle, code)
                     native = max(0, min(round(value * max_val / 100), max_val))
                     for attempt in range(DDC_ATTEMPTS):
                         if dxva2.SetVCPFeature(handle, BYTE(code), DWORD(native)):
