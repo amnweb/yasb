@@ -17,6 +17,9 @@ _ECB_NS = {
     "gesmes": "http://www.gesmes.org/xml/2002-08-01",
     "ecb": "http://www.ecb.int/vocabulary/2002-08-01/eurofxref",
 }
+# Tried when the ECB feed fails: the Bank of England's daily rates, served keyless by
+# allratestoday.com as rows of "1 base = value quote"; rebased to EUR below.
+_BOE_URL = "https://allratestoday.com/api/open/central-bank/boe"
 _CACHE_FILE = str(app_data_path("currency_rates.json"))
 _CACHE_MAX_AGE = 12 * 3600  # 12 hours
 
@@ -57,6 +60,28 @@ _QUERY_RE = re.compile(
 )
 # Single currency pattern for showing rate overview
 _SINGLE_RE = re.compile(r"^([\d.,]+)?\s*([a-zA-Z]{3})$")
+
+
+def _rebase_to_eur(rows: list[dict[str, Any]], home: str) -> dict[str, float] | None:
+    """Turn a central bank's table (rows of "1 base = value quote", quoted against
+    its home currency) into rates per EUR, the shape the ECB feed gives."""
+    per_home: dict[str, float] = {}
+    for row in rows:
+        if row.get("type") != "reference":
+            continue
+        value = row.get("value")
+        if not isinstance(value, (int, float)) or value <= 0:
+            continue
+        if row.get("base") == home and row.get("quote") != home:
+            per_home[str(row["quote"])] = value
+        elif row.get("quote") == home and row.get("base") != home:
+            per_home[str(row["base"])] = 1 / value
+    eur = per_home.get("EUR")
+    if not eur:
+        return None
+    rates = {code: value / eur for code, value in per_home.items() if code != "EUR"}
+    rates[home] = 1 / eur
+    return rates or None
 
 
 class CurrencyProvider(BaseProvider):
@@ -284,6 +309,9 @@ class CurrencyProvider(BaseProvider):
         return None
 
     def _fetch_rates(self) -> dict[str, float] | None:
+        return self._fetch_ecb_rates() or self._fetch_boe_rates()
+
+    def _fetch_ecb_rates(self) -> dict[str, float] | None:
         try:
             import urllib.request
 
@@ -306,6 +334,18 @@ class CurrencyProvider(BaseProvider):
             return rates if rates else None
         except Exception as e:
             logging.debug("Failed to fetch ECB rates: %s", e)
+            return None
+
+    def _fetch_boe_rates(self) -> dict[str, float] | None:
+        try:
+            import urllib.request
+
+            req = urllib.request.Request(_BOE_URL, headers={"User-Agent": "yasb/1.0"})
+            with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
+                data = json.load(resp)
+            return _rebase_to_eur(data.get("rates", []), "GBP")
+        except Exception as e:
+            logging.debug("Failed to fetch Bank of England rates: %s", e)
             return None
 
     def _load_cache(self) -> tuple[dict[str, float] | None, float]:

@@ -224,7 +224,7 @@ Input formats:
 Click a result to copy the converted value to the clipboard.
 
 > [!NOTE]
-> Currency rates are fetched from the ECB and cached for 12 hours. If there is no internet connection and no cached data, a "rates unavailable" message is shown. Stale cached rates are used as fallback when the network is unreachable.
+> Currency rates are fetched from the ECB and cached for 12 hours. If the ECB feed cannot be reached, the Bank of England's daily rates (from [allratestoday.com](https://allratestoday.com), no API key) are used instead, so the set of currencies may differ slightly. If there is no internet connection and no cached data, a "rates unavailable" message is shown. Stale cached rates are used as fallback when the network is unreachable.
 
 ### Developer Tools Provider
 
